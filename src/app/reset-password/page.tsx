@@ -7,21 +7,44 @@ export default function ResetPasswordPage() {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
+  const [sessionLoading, setSessionLoading] = useState(true)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (event === 'PASSWORD_RECOVERY') {
+          setSessionLoading(false)
+        } else if (session) {
+          setSessionLoading(false)
+        }
+      }
+    )
+    setTimeout(() => setSessionLoading(false), 3000)
+    return () => subscription.unsubscribe()
+  }, [])
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (password !== confirm) { setError('As senhas nao conferem.'); return }
-    if (password.length < 6) { setError('A senha deve ter pelo menos 6 caracteres.'); return }
+    if (password.length < 6) { setError('Minimo 6 caracteres.'); return }
     setLoading(true)
     setError('')
     const { error } = await supabase.auth.updateUser({ password })
     if (error) { setError(error.message); setLoading(false); return }
     setDone(true)
-    setTimeout(() => router.push('/dashboard'), 2000)
+    setTimeout(() => router.push('/login'), 2000)
+  }
+
+  if (sessionLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-sm text-gray-500">Verificando link...</div>
+      </div>
+    )
   }
 
   return (
@@ -51,13 +74,13 @@ export default function ResetPasswordPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nova senha</label>
                   <input type="password" required value={password} onChange={e => setPassword(e.target.value)}
                     placeholder="minimo 6 caracteres" minLength={6}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"/>
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"/>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Confirmar senha</label>
                   <input type="password" required value={confirm} onChange={e => setConfirm(e.target.value)}
                     placeholder="repita a senha"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent"/>
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"/>
                 </div>
                 <button type="submit" disabled={loading}
                   className="w-full py-2.5 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors disabled:opacity-50">
@@ -70,8 +93,8 @@ export default function ResetPasswordPage() {
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>
               </div>
-              <h2 className="text-base font-semibold mb-2">Senha redefinida!</h2>
-              <p className="text-sm text-gray-500">Redirecionando para o dashboard...</p>
+              <h2 className="text-base font-semibold mb-2">Senha definida!</h2>
+              <p className="text-sm text-gray-500">Redirecionando para o login...</p>
             </div>
           )}
         </div>
