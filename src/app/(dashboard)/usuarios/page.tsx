@@ -1,102 +1,111 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
-import type { Profile, UserRole } from '@/lib/types'
 
-const ROLES: { value: UserRole; label: string; desc: string }[] = [
-  { value: 'admin', label: 'Administrador', desc: 'Acesso total à plataforma' },
-  { value: 'encarregado', label: 'Encarregado', desc: 'Funcionários, alocação e HH' },
-  { value: 'almoxarife', label: 'Almoxarife', desc: 'Somente estoque e requisições' },
-  { value: 'funcionario', label: 'Funcionário', desc: 'Somente próprio HH' },
-]
+const ROLES = ['admin','encarregado','almoxarife','funcionario'] as const
+type Role = typeof ROLES[number]
+const ROLE_LABEL: Record<Role, string> = {
+  admin: 'Administrador', encarregado: 'Encarregado',
+  almoxarife: 'Almoxarife', funcionario: 'Funcionário',
+}
+const ROLE_COLOR: Record<Role, string> = {
+  admin: 'bg-purple-100 text-purple-700',
+  encarregado: 'bg-blue-100 text-blue-700',
+  almoxarife: 'bg-amber-100 text-amber-700',
+  funcionario: 'bg-gray-100 text-gray-600',
+}
 
 export default function UsuariosPage() {
-  const [profiles, setProfiles] = useState<Profile[]>([])
+  const [profiles, setProfiles] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
+  const [currentUser, setCurrentUser] = useState<string | null>(null)
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('profiles').select('*').order('nome').then(({ data }) => {
-      setProfiles(data ?? [])
-      setLoading(false)
-    })
+    loadData()
   }, [])
 
-  async function changeRole(profileId: string, role: UserRole) {
-    await supabase.from('profiles').update({ role }).eq('id', profileId)
-    setProfiles(p => p.map(x => x.id === profileId ? { ...x, role } : x))
+  async function loadData() {
+    const [{ data: { user } }, { data: prof }] = await Promise.all([
+      supabase.auth.getUser(),
+      supabase.from('profiles').select('*').order('nome'),
+    ])
+    setCurrentUser(user?.id ?? null)
+    setProfiles(prof ?? [])
+    setLoading(false)
   }
 
-  const ROLE_BADGE: Record<string, string> = {
-    admin: 'bg-purple-100 text-purple-700',
-    encarregado: 'bg-blue-100 text-blue-700',
-    almoxarife: 'bg-amber-100 text-amber-700',
-    funcionario: 'bg-gray-100 text-gray-600',
+  async function changeRole(userId: string, newRole: Role) {
+    setSaving(userId)
+    await supabase.from('profiles').update({ role: newRole }).eq('user_id', userId)
+    setProfiles(prev => prev.map(p => p.user_id === userId ? { ...p, role: newRole } : p))
+    setSaving(null)
   }
+
+  if (loading) return <div className="p-6 text-sm text-gray-400">Carregando...</div>
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Usuários & Níveis de Acesso</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Gerencie quem tem acesso a cada módulo da plataforma.</p>
+        <h1 className="text-xl font-bold font-display text-brand">Usuários & Acesso</h1>
+        <p className="text-sm text-gray-500 mt-0.5">{profiles.length} usuários cadastrados</p>
       </div>
 
-      {/* Role legend */}
-      <div className="grid grid-cols-4 gap-3 mb-6">
-        {ROLES.map(r => (
-          <div key={r.value} className="bg-white border border-gray-200 rounded-xl p-3">
-            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_BADGE[r.value]}`}>{r.label}</span>
-            <p className="text-xs text-gray-400 mt-2">{r.desc}</p>
-          </div>
-        ))}
+      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-5 text-sm text-amber-800">
+        ⚠️ Alterar o nível de acesso afeta imediatamente o que o usuário pode ver e fazer no sistema.
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        {loading ? (
-          <div className="p-8 text-center text-gray-400 text-sm">Carregando...</div>
-        ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Nome</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Nível atual</th>
-                <th className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Alterar para</th>
-                <th className="px-4 py-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {profiles.map(p => (
-                <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center text-xs font-semibold text-gray-600">
-                        {p.nome?.split(' ').map(n => n[0]).slice(0,2).join('').toUpperCase()}
-                      </div>
-                      <span className="font-medium">{p.nome}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${ROLE_BADGE[p.role]}`}>
-                      {ROLES.find(r => r.value === p.role)?.label ?? p.role}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={p.role}
-                      onChange={e => changeRole(p.id, e.target.value as UserRole)}
-                      className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 bg-white focus:outline-none focus:ring-2 focus:ring-brand"
-                    >
-                      {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                    </select>
-                  </td>
-                  <td className="px-4 py-3 text-xs text-gray-400">
-                    Criado em {new Date(p.created_at).toLocaleDateString('pt-BR')}
-                  </td>
-                </tr>
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 bg-gray-50">
+              {['Usuário','Role atual','Alterar para',''].map(h => (
+                <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
               ))}
-            </tbody>
-          </table>
-        )}
+            </tr>
+          </thead>
+          <tbody>
+            {profiles.map((p: any) => (
+              <tr key={p.user_id} className="border-b border-gray-50 hover:bg-gray-50">
+                <td className="px-4 py-3">
+                  <div className="font-semibold text-gray-900">{p.nome}</div>
+                  {p.user_id === currentUser && <span className="text-[10px] text-brand font-medium">(você)</span>}
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${ROLE_COLOR[p.role as Role] ?? 'bg-gray-100'}`}>
+                    {ROLE_LABEL[p.role as Role] ?? p.role}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {ROLES.filter(r => r !== p.role).map(role => (
+                      <button key={role} onClick={() => changeRole(p.user_id, role)}
+                        disabled={saving === p.user_id || p.user_id === currentUser}
+                        className={`text-xs px-2.5 py-1 rounded-full border transition-all disabled:opacity-40 hover:scale-105 ${ROLE_COLOR[role]} border-current`}>
+                        {saving === p.user_id ? '...' : ROLE_LABEL[role]}
+                      </button>
+                    ))}
+                  </div>
+                  {p.user_id === currentUser && <span className="text-xs text-gray-400">Não é possível alterar seu próprio acesso</span>}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <span className={`w-2 h-2 rounded-full inline-block ${saving === p.user_id ? 'bg-amber-400 animate-pulse' : 'bg-green-400'}`}/>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="mt-5 p-4 bg-gray-50 rounded-xl border border-gray-200">
+        <h3 className="text-sm font-bold text-gray-700 mb-2">Níveis de acesso</h3>
+        <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
+          <div><span className="font-semibold text-purple-700">Administrador</span> — acesso total: edita, exclui, vê financeiro e auditoria</div>
+          <div><span className="font-semibold text-blue-700">Encarregado</span> — efetivo diário, BMs, HH, alocação, relatórios</div>
+          <div><span className="font-semibold text-amber-700">Almoxarife</span> — movimentação de estoque</div>
+          <div><span className="font-semibold text-gray-700">Funcionário</span> — visualiza apenas seus próprios HH</div>
+        </div>
       </div>
     </div>
   )

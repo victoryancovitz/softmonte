@@ -124,6 +124,7 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
           <>
             <SectionLabel label="Admin" />
             <NavItem href="/usuarios" label="Usuários & Acesso" icon={ic.users} />
+            <NavItem href="/importar" label="Importar dados" icon={ic.audit} />
             <NavItem href="/audit" label="Trilha de Auditoria" icon={ic.audit} />
             <NavItem href="/assistente" label="Assistente IA ✨" icon={ic.ai} />
           </>
