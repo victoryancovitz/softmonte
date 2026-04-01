@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase-server'
+import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -9,14 +9,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('*')
+    .select('user_id, nome, role')
     .eq('user_id', user.id)
     .single()
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div className="flex min-h-screen">
       <Sidebar profile={profile} />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-auto min-h-screen bg-[#F4F6FA]">
         {children}
       </main>
     </div>

@@ -1,3 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@400;500;600;700;800&family=Lato:wght@400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --brand: #00215B;
+  --brand-dark: #001640;
+  --brand-light: #E8EEF8;
+  --gold: #C4972A;
+  --gold-dark: #A67E20;
+  --gold-light: #F5EDD4;
+}
+
+@layer base {
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Lato', system-ui, sans-serif;
+    background-color: #F4F6FA;
+    color: #1a2340;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Kanit', system-ui, sans-serif;
+    font-weight: 600;
+    color: #00215B;
+  }
+}
+
+@layer utilities {
+  .font-display { font-family: 'Kanit', system-ui, sans-serif; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+  .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+  .text-brand { color: #00215B; }
+  .bg-brand { background-color: #00215B; }
+  .hover\:bg-brand-dark:hover { background-color: #001640; }
+  .bg-brand-light { background-color: #E8EEF8; }
+  .border-brand { border-color: #00215B; }
+  .ring-brand { --tw-ring-color: #00215B; }
+  .focus\:ring-brand:focus { --tw-ring-color: #00215B; }
+  .text-gold { color: #C4972A; }
+  .bg-gold { background-color: #C4972A; }
+  .bg-gold-light { background-color: #F5EDD4; }
+}
