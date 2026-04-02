@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
@@ -14,7 +14,7 @@ function NavItem({ href, label, icon, badge }: { href: string; label: string; ic
   const pathname = usePathname()
   const active = pathname === href || (href !== '/dashboard' && pathname.startsWith(href))
   return (
-    <Link href={href} className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm transition-all duration-150 mb-0.5 border-l-2 ${
+    <Link href={href} className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-150 mb-0.5 border-l-2 ${
       active
         ? 'bg-brand-gold/20 text-brand-gold font-semibold border-brand-gold'
         : 'text-blue-200 hover:bg-white/10 hover:text-white border-transparent'
@@ -23,6 +23,54 @@ function NavItem({ href, label, icon, badge }: { href: string; label: string; ic
       <span className="flex-1 leading-none">{label}</span>
       {badge && <span className="text-[9px] bg-brand-gold text-white px-1.5 py-0.5 rounded-full font-bold">{badge}</span>}
     </Link>
+  )
+}
+
+function NavGroup({ label, children, defaultOpen, forceOpen }: { label: string; children: React.ReactNode; defaultOpen?: boolean; forceOpen?: boolean }) {
+  const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    const stored = localStorage.getItem(`sidebar_${label}`)
+    if (stored !== null) {
+      setOpen(stored === 'true')
+    } else {
+      setOpen(defaultOpen ?? false)
+    }
+    setMounted(true)
+  }, [label, defaultOpen])
+
+  const isOpen = forceOpen || open
+
+  function toggle() {
+    const next = !isOpen
+    setOpen(next)
+    localStorage.setItem(`sidebar_${label}`, String(next))
+  }
+
+  return (
+    <div>
+      <button
+        onClick={toggle}
+        className="text-[9px] font-black text-blue-400/60 uppercase tracking-widest px-3 pt-2 pb-0.5 cursor-pointer flex items-center justify-between w-full"
+      >
+        <span>{label}</span>
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="currentColor"
+          className={`transition-transform duration-200 ${isOpen ? 'rotate-90' : ''}`}
+        >
+          <path d="M3 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+        </svg>
+      </button>
+      <div
+        className={`overflow-hidden transition-all duration-200 ${isOpen ? 'max-h-[500px]' : 'max-h-0'}`}
+      >
+        {children}
+      </div>
+    </div>
   )
 }
 
@@ -49,13 +97,10 @@ const ic = {
   config:  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.3" fill="none"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M13 3l-1.5 1.5M4.5 11.5L3 13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>,
 }
 
-function SectionLabel({ label }: { label: string }) {
-  return <p className="text-[8px] font-black text-blue-400/60 uppercase tracking-widest px-3 pt-2 pb-0.5">{label}</p>
-}
-
 export default function Sidebar({ profile }: { profile: Profile | null }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const router = useRouter()
+  const pathname = usePathname()
   const supabase = createClient()
   const role = profile?.role ?? 'funcionario'
   const isAdmin = role === 'admin'
@@ -70,6 +115,10 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
     funcionario: 'bg-white/10 text-blue-200',
   }
 
+  function hasActiveChild(paths: string[]) {
+    return paths.some(p => pathname === p || pathname.startsWith(p + '/'))
+  }
+
   async function handleLogout() {
     await supabase.auth.signOut()
     router.push('/login')
@@ -80,47 +129,49 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
     <nav className="flex-1 px-2 py-2 overflow-y-auto scrollbar-none">
       <NavItem href="/dashboard" label="Dashboard" icon={ic.home} />
 
-      <SectionLabel label="Obras" />
-      {isOp && <NavItem href="/obras" label="Obras" icon={ic.obras} />}
-      {isOp && <NavItem href="/efetivo" label="Efetivo Diário" icon={ic.efetivo} />}
-      {isOp && <NavItem href="/boletins" label="Boletins (BM)" icon={ic.bm} />}
+      <NavGroup label="Obras" forceOpen={hasActiveChild(['/obras','/efetivo','/boletins','/ponto','/faltas'])}>
+        {isOp && <NavItem href="/obras" label="Obras" icon={ic.obras} />}
+        {isOp && <NavItem href="/efetivo" label="Efetivo Diário" icon={ic.efetivo} />}
+        {isOp && <NavItem href="/boletins" label="Boletins (BM)" icon={ic.bm} />}
+        {isOp && <NavItem href="/ponto" label="Ponto" icon={ic.ponto} />}
+        {isOp && <NavItem href="/faltas" label="Faltas" icon={ic.faltas} />}
+      </NavGroup>
 
-      <SectionLabel label="Operacional" />
-      {isAdmin && <NavItem href="/funcionarios" label="Funcionários" icon={ic.func} />}
-      {isOp && <NavItem href="/alocacao" label="Alocação" icon={ic.alloc} />}
-      {isStock && <NavItem href="/estoque" label="Estoque" icon={ic.stock} />}
-      {isOp && <NavItem href="/hh" label="Gestão de HH" icon={ic.hh} />}
-      {isOp && <NavItem href="/documentos" label="Documentos" icon={ic.docs} />}
-      {isOp && <NavItem href="/faltas" label="Faltas & Atestados" icon={ic.faltas} />}
-      {isOp && <NavItem href="/ponto" label="Ponto" icon={ic.ponto} />}
-      {role === 'funcionario' && <NavItem href="/hh" label="Meu HH" icon={ic.hh} />}
+      <NavGroup label="Equipe" forceOpen={hasActiveChild(['/funcionarios','/alocacao','/documentos'])}>
+        {isAdmin && <NavItem href="/funcionarios" label="Funcionários" icon={ic.func} />}
+        {isOp && <NavItem href="/alocacao" label="Alocação" icon={ic.alloc} />}
+        {isOp && <NavItem href="/documentos" label="Documentos" icon={ic.docs} />}
+      </NavGroup>
+
+      <NavGroup label="Operacional" forceOpen={hasActiveChild(['/estoque','/hh'])}>
+        {isStock && <NavItem href="/estoque" label="Estoque" icon={ic.stock} />}
+        {isOp && <NavItem href="/hh" label="Gestão de HH" icon={ic.hh} />}
+        {role === 'funcionario' && <NavItem href="/hh" label="Meu HH" icon={ic.hh} />}
+      </NavGroup>
+
+      {isOp && (
+        <NavGroup label="Análise" forceOpen={hasActiveChild(['/financeiro','/relatorios','/assistente'])}>
+          <NavItem href="/financeiro" label="Financeiro" icon={ic.fin} />
+          <NavItem href="/relatorios" label="Relatórios" icon={ic.report} />
+          {isAdmin && <NavItem href="/assistente" label="Assistente IA" icon={ic.ai} badge="IA" />}
+        </NavGroup>
+      )}
 
       {isAdmin && (
-        <>
-          <SectionLabel label="Cadastros" />
+        <NavGroup label="Cadastros" forceOpen={hasActiveChild(['/cadastros','/clientes','/importar'])}>
           <NavItem href="/cadastros" label="Todos os cadastros" icon={ic.cad} />
           <NavItem href="/cadastros/funcoes" label="Funções / Cargos" icon={ic.func} />
           <NavItem href="/clientes" label="Clientes" icon={ic.client} />
           <NavItem href="/importar" label="Importar dados" icon={ic.import} />
-        </>
-      )}
-
-      {isOp && (
-        <>
-          <SectionLabel label="Análise" />
-          <NavItem href="/financeiro" label="Financeiro" icon={ic.fin} />
-          <NavItem href="/relatorios" label="Relatórios" icon={ic.report} />
-          {isAdmin && <NavItem href="/assistente" label="Assistente IA" icon={ic.ai} badge="IA" />}
-        </>
+        </NavGroup>
       )}
 
       {isAdmin && (
-        <>
-          <SectionLabel label="Admin" />
+        <NavGroup label="Admin" forceOpen={hasActiveChild(['/usuarios','/audit','/configuracoes'])}>
           <NavItem href="/usuarios" label="Usuários & Acesso" icon={ic.users} />
-          <NavItem href="/audit" label="Trilha de Auditoria" icon={ic.audit} />
+          <NavItem href="/audit" label="Auditoria" icon={ic.audit} />
           <NavItem href="/configuracoes" label="Configurações" icon={ic.config} />
-        </>
+        </NavGroup>
       )}
     </nav>
   )
