@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase-server'
+import { getRole } from '@/lib/get-role'
 import Link from 'next/link'
+import { EncerrarAlocacaoBtn } from '@/components/DeleteActions'
 
 export default async function AlocacaoPage() {
   const supabase = createClient()
@@ -8,6 +10,7 @@ export default async function AlocacaoPage() {
     .select('*, funcionarios(nome, cargo, matricula), obras(nome, cliente)')
     .order('created_at', { ascending: false })
 
+  const role = await getRole()
   const ativas = alocacoes?.filter((a: any) => a.ativo) ?? []
   const encerradas = alocacoes?.filter((a: any) => !a.ativo) ?? []
 
@@ -51,8 +54,11 @@ export default async function AlocacaoPage() {
                 </td>
                 <td className="px-4 py-3 text-gray-500">{a.obras?.cliente}</td>
                 <td className="px-4 py-3 text-gray-500 text-xs">{a.data_inicio ? new Date(a.data_inicio+'T12:00').toLocaleDateString('pt-BR') : '—'}</td>
-                <td className="px-4 py-3 text-right opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                  <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Ativa</span>
+                <td className="px-4 py-3 text-right">
+                  <span className="inline-flex items-center gap-2">
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Ativa</span>
+                    <EncerrarAlocacaoBtn alocacaoId={a.id} funcId={a.funcionario_id} role={role} />
+                  </span>
                 </td>
               </tr>
             )) : (

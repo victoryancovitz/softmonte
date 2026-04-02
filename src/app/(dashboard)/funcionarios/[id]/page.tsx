@@ -1,11 +1,14 @@
 import { createClient } from '@/lib/supabase-server'
+import { getRole } from '@/lib/get-role'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { DesativarFuncionarioBtn } from '@/components/DeleteActions'
 
 export default async function FuncionarioPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
   const { data: f } = await supabase.from('funcionarios').select('*').eq('id', params.id).single()
   if (!f) notFound()
+  const role = await getRole()
 
   const { data: alocacoes } = await supabase.from('alocacoes')
     .select('*, obras(nome, status)').eq('funcionario_id', params.id).order('data_inicio', { ascending: false })
@@ -60,10 +63,13 @@ export default async function FuncionarioPage({ params }: { params: { id: string
             <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>{f.status}</span>
           </div>
         </div>
-        <Link href={`/funcionarios/${f.id}/editar`}
-          className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
-          ✏️ Editar
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href={`/funcionarios/${f.id}/editar`}
+            className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
+            ✏️ Editar
+          </Link>
+          {f.status !== 'inativo' && <DesativarFuncionarioBtn funcId={f.id} role={role} />}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-5">

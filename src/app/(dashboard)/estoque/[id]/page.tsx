@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import ConfirmButton from '@/components/ConfirmButton'
 
 export default function MovimentarEstoquePage({ params }: { params: { id: string } }) {
   const [item, setItem] = useState<any>(null)
@@ -60,7 +61,22 @@ export default function MovimentarEstoquePage({ params }: { params: { id: string
             <h1 className="text-lg font-bold font-display text-brand">{item.nome}</h1>
             <div className="text-sm text-gray-500 mt-0.5">Saldo atual: <strong className="text-brand text-lg">{item.quantidade} {item.unidade}</strong></div>
           </div>
-          <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{item.categoria}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-xs bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">{item.categoria}</span>
+            {item.quantidade > 0 && (
+              <ConfirmButton label={`Zerar (${item.quantidade} ${item.unidade})`}
+                className="text-xs text-red-500 hover:text-red-700 font-medium"
+                onConfirm={async () => {
+                  await supabase.from('estoque_movimentacoes').insert({
+                    item_id: params.id, tipo: 'saida', quantidade: item.quantidade,
+                    motivo: 'Zeragem de estoque',
+                  })
+                  await supabase.from('estoque_itens').update({ quantidade: 0 }).eq('id', params.id)
+                  setItem((prev: any) => ({ ...prev, quantidade: 0 }))
+                  setSuccess(true)
+                }} />
+            )}
+          </div>
         </div>
 
         {success && <div className="mb-4 p-3 bg-green-50 text-green-700 text-sm rounded-xl border border-green-200">✓ Movimentação registrada!</div>}

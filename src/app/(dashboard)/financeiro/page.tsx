@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
+import ConfirmButton from '@/components/ConfirmButton'
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const fmtK = (v: number) => {
@@ -271,7 +272,7 @@ export default function FinanceiroPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Data','Descrição','Categoria','Tipo','Valor','Status'].map(h => (
+                {['Data','Descrição','Categoria','Tipo','Valor','Status',''].map(h => (
                   <th key={h} className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -297,6 +298,12 @@ export default function FinanceiroPage() {
                     <span className={`text-xs px-2 py-0.5 rounded-full ${l.status === 'pago' ? 'bg-green-100 text-green-700' : l.status === 'cancelado' ? 'bg-gray-100 text-gray-500' : 'bg-yellow-100 text-yellow-700'}`}>
                       {l.status === 'em_aberto' ? 'Em aberto' : l.status === 'pago' ? 'Pago' : l.status === 'cancelado' ? 'Cancelado' : l.status}
                     </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-right">
+                    <ConfirmButton label="Excluir" onConfirm={async () => {
+                      await supabase.from('financeiro_lancamentos').update({ deleted_at: new Date().toISOString() }).eq('id', l.id)
+                      setLancamentos(prev => prev.filter(x => x.id !== l.id))
+                    }} />
                   </td>
                 </tr>
               ))}

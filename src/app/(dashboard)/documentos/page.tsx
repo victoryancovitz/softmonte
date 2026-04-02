@@ -1,5 +1,7 @@
 import { createClient } from '@/lib/supabase-server'
+import { getRole } from '@/lib/get-role'
 import Link from 'next/link'
+import { ExcluirDocBtn } from '@/components/DeleteActions'
 
 const TIPO_LABEL: Record<string, string> = {
   'ASO': 'ASO', 'NR-10': 'NR-10', 'NR-35': 'NR-35', 'NR-33': 'NR-33',
@@ -14,6 +16,7 @@ const STATUS_COLOR = (dias: number | null) => {
 
 export default async function DocumentosPage() {
   const supabase = createClient()
+  const role = await getRole()
   const { data: docs } = await supabase
     .from('documentos')
     .select('*, funcionarios(nome, cargo)')
@@ -85,8 +88,11 @@ export default async function DocumentosPage() {
                       className="text-xs text-brand hover:underline flex items-center gap-1">📎 {d.arquivo_nome ?? 'Ver'}</a>
                   ) : <span className="text-xs text-gray-300">Sem arquivo</span>}
                 </td>
-                <td className="px-4 py-3 text-right opacity-0 group-hover:opacity-100">
-                  <Link href={`/documentos/novo?funcionario=${d.funcionario_id}&tipo=${d.tipo}`} className="text-xs text-brand hover:underline">Renovar</Link>
+                <td className="px-4 py-3 text-right opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
+                  <span className="inline-flex items-center gap-2">
+                    <Link href={`/documentos/novo?funcionario=${d.funcionario_id}&tipo=${d.tipo}`} className="text-xs text-brand hover:underline">Renovar</Link>
+                    <ExcluirDocBtn docId={d.id} role={role} />
+                  </span>
                 </td>
               </tr>
             )) : (

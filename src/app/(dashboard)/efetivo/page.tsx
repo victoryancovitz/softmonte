@@ -209,13 +209,19 @@ export default function EfetivoDiarioPage() {
                             <div className="text-xs text-gray-400">{f.matricula}</div>
                           </div>
                           {presentes.has(f.id) && (
-                            <input
-                              type="text"
-                              value={obs[f.id] ?? ''}
-                              onChange={e => setObs(prev => ({ ...prev, [f.id]: e.target.value }))}
-                              placeholder="Observação..."
-                              className="text-xs border border-gray-200 rounded-lg px-2 py-1 w-40 focus:outline-none focus:ring-1 focus:ring-brand"
-                            />
+                            <>
+                              <input
+                                type="text"
+                                value={obs[f.id] ?? ''}
+                                onChange={e => setObs(prev => ({ ...prev, [f.id]: e.target.value }))}
+                                placeholder="Observação..."
+                                className="text-xs border border-gray-200 rounded-lg px-2 py-1 w-40 focus:outline-none focus:ring-1 focus:ring-brand"
+                              />
+                              <button onClick={() => togglePresente(f.id)} title="Remover presença"
+                                className="text-gray-300 hover:text-red-500 transition-colors flex-shrink-0">
+                                <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                              </button>
+                            </>
                           )}
                         </div>
                       ))}

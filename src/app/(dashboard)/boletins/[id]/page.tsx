@@ -1,7 +1,9 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import ConfirmButton from '@/components/ConfirmButton'
 
 const STATUS_BADGE: Record<string, string> = {
   aberto: 'bg-blue-100 text-blue-700',
@@ -19,6 +21,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
     loadBM()
@@ -127,10 +130,20 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
               {exporting ? 'Exportando...' : 'Exportar CSV'}
             </button>
             {bm.status === 'aberto' && (
-              <button onClick={() => updateStatus('fechado')}
-                className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark">
-                Fechar BM
-              </button>
+              <>
+                <button onClick={() => updateStatus('fechado')}
+                  className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark">
+                  Fechar BM
+                </button>
+                <ConfirmButton label="Excluir BM"
+                  confirmLabel="Esta ação não pode ser desfeita. Confirmar?"
+                  className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50"
+                  confirmClassName="text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700"
+                  onConfirm={async () => {
+                    await supabase.from('boletins_medicao').delete().eq('id', params.id)
+                    router.push('/boletins')
+                  }} />
+              </>
             )}
             {bm.status === 'fechado' && (
               <button onClick={() => updateStatus('enviado')}

@@ -1,8 +1,11 @@
 import { createClient } from '@/lib/supabase-server'
+import { getRole } from '@/lib/get-role'
 import Link from 'next/link'
+import { ExcluirHHBtn } from '@/components/DeleteActions'
 
 export default async function HHPage() {
   const supabase = createClient()
+  const role = await getRole()
   const hoje = new Date()
   const mesAtual = hoje.getMonth() + 1
   const anoAtual = hoje.getFullYear()
@@ -83,8 +86,11 @@ export default async function HHPage() {
                   <td className="px-4 py-3 text-center font-bold text-brand">{total.toFixed(0)}h</td>
                   <td className="px-4 py-3 text-green-700 font-semibold text-xs">{fmt(custo)}</td>
                   <td className="px-4 py-3 text-right">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${l.auditoria_status === 'aprovado' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                      {l.auditoria_status ?? 'pendente'}
+                    <span className="inline-flex items-center gap-2">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${l.auditoria_status === 'aprovado' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                        {l.auditoria_status ?? 'pendente'}
+                      </span>
+                      <ExcluirHHBtn hhId={l.id} nome={l.funcionarios?.nome} role={role} />
                     </span>
                   </td>
                 </tr>

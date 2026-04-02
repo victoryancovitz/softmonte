@@ -1,11 +1,14 @@
 import { createClient } from '@/lib/supabase-server'
+import { getRole } from '@/lib/get-role'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import { ObraStatusBtns } from '@/components/DeleteActions'
 
 export default async function ObraDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
   const { data: obra } = await supabase.from('obras').select('*').eq('id', params.id).single()
   if (!obra) notFound()
+  const role = await getRole()
 
   const { data: alocados } = await supabase
     .from('alocacoes')
@@ -43,6 +46,7 @@ export default async function ObraDetailPage({ params }: { params: { id: string 
         <div className="flex items-center gap-2">
           <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${STATUS_BADGE[obra.status] ?? 'bg-gray-100 text-gray-600'}`}>{obra.status}</span>
           <Link href={`/obras/${obra.id}/editar`} className="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">Editar</Link>
+          <ObraStatusBtns obraId={obra.id} status={obra.status} role={role} />
         </div>
       </div>
 
