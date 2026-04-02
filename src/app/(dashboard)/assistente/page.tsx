@@ -116,10 +116,13 @@ Instruções:
       const reply = data.content?.[0]?.text ?? 'Não consegui processar sua pergunta. Tente novamente.'
 
       setMessages(prev => [...prev, { role: 'assistant', content: reply, timestamp: new Date() }])
-    } catch (e) {
+    } catch (e: any) {
+      const msg = e?.message?.includes('ANTHROPIC_API_KEY')
+        ? 'A chave de API da Anthropic não está configurada no servidor. Peça ao administrador para adicionar ANTHROPIC_API_KEY nas variáveis de ambiente do Vercel.'
+        : 'Erro ao conectar com a IA. Verifique sua conexão e tente novamente.'
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: 'Erro ao conectar com a IA. Verifique sua conexão e tente novamente.',
+        content: msg,
         timestamp: new Date()
       }])
     }
@@ -166,8 +169,11 @@ ${context}`,
         if (data.error) throw new Error(data.error)
         const reply = data.content?.[0]?.text ?? 'Não consegui analisar o arquivo.'
         setMessages(prev => [...prev, { role: 'assistant', content: reply, timestamp: new Date() }])
-      } catch {
-        setMessages(prev => [...prev, { role: 'assistant', content: 'Erro ao analisar o arquivo.', timestamp: new Date() }])
+      } catch (e: any) {
+        const msg = e?.message?.includes('ANTHROPIC_API_KEY')
+          ? 'A chave de API da Anthropic não está configurada. Peça ao administrador para adicionar ANTHROPIC_API_KEY nas variáveis de ambiente.'
+          : 'Erro ao analisar o arquivo.'
+        setMessages(prev => [...prev, { role: 'assistant', content: msg, timestamp: new Date() }])
       }
       setLoading(false)
     }

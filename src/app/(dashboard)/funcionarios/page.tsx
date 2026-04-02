@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server'
 import { getRole } from '@/lib/get-role'
 import Link from 'next/link'
+import ViewToggle from '@/components/ViewToggle'
 
 const STATUS_COLOR: Record<string, string> = {
   disponivel: 'bg-green-100 text-green-700',
@@ -45,16 +46,6 @@ export default async function FuncionariosPage({
   const { data: cargos } = await supabase.from('funcionarios').select('cargo').order('cargo')
   const cargosUnicos = Array.from(new Set(cargos?.map((c: any) => c.cargo).filter(Boolean)))
 
-  // Build toggle URLs preserving current filters
-  const buildViewUrl = (v: string) => {
-    const params = new URLSearchParams()
-    params.set('view', v)
-    if (q) params.set('q', q)
-    if (status) params.set('status', status)
-    if (cargo) params.set('cargo', cargo)
-    return `/funcionarios?${params.toString()}`
-  }
-
   return (
     <div className="p-6 max-w-6xl mx-auto">
       {/* Header */}
@@ -64,21 +55,7 @@ export default async function FuncionariosPage({
           <p className="text-sm text-gray-500 mt-0.5">{funcs.length} encontrado(s)</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* View toggle */}
-          <div className="flex border border-gray-200 rounded-lg overflow-hidden">
-            <Link
-              href={buildViewUrl('cards')}
-              className={`px-3 py-1.5 text-xs font-medium ${view === 'cards' ? 'bg-brand text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-            >
-              Cards
-            </Link>
-            <Link
-              href={buildViewUrl('table')}
-              className={`px-3 py-1.5 text-xs font-medium ${view === 'table' ? 'bg-brand text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}
-            >
-              Tabela
-            </Link>
-          </div>
+          <ViewToggle currentView={view} />
           <Link href="/funcionarios/novo" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark">+ Novo</Link>
         </div>
       </div>

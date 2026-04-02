@@ -67,12 +67,13 @@ export default async function DashboardPage() {
   const fullName = profileData?.nome ?? profileData?.name ?? 'Usuário'
   const firstName = fullName.split(' ')[0]
 
-  // Greeting based on hour
-  const hour = hoje.getHours()
-  const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite'
+  // Greeting based on São Paulo timezone
+  const spHour = parseInt(hoje.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', hour12: false }))
+  const greeting = spHour >= 6 && spHour < 12 ? 'Bom dia' : spHour >= 12 && spHour < 18 ? 'Boa tarde' : 'Boa noite'
 
-  // Format date
+  // Format date in São Paulo timezone
   const hojeFormatted = hoje.toLocaleDateString('pt-BR', {
+    timeZone: 'America/Sao_Paulo',
     weekday: 'long',
     day: '2-digit',
     month: 'long',
