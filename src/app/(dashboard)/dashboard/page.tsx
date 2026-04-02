@@ -5,13 +5,15 @@ export default async function DashboardPage() {
   const supabase = createClient()
   const hoje = new Date()
 
-  const [funcs, obras, estoque, docs, alertas, efetivo_hoje] = await Promise.all([
+  const mesInicio = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-01`
+  const [funcs, obras, estoque, docs, alertas, efetivo_hoje, faltas_mes] = await Promise.all([
     supabase.from('funcionarios').select('id,status', { count: 'exact' }),
     supabase.from('obras').select('id,nome,cliente,local,status').eq('status','ativo'),
     supabase.from('estoque_itens').select('id,nome,quantidade,quantidade_minima').filter('quantidade','lte','quantidade_minima'),
     supabase.from('documentos').select('id').lte('vencimento', new Date(Date.now() + 30*86400000).toISOString().split('T')[0]),
     supabase.from('vw_alertas').select('*').order('dias_restantes'),
     supabase.from('efetivo_diario').select('id', { count: 'exact' }).eq('data', `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`),
+    supabase.from('faltas').select('id', { count: 'exact' }).eq('tipo', 'falta_injustificada').gte('data', mesInicio),
   ])
 
   const nFuncs = funcs.count ?? 0
@@ -20,6 +22,7 @@ export default async function DashboardPage() {
   const nDocs = docs.data?.length ?? 0
   const nAlertas = alertas.data?.length ?? 0
   const nEfetivoHoje = efetivo_hoje.count ?? 0
+  const nFaltasMes = faltas_mes.count ?? 0
 
   const KPIs = [
     { label: 'Funcionários', value: nFuncs, sub: 'cadastrados', href: '/funcionarios', color: 'bg-brand/5 border-brand/10', valueColor: 'text-brand' },
@@ -27,6 +30,7 @@ export default async function DashboardPage() {
     { label: 'Efetivo hoje', value: nEfetivoHoje, sub: 'registros', href: '/efetivo', color: 'bg-blue-50 border-blue-100', valueColor: 'text-blue-700' },
     { label: 'Estoque crítico', value: nEstoque, sub: 'itens abaixo do mín.', href: '/estoque', color: nEstoque > 0 ? 'bg-amber-50 border-amber-100' : 'bg-gray-50 border-gray-100', valueColor: nEstoque > 0 ? 'text-amber-700' : 'text-gray-400' },
     { label: 'Docs vencendo', value: nDocs, sub: 'próx. 30 dias', href: '/documentos', color: nDocs > 0 ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100', valueColor: nDocs > 0 ? 'text-red-700' : 'text-gray-400' },
+    { label: 'Faltas mês', value: nFaltasMes, sub: 'injustificadas', href: '/faltas', color: nFaltasMes > 0 ? 'bg-red-50 border-red-100' : 'bg-gray-50 border-gray-100', valueColor: nFaltasMes > 0 ? 'text-red-700' : 'text-gray-400' },
     { label: 'Alertas', value: nAlertas, sub: 'atenção necessária', href: '/relatorios', color: nAlertas > 0 ? 'bg-orange-50 border-orange-100' : 'bg-gray-50 border-gray-100', valueColor: nAlertas > 0 ? 'text-orange-700' : 'text-gray-400' },
   ]
 
@@ -40,7 +44,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* KPIs clicáveis */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-4 gap-4 mb-6">
         {KPIs.map(k => (
           <Link key={k.label} href={k.href}
             className={`rounded-2xl border p-5 ${k.color} hover:shadow-sm transition-all group cursor-pointer`}>

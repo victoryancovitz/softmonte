@@ -10,8 +10,15 @@ export default async function FuncionarioPage({ params }: { params: { id: string
   if (!f) notFound()
   const role = await getRole()
 
-  const { data: alocacoes } = await supabase.from('alocacoes')
-    .select('*, obras(nome, status)').eq('funcionario_id', params.id).order('data_inicio', { ascending: false })
+  const hoje = new Date()
+  const trintaDiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
+
+  const [{ data: alocacoes }, { data: faltas }, { data: docsFunc }, { data: efetivo30 }] = await Promise.all([
+    supabase.from('alocacoes').select('*, obras(nome, status)').eq('funcionario_id', params.id).order('data_inicio', { ascending: false }),
+    supabase.from('faltas').select('*').eq('funcionario_id', params.id).order('data', { ascending: false }).limit(20),
+    supabase.from('documentos').select('*').eq('funcionario_id', params.id).order('vencimento'),
+    supabase.from('efetivo_diario').select('data,tipo_dia,obras(nome)').eq('funcionario_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
+  ])
 
   const campos = [
     { label: 'Matrícula', value: f.matricula },
@@ -112,6 +119,85 @@ export default async function FuncionarioPage({ params }: { params: { id: string
             <p className="text-sm text-gray-400">Sem alocações.</p>
           )}
         </div>
+      </div>
+
+      {/* Faltas e Atestados */}
+      <div className="mt-5 bg-white rounded-2xl border border-gray-200 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold text-brand font-display">Faltas e Atestados</h2>
+          <Link href="/faltas/nova" className="text-xs text-brand hover:underline">+ Registrar</Link>
+        </div>
+        {faltas && faltas.length > 0 ? (
+          <div className="space-y-2">
+            {faltas.map((ft: any) => {
+              const TIPO_BADGE: Record<string, string> = {
+                falta_injustificada: 'bg-red-100 text-red-700',
+                atestado_medico: 'bg-blue-100 text-blue-700',
+                licenca: 'bg-green-100 text-green-700',
+                folga: 'bg-gray-100 text-gray-600',
+                atraso: 'bg-amber-100 text-amber-700',
+              }
+              const TIPO_LABEL: Record<string, string> = {
+                falta_injustificada: 'FALTA', atestado_medico: 'ATESTADO',
+                licenca: 'LICENÇA', folga: 'FOLGA', atraso: 'ATRASO',
+              }
+              return (
+                <div key={ft.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${TIPO_BADGE[ft.tipo] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {TIPO_LABEL[ft.tipo] ?? ft.tipo}
+                    </span>
+                    <span className="text-xs text-gray-500">{new Date(ft.data+'T12:00').toLocaleDateString('pt-BR')}</span>
+                  </div>
+                  <span className="text-xs text-gray-400 truncate max-w-[200px]">{ft.observacao || '—'}</span>
+                </div>
+              )
+            })}
+          </div>
+        ) : <p className="text-sm text-gray-400">Nenhuma falta ou atestado registrado.</p>}
+      </div>
+
+      {/* Histórico de Ponto (últimos 30 dias) */}
+      <div className="mt-5 bg-white rounded-2xl border border-gray-200 p-5">
+        <h2 className="text-sm font-bold text-brand font-display mb-4">Ponto — últimos 30 dias</h2>
+        {efetivo30 && efetivo30.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {efetivo30.map((e: any, i: number) => (
+              <div key={i} className="w-8 h-8 rounded-lg bg-green-100 text-green-700 text-[10px] font-bold flex items-center justify-center" title={`${new Date(e.data+'T12:00').toLocaleDateString('pt-BR')} · ${e.obras?.nome}`}>
+                {new Date(e.data+'T12:00').getDate()}
+              </div>
+            ))}
+          </div>
+        ) : <p className="text-sm text-gray-400">Nenhum registro de ponto nos últimos 30 dias.</p>}
+        <p className="text-xs text-gray-400 mt-2">{efetivo30?.length ?? 0} dias presentes</p>
+      </div>
+
+      {/* Documentos */}
+      <div className="mt-5 bg-white rounded-2xl border border-gray-200 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold text-brand font-display">Documentos</h2>
+          <Link href={`/documentos/novo?funcionario=${f.id}`} className="text-xs text-brand hover:underline">+ Novo</Link>
+        </div>
+        {docsFunc && docsFunc.length > 0 ? (
+          <div className="space-y-2">
+            {docsFunc.map((d: any) => {
+              const dias = d.vencimento ? Math.ceil((new Date(d.vencimento+'T12:00').getTime() - hoje.getTime()) / 86400000) : null
+              return (
+                <div key={d.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold bg-brand/10 text-brand px-2 py-0.5 rounded">{d.tipo}</span>
+                    <span className="text-xs text-gray-500">{d.vencimento ? new Date(d.vencimento+'T12:00').toLocaleDateString('pt-BR') : '—'}</span>
+                  </div>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                    dias === null ? 'bg-gray-100 text-gray-500' : dias < 0 ? 'bg-red-100 text-red-700' : dias <= 30 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
+                  }`}>
+                    {dias === null ? 'Sem venc.' : dias < 0 ? 'VENCIDO' : dias <= 30 ? `${dias}d` : 'OK'}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        ) : <p className="text-sm text-gray-400">Nenhum documento cadastrado.</p>}
       </div>
     </div>
   )

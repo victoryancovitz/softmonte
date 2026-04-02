@@ -43,6 +43,10 @@ const ic = {
   ai:      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3" fill="none"/><path d="M5 8c0-1.7 1.3-3 3-3s3 1.3 3 3-1.3 3-3 3" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinecap="round"/><circle cx="8" cy="8" r="1.2"/></svg>,
   import:  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 10V3M5 7l3 3 3-3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" fill="none"/></svg>,
   cad:     <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="14" rx="1.5" opacity=".3"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>,
+  faltas:  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="2" width="12" height="12" rx="2" opacity=".15"/><path d="M5 5l6 6M11 5l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/></svg>,
+  ponto:   <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3" fill="none"/><path d="M8 4.5v4l2.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" fill="none"/><path d="M5 8l2 2 3.5-3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity=".5"/></svg>,
+  client:  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="3" width="14" height="10" rx="2" opacity=".2"/><path d="M4 7h8M4 10h5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" fill="none"/></svg>,
+  config:  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.3" fill="none"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M13 3l-1.5 1.5M4.5 11.5L3 13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>,
 }
 
 function SectionLabel({ label }: { label: string }) {
@@ -87,6 +91,8 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
       {isStock && <NavItem href="/estoque" label="Estoque" icon={ic.stock} />}
       {isOp && <NavItem href="/hh" label="Gestão de HH" icon={ic.hh} />}
       {isOp && <NavItem href="/documentos" label="Documentos" icon={ic.docs} />}
+      {isOp && <NavItem href="/faltas" label="Faltas & Atestados" icon={ic.faltas} />}
+      {isOp && <NavItem href="/ponto" label="Ponto" icon={ic.ponto} />}
       {role === 'funcionario' && <NavItem href="/hh" label="Meu HH" icon={ic.hh} />}
 
       {isAdmin && (
@@ -94,6 +100,7 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
           <SectionLabel label="Cadastros" />
           <NavItem href="/cadastros" label="Todos os cadastros" icon={ic.cad} />
           <NavItem href="/cadastros/funcoes" label="Funções / Cargos" icon={ic.func} />
+          <NavItem href="/clientes" label="Clientes" icon={ic.client} />
           <NavItem href="/importar" label="Importar dados" icon={ic.import} />
         </>
       )}
@@ -112,6 +119,7 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
           <SectionLabel label="Admin" />
           <NavItem href="/usuarios" label="Usuários & Acesso" icon={ic.users} />
           <NavItem href="/audit" label="Trilha de Auditoria" icon={ic.audit} />
+          <NavItem href="/configuracoes" label="Configurações" icon={ic.config} />
         </>
       )}
     </nav>
