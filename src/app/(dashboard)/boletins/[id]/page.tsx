@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ConfirmButton from '@/components/ConfirmButton'
+import { useToast } from '@/components/Toast'
 
 const STATUS_BADGE: Record<string, string> = {
   aberto: 'bg-blue-100 text-blue-700',
@@ -30,6 +31,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   const [mailtoAberto, setMailtoAberto] = useState(false)
   const supabase = createClient()
   const router = useRouter()
+  const toast = useToast()
 
   const STATUS_ORDER = ['aberto','fechado','enviado','aprovado']
 
@@ -188,6 +190,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     setMailtoAberto(false)
     setEnvioEmails('')
     setEnvioObs('')
+    toast.show('Envio registrado com sucesso!')
   }
 
   async function handleRevisao() {
@@ -225,6 +228,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     }
     await loadBM()
     setShowCriarReceita(false)
+    toast.show('BM aprovado com sucesso!')
   }
 
   async function handleAprovarSemReceita() {
@@ -234,6 +238,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     }).eq('id', params.id)
     await loadBM()
     setShowCriarReceita(false)
+    toast.show('BM aprovado com sucesso!')
   }
 
   function buildHistorico() {

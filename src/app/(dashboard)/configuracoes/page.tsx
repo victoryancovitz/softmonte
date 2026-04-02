@@ -1,8 +1,10 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
+import { useToast } from '@/components/Toast'
 
 export default function ConfiguracoesPage() {
+  const toast = useToast()
   const [form, setForm] = useState<any>({
     id: 1,
     razao_social: '', nome_fantasia: '', cnpj: '', ie: '',
@@ -54,6 +56,7 @@ export default function ConfiguracoesPage() {
 
     if (err) { setError(err.message); setLoading(false); return }
     setSuccess(true)
+    toast.show('Configurações salvas com sucesso!')
     setLoading(false)
   }
 

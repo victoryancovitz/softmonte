@@ -41,4 +41,12 @@
   .text-gold { color: #C4972A; }
   .bg-gold { background-color: #C4972A; }
   .bg-gold-light { background-color: #F5EDD4; }
+  .animate-slide-up {
+    animation: slide-up 0.3s ease-out;
+  }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
