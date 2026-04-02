@@ -28,7 +28,7 @@ export default async function ClientesPage() {
           <tbody>
             {rows.length > 0 ? rows.map((c: any) => {
               const contatos = Array.isArray(c.contatos) ? c.contatos : []
-              const ativo = c.status !== 'inativo'
+              const ativo = c.ativo !== false
               return (
                 <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50 group">
                   <td className="px-4 py-3 font-semibold">

@@ -2,11 +2,16 @@ import { createClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 
 const TIPO_BADGE: Record<string, { label: string; cls: string }> = {
-  falta_injustificada: { label: 'FALTA', cls: 'bg-red-100 text-red-700' },
-  atestado_medico:     { label: 'ATESTADO', cls: 'bg-blue-100 text-blue-700' },
-  licenca:             { label: 'LICENCA', cls: 'bg-green-100 text-green-700' },
-  folga:               { label: 'FOLGA', cls: 'bg-gray-100 text-gray-600' },
-  atraso:              { label: 'ATRASO', cls: 'bg-yellow-100 text-yellow-700' },
+  falta_injustificada:  { label: 'FALTA', cls: 'bg-red-100 text-red-700' },
+  falta_justificada:    { label: 'JUSTIFICADA', cls: 'bg-orange-100 text-orange-700' },
+  atestado_medico:      { label: 'ATESTADO', cls: 'bg-blue-100 text-blue-700' },
+  atestado_acidente:    { label: 'ACIDENTE', cls: 'bg-blue-100 text-blue-700' },
+  licenca_maternidade:  { label: 'LIC. MATERNIDADE', cls: 'bg-green-100 text-green-700' },
+  licenca_paternidade:  { label: 'LIC. PATERNIDADE', cls: 'bg-green-100 text-green-700' },
+  folga_compensatoria:  { label: 'FOLGA', cls: 'bg-gray-100 text-gray-600' },
+  feriado:              { label: 'FERIADO', cls: 'bg-gray-100 text-gray-600' },
+  suspensao:            { label: 'SUSPENSÃO', cls: 'bg-red-100 text-red-700' },
+  outro:                { label: 'OUTRO', cls: 'bg-gray-100 text-gray-600' },
 }
 
 export default async function FaltasPage() {

@@ -56,7 +56,7 @@ export default function NovaFaltaPage() {
       dias_descontados: parseFloat(form.dias_descontados) || 1.0,
     }
 
-    if (form.tipo === 'atestado_medico') {
+    if ((form.tipo === 'atestado_medico' || form.tipo === 'atestado_acidente')) {
       payload.cid = form.cid.trim() || null
       payload.medico = form.medico.trim() || null
       payload.crm = form.crm.trim() || null
@@ -124,10 +124,15 @@ export default function NovaFaltaPage() {
             <label className={lbl}>Tipo *</label>
             <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className={inp}>
               <option value="falta_injustificada">Falta Injustificada</option>
+              <option value="falta_justificada">Falta Justificada</option>
               <option value="atestado_medico">Atestado Médico</option>
-              <option value="licenca">Licença</option>
-              <option value="folga">Folga</option>
-              <option value="atraso">Atraso</option>
+              <option value="atestado_acidente">Atestado Acidente</option>
+              <option value="licenca_maternidade">Licença Maternidade</option>
+              <option value="licenca_paternidade">Licença Paternidade</option>
+              <option value="folga_compensatoria">Folga Compensatória</option>
+              <option value="feriado">Feriado</option>
+              <option value="suspensao">Suspensão</option>
+              <option value="outro">Outro</option>
             </select>
           </div>
 
@@ -150,7 +155,7 @@ export default function NovaFaltaPage() {
         </div>
 
         {/* Campos condicionais: atestado médico */}
-        {form.tipo === 'atestado_medico' && (
+        {(form.tipo === 'atestado_medico' || form.tipo === 'atestado_acidente') && (
           <div className="border-t border-gray-100 pt-5">
             <p className="text-xs font-semibold text-blue-600 mb-3 uppercase tracking-wide">Dados do Atestado</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">

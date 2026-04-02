@@ -11,7 +11,7 @@ export default async function ClientePage({ params }: { params: { id: string } }
 
   const { data: obras } = await supabase.from('obras').select('*').eq('cliente', cliente.nome)
   const { data: emailLogs } = await supabase.from('email_logs').select('*')
-    .eq('cliente_id', params.id).order('created_at', { ascending: false }).limit(20)
+    .order('enviado_em', { ascending: false }).limit(20)
 
   const contatos = Array.isArray(cliente.contatos) ? cliente.contatos : []
 
@@ -41,8 +41,8 @@ export default async function ClientePage({ params }: { params: { id: string } }
           <h1 className="text-2xl font-bold font-display text-brand">{cliente.nome}</h1>
           <div className="flex items-center gap-3 mt-2">
             {cliente.cidade && <span className="text-gray-600 text-sm">{cliente.cidade}{cliente.estado ? ` - ${cliente.estado}` : ''}</span>}
-            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${cliente.status !== 'inativo' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-              {cliente.status !== 'inativo' ? 'Ativo' : 'Inativo'}
+            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${cliente.ativo !== false ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+              {cliente.ativo !== false ? 'Ativo' : 'Inativo'}
             </span>
           </div>
         </div>
@@ -132,7 +132,7 @@ export default async function ClientePage({ params }: { params: { id: string } }
                 {emailLogs.map((log: any) => (
                   <tr key={log.id} className="border-b border-gray-50">
                     <td className="px-4 py-2.5 text-gray-500 text-xs">
-                      {log.created_at ? new Date(log.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                      {log.enviado_em ? new Date(log.enviado_em).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
                     </td>
                     <td className="px-4 py-2.5 text-gray-800">{log.assunto ?? '—'}</td>
                     <td className="px-4 py-2.5">

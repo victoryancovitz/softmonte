@@ -135,14 +135,22 @@ export default async function FuncionarioPage({ params }: { params: { id: string
             {faltas.map((ft: any) => {
               const TIPO_BADGE: Record<string, string> = {
                 falta_injustificada: 'bg-red-100 text-red-700',
+                falta_justificada: 'bg-orange-100 text-orange-700',
                 atestado_medico: 'bg-blue-100 text-blue-700',
-                licenca: 'bg-green-100 text-green-700',
-                folga: 'bg-gray-100 text-gray-600',
-                atraso: 'bg-amber-100 text-amber-700',
+                atestado_acidente: 'bg-blue-100 text-blue-700',
+                licenca_maternidade: 'bg-green-100 text-green-700',
+                licenca_paternidade: 'bg-green-100 text-green-700',
+                folga_compensatoria: 'bg-gray-100 text-gray-600',
+                feriado: 'bg-gray-100 text-gray-600',
+                suspensao: 'bg-red-100 text-red-700',
+                outro: 'bg-gray-100 text-gray-600',
               }
               const TIPO_LABEL: Record<string, string> = {
-                falta_injustificada: 'FALTA', atestado_medico: 'ATESTADO',
-                licenca: 'LICENÇA', folga: 'FOLGA', atraso: 'ATRASO',
+                falta_injustificada: 'FALTA', falta_justificada: 'JUST.',
+                atestado_medico: 'ATESTADO', atestado_acidente: 'ACIDENTE',
+                licenca_maternidade: 'LIC. MAT.', licenca_paternidade: 'LIC. PAT.',
+                folga_compensatoria: 'FOLGA', feriado: 'FERIADO',
+                suspensao: 'SUSPENSÃO', outro: 'OUTRO',
               }
               return (
                 <div key={ft.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">

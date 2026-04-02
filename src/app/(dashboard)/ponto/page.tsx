@@ -120,7 +120,10 @@ export default function PontoPage() {
 
     const faltaTipo = faltasMap[funcId]?.[day]
     if (faltaTipo) {
-      if (faltaTipo === 'atestado_medico') return { label: 'A', cls: 'bg-blue-100 text-blue-700' }
+      if (faltaTipo.startsWith('atestado')) return { label: 'A', cls: 'bg-blue-100 text-blue-700' }
+      if (faltaTipo.startsWith('licenca')) return { label: 'L', cls: 'bg-green-100 text-green-700' }
+      if (faltaTipo === 'folga_compensatoria' || faltaTipo === 'feriado') return { label: '-', cls: 'bg-gray-100 text-gray-400' }
+      if (faltaTipo === 'suspensao') return { label: 'S', cls: 'bg-red-100 text-red-700' }
       return { label: 'F', cls: 'bg-red-100 text-red-700' }
     }
 
