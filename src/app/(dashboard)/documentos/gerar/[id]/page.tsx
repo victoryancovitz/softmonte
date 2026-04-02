@@ -184,6 +184,16 @@ export default function GerarDocumentoPage() {
       </html>
     `)
     printWindow.document.close()
+
+    // Salvar registro em documentos_gerados para cada funcionário
+    const registros = funcsSelecionadas.map(func => ({
+      funcionario_id: func.id,
+      modelo_id: modelo!.id,
+      modelo_nome: modelo!.nome,
+      categoria: modelo!.categoria,
+      campos: getVarsParaFuncionario(func),
+    }))
+    await supabase.from('documentos_gerados').insert(registros)
   }
 
   if (loading) return <div className="p-6 flex items-center justify-center h-64"><div className="text-gray-400">Carregando...</div></div>

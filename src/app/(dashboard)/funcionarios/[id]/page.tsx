@@ -13,11 +13,12 @@ export default async function FuncionarioPage({ params }: { params: { id: string
   const hoje = new Date()
   const trintaDiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
 
-  const [{ data: alocacoes }, { data: faltas }, { data: docsFunc }, { data: efetivo30 }] = await Promise.all([
+  const [{ data: alocacoes }, { data: faltas }, { data: docsFunc }, { data: efetivo30 }, { data: docsGerados }] = await Promise.all([
     supabase.from('alocacoes').select('*, obras(nome, status)').eq('funcionario_id', params.id).order('data_inicio', { ascending: false }),
     supabase.from('faltas').select('*').eq('funcionario_id', params.id).order('data', { ascending: false }).limit(20),
     supabase.from('documentos').select('*').eq('funcionario_id', params.id).order('vencimento'),
     supabase.from('efetivo_diario').select('data,tipo_dia,obras(nome)').eq('funcionario_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
+    supabase.from('documentos_gerados').select('*').eq('funcionario_id', params.id).order('created_at', { ascending: false }),
   ])
 
   const campos = [
@@ -198,6 +199,41 @@ export default async function FuncionarioPage({ params }: { params: { id: string
             })}
           </div>
         ) : <p className="text-sm text-gray-400">Nenhum documento cadastrado.</p>}
+      </div>
+
+      {/* Advertências e Termos */}
+      <div className="mt-5 bg-white rounded-2xl border border-gray-200 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold text-brand font-display">Advertências e Termos</h2>
+          <Link href="/documentos/gerar" className="text-xs text-brand hover:underline">Gerar novo</Link>
+        </div>
+        {docsGerados && docsGerados.length > 0 ? (
+          <div className="space-y-2">
+            {docsGerados.map((d: any) => {
+              const CAT_BADGE: Record<string, string> = {
+                advertencia: 'bg-red-100 text-red-700',
+                termo: 'bg-blue-100 text-blue-700',
+                comunicado: 'bg-purple-100 text-purple-700',
+              }
+              const CAT_LABEL: Record<string, string> = {
+                advertencia: 'ADVERTÊNCIA',
+                termo: 'TERMO',
+                comunicado: 'COMUNICADO',
+              }
+              return (
+                <div key={d.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                  <div className="flex items-center gap-3">
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${CAT_BADGE[d.categoria] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {CAT_LABEL[d.categoria] ?? d.categoria?.toUpperCase()}
+                    </span>
+                    <span className="text-sm text-gray-700">{d.modelo_nome}</span>
+                  </div>
+                  <span className="text-xs text-gray-400">{new Date(d.created_at).toLocaleDateString('pt-BR')}</span>
+                </div>
+              )
+            })}
+          </div>
+        ) : <p className="text-sm text-gray-400">Nenhuma advertência ou termo registrado.</p>}
       </div>
     </div>
   )
