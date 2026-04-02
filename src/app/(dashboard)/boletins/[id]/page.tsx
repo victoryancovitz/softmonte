@@ -163,7 +163,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       destinatarios: emails,
       assunto: `BM ${String(bm.numero).padStart(2,'0')} - ${bm.obras.nome}`,
       status: 'mailto_aberto',
-    }).catch(() => {})
+    }).then(() => {})
 
     setMailtoAberto(true)
   }
@@ -182,7 +182,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       destinatarios: emails,
       assunto: `BM ${String(bm.numero).padStart(2,'0')} - ${bm.obras.nome}`,
       status: 'enviado',
-    }).catch(() => {})
+    }).then(() => {})
     await loadBM()
     setEnviando(false)
     setMailtoAberto(false)
