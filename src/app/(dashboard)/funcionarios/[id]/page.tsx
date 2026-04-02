@@ -210,6 +210,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
         {docsGerados && docsGerados.length > 0 ? (
           <div className="space-y-2">
             {docsGerados.map((d: any) => {
+              const cat = d.dados_preenchidos?.categoria ?? ''
               const CAT_BADGE: Record<string, string> = {
                 advertencia: 'bg-red-100 text-red-700',
                 termo: 'bg-blue-100 text-blue-700',
@@ -223,10 +224,10 @@ export default async function FuncionarioPage({ params }: { params: { id: string
               return (
                 <div key={d.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
                   <div className="flex items-center gap-3">
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${CAT_BADGE[d.categoria] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {CAT_LABEL[d.categoria] ?? d.categoria?.toUpperCase()}
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${CAT_BADGE[cat] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {CAT_LABEL[cat] ?? cat?.toUpperCase() || 'DOC'}
                     </span>
-                    <span className="text-sm text-gray-700">{d.modelo_nome}</span>
+                    <span className="text-sm text-gray-700">{d.nome_modelo}</span>
                   </div>
                   <span className="text-xs text-gray-400">{new Date(d.created_at).toLocaleDateString('pt-BR')}</span>
                 </div>

@@ -16,7 +16,9 @@
       "Bash(npm run:*)",
       "Bash(ls src/lib/supabase*)",
       "Bash(npm ls:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "mcp__claude_ai_Supabase__list_tables",
+      "mcp__claude_ai_Supabase__execute_sql"
     ]
   }
 }

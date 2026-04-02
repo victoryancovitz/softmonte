@@ -189,9 +189,10 @@ export default function GerarDocumentoPage() {
     const registros = funcsSelecionadas.map(func => ({
       funcionario_id: func.id,
       modelo_id: modelo!.id,
-      modelo_nome: modelo!.nome,
-      categoria: modelo!.categoria,
-      campos: getVarsParaFuncionario(func),
+      nome_modelo: modelo!.nome,
+      nome_funcionario: func.nome,
+      conteudo_final: aplicarVariaveis(modelo!.conteudo, getVarsParaFuncionario(func)),
+      dados_preenchidos: { ...getVarsParaFuncionario(func), categoria: modelo!.categoria },
     }))
     await supabase.from('documentos_gerados').insert(registros)
   }
