@@ -11,6 +11,12 @@ export default async function AlocacaoPage() {
   const ativas = alocacoes?.filter((a: any) => a.ativo) ?? []
   const encerradas = alocacoes?.filter((a: any) => !a.ativo) ?? []
 
+  // Sync: ensure all actively allocated workers have status 'alocado'
+  const funcIdsAlocados = ativas.map((a: any) => a.funcionario_id).filter(Boolean)
+  if (funcIdsAlocados.length > 0) {
+    await supabase.from('funcionarios').update({ status: 'alocado' }).in('id', funcIdsAlocados).neq('status', 'alocado')
+  }
+
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">

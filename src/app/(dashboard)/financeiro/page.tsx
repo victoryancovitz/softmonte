@@ -39,7 +39,7 @@ export default function FinanceiroPage() {
 
   async function loadData() {
     setLoading(true)
-    let q = supabase.from('financeiro_lancamentos').select('*').order('data_competencia')
+    let q = supabase.from('financeiro_lancamentos').select('*').order('data_competencia').limit(5000)
     if (obraId !== 'all') q = q.eq('obra_id', obraId)
     if (!showProvisoes) q = q.eq('is_provisao', false)
     const { data } = await q

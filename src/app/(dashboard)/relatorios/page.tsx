@@ -8,19 +8,25 @@ export default async function RelatoriosPage() {
     supabase.from('obras').select('id,nome,cliente,status').eq('status','ativo'),
     supabase.from('funcionarios').select('id,nome,cargo,status,prazo1,prazo2'),
     supabase.from('hh_lancamentos').select('funcionario_id,obra_id,mes,ano,horas_normais,horas_extras,horas_noturnas,funcionarios(nome,cargo),obras(nome)').order('ano').order('mes'),
-    supabase.from('efetivo_diario').select('obra_id,data,tipo_dia,funcionarios(cargo),obras(nome)').gte('data', new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0]),
+    supabase.from('efetivo_diario').select('obra_id,data,tipo_dia,funcionarios(cargo),obras(nome)').order('data', { ascending: false }),
     supabase.from('financeiro_lancamentos').select('tipo,valor,status,categoria,data_competencia,obra_id,obras(nome)').is('deleted_at', null),
     supabase.from('documentos').select('tipo,vencimento,funcionarios(nome)'),
   ])
 
   const hoje = new Date()
 
-  // 1. Efetivo do mês atual por obra
+  // 1. Efetivo do mês mais recente com dados
   const efetivoMes: Record<string, number> = {}
-  efetivo.data?.forEach((e: any) => {
-    const k = e.obras?.nome ?? 'Sem obra'
-    efetivoMes[k] = (efetivoMes[k] ?? 0) + 1
-  })
+  let mesEfetivo = ''
+  if (efetivo.data && efetivo.data.length > 0) {
+    // Find the most recent month with data
+    const mesesComDados = new Set(efetivo.data.map((e: any) => e.data?.slice(0, 7)).filter(Boolean))
+    mesEfetivo = Array.from(mesesComDados).sort().pop() ?? ''
+    efetivo.data.filter((e: any) => e.data?.startsWith(mesEfetivo)).forEach((e: any) => {
+      const k = e.obras?.nome ?? 'Sem obra'
+      efetivoMes[k] = (efetivoMes[k] ?? 0) + 1
+    })
+  }
 
   // 2. HH por obra (totais)
   const hhObra: Record<string, { normais: number; extras: number; noturnas: number }> = {}
@@ -54,7 +60,7 @@ export default async function RelatoriosPage() {
   const vencContratos = funcs.data?.filter((f: any) => {
     if (!f.prazo1) return false
     const dias = Math.ceil((new Date(f.prazo1+'T12:00').getTime() - hoje.getTime()) / 86400000)
-    return dias <= 45 && dias >= -7
+    return dias <= 45 && dias >= -30
   }).map((f: any) => ({
     ...f,
     dias: Math.ceil((new Date(f.prazo1+'T12:00').getTime() - hoje.getTime()) / 86400000)
@@ -72,7 +78,7 @@ export default async function RelatoriosPage() {
       <div className="grid grid-cols-2 gap-5 mb-5">
         {/* Efetivo do mês */}
         <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <h2 className="text-sm font-bold font-display text-brand mb-4">📋 Efetivo — {hoje.toLocaleDateString('pt-BR', { month: 'short' })}</h2>
+          <h2 className="text-sm font-bold font-display text-brand mb-4">📋 Efetivo — {mesEfetivo ? new Date(mesEfetivo + '-15').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }) : hoje.toLocaleDateString('pt-BR', { month: 'short' })}</h2>
           {Object.keys(efetivoMes).length > 0 ? (
             <div className="space-y-2">
               {Object.entries(efetivoMes).sort((a,b) => b[1]-a[1]).map(([obra, total]) => (

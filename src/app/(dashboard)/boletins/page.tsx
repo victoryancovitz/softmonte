@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase-server'
 import Link from 'next/link'
+import BMStatusButton from './status-button'
 
 const STATUS_BADGE: Record<string, string> = {
   aberto: 'bg-blue-100 text-blue-700',
@@ -33,9 +34,9 @@ export default async function BoletinsPage() {
       {bms && bms.length > 0 ? (
         <div className="space-y-3">
           {bms.map((bm: any) => (
-            <Link key={bm.id} href={`/boletins/${bm.id}`}
-              className="bg-white rounded-xl border border-gray-200 p-5 flex items-center justify-between hover:border-gray-300 hover:shadow-sm transition-all group block">
-              <div className="flex items-center gap-4">
+            <div key={bm.id}
+              className="bg-white rounded-xl border border-gray-200 p-5 flex items-center justify-between hover:border-gray-300 hover:shadow-sm transition-all group">
+              <Link href={`/boletins/${bm.id}`} className="flex items-center gap-4 flex-1 min-w-0">
                 <div className="w-12 h-12 bg-brand/10 rounded-xl flex items-center justify-center flex-shrink-0">
                   <span className="text-brand font-bold text-sm">BM{String(bm.numero).padStart(2,'0')}</span>
                 </div>
@@ -46,16 +47,16 @@ export default async function BoletinsPage() {
                     {new Date(bm.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR')} até {new Date(bm.data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}
                   </div>
                 </div>
+              </Link>
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <BMStatusButton bmId={bm.id} currentStatus={bm.status} />
+                <Link href={`/boletins/${bm.id}`}>
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-gray-400">
+                    <path d="M6 12l4-4-4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </Link>
               </div>
-              <div className="flex items-center gap-3">
-                <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_BADGE[bm.status]}`}>
-                  {STATUS_LABEL[bm.status]}
-                </span>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-gray-400">
-                  <path d="M6 12l4-4-4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                </svg>
-              </div>
-            </Link>
+            </div>
           ))}
         </div>
       ) : (
