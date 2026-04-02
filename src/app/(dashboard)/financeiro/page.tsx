@@ -159,7 +159,7 @@ export default function FinanceiroPage() {
                   <line x1="40" y1={chartH - p * chartH + 10} x2="590" y2={chartH - p * chartH + 10}
                     stroke="#f3f4f6" strokeWidth="1"/>
                   <text x="35" y={chartH - p * chartH + 14} textAnchor="end" fontSize="8" fill="#9ca3af">
-                    {fmtK(maxVal * p)}k
+                    {fmtK(maxVal * p)}
                   </text>
                 </g>
               ))}
@@ -279,7 +279,7 @@ export default function FinanceiroPage() {
             <tbody>
               {lancamentos.map(l => (
                 <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="px-4 py-2.5 text-gray-500 text-xs">{new Date(l.data_competencia).toLocaleDateString('pt-BR')}</td>
+                  <td className="px-4 py-2.5 text-gray-500 text-xs">{new Date(l.data_competencia+'T12:00:00').toLocaleDateString('pt-BR')}</td>
                   <td className="px-4 py-2.5 font-medium">
                     {l.nome}
                     {l.is_provisao && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-purple-100 text-purple-600 rounded">provisão</span>}
@@ -287,15 +287,15 @@ export default function FinanceiroPage() {
                   <td className="px-4 py-2.5 text-gray-500 text-xs">{l.categoria || '—'}</td>
                   <td className="px-4 py-2.5">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${l.tipo === 'receita' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                      {l.tipo}
+                      {l.tipo === 'receita' ? 'Receita' : 'Despesa'}
                     </span>
                   </td>
                   <td className={`px-4 py-2.5 font-semibold ${l.tipo === 'receita' ? 'text-green-700' : 'text-red-700'}`}>
                     {l.tipo === 'receita' ? '+' : '-'}{fmt(l.valor)}
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${l.status === 'pago' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                      {l.status}
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${l.status === 'pago' ? 'bg-green-100 text-green-700' : l.status === 'cancelado' ? 'bg-gray-100 text-gray-500' : 'bg-yellow-100 text-yellow-700'}`}>
+                      {l.status === 'em_aberto' ? 'Em aberto' : l.status === 'pago' ? 'Pago' : l.status === 'cancelado' ? 'Cancelado' : l.status}
                     </span>
                   </td>
                 </tr>

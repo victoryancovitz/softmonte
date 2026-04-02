@@ -11,7 +11,7 @@ export default function NovoLancamentoPage() {
   const [obras, setObras] = useState<any[]>([])
   const [form, setForm] = useState({
     obra_id: '', tipo: 'despesa', nome: '', categoria: '', valor: '',
-    status: 'em_aberto', data_competencia: new Date().toISOString().split('T')[0],
+    status: 'em_aberto', data_competencia: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(),
     data_vencimento: '', data_pagamento: '', cliente: '', fornecedor: '',
     conta_bancaria: '', is_provisao: false, observacao: ''
   })

@@ -87,7 +87,7 @@ Provisões futuras: R$ ${fin.data?.filter(f => f.tipo === 'despesa' && f.status 
     try {
       const history = messages.map(m => ({ role: m.role, content: m.content }))
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
+      const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -100,7 +100,7 @@ ${context}
 
 Instruções:
 - Responda sempre em português brasileiro
-- Seja direto e objetivo, use dados reais do contexto quando disponível  
+- Seja direto e objetivo, use dados reais do contexto quando disponível
 - Ao mencionar valores financeiros, sempre formate como R$ X.XXX,XX
 - Ao mencionar datas, use o formato DD/MM/AAAA
 - Se algum dado não estiver no contexto, diga que precisa verificar no sistema
@@ -112,6 +112,7 @@ Instruções:
       })
 
       const data = await response.json()
+      if (data.error) throw new Error(data.error)
       const reply = data.content?.[0]?.text ?? 'Não consegui processar sua pergunta. Tente novamente.'
 
       setMessages(prev => [...prev, { role: 'assistant', content: reply, timestamp: new Date() }])
@@ -144,7 +145,7 @@ Instruções:
       const fileContent = ev.target?.result as string
 
       try {
-        const response = await fetch('https://api.anthropic.com/v1/messages', {
+        const response = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -162,6 +163,7 @@ ${context}`,
         })
 
         const data = await response.json()
+        if (data.error) throw new Error(data.error)
         const reply = data.content?.[0]?.text ?? 'Não consegui analisar o arquivo.'
         setMessages(prev => [...prev, { role: 'assistant', content: reply, timestamp: new Date() }])
       } catch {

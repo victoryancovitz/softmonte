@@ -45,7 +45,7 @@ export default async function AlocacaoPage() {
                 </td>
                 <td className="px-4 py-3 text-gray-500">{a.obras?.cliente}</td>
                 <td className="px-4 py-3 text-gray-500 text-xs">{a.data_inicio ? new Date(a.data_inicio+'T12:00').toLocaleDateString('pt-BR') : '—'}</td>
-                <td className="px-4 py-3 text-right opacity-0 group-hover:opacity-100">
+                <td className="px-4 py-3 text-right opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                   <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Ativa</span>
                 </td>
               </tr>

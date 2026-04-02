@@ -11,7 +11,7 @@ const STATUS_LABEL: Record<string, string> = {
   aberto: 'Em aberto', fechado: 'Fechado', enviado: 'Enviado', aprovado: 'Aprovado'
 }
 
-export default async function BolentinsPage() {
+export default async function BoletinsPage() {
   const supabase = createClient()
   const { data: bms } = await supabase
     .from('boletins_medicao')

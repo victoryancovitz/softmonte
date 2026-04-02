@@ -44,7 +44,7 @@ export default function NovaAlocacaoPage() {
     setLoading(true)
     const { error } = await supabase.from('alocacoes').insert({
       ...form, ativo: true,
-      data_inicio: form.data_inicio || new Date().toISOString().split('T')[0]
+      data_inicio: form.data_inicio || (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })()
     })
     if (error) { setError(error.message); setLoading(false); return }
     await supabase.from('funcionarios').update({ status: 'alocado' }).eq('id', form.funcionario_id)
