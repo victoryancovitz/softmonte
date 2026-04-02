@@ -40,7 +40,7 @@ export default async function FuncionariosPage({
   })
 
   const { data: cargos } = await supabase.from('funcionarios').select('cargo').order('cargo')
-  const cargosUnicos = [...new Set(cargos?.map((c: any) => c.cargo).filter(Boolean))]
+  const cargosUnicos = Array.from(new Set(cargos?.map((c: any) => c.cargo).filter(Boolean)))
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
