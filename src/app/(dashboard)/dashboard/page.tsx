@@ -11,7 +11,7 @@ export default async function DashboardPage() {
     supabase.from('estoque_itens').select('id,nome,quantidade,quantidade_minima').filter('quantidade','lte','quantidade_minima'),
     supabase.from('documentos').select('id').lte('vencimento', new Date(Date.now() + 30*86400000).toISOString().split('T')[0]),
     supabase.from('vw_alertas').select('*').order('dias_restantes'),
-    supabase.from('efetivo_diario').select('id', { count: 'exact' }).eq('data', hoje.toISOString().split('T')[0]),
+    supabase.from('efetivo_diario').select('id', { count: 'exact' }).eq('data', `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`),
   ])
 
   const nFuncs = funcs.count ?? 0

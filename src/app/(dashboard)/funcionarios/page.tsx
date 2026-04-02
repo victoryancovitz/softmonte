@@ -36,7 +36,7 @@ export default async function FuncionariosPage({
   const vencendo = funcs.filter(f => {
     if (!f.prazo1) return false
     const dias = Math.ceil((new Date(f.prazo1+'T12:00').getTime() - hoje.getTime()) / 86400000)
-    return dias <= 30 && dias >= 0
+    return dias <= 30 && dias >= -30
   })
 
   const { data: cargos } = await supabase.from('funcionarios').select('cargo').order('cargo')
@@ -100,6 +100,7 @@ export default async function FuncionariosPage({
             {funcs.length > 0 ? funcs.map((f: any) => {
               const p1 = f.prazo1 ? new Date(f.prazo1+'T12:00') : null
               const dias = p1 ? Math.ceil((p1.getTime() - hoje.getTime()) / 86400000) : null
+              const vencido = dias !== null && dias < 0
               const alerta = dias !== null && dias <= 30 && dias >= 0
               return (
                 <tr key={f.id} className="border-b border-gray-50 hover:bg-gray-50 group">
@@ -109,12 +110,13 @@ export default async function FuncionariosPage({
                   </td>
                   <td className="px-4 py-3 text-gray-600">{f.cargo}</td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{f.vt_estrutura ?? '—'}</td>
-                  <td className={`px-4 py-3 text-xs font-medium ${alerta ? 'text-amber-600' : 'text-gray-500'}`}>
+                  <td className={`px-4 py-3 text-xs font-medium ${vencido ? 'text-red-600' : alerta ? 'text-amber-600' : 'text-gray-500'}`}>
                     {p1 ? p1.toLocaleDateString('pt-BR') : '—'}
+                    {vencido && <span className="ml-1 bg-red-100 text-red-700 px-1.5 rounded text-[10px] font-bold">VENCIDO</span>}
                     {alerta && <span className="ml-1 bg-amber-100 text-amber-700 px-1.5 rounded text-[10px]">{dias}d</span>}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>{f.status}</span>
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold capitalize ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>{f.status === 'disponivel' ? 'Disponível' : f.status}</span>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">

@@ -46,7 +46,7 @@ const ic = {
 }
 
 function SectionLabel({ label }: { label: string }) {
-  return <p className="text-[9px] font-black text-blue-400/60 uppercase tracking-widest px-3 pt-3 pb-1">{label}</p>
+  return <p className="text-[9px] font-black text-blue-400/60 uppercase tracking-widest px-3 pt-2 pb-1">{label}</p>
 }
 
 export default function Sidebar({ profile }: { profile: Profile | null }) {
