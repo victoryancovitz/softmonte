@@ -137,10 +137,11 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
         {isOp && <NavItem href="/faltas" label="Faltas" icon={ic.faltas} />}
       </NavGroup>
 
-      <NavGroup label="Equipe" forceOpen={hasActiveChild(['/funcionarios','/alocacao','/documentos'])}>
+      <NavGroup label="Equipe" forceOpen={hasActiveChild(['/funcionarios','/alocacao','/documentos','/documentos/gerar'])}>
         {isAdmin && <NavItem href="/funcionarios" label="Funcionários" icon={ic.func} />}
         {isOp && <NavItem href="/alocacao" label="Alocação" icon={ic.alloc} />}
         {isOp && <NavItem href="/documentos" label="Documentos" icon={ic.docs} />}
+        {isOp && <NavItem href="/documentos/gerar" label="Gerar Documento" icon={ic.bm} />}
       </NavGroup>
 
       <NavGroup label="Operacional" forceOpen={hasActiveChild(['/estoque','/hh'])}>
