@@ -24,6 +24,9 @@ const tabs = [
   { key: 'boletins', label: 'Boletins' },
   { key: 'financeiro', label: 'Financeiro' },
   { key: 'documentos', label: 'Documentos' },
+  { key: 'cronograma', label: 'Cronograma' },
+  { key: 'diario', label: 'Diário' },
+  { key: 'rnc', label: 'RNC' },
 ]
 
 export default async function ObraDetailPage({ params, searchParams }: { params: { id: string }; searchParams: { tab?: string } }) {
@@ -40,6 +43,12 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
     role,
     { data: efetivo },
     { data: lancamentos },
+    { data: composicao },
+    { data: aditivosData },
+    { data: cronograma },
+    { data: diario },
+    { data: rncData },
+    { data: transferencias },
   ] = await Promise.all([
     supabase.from('obras').select('*').eq('id', params.id).single(),
     supabase.from('alocacoes').select('*, funcionarios(id, nome, cargo, matricula, status)').eq('obra_id', params.id).eq('ativo', true),
@@ -47,6 +56,12 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
     getRole(),
     supabase.from('efetivo_diario').select('id, data, tipo_dia, funcionario_id, observacao, funcionarios(nome)').eq('obra_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
     supabase.from('financeiro_lancamentos').select('*').eq('obra_id', params.id).is('deleted_at', null).order('data_competencia', { ascending: false }),
+    supabase.from('contrato_composicao').select('*').eq('obra_id', params.id).order('funcao_nome'),
+    supabase.from('aditivos').select('*').eq('obra_id', params.id).order('numero'),
+    supabase.from('cronograma_etapas').select('*').eq('obra_id', params.id).order('ordem'),
+    supabase.from('diario_obra').select('*').eq('obra_id', params.id).order('data', { ascending: false }).limit(30),
+    supabase.from('rnc').select('*').eq('obra_id', params.id).order('created_at', { ascending: false }),
+    supabase.from('transferencias').select('*, funcionarios(nome)').eq('obra_origem_id', params.id).order('data_transferencia', { ascending: false }),
   ])
 
   if (!obra) notFound()
@@ -178,6 +193,52 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               </div>
             </div>
           </div>
+
+          {/* Contrato HH */}
+          <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <h2 className="text-sm font-semibold mb-4">Composição Contratual</h2>
+            {composicao && composicao.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead><tr className="border-b border-gray-100">
+                    {['Função','Qtd Contratada','Horas/Mês','Custo/Hora','Origem'].map(h => (
+                      <th key={h} className="text-left px-4 py-2 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                    ))}
+                  </tr></thead>
+                  <tbody>
+                    {composicao.map((c: any) => (
+                      <tr key={c.id} className="border-b border-gray-50">
+                        <td className="px-4 py-2 font-medium">{c.funcao_nome}</td>
+                        <td className="px-4 py-2">{c.quantidade_contratada}</td>
+                        <td className="px-4 py-2">{c.horas_mes}h</td>
+                        <td className="px-4 py-2">R$ {Number(c.custo_hora_contratado || 0).toFixed(2)}</td>
+                        <td className="px-4 py-2"><span className={`text-xs px-2 py-0.5 rounded-full ${c.origem === 'aditivo' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>{c.origem}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <p className="text-sm text-gray-400">Sem composição contratual definida.</p>}
+          </div>
+
+          {/* Aditivos */}
+          {aditivosData && aditivosData.length > 0 && (
+            <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+              <h2 className="text-sm font-semibold mb-4">Aditivos</h2>
+              <div className="space-y-2">
+                {aditivosData.map((a: any) => (
+                  <div key={a.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                    <div>
+                      <span className="text-sm font-medium">Aditivo #{a.numero}</span>
+                      <span className={`ml-2 text-xs px-2 py-0.5 rounded-full ${a.status === 'aprovado' ? 'bg-green-100 text-green-700' : a.status === 'pendente' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>{a.status}</span>
+                      <span className="ml-2 text-xs text-gray-400">{a.tipo}</span>
+                    </div>
+                    <span className="text-xs text-gray-400">{a.descricao}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </>
       )}
 
@@ -359,6 +420,104 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-12 text-center text-gray-400 text-sm">
               Nenhum documento encontrado para os funcionários alocados.
             </div>
+          )}
+        </div>
+      )}
+
+      {/* ===== CRONOGRAMA ===== */}
+      {activeTab === 'cronograma' && (
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold text-gray-700">{cronograma?.length ?? 0} etapas</h2>
+          </div>
+          {cronograma && cronograma.length > 0 ? (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-50">
+              {cronograma.map((e: any) => (
+                <div key={e.id} className={`px-4 py-3 ${e.nivel > 0 ? 'pl-10' : ''}`}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className={`text-sm ${e.nivel === 0 ? 'font-bold' : 'font-medium'} text-gray-900`}>{e.nome}</span>
+                      {e.milestone && <span className="ml-2 text-xs bg-brand/10 text-brand px-2 py-0.5 rounded">Marco</span>}
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${
+                        e.status === 'concluida' ? 'bg-green-100 text-green-700' :
+                        e.status === 'em_andamento' ? 'bg-blue-100 text-blue-700' :
+                        e.status === 'atrasada' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'
+                      }`}>{e.status}</span>
+                      <span className="text-xs text-gray-400">{e.percentual_fisico}%</span>
+                    </div>
+                  </div>
+                  {(e.data_inicio_plan || e.data_fim_plan) && (
+                    <div className="text-xs text-gray-400 mt-1">
+                      Plan: {e.data_inicio_plan ? new Date(e.data_inicio_plan+'T12:00').toLocaleDateString('pt-BR') : '—'} → {e.data_fim_plan ? new Date(e.data_fim_plan+'T12:00').toLocaleDateString('pt-BR') : '—'}
+                    </div>
+                  )}
+                  <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-brand rounded-full" style={{ width: `${e.percentual_fisico}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400 text-sm">Nenhuma etapa cadastrada.</div>
+          )}
+        </div>
+      )}
+
+      {/* ===== DIARIO ===== */}
+      {activeTab === 'diario' && (
+        <div>
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Diário da Obra</h2>
+          {diario && diario.length > 0 ? (
+            <div className="space-y-3">
+              {diario.map((d: any) => (
+                <div key={d.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">{new Date(d.data+'T12:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</span>
+                      {d.clima && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{d.clima}</span>}
+                    </div>
+                    <span className="text-xs text-gray-400">{d.efetivo_presente} presentes</span>
+                  </div>
+                  {d.servicos_executados && <p className="text-xs text-gray-600 mb-1">{d.servicos_executados}</p>}
+                  {d.ocorrencias && <p className="text-xs text-red-600">{d.ocorrencias}</p>}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400 text-sm">Nenhum registro no diário.</div>
+          )}
+        </div>
+      )}
+
+      {/* ===== RNC ===== */}
+      {activeTab === 'rnc' && (
+        <div>
+          <h2 className="text-sm font-semibold text-gray-700 mb-4">Registros de Não Conformidade</h2>
+          {rncData && rncData.length > 0 ? (
+            <div className="space-y-3">
+              {rncData.map((r: any) => {
+                const impactColor: Record<string,string> = { critico:'bg-red-100 text-red-700', alto:'bg-orange-100 text-orange-700', medio:'bg-yellow-100 text-yellow-700', baixo:'bg-gray-100 text-gray-600' }
+                const statusColor: Record<string,string> = { aberta:'bg-blue-100 text-blue-700', em_tratamento:'bg-amber-100 text-amber-700', fechada:'bg-green-100 text-green-700' }
+                return (
+                  <div key={r.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold">RNC #{r.numero}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${impactColor[r.impacto] ?? 'bg-gray-100'}`}>{r.impacto?.toUpperCase()}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${statusColor[r.status] ?? 'bg-gray-100'}`}>{r.status}</span>
+                      </div>
+                      <span className="text-xs text-gray-400">{r.responsavel_nome}</span>
+                    </div>
+                    <p className="text-xs text-gray-700">{r.descricao}</p>
+                    {r.acao_corretiva && <p className="text-xs text-gray-500 mt-1">Ação: {r.acao_corretiva}</p>}
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400 text-sm">Nenhuma RNC registrada.</div>
           )}
         </div>
       )}

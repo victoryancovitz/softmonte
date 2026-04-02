@@ -143,11 +143,28 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
         {isOp && <NavItem href="/documentos" label="Documentos" icon={ic.docs} />}
       </NavGroup>
 
+      {isOp && (
+        <NavGroup label="RH" forceOpen={hasActiveChild(['/rh'])}>
+          <NavItem href="/rh/banco-horas" label="Banco de Horas" icon={ic.hh} />
+          <NavItem href="/rh/ferias" label="Férias" icon={ic.efetivo} />
+          <NavItem href="/rh/treinamentos" label="Treinamentos" icon={ic.audit} />
+          <NavItem href="/rh/admissoes" label="Admissões" icon={ic.func} />
+          <NavItem href="/rh/desligamentos" label="Desligamentos" icon={ic.faltas} />
+        </NavGroup>
+      )}
+
       <NavGroup label="Operacional" forceOpen={hasActiveChild(['/estoque','/hh'])}>
         {isStock && <NavItem href="/estoque" label="Estoque" icon={ic.stock} />}
         {isOp && <NavItem href="/hh" label="Gestão de HH" icon={ic.hh} />}
         {role === 'funcionario' && <NavItem href="/hh" label="Meu HH" icon={ic.hh} />}
       </NavGroup>
+
+      {isOp && (
+        <NavGroup label="Compras" forceOpen={hasActiveChild(['/compras'])}>
+          <NavItem href="/compras/fornecedores" label="Fornecedores" icon={ic.client} />
+          <NavItem href="/compras/cotacoes" label="Cotações" icon={ic.bm} />
+        </NavGroup>
+      )}
 
       {isOp && (
         <NavGroup label="Análise" forceOpen={hasActiveChild(['/financeiro','/relatorios','/assistente'])}>
