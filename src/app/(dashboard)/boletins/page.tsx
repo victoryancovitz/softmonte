@@ -22,7 +22,7 @@ export default async function BolentinsPage() {
     <div className="p-6 max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold">Boletins de Medição</h1>
+          <h1 className="text-xl font-semibold font-display">Boletins de Medição</h1>
           <p className="text-sm text-gray-500 mt-0.5">{bms?.length ?? 0} boletins cadastrados</p>
         </div>
         <Link href="/boletins/nova" className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors">

@@ -26,7 +26,7 @@ export default async function AuditPage() {
   return (
     <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Trilha de Auditoria</h1>
+        <h1 className="text-xl font-semibold font-display">Trilha de Auditoria</h1>
         <p className="text-sm text-gray-500 mt-0.5">Registro completo de todas as alterações no sistema</p>
       </div>
 

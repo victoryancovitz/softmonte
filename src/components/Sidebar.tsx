@@ -46,7 +46,7 @@ const ic = {
 }
 
 function SectionLabel({ label }: { label: string }) {
-  return <p className="text-[9px] font-black text-blue-400/60 uppercase tracking-widest px-3 pt-4 pb-1.5">{label}</p>
+  return <p className="text-[9px] font-black text-blue-400/60 uppercase tracking-widest px-3 pt-3 pb-1">{label}</p>
 }
 
 export default function Sidebar({ profile }: { profile: Profile | null }) {
@@ -89,14 +89,6 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
       {isOp && <NavItem href="/documentos" label="Documentos" icon={ic.docs} />}
       {role === 'funcionario' && <NavItem href="/hh" label="Meu HH" icon={ic.hh} />}
 
-      {isOp && (
-        <>
-          <SectionLabel label="Análise" />
-          <NavItem href="/financeiro" label="Financeiro" icon={ic.fin} />
-          <NavItem href="/relatorios" label="Relatórios" icon={ic.report} />
-        </>
-      )}
-
       {isAdmin && (
         <>
           <SectionLabel label="Cadastros" />
@@ -106,12 +98,20 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
         </>
       )}
 
+      {isOp && (
+        <>
+          <SectionLabel label="Análise" />
+          <NavItem href="/financeiro" label="Financeiro" icon={ic.fin} />
+          <NavItem href="/relatorios" label="Relatórios" icon={ic.report} />
+          {isAdmin && <NavItem href="/assistente" label="Assistente IA" icon={ic.ai} badge="IA" />}
+        </>
+      )}
+
       {isAdmin && (
         <>
           <SectionLabel label="Admin" />
           <NavItem href="/usuarios" label="Usuários & Acesso" icon={ic.users} />
           <NavItem href="/audit" label="Trilha de Auditoria" icon={ic.audit} />
-          <NavItem href="/assistente" label="Assistente IA" icon={ic.ai} badge="IA" />
         </>
       )}
     </nav>

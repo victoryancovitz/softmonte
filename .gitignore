@@ -2,3 +2,5 @@
 .next/
 node_modules/
 out/
+.vercel
+.env*.local

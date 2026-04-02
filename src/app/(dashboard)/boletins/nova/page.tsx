@@ -51,7 +51,7 @@ export default function NovoBMPage() {
         <span className="text-sm font-medium">Novo BM</span>
       </div>
       <div className="bg-white rounded-xl border border-gray-200 p-6">
-        <h1 className="text-lg font-semibold mb-6">Novo Boletim de Medição</h1>
+        <h1 className="text-lg font-semibold font-display mb-6">Novo Boletim de Medição</h1>
         {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>

@@ -121,10 +121,14 @@ export default function NovoHHPage() {
                 <div className="text-xs text-gray-500">Total de horas</div>
                 <div className="text-xl font-bold font-display text-brand">{totalHoras.toFixed(1)}h</div>
               </div>
-              {custoPreview > 0 && (
+              {custoPreview > 0 ? (
                 <div>
                   <div className="text-xs text-gray-500">Custo estimado</div>
                   <div className="text-xl font-bold font-display text-green-700">{fmt(custoPreview)}</div>
+                </div>
+              ) : form.funcionario_id && (
+                <div>
+                  <div className="text-xs text-amber-600 font-medium">Custo/hora não cadastrado para este funcionário</div>
                 </div>
               )}
             </div>

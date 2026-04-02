@@ -105,7 +105,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-xl font-semibold">
+              <h1 className="text-xl font-semibold font-display">
                 BM {String(bm.numero).padStart(2,'0')} — {bm.obras.nome}
               </h1>
               <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_BADGE[bm.status]}`}>
@@ -124,7 +124,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
                 <rect x="1" y="1" width="14" height="14" rx="2" opacity=".2"/>
                 <path d="M8 10V4M5 7l3 3 3-3M4 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
               </svg>
-              {exporting ? 'Exportando...' : 'Exportar Excel'}
+              {exporting ? 'Exportando...' : 'Exportar CSV'}
             </button>
             {bm.status === 'aberto' && (
               <button onClick={() => updateStatus('fechado')}

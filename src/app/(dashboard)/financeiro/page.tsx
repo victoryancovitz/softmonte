@@ -101,7 +101,7 @@ export default function FinanceiroPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold">Resultado Financeiro</h1>
+          <h1 className="text-xl font-semibold font-display">Resultado Financeiro</h1>
           <p className="text-sm text-gray-500 mt-0.5">Fluxo de caixa, receitas e despesas por obra</p>
         </div>
         <div className="flex items-center gap-3">

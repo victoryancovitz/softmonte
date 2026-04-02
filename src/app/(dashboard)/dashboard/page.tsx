@@ -43,7 +43,7 @@ export default async function DashboardPage() {
       <div className="grid grid-cols-3 gap-4 mb-6">
         {KPIs.map(k => (
           <Link key={k.label} href={k.href}
-            className={`rounded-2xl border p-5 ${k.color} hover:shadow-sm transition-all group`}>
+            className={`rounded-2xl border p-5 ${k.color} hover:shadow-sm transition-all group cursor-pointer`}>
             <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">{k.label}</div>
             <div className={`text-3xl font-bold font-display ${k.valueColor}`}>{k.value}</div>
             <div className="text-xs text-gray-400 mt-0.5">{k.sub}</div>

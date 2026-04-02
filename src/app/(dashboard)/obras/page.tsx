@@ -16,7 +16,7 @@ export default async function ObrasPage() {
     <div className="p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-semibold">Obras</h1>
+          <h1 className="text-xl font-semibold font-display">Obras</h1>
           <p className="text-sm text-gray-500 mt-0.5">{obras?.length ?? 0} obras cadastradas</p>
         </div>
         <Link href="/obras/nova" className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors">+ Nova obra</Link>
@@ -32,17 +32,17 @@ export default async function ObrasPage() {
           </thead>
           <tbody>
             {obras && obras.length > 0 ? obras.map((o: any) => (
-              <tr key={o.id} className="border-b border-gray-50 hover:bg-gray-50 group">
+              <tr key={o.id} className="border-b border-gray-50 hover:bg-gray-50 group cursor-pointer">
                 <td className="px-4 py-3 font-semibold">
-                  <Link href={`/obras/${o.id}`} className="hover:text-brand">{o.nome}</Link>
+                  <Link href={`/obras/${o.id}`} className="hover:text-brand block">{o.nome}</Link>
                 </td>
-                <td className="px-4 py-3 text-gray-600">{o.cliente ?? '—'}</td>
-                <td className="px-4 py-3 text-gray-500">{o.local ?? '—'}</td>
-                <td className="px-4 py-3 text-gray-500 text-xs">{o.data_inicio ? new Date(o.data_inicio+'T12:00').toLocaleDateString('pt-BR') : '—'}</td>
-                <td className="px-4 py-3 text-gray-500 text-xs">{o.data_prev_fim ? new Date(o.data_prev_fim+'T12:00').toLocaleDateString('pt-BR') : '—'}</td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 text-gray-600"><Link href={`/obras/${o.id}`} className="block">{o.cliente ?? '—'}</Link></td>
+                <td className="px-4 py-3 text-gray-500"><Link href={`/obras/${o.id}`} className="block">{o.local ?? '—'}</Link></td>
+                <td className="px-4 py-3 text-gray-500 text-xs"><Link href={`/obras/${o.id}`} className="block">{o.data_inicio ? new Date(o.data_inicio+'T12:00').toLocaleDateString('pt-BR') : '—'}</Link></td>
+                <td className="px-4 py-3 text-gray-500 text-xs"><Link href={`/obras/${o.id}`} className="block">{o.data_prev_fim ? new Date(o.data_prev_fim+'T12:00').toLocaleDateString('pt-BR') : '—'}</Link></td>
+                <td className="px-4 py-3"><Link href={`/obras/${o.id}`} className="block">
                   <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLOR[o.status] ?? 'bg-gray-100 text-gray-600'}`}>{o.status ?? 'ativo'}</span>
-                </td>
+                </Link></td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                     <Link href={`/obras/${o.id}`} className="text-xs text-brand hover:underline">Ver</Link>

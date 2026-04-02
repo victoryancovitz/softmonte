@@ -89,7 +89,7 @@ export default function NovoFuncionarioPage() {
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Identificação</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2"><label className={lbl}>Nome completo *</label>
-                <input required type="text" value={form.nome} onChange={e => set('nome', e.target.value)} className={inp} placeholder="NOME SOBRENOME"/></div>
+                <input required type="text" value={form.nome} onChange={e => set('nome', e.target.value)} className={inp} placeholder="NOME SOBRENOME" style={{textTransform:'uppercase'}}/></div>
               <div><label className={lbl}>Matrícula *</label>
                 <input required type="text" value={form.matricula} onChange={e => set('matricula', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>RE</label>

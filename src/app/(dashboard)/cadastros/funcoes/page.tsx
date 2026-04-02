@@ -90,7 +90,7 @@ export default async function FuncoesPage() {
                     <td className="px-5 py-3 text-right text-xs text-gray-500">
                       {f.custo_hora ? fmt(f.custo_hora * f.multiplicador_extra) + '/h' : '—'}
                     </td>
-                    <td className="px-5 py-3 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                    <td className="px-5 py-3 text-right opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                       <Link href={`/cadastros/funcoes/${f.id}/editar`}
                         className="text-xs text-brand hover:underline font-medium">Editar</Link>
                     </td>

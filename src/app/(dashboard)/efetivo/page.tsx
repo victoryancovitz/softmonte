@@ -17,7 +17,10 @@ function getTipoDia(date: Date): 'util' | 'sabado' | 'domingo_feriado' {
 export default function EfetivoDiarioPage() {
   const [obras, setObras] = useState<any[]>([])
   const [obraId, setObraId] = useState('')
-  const [data, setData] = useState(new Date().toISOString().split('T')[0])
+  const [data, setData] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`
+  })
   const [funcionarios, setFuncionarios] = useState<any[]>([])
   const [presentes, setPresentes] = useState<Set<string>>(new Set())
   const [obs, setObs] = useState<Record<string, string>>({})
@@ -112,7 +115,7 @@ export default function EfetivoDiarioPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="mb-6">
-        <h1 className="text-xl font-semibold">Efetivo Diário</h1>
+        <h1 className="text-xl font-semibold font-display">Efetivo Diário</h1>
         <p className="text-sm text-gray-500 mt-0.5">Registre quem trabalhou no dia</p>
       </div>
 
