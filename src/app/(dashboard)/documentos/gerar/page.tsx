@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 import {
   FileText,
   AlertTriangle,
@@ -98,6 +99,7 @@ export default function GerarDocumentosPage() {
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-2 text-sm mb-4">
+          <BackButton fallback="/documentos" />
           <Link href="/documentos" className="text-gray-400 hover:text-gray-600">Documentos</Link>
           <span className="text-gray-300">/</span>
           <span className="font-medium text-gray-700">Gerar Documento</span>

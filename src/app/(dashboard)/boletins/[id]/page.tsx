@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ConfirmButton from '@/components/ConfirmButton'
 import { useToast } from '@/components/Toast'
+import BackButton from '@/components/BackButton'
 
 const STATUS_BADGE: Record<string, string> = {
   aberto: 'bg-blue-100 text-blue-700',
@@ -283,6 +284,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
+        <BackButton fallback="/boletins" />
         <Link href="/boletins" className="text-gray-400 hover:text-gray-600 text-sm">Boletins</Link>
         <span className="text-gray-300">/</span>
         <span className="text-sm font-medium">BM {String(bm.numero).padStart(2,'0')} — {bm.obras.nome}</span>

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 export default function CategoriasPage() {
   const [cats, setCats] = useState<any[]>([])
@@ -36,6 +37,7 @@ export default function CategoriasPage() {
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
+        <BackButton fallback="/cadastros" />
         <Link href="/cadastros" className="text-gray-400 hover:text-gray-600">Cadastros</Link>
         <span className="text-gray-300">/</span>
         <span className="font-medium">Categorias Financeiras</span>

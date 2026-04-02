@@ -3,6 +3,7 @@ import { getRole } from '@/lib/get-role'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ObraStatusBtns } from '@/components/DeleteActions'
+import BackButton from '@/components/BackButton'
 
 const STATUS_BADGE: Record<string, string> = {
   ativo: 'bg-green-100 text-green-700',
@@ -94,6 +95,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
     <div className="p-6 max-w-5xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-3 mb-6">
+        <BackButton fallback="/obras" />
         <Link href="/obras" className="text-gray-400 hover:text-gray-600 text-sm">Obras</Link>
         <span className="text-gray-300">/</span>
         <span className="text-sm font-medium">{obra.nome}</span>

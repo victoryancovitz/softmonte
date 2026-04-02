@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 export default function NovaAlocacaoPage() {
   const [funcionarios, setFuncionarios] = useState<any[]>([])
@@ -54,6 +55,7 @@ export default function NovaAlocacaoPage() {
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
+        <BackButton fallback="/alocacao" />
         <Link href="/alocacao" className="text-gray-400 hover:text-gray-600">Alocação</Link>
         <span className="text-gray-300">/</span>
         <span className="font-medium">Nova alocação</span>

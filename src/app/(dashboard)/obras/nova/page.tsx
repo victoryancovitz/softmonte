@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 export default function NovaObraPage() {
   const [form, setForm] = useState({ nome: '', cliente: '', local: '', data_inicio: '', data_prev_fim: '' })
@@ -24,6 +25,7 @@ export default function NovaObraPage() {
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
+        <BackButton fallback="/obras" />
         <Link href="/obras" className="text-gray-400 hover:text-gray-600 text-sm">Obras</Link>
         <span className="text-gray-300">/</span>
         <span className="text-sm font-medium">Nova obra</span>

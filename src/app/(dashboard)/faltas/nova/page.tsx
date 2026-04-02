@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 export default function NovaFaltaPage() {
   const [funcionarios, setFuncionarios] = useState<any[]>([])
@@ -76,6 +77,7 @@ export default function NovaFaltaPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
+        <BackButton fallback="/faltas" />
         <Link href="/faltas" className="text-gray-400 hover:text-gray-600">Faltas &amp; Atestados</Link>
         <span className="text-gray-300">/</span>
         <span className="font-medium">Registrar</span>

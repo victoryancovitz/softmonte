@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 export default function NovoFuncionarioPage() {
   const [funcoes, setFuncoes] = useState<any[]>([])
@@ -75,6 +76,7 @@ export default function NovoFuncionarioPage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
+        <BackButton fallback="/funcionarios" />
         <Link href="/funcionarios" className="text-gray-400 hover:text-gray-600">Funcionários</Link>
         <span className="text-gray-300">/</span>
         <span className="font-medium">Novo</span>

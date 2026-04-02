@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 const CATEGORIAS_RECEITA = ['Receita HH Homem-Hora', 'Receita Material', 'Receita Equipamento', 'Outras receitas']
 const CATEGORIAS_DESPESA = ['Salário Base', 'FGTS', 'Vale-Transporte', 'Treinamentos Obrigatórios', 'Rescisões Extraordinárias', 'Acordos Trabalhistas', 'Desmobilização', 'Férias Provisionadas', '13º Salário Provisionado', 'EPI', 'Ferramentas', 'Transporte', 'Outras despesas']
@@ -57,6 +58,7 @@ export default function NovoLancamentoPage() {
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
+        <BackButton fallback="/financeiro" />
         <Link href="/financeiro" className="text-gray-400 hover:text-gray-600 text-sm">Financeiro</Link>
         <span className="text-gray-300">/</span>
         <span className="text-sm font-medium">Novo lançamento</span>

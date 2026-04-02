@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
+import BackButton from '@/components/BackButton'
 
 export default async function ClientePage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -29,6 +30,7 @@ export default async function ClientePage({ params }: { params: { id: string } }
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
+        <BackButton fallback="/clientes" />
         <Link href="/clientes" className="text-gray-400 hover:text-gray-600">Clientes</Link>
         <span className="text-gray-300">/</span>
         <span className="font-medium text-gray-700">{cliente.nome}</span>

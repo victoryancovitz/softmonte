@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 const CATEGORIAS = ['Montagem','Elétrica','Tubulação','Mecânica','Pintura','Qualidade','Gestão','Suporte','Equipamentos','Operacional']
 
@@ -42,6 +43,7 @@ export default function NovaFuncaoPage() {
   return (
     <div className="p-6 max-w-xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
+        <BackButton fallback="/cadastros/funcoes" />
         <Link href="/cadastros" className="text-gray-400 hover:text-gray-600">Cadastros</Link>
         <span className="text-gray-300">/</span>
         <Link href="/cadastros/funcoes" className="text-gray-400 hover:text-gray-600">Funções</Link>

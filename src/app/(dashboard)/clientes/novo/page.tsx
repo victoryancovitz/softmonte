@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 interface Contato {
   nome: string
@@ -68,6 +69,7 @@ export default function NovoClientePage() {
   return (
     <div className="p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
+        <BackButton fallback="/clientes" />
         <Link href="/clientes" className="text-gray-400 hover:text-gray-600">Clientes</Link>
         <span className="text-gray-300">/</span>
         <span className="font-medium">Novo</span>

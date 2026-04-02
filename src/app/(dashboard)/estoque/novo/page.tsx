@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 export default function NovoItemPage() {
   const [form, setForm] = useState({ codigo: '', nome: '', categoria: 'Material', deposito: '', quantidade: '0', quantidade_minima: '0', unidade: 'un' })
@@ -26,6 +27,7 @@ export default function NovoItemPage() {
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
+        <BackButton fallback="/estoque" />
         <Link href="/estoque" className="text-gray-400 hover:text-gray-600 text-sm">Estoque</Link>
         <span className="text-gray-300">/</span>
         <span className="text-sm font-medium">Novo item</span>

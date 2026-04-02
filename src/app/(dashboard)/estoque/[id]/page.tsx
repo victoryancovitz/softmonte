@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import ConfirmButton from '@/components/ConfirmButton'
+import BackButton from '@/components/BackButton'
 
 export default function MovimentarEstoquePage({ params }: { params: { id: string } }) {
   const [item, setItem] = useState<any>(null)
@@ -51,6 +52,7 @@ export default function MovimentarEstoquePage({ params }: { params: { id: string
   return (
     <div className="p-6 max-w-xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
+        <BackButton fallback="/estoque" />
         <Link href="/estoque" className="text-gray-400 hover:text-gray-600">Estoque</Link>
         <span className="text-gray-300">/</span>
         <span className="font-medium">{item.nome}</span>

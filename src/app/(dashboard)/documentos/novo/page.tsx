@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import BackButton from '@/components/BackButton'
 
 const TIPOS = ['ASO','NR-10','NR-35','NR-33','NR-12','CIPA','outro']
 
@@ -59,6 +60,7 @@ export default function NovoDocumentoPage() {
   return (
     <div className="p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
+        <BackButton fallback="/documentos" />
         <Link href="/documentos" className="text-gray-400 hover:text-gray-600">Documentos</Link>
         <span className="text-gray-300">/</span>
         <span className="font-medium">Novo documento</span>

@@ -3,6 +3,7 @@ import { getRole } from '@/lib/get-role'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { DesativarFuncionarioBtn } from '@/components/DeleteActions'
+import BackButton from '@/components/BackButton'
 
 export default async function FuncionarioPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -52,6 +53,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
   return (
     <div className="p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
+        <BackButton fallback="/funcionarios" />
         <Link href="/funcionarios" className="text-gray-400 hover:text-gray-600">Funcionários</Link>
         <span className="text-gray-300">/</span>
         <span className="font-medium text-gray-700">{f.nome}</span>
