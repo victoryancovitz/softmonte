@@ -137,11 +137,10 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
         {isOp && <NavItem href="/faltas" label="Faltas" icon={ic.faltas} />}
       </NavGroup>
 
-      <NavGroup label="Equipe" forceOpen={hasActiveChild(['/funcionarios','/alocacao','/documentos','/documentos/gerar'])}>
+      <NavGroup label="Equipe" forceOpen={hasActiveChild(['/funcionarios','/alocacao','/documentos'])}>
         {isAdmin && <NavItem href="/funcionarios" label="Funcionários" icon={ic.func} />}
         {isOp && <NavItem href="/alocacao" label="Alocação" icon={ic.alloc} />}
         {isOp && <NavItem href="/documentos" label="Documentos" icon={ic.docs} />}
-        {isOp && <NavItem href="/documentos/gerar" label="Gerar Documento" icon={ic.bm} />}
       </NavGroup>
 
       <NavGroup label="Operacional" forceOpen={hasActiveChild(['/estoque','/hh'])}>
@@ -161,7 +160,6 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
       {isAdmin && (
         <NavGroup label="Cadastros" forceOpen={hasActiveChild(['/cadastros','/clientes','/importar'])}>
           <NavItem href="/cadastros" label="Todos os cadastros" icon={ic.cad} />
-          <NavItem href="/cadastros/funcoes" label="Funções / Cargos" icon={ic.func} />
           <NavItem href="/clientes" label="Clientes" icon={ic.client} />
           <NavItem href="/importar" label="Importar dados" icon={ic.import} />
         </NavGroup>
