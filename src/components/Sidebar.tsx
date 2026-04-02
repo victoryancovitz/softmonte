@@ -167,8 +167,9 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
       )}
 
       {isOp && (
-        <NavGroup label="Análise" forceOpen={hasActiveChild(['/financeiro','/relatorios','/assistente'])}>
+        <NavGroup label="Análise" forceOpen={hasActiveChild(['/financeiro','/relatorios','/forecast','/assistente'])}>
           <NavItem href="/financeiro" label="Financeiro" icon={ic.fin} />
+          <NavItem href="/forecast" label="Forecast" icon={ic.report} />
           <NavItem href="/relatorios" label="Relatórios" icon={ic.report} />
           {isAdmin && <NavItem href="/assistente" label="Assistente IA" icon={ic.ai} badge="IA" />}
         </NavGroup>
