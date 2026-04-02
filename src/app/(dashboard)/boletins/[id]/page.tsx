@@ -292,7 +292,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   const dias = Math.ceil((new Date(bm.data_fim).getTime() - new Date(bm.data_inicio).getTime()) / 86400000) + 1
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <BackButton fallback="/boletins" />
         <Link href="/boletins" className="text-gray-400 hover:text-gray-600 text-sm">Boletins</Link>
@@ -347,7 +347,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-5 gap-4 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4 mb-5">
         <div className="bg-gray-100 rounded-xl p-4">
           <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Pessoas-dia</div>
           <div className="text-2xl font-semibold">{totalDias}</div>

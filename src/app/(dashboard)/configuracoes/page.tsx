@@ -72,7 +72,7 @@ export default function ConfiguracoesPage() {
   const lbl = "block text-xs font-semibold text-gray-600 mb-1"
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h1 className="text-lg font-bold font-display text-brand mb-6">Configurações da Empresa</h1>
 
@@ -84,10 +84,10 @@ export default function ConfiguracoesPage() {
           {/* Dados da empresa */}
           <section>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Dados da empresa</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><label className={lbl}>Razão social</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="col-span-1 sm:col-span-2"><label className={lbl}>Razão social</label>
                 <input type="text" value={form.razao_social} onChange={e => set('razao_social', e.target.value)} className={inp} /></div>
-              <div className="col-span-2"><label className={lbl}>Nome fantasia</label>
+              <div className="col-span-1 sm:col-span-2"><label className={lbl}>Nome fantasia</label>
                 <input type="text" value={form.nome_fantasia} onChange={e => set('nome_fantasia', e.target.value)} className={inp} /></div>
               <div><label className={lbl}>CNPJ</label>
                 <input type="text" value={form.cnpj} onChange={e => set('cnpj', e.target.value)} className={inp} placeholder="00.000.000/0000-00" /></div>
@@ -99,8 +99,8 @@ export default function ConfiguracoesPage() {
           {/* Endereço */}
           <section>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Endereço</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><label className={lbl}>Endereço</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="col-span-1 sm:col-span-2"><label className={lbl}>Endereço</label>
                 <input type="text" value={form.endereco} onChange={e => set('endereco', e.target.value)} className={inp} /></div>
               <div><label className={lbl}>Cidade</label>
                 <input type="text" value={form.cidade} onChange={e => set('cidade', e.target.value)} className={inp} /></div>
@@ -114,8 +114,8 @@ export default function ConfiguracoesPage() {
           {/* Emails */}
           <section>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Emails</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><label className={lbl}>Email principal</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="col-span-1 sm:col-span-2"><label className={lbl}>Email principal</label>
                 <input type="email" value={form.email_principal} onChange={e => set('email_principal', e.target.value)} className={inp} /></div>
               <div><label className={lbl}>Email financeiro</label>
                 <input type="email" value={form.email_financeiro} onChange={e => set('email_financeiro', e.target.value)} className={inp} /></div>
@@ -127,7 +127,7 @@ export default function ConfiguracoesPage() {
           {/* Dados bancários */}
           <section>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Dados bancários</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label className={lbl}>Banco</label>
                 <input type="text" value={form.banco_principal} onChange={e => set('banco_principal', e.target.value)} className={inp} /></div>
               <div><label className={lbl}>Agência</label>

@@ -23,7 +23,7 @@ export default function NovaObraPage() {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <BackButton fallback="/obras" />
         <Link href="/obras" className="text-gray-400 hover:text-gray-600 text-sm">Obras</Link>
@@ -36,13 +36,13 @@ export default function NovaObraPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div><label className="block text-sm font-medium text-gray-700 mb-1">Nome da obra *</label>
             <input type="text" required value={form.nome} onChange={e => set('nome', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
               <input type="text" value={form.cliente} onChange={e => set('cliente', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Local</label>
               <input type="text" value={form.local} onChange={e => set('local', e.target.value)} placeholder="Cidade/UF" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Data de inicio</label>
               <input type="date" value={form.data_inicio} onChange={e => set('data_inicio', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Previsao de termino</label>

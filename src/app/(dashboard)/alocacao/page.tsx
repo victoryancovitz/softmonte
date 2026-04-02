@@ -21,7 +21,7 @@ export default async function AlocacaoPage() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold font-display text-brand">Alocação</h1>
@@ -30,7 +30,7 @@ export default async function AlocacaoPage() {
         <Link href="/alocacao/nova" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-dark">+ Nova alocação</Link>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-5">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto mb-5">
         <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-700">Alocações ativas ({ativas.length})</h2>
         </div>
@@ -69,7 +69,7 @@ export default async function AlocacaoPage() {
       </div>
 
       {encerradas.length > 0 && (
-        <details className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <details className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
           <summary className="px-5 py-3 bg-gray-50 border-b border-gray-100 cursor-pointer text-sm font-semibold text-gray-500">
             Alocações encerradas ({encerradas.length})
           </summary>

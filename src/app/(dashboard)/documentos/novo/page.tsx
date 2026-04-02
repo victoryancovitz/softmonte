@@ -58,7 +58,7 @@ export default function NovoDocumentoPage() {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/documentos" />
         <Link href="/documentos" className="text-gray-400 hover:text-gray-600">Documentos</Link>
@@ -77,7 +77,7 @@ export default function NovoDocumentoPage() {
               {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome} — {f.cargo}</option>)}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tipo *</label>
               <select required value={form.tipo} onChange={e => set('tipo', e.target.value)}

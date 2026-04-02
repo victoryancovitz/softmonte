@@ -34,7 +34,7 @@ export default async function HHPage() {
   const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold font-display text-brand">Gestão de HH</h1>
@@ -44,7 +44,7 @@ export default async function HHPage() {
       </div>
 
       {/* KPIs do mês */}
-      <div className="grid grid-cols-4 gap-4 mb-5">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-5">
         {[
           { label: 'Horas normais', value: totalNormais.toFixed(0) + 'h', color: 'text-brand' },
           { label: 'Horas extras', value: totalExtras.toFixed(0) + 'h', color: 'text-amber-600' },
@@ -59,7 +59,7 @@ export default async function HHPage() {
       </div>
 
       {/* Tabela de lançamentos */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">

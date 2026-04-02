@@ -98,7 +98,7 @@ export default function FinanceiroPage() {
   const totalDesp = Object.values(cats).reduce((s, v) => s + v, 0)
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -123,7 +123,7 @@ export default function FinanceiroPage() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-6 gap-3 mb-5">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
         {[
           { label: 'Receita recebida', value: receitaPaga, color: 'text-green-600', bg: 'bg-green-50' },
           { label: 'Receita em aberto', value: receitaAberto, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -141,9 +141,9 @@ export default function FinanceiroPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-3 gap-5 mb-5">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5 mb-5">
         {/* Fluxo de caixa chart */}
-        <div className="col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold">Fluxo de Caixa Mensal</h2>
             <div className="flex items-center gap-3 text-xs text-gray-400">
@@ -229,7 +229,7 @@ export default function FinanceiroPage() {
       </div>
 
       {/* Tabela de fluxo mensal */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-5">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto mb-5">
         <div className="px-5 py-3 border-b border-gray-100 flex gap-3">
           {(['fluxo', 'lancamentos'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}

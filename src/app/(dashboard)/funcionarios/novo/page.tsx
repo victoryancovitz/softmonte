@@ -74,7 +74,7 @@ export default function NovoFuncionarioPage() {
   const lbl = "block text-xs font-semibold text-gray-600 mb-1"
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/funcionarios" />
         <Link href="/funcionarios" className="text-gray-400 hover:text-gray-600">Funcionários</Link>
@@ -89,8 +89,8 @@ export default function NovoFuncionarioPage() {
           {/* Identificação */}
           <section>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Identificação</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2"><label className={lbl}>Nome completo *</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="col-span-1 sm:col-span-2"><label className={lbl}>Nome completo *</label>
                 <input required type="text" value={form.nome} onChange={e => set('nome', e.target.value)} className={inp} placeholder="NOME SOBRENOME" style={{textTransform:'uppercase'}}/></div>
               <div><label className={lbl}>Matrícula *</label>
                 <input required type="text" value={form.matricula} onChange={e => set('matricula', e.target.value)} className={inp}/></div>
@@ -109,8 +109,8 @@ export default function NovoFuncionarioPage() {
               Função e custos
               <Link href="/cadastros/funcoes/nova" className="ml-2 text-brand normal-case font-normal hover:underline">(+ nova função)</Link>
             </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="col-span-1 sm:col-span-2">
                 <label className={lbl}>Função cadastrada</label>
                 <select value={form.funcao_id} onChange={e => set('funcao_id', e.target.value)}
                   className={inp + ' bg-white'}>
@@ -139,7 +139,7 @@ export default function NovoFuncionarioPage() {
           {/* Contratos */}
           <section>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Datas contratuais</h3>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div><label className={lbl}>Admissão</label>
                 <input type="date" value={form.admissao} onChange={e => set('admissao', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>Prazo 1</label>
@@ -162,12 +162,12 @@ export default function NovoFuncionarioPage() {
           {/* Banco */}
           <section>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Dados bancários</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label className={lbl}>Banco</label>
                 <input type="text" value={form.banco} onChange={e => set('banco', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>Agência / Conta</label>
                 <input type="text" value={form.agencia_conta} onChange={e => set('agencia_conta', e.target.value)} className={inp}/></div>
-              <div className="col-span-2"><label className={lbl}>PIX</label>
+              <div className="col-span-1 sm:col-span-2"><label className={lbl}>PIX</label>
                 <input type="text" value={form.pix} onChange={e => set('pix', e.target.value)} className={inp}/></div>
             </div>
           </section>
@@ -175,7 +175,7 @@ export default function NovoFuncionarioPage() {
           {/* EPI */}
           <section>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">EPI</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div><label className={lbl}>Tamanho Bota</label>
                 <input type="text" value={form.tamanho_bota} onChange={e => set('tamanho_bota', e.target.value)} placeholder="42" className={inp}/></div>
               <div><label className={lbl}>Tamanho Uniforme</label>

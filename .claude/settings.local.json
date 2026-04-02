@@ -19,7 +19,8 @@
       "Bash(npm install:*)",
       "mcp__claude_ai_Supabase__list_tables",
       "mcp__claude_ai_Supabase__execute_sql",
-      "Bash(grep -rn \"flex items-center gap-2 mb-6 text-sm\\\\|flex items-center gap-3 mb-6\\\\|Boletins.*\\\\/.*span\" src/app/\\\\\\(dashboard\\\\\\)/*/page.tsx src/app/\\\\\\(dashboard\\\\\\)/*/*/page.tsx src/app/\\\\\\(dashboard\\\\\\)/*/*/*/page.tsx)"
+      "Bash(grep -rn \"flex items-center gap-2 mb-6 text-sm\\\\|flex items-center gap-3 mb-6\\\\|Boletins.*\\\\/.*span\" src/app/\\\\\\(dashboard\\\\\\)/*/page.tsx src/app/\\\\\\(dashboard\\\\\\)/*/*/page.tsx src/app/\\\\\\(dashboard\\\\\\)/*/*/*/page.tsx)",
+      "Bash(node -e ':*)"
     ]
   }
 }

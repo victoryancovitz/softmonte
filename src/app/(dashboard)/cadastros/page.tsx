@@ -75,13 +75,13 @@ export default async function CadastrosPage() {
   ]
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="mb-8">
         <h1 className="text-2xl font-bold font-display text-brand">Cadastros</h1>
         <p className="text-sm text-gray-500 mt-1">Dados mestres do sistema — funções, obras, funcionários e classificações</p>
       </div>
 
-      <div className="grid grid-cols-3 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 lg:gap-5">
         {cards.map(card => (
           <div key={card.href} className={`rounded-2xl border-2 p-5 transition-all ${card.color}`}>
             <div className="flex items-start justify-between mb-3">
@@ -106,7 +106,7 @@ export default async function CadastrosPage() {
       {/* Atalhos rápidos */}
       <div className="mt-8 p-5 bg-white rounded-xl shadow-sm border border-gray-100">
         <h3 className="text-sm font-bold text-brand font-display mb-4">Ações rápidas de cadastro</h3>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
           {[
             { href: '/funcionarios/novo', label: '+ Funcionário', icon: '👷' },
             { href: '/obras/nova', label: '+ Obra', icon: '🏗️' },

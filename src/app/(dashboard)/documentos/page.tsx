@@ -32,7 +32,7 @@ export default async function DocumentosPage() {
   const vencendo = docsComDias.filter(d => d.dias !== null && d.dias >= 0 && d.dias <= 30)
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold font-display text-brand">Documentos</h1>
@@ -45,7 +45,7 @@ export default async function DocumentosPage() {
       </div>
 
       {(vencidos.length > 0 || vencendo.length > 0) && (
-        <div className="grid grid-cols-2 gap-4 mb-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-5">
           {vencidos.length > 0 && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
               <div className="font-semibold text-red-800 text-sm mb-1 flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> {vencidos.length} documento(s) VENCIDO(S)</div>
@@ -61,7 +61,7 @@ export default async function DocumentosPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">

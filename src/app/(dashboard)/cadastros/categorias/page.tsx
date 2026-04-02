@@ -35,7 +35,7 @@ export default function CategoriasPage() {
   const despesas = cats.filter(c => c.tipo === 'despesa')
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/cadastros" />
         <Link href="/cadastros" className="text-gray-400 hover:text-gray-600">Cadastros</Link>
@@ -68,7 +68,7 @@ export default function CategoriasPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
         {[{ label: 'Receitas', icon: '↑', items: receitas, color: 'text-green-700', bg: 'bg-green-50 border-green-100', badge: 'bg-green-100 text-green-700' },
           { label: 'Despesas', icon: '↓', items: despesas, color: 'text-red-700', bg: 'bg-red-50 border-red-100', badge: 'bg-red-100 text-red-700' }
         ].map(({ label, icon, items, color, bg, badge }) => (

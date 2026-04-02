@@ -92,7 +92,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
   }
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-3 mb-6">
         <BackButton fallback="/obras" />
@@ -115,7 +115,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 mb-5 bg-white rounded-xl shadow-sm border border-gray-100 p-1">
+      <div className="flex gap-1 overflow-x-auto mb-5 bg-white rounded-xl shadow-sm border border-gray-100 p-1">
         {tabs.map(t => (
           <Link key={t.key} href={`/obras/${params.id}?tab=${t.key}`}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -131,7 +131,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
       {/* ===== GERAL ===== */}
       {activeTab === 'geral' && (
         <>
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
               <div className="text-xs text-gray-500 mb-1">Equipe alocada</div>
               <div className="text-2xl font-bold">{alocados?.length ?? 0}</div>
@@ -151,7 +151,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <h2 className="text-sm font-semibold mb-4">Informações da Obra</h2>
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm">
               <div>
                 <span className="text-gray-500">Nome:</span>
                 <span className="ml-2 font-medium">{obra.nome}</span>
@@ -189,7 +189,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
             <Link href="/alocacao/nova" className="text-xs text-brand hover:underline font-medium">+ Alocar funcionário</Link>
           </div>
           {alocados && alocados.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {alocados.map((a: any) => {
                 const nome = a.funcionarios?.nome ?? 'Sem nome'
                 const initials = nome.split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
@@ -281,7 +281,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
       {/* ===== FINANCEIRO ===== */}
       {activeTab === 'financeiro' && (
         <div>
-          <div className="grid grid-cols-3 gap-4 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
               <div className="text-xs text-gray-500 mb-1">Total Receita</div>
               <div className="text-xl font-bold text-green-700">{fmt(totalReceita)}</div>

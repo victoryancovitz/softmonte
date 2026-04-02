@@ -56,7 +56,7 @@ export default function NovoLancamentoPage() {
   const cats = form.tipo === 'receita' ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <BackButton fallback="/financeiro" />
         <Link href="/financeiro" className="text-gray-400 hover:text-gray-600 text-sm">Financeiro</Link>
@@ -81,7 +81,7 @@ export default function NovoLancamentoPage() {
             ))}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Obra</label>
               <select value={form.obra_id} onChange={e => set('obra_id', e.target.value)}
@@ -106,7 +106,7 @@ export default function NovoLancamentoPage() {
               placeholder="Ex: Folha de pagamento março" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$) *</label>
               <input type="number" required min="0.01" step="0.01" value={form.valor} onChange={e => set('valor', e.target.value)}
@@ -123,7 +123,7 @@ export default function NovoLancamentoPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Data de competência *</label>
               <input type="date" required value={form.data_competencia} onChange={e => set('data_competencia', e.target.value)}
@@ -144,7 +144,7 @@ export default function NovoLancamentoPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{form.tipo === 'receita' ? 'Cliente' : 'Fornecedor'}</label>
               <input type="text" value={form.tipo === 'receita' ? form.cliente : form.fornecedor}

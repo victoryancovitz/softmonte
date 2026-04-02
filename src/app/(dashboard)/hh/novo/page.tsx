@@ -61,7 +61,7 @@ export default function NovoHHPage() {
   const totalHoras = Number(form.horas_normais || 0) + Number(form.horas_extras || 0) + Number(form.horas_noturnas || 0)
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/hh" />
         <Link href="/hh" className="text-gray-400 hover:text-gray-600">HH</Link>
@@ -88,7 +88,7 @@ export default function NovoHHPage() {
               {obras.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Mês *</label>
               <select required value={form.mes} onChange={e => set('mes', parseInt(e.target.value))}
@@ -104,7 +104,7 @@ export default function NovoHHPage() {
               </select>
             </div>
           </div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {[
               { field: 'horas_normais', label: 'H. Normais', color: 'text-brand' },
               { field: 'horas_extras', label: 'H. Extras (×1,7)', color: 'text-amber-600' },
@@ -118,7 +118,7 @@ export default function NovoHHPage() {
             ))}
           </div>
           {(totalHoras > 0 || custoPreview > 0) && (
-            <div className="p-4 bg-brand/5 rounded-xl border border-brand/10 grid grid-cols-2 gap-4">
+            <div className="p-4 bg-brand/5 rounded-xl border border-brand/10 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <div>
                 <div className="text-xs text-gray-500">Total de horas</div>
                 <div className="text-xl font-bold font-display text-brand">{totalHoras.toFixed(1)}h</div>

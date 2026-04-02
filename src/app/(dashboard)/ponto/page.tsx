@@ -133,7 +133,7 @@ export default function PontoPage() {
   }
 
   return (
-    <div className="p-6 max-w-[1400px] mx-auto">
+    <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
       <h1 className="text-xl font-bold font-display text-brand mb-5">Controle de Ponto</h1>
 
       {/* Selectors */}
@@ -246,7 +246,7 @@ export default function PontoPage() {
           </div>
 
           {/* Summary */}
-          <div className="grid grid-cols-3 gap-4 mt-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6">
             <div className="bg-green-50 rounded-2xl border border-green-200 p-4 text-center">
               <p className="text-xs text-green-600 font-semibold uppercase tracking-wide">Total Presentes</p>
               <p className="text-2xl font-bold text-green-700 mt-1">{totalPresentes}</p>

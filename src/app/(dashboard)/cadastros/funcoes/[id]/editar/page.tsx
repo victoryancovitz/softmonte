@@ -53,7 +53,7 @@ export default function EditarFuncaoPage({ params }: { params: { id: string } })
   const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/cadastros/funcoes" />
         <Link href="/cadastros" className="text-gray-400 hover:text-gray-600">Cadastros</Link>
@@ -90,7 +90,7 @@ export default function EditarFuncaoPage({ params }: { params: { id: string } })
             <input type="number" step="0.01" min="0" value={form.custo_hora ?? ''} onChange={e => set('custo_hora', e.target.value)}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand"/>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-semibold text-amber-600 mb-1.5">Multiplicador extra</label>
               <input type="number" step="0.01" min="1" value={form.multiplicador_extra ?? 1.70} onChange={e => set('multiplicador_extra', e.target.value)}
@@ -105,7 +105,7 @@ export default function EditarFuncaoPage({ params }: { params: { id: string } })
           {ch > 0 && (
             <div className="p-4 bg-brand/5 rounded-xl border border-brand/10">
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Preview</p>
-              <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
                 <div><p className="text-xs text-gray-400">Normal</p><p className="font-bold text-brand">{fmt(ch)}/h</p></div>
                 <div><p className="text-xs text-amber-500">Extra</p><p className="font-bold text-amber-600">{fmt(ch * extra)}/h</p></div>
                 <div><p className="text-xs text-blue-500">Noturno</p><p className="font-bold text-blue-600">{fmt(ch * not)}/h</p></div>

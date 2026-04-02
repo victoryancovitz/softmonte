@@ -7,7 +7,7 @@ export default async function ClientesPage() {
   const rows = clientes ?? []
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-bold font-display text-brand">Clientes</h1>
@@ -16,7 +16,7 @@ export default async function ClientesPage() {
         <Link href="/clientes/novo" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark">+ Novo cliente</Link>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">

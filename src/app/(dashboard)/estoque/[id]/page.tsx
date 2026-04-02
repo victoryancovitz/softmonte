@@ -50,7 +50,7 @@ export default function MovimentarEstoquePage({ params }: { params: { id: string
   if (!item) return <div className="p-6 text-gray-400 text-sm">Carregando...</div>
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/estoque" />
         <Link href="/estoque" className="text-gray-400 hover:text-gray-600">Estoque</Link>
@@ -87,7 +87,7 @@ export default function MovimentarEstoquePage({ params }: { params: { id: string
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Tipo de movimentação</label>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {(['entrada','saida'] as const).map(t => (
                 <button key={t} type="button" onClick={() => set('tipo', t)}
                   className={`py-2.5 rounded-xl text-sm font-semibold border-2 transition-all ${form.tipo === t ? (t === 'entrada' ? 'border-green-500 bg-green-50 text-green-700' : 'border-red-500 bg-red-50 text-red-700') : 'border-gray-200 text-gray-500 hover:bg-gray-50'}`}>
@@ -96,7 +96,7 @@ export default function MovimentarEstoquePage({ params }: { params: { id: string
               ))}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Quantidade *</label>
               <input type="number" required step="0.01" min="0.01" value={form.quantidade} onChange={e => set('quantidade', e.target.value)}

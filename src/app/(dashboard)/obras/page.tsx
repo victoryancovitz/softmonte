@@ -13,7 +13,7 @@ export default async function ObrasPage() {
   const { data: obras } = await supabase.from('obras').select('*').order('created_at', { ascending: false })
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold font-display">Obras</h1>
@@ -21,7 +21,7 @@ export default async function ObrasPage() {
         </div>
         <Link href="/obras/nova" className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors">+ Nova obra</Link>
       </div>
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-200 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">

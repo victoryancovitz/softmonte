@@ -28,7 +28,7 @@ export default async function ClientePage({ params }: { params: { id: string } }
   ]
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/clientes" />
         <Link href="/clientes" className="text-gray-400 hover:text-gray-600">Clientes</Link>
@@ -52,7 +52,7 @@ export default async function ClientePage({ params }: { params: { id: string } }
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
         {/* Dados cadastrais */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h2 className="text-sm font-bold text-brand font-display mb-4">Dados cadastrais</h2>

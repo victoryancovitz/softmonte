@@ -25,7 +25,7 @@ export default function NovoItemPage() {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <BackButton fallback="/estoque" />
         <Link href="/estoque" className="text-gray-400 hover:text-gray-600 text-sm">Estoque</Link>
@@ -36,7 +36,7 @@ export default function NovoItemPage() {
         <h1 className="text-lg font-semibold font-display mb-6">Novo item de estoque</h1>
         {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Codigo *</label>
               <input type="text" required value={form.codigo} onChange={e => set('codigo', e.target.value)} placeholder="EPI-001" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
@@ -46,7 +46,7 @@ export default function NovoItemPage() {
           </div>
           <div><label className="block text-sm font-medium text-gray-700 mb-1">Nome do item *</label>
             <input type="text" required value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Ex: Capacete de seguranca" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Qtd. atual</label>
               <input type="number" step="0.01" value={form.quantidade} onChange={e => set('quantidade', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Qtd. minima</label>

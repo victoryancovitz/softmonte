@@ -16,7 +16,7 @@ export default async function EstoquePage() {
   const totalItens = itens?.length ?? 0
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-bold font-display text-brand">Estoque</h1>
@@ -32,7 +32,7 @@ export default async function EstoquePage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">

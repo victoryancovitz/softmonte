@@ -69,13 +69,13 @@ export default async function RelatoriosPage() {
   const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="mb-6">
         <h1 className="text-xl font-bold font-display text-brand">Relatórios</h1>
         <p className="text-sm text-gray-500 mt-0.5">Visão consolidada — {hoje.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-5 mb-5">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 mb-5">
         {/* Efetivo do mês */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h2 className="text-sm font-bold font-display text-brand mb-4">Efetivo — {mesEfetivo ? new Date(mesEfetivo + '-15').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }) : hoje.toLocaleDateString('pt-BR', { month: 'short' })}</h2>
@@ -167,7 +167,7 @@ export default async function RelatoriosPage() {
       </div>
 
       {/* Tabela de funcionários por cargo */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
         <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
           <h2 className="text-sm font-bold text-gray-700">Equipe por Cargo</h2>
         </div>
@@ -176,7 +176,7 @@ export default async function RelatoriosPage() {
             const byCargo: Record<string, number> = {}
             funcs.data?.forEach((f: any) => { byCargo[f.cargo] = (byCargo[f.cargo] ?? 0) + 1 })
             return (
-              <div className="grid grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                 {Object.entries(byCargo).sort((a,b)=>b[1]-a[1]).map(([cargo, qtd]) => (
                   <div key={cargo} className="bg-brand/5 rounded-xl p-3 text-center border border-brand/10">
                     <div className="text-2xl font-bold font-display text-brand">{qtd}</div>

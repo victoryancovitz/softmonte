@@ -33,7 +33,7 @@ export default function FuncionariosView({ funcs, hoje }: { funcs: any[]; hoje: 
       {/* Content injected via portal pattern - actually we render inline */}
       {funcs.length > 0 ? (
         view === 'cards' ? (
-          <div className="grid grid-cols-3 gap-4 mt-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mt-5">
             {funcs.map((f: any) => {
               const p1 = f.prazo1 ? new Date(f.prazo1 + 'T12:00') : null
               const dias = p1 ? Math.ceil((p1.getTime() - hojeDate.getTime()) / 86400000) : null
@@ -66,7 +66,7 @@ export default function FuncionariosView({ funcs, hoje }: { funcs: any[]; hoje: 
             })}
           </div>
         ) : (
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mt-5">
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-x-auto mt-5">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">

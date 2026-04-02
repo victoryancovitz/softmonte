@@ -76,7 +76,7 @@ export default function AdminUsuariosPage() {
   if (loading) return <div className="p-6 text-sm text-gray-400">Carregando...</div>
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/dashboard" />
@@ -102,7 +102,7 @@ export default function AdminUsuariosPage() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
         <div className="bg-white rounded-xl border border-gray-200 p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Ativos</p>
           <p className="text-2xl font-bold text-brand mt-1">{ativos.length}</p>

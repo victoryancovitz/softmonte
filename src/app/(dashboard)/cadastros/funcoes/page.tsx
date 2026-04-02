@@ -32,7 +32,7 @@ export default async function FuncoesPage() {
   })
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/cadastros" />
         <Link href="/cadastros" className="text-gray-400 hover:text-gray-600">Cadastros</Link>

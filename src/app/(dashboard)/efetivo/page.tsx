@@ -113,7 +113,7 @@ export default function EfetivoDiarioPage() {
   })
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="mb-6">
         <h1 className="text-xl font-semibold font-display">Efetivo Diário</h1>
         <p className="text-sm text-gray-500 mt-0.5">Registre quem trabalhou no dia</p>
@@ -121,7 +121,7 @@ export default function EfetivoDiarioPage() {
 
       {/* Seleção de obra e data */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Obra</label>
             <select value={obraId} onChange={e => setObraId(e.target.value)}

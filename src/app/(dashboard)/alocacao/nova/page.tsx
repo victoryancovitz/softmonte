@@ -53,7 +53,7 @@ export default function NovaAlocacaoPage() {
   }
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/alocacao" />
         <Link href="/alocacao" className="text-gray-400 hover:text-gray-600">Alocação</Link>
@@ -83,7 +83,7 @@ export default function NovaAlocacaoPage() {
               {obras.map(o => <option key={o.id} value={o.id}>{o.nome} — {o.cliente}</option>)}
             </select>
           </div>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Cargo na obra</label>
               <input type="text" value={form.cargo_na_obra} onChange={e => set('cargo_na_obra', e.target.value)}

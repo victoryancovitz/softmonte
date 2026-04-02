@@ -50,7 +50,7 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
   if (loading) return <div className="p-6 text-sm text-gray-400">Carregando...</div>
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/obras" />
         <Link href="/obras" className="text-gray-400 hover:text-gray-600">Obras</Link>
@@ -78,7 +78,7 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Cliente</label>
               <input type="text" value={form.cliente} onChange={e => set('cliente', e.target.value)}
@@ -92,7 +92,7 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Data de início</label>
               <input type="date" value={form.data_inicio} onChange={e => set('data_inicio', e.target.value)}

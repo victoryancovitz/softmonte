@@ -75,7 +75,7 @@ export default function NovaFaltaPage() {
   const lbl = "block text-xs font-semibold text-gray-600 mb-1"
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/faltas" />
         <Link href="/faltas" className="text-gray-400 hover:text-gray-600">Faltas &amp; Atestados</Link>

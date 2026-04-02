@@ -38,7 +38,7 @@ export default async function FuncionariosPage({
   const cargosUnicos = Array.from(new Set(cargos?.map((c: any) => c.cargo).filter(Boolean)))
 
   return (
-    <div className="p-6 max-w-6xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-bold font-display text-brand">Funcionários</h1>

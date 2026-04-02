@@ -45,7 +45,7 @@ export default function NovoBMPage() {
     : null
 
   return (
-    <div className="p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <BackButton fallback="/boletins" />
         <Link href="/boletins" className="text-gray-400 hover:text-gray-600 text-sm">Boletins</Link>
@@ -72,7 +72,7 @@ export default function NovoBMPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Data de início *</label>
               <input type="date" required value={form.data_inicio} onChange={e => set('data_inicio', e.target.value)}

@@ -89,7 +89,7 @@ export default function EditarUsuarioPage() {
   const currentRoleConf = ROLE_CONFIG[profile.role] || { label: profile.role || '--', color: 'bg-gray-100 text-gray-600' }
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/admin/usuarios" />
@@ -149,7 +149,7 @@ export default function EditarUsuarioPage() {
       {/* Perfil de acesso */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 mb-6">
         <h2 className="text-sm font-bold text-gray-700 mb-3">Perfil de acesso</h2>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           {ROLES.map(r => (
             <button
               key={r.key}
@@ -200,7 +200,7 @@ export default function EditarUsuarioPage() {
             </button>
           </div>
         </div>
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {MODULOS.map(m => (
             <label key={m} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 hover:bg-gray-50 cursor-pointer text-sm">
               <input

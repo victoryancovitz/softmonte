@@ -49,7 +49,7 @@ export default async function BoletinsPage() {
   const aprovados = (bms ?? []).filter((b: any) => b.status === 'aprovado')
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -60,7 +60,7 @@ export default async function BoletinsPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mb-6">
         <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
           <div className="text-2xl font-bold font-display text-blue-700">{emAndamento.length}</div>
           <div className="text-xs text-gray-500 uppercase tracking-wide">Em andamento</div>

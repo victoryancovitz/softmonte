@@ -89,7 +89,7 @@ export default async function DashboardPage() {
   ]
 
   return (
-    <div className="p-6 lg:p-8 max-w-[1200px] mx-auto">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-[1200px] mx-auto">
 
       {/* ── HEADER ── */}
       <div className="mb-8">
@@ -102,7 +102,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── KPIs OPERACIONAIS ── */}
-      <div className="grid grid-cols-4 gap-4 mb-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-4">
         {kpisOp.map(k => (
           <Link key={k.label} href={k.href}
             className={`bg-white rounded-xl border border-gray-100 border-l-4 ${k.accent} p-4 hover:shadow-md transition-all duration-200 block group`}>
@@ -117,7 +117,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── KPIs ALERTAS ── */}
-      <div className="grid grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-8">
         {kpisAlert.map(k => (
           <Link key={k.label} href={k.href}
             className={`bg-white rounded-xl border border-gray-100 border-l-4 ${k.accent} p-4 ${k.bg} hover:shadow-md transition-all duration-200 block`}>
@@ -132,16 +132,16 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── OBRAS + ALERTAS ── */}
-      <div className="grid grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6 mb-8">
 
         {/* Obras */}
-        <div className="col-span-2">
+        <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Obras ativas</h2>
             <Link href="/obras" className="text-xs font-semibold text-brand hover:underline">Ver todas</Link>
           </div>
           {obras.data && obras.data.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               {obras.data.map((o: any) => {
                 const inicio = o.data_inicio ? new Date(o.data_inicio + 'T12:00') : null
                 const fim = o.data_prev_fim ? new Date(o.data_prev_fim + 'T12:00') : null
@@ -184,7 +184,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* Alertas */}
-        <div className="col-span-1">
+        <div className="lg:col-span-1">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider">Alertas</h2>
             <Link href="/relatorios" className="text-xs font-semibold text-brand hover:underline">Relatórios</Link>
@@ -229,7 +229,7 @@ export default async function DashboardPage() {
       {/* ── AÇÕES RÁPIDAS ── */}
       <div>
         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Ações rápidas</h3>
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
           {[
             { href: '/efetivo', icon: icons.checkSquare, label: 'Efetivo de hoje', color: 'text-emerald-600 bg-emerald-50' },
             { href: '/boletins/nova', icon: icons.filePlus, label: 'Novo BM', color: 'text-blue-600 bg-blue-50' },
