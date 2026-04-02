@@ -38,7 +38,10 @@ export default async function DocumentosPage() {
           <h1 className="text-xl font-bold font-display text-brand">Documentos</h1>
           <p className="text-sm text-gray-500 mt-0.5">{docs?.length ?? 0} documentos</p>
         </div>
-        <Link href="/documentos/novo" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-dark">+ Novo documento</Link>
+        <div className="flex items-center gap-2">
+          <Link href="/documentos/gerar" className="px-4 py-2 border border-brand text-brand rounded-xl text-sm font-semibold hover:bg-brand/5 transition-all">Gerar Documento</Link>
+          <Link href="/documentos/novo" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-dark">+ Novo documento</Link>
+        </div>
       </div>
 
       {(vencidos.length > 0 || vencendo.length > 0) && (

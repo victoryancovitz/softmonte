@@ -13,7 +13,10 @@
       "Bash(\"/c/Program Files/nodejs/npm.cmd\" run build)",
       "Bash(\"/c/Program Files/nodejs/npm.cmd\" install)",
       "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(ls src/lib/supabase*)",
+      "Bash(npm ls:*)",
+      "Bash(npm install:*)"
     ]
   }
 }
