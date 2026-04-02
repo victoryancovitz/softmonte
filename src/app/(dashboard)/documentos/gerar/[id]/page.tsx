@@ -141,7 +141,7 @@ export default function GerarDocumentoPage() {
   const variavelManual = modelo?.variaveis?.filter(v => v.tipo === 'manual') || []
   const variavelData = modelo?.variaveis?.filter(v => v.tipo === 'data') || []
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     const printWindow = window.open('', '_blank')
     if (!printWindow) return
 

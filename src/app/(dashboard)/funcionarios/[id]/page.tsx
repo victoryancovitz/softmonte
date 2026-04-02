@@ -225,7 +225,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
                 <div key={d.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
                   <div className="flex items-center gap-3">
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${CAT_BADGE[cat] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {CAT_LABEL[cat] ?? cat?.toUpperCase() || 'DOC'}
+                      {CAT_LABEL[cat] ?? (cat?.toUpperCase() || 'DOC')}
                     </span>
                     <span className="text-sm text-gray-700">{d.nome_modelo}</span>
                   </div>
