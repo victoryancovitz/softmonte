@@ -23,6 +23,7 @@ export default async function DashboardPage() {
     faltas_mes,
     hh_mes,
     bms_abertos,
+    bms_enviados,
     perfil,
     contratos_vencidos,
     contratos_vencendo,
@@ -36,6 +37,7 @@ export default async function DashboardPage() {
     supabase.from('faltas').select('id', { count: 'exact' }).eq('tipo', 'falta_injustificada').gte('data', mesInicio),
     supabase.from('hh_lancamentos').select('horas_normais,horas_extras,horas_noturnas').gte('data', mesInicio),
     supabase.from('boletins_medicao').select('id', { count: 'exact' }).eq('status', 'aberto'),
+    supabase.from('boletins_medicao').select('id,enviado_em', { count: 'exact' }).eq('status', 'enviado'),
     user
       ? supabase.from('profiles').select('*').eq('user_id', user.id).single()
       : Promise.resolve({ data: null }),
@@ -51,6 +53,7 @@ export default async function DashboardPage() {
   const nEfetivoHoje = efetivo_hoje.count ?? 0
   const nFaltasMes = faltas_mes.count ?? 0
   const nBMsAbertos = bms_abertos.count ?? 0
+  const nBMsEnviados = bms_enviados.count ?? 0
   const nContratosVencidos = contratos_vencidos.count ?? 0
   const nContratosVencendo = contratos_vencendo.count ?? 0
 
@@ -139,11 +142,11 @@ export default async function DashboardPage() {
       dotColor: 'bg-amber-500',
     },
     {
-      label: 'Estoque crítico',
-      value: nEstoque,
-      href: '/estoque',
-      bg: nEstoque > 0 ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100',
-      valueColor: nEstoque > 0 ? 'text-amber-700' : 'text-gray-400',
+      label: 'BMs aguardando',
+      value: nBMsEnviados,
+      href: '/boletins',
+      bg: nBMsEnviados > 0 ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-100',
+      valueColor: nBMsEnviados > 0 ? 'text-amber-700' : 'text-gray-400',
       dotColor: 'bg-amber-500',
     },
   ]

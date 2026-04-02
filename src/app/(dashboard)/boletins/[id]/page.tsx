@@ -20,8 +20,16 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   const [resumo, setResumo] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  const [envioEmails, setEnvioEmails] = useState('')
+  const [envioObs, setEnvioObs] = useState('')
+  const [enviando, setEnviando] = useState(false)
+  const [revisaoTexto, setRevisaoTexto] = useState('')
+  const [valorBM, setValorBM] = useState('')
+  const [showCriarReceita, setShowCriarReceita] = useState(false)
   const supabase = createClient()
   const router = useRouter()
+
+  const STATUS_ORDER = ['aberto','fechado','enviado','aprovado']
 
   useEffect(() => {
     loadBM()
@@ -89,6 +97,107 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     setExporting(false)
   }
 
+  async function handleRegistrarEnvio() {
+    setEnviando(true)
+    const emails = envioEmails.split(',').map(e => e.trim()).filter(Boolean)
+    await supabase.from('boletins_medicao').update({
+      status: 'enviado',
+      enviado_para: emails,
+      enviado_em: new Date().toISOString(),
+      observacao_envio: envioObs || null,
+    }).eq('id', params.id)
+    // Log the email
+    await supabase.from('email_logs').insert({
+      tipo: 'envio_bm',
+      destinatarios: emails,
+      assunto: `BM ${String(bm.numero).padStart(2,'0')} - ${bm.obras.nome}`,
+      status: 'registrado',
+    }).catch(() => {}) // ignore if table doesn't exist
+    await loadBM()
+    setEnviando(false)
+    setEnvioEmails('')
+    setEnvioObs('')
+  }
+
+  async function handleRevisao() {
+    const revisoes = [...(bm.revisoes_solicitadas || []), {
+      data: new Date().toISOString(),
+      descricao: revisaoTexto,
+    }]
+    await supabase.from('boletins_medicao').update({
+      status: 'fechado',
+      revisoes_solicitadas: revisoes,
+    }).eq('id', params.id)
+    await loadBM()
+    setRevisaoTexto('')
+  }
+
+  async function handleAprovar() {
+    const valor = parseFloat(valorBM)
+    await supabase.from('boletins_medicao').update({
+      status: 'aprovado',
+      aprovado_em: new Date().toISOString(),
+      valor_aprovado: valor || null,
+    }).eq('id', params.id)
+    // Create financial entry if valor provided
+    if (valor > 0) {
+      await supabase.from('financeiro_lancamentos').insert({
+        obra_id: bm.obras.id,
+        tipo: 'receita',
+        nome: `BM ${String(bm.numero).padStart(2,'0')} — ${bm.obras.nome}`,
+        categoria: 'Receita HH Homem-Hora',
+        valor: valor,
+        status: 'em_aberto',
+        data_competencia: bm.data_fim,
+        origem: 'bm_aprovado',
+      })
+    }
+    await loadBM()
+    setShowCriarReceita(false)
+  }
+
+  async function handleAprovarSemReceita() {
+    await supabase.from('boletins_medicao').update({
+      status: 'aprovado',
+      aprovado_em: new Date().toISOString(),
+    }).eq('id', params.id)
+    await loadBM()
+    setShowCriarReceita(false)
+  }
+
+  function buildHistorico() {
+    const items: {data: string; texto: string; color: string; ts: number}[] = []
+    if (bm.created_at) items.push({
+      data: new Date(bm.created_at).toLocaleString('pt-BR'),
+      texto: 'Boletim criado',
+      color: 'bg-blue-500',
+      ts: new Date(bm.created_at).getTime(),
+    })
+    if (bm.enviado_em) items.push({
+      data: new Date(bm.enviado_em).toLocaleString('pt-BR'),
+      texto: `Enviado para ${(bm.enviado_para || []).join(', ')}${bm.observacao_envio ? ` — ${bm.observacao_envio}` : ''}`,
+      color: 'bg-amber-500',
+      ts: new Date(bm.enviado_em).getTime(),
+    })
+    if (bm.revisoes_solicitadas) {
+      bm.revisoes_solicitadas.forEach((r: any) => {
+        items.push({
+          data: new Date(r.data).toLocaleString('pt-BR'),
+          texto: `Revisão solicitada: "${r.descricao}"`,
+          color: 'bg-red-500',
+          ts: new Date(r.data).getTime(),
+        })
+      })
+    }
+    if (bm.aprovado_em) items.push({
+      data: new Date(bm.aprovado_em).toLocaleString('pt-BR'),
+      texto: `Aprovado${bm.valor_aprovado ? ` — Receita de R$ ${Number(bm.valor_aprovado).toLocaleString('pt-BR', {minimumFractionDigits: 2})} criada` : ''}`,
+      color: 'bg-green-500',
+      ts: new Date(bm.aprovado_em).getTime(),
+    })
+    return items.sort((a, b) => a.ts - b.ts)
+  }
+
   if (loading) return <div className="p-6 text-sm text-gray-400">Carregando...</div>
   if (!bm) return <div className="p-6 text-sm text-red-500">Boletim não encontrado.</div>
 
@@ -144,12 +253,6 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
                     router.push('/boletins')
                   }} />
               </>
-            )}
-            {bm.status === 'fechado' && (
-              <button onClick={() => updateStatus('enviado')}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-                Marcar enviado
-              </button>
             )}
           </div>
         </div>
@@ -214,6 +317,145 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
             </Link>
           </div>
         )}
+      </div>
+
+      {/* Timeline de Status */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+        <h2 className="text-sm font-semibold mb-4">Acompanhamento</h2>
+        <div className="flex items-center gap-0">
+          {(['aberto','fechado','enviado','aprovado'] as const).map((s, i) => {
+            const reached = STATUS_ORDER.indexOf(bm.status) >= i
+            const isCurrent = bm.status === s
+            const LABELS: Record<string,string> = { aberto:'Aberto', fechado:'Fechado', enviado:'Enviado', aprovado:'Aprovado' }
+            // Timestamps from bm fields
+            const timestamps: Record<string,string|null> = {
+              aberto: bm.created_at,
+              fechado: null, // we don't track this separately
+              enviado: bm.enviado_em,
+              aprovado: bm.aprovado_em,
+            }
+            return (
+              <div key={s} className="flex items-center flex-1">
+                <div className="flex flex-col items-center">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-2 transition-all ${
+                    reached ? 'bg-brand text-white border-brand' : 'bg-white text-gray-300 border-gray-200'
+                  } ${isCurrent ? 'ring-4 ring-brand/20' : ''}`}>
+                    {reached ? '✓' : i + 1}
+                  </div>
+                  <div className={`text-[10px] mt-1 font-semibold ${reached ? 'text-brand' : 'text-gray-300'}`}>{LABELS[s]}</div>
+                  {timestamps[s] && (
+                    <div className="text-[9px] text-gray-400">{new Date(timestamps[s]!).toLocaleDateString('pt-BR')}</div>
+                  )}
+                </div>
+                {i < 3 && <div className={`flex-1 h-0.5 mx-2 ${reached && STATUS_ORDER.indexOf(bm.status) > i ? 'bg-brand' : 'bg-gray-200'}`} />}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Envio ao Cliente */}
+      {bm.status === 'fechado' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+          <h2 className="text-sm font-semibold mb-4">Envio ao Cliente</h2>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Enviar para (emails separados por vírgula)</label>
+              <input type="text" value={envioEmails} onChange={e => setEnvioEmails(e.target.value)}
+                placeholder="email@cliente.com, medicao@cliente.com"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Observação / Número NF</label>
+              <input type="text" value={envioObs} onChange={e => setEnvioObs(e.target.value)}
+                placeholder="NF 12345 ou observação"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+            </div>
+            <button onClick={handleRegistrarEnvio} disabled={!envioEmails.trim() || enviando}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+              {enviando ? 'Registrando...' : 'Registrar Envio'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Retorno do Cliente */}
+      {bm.status === 'enviado' && (
+        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+          <h2 className="text-sm font-semibold mb-4">Retorno do Cliente</h2>
+
+          {!showCriarReceita ? (
+            <div className="flex gap-3">
+              <button onClick={() => setShowCriarReceita(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+                ✓ Aprovar BM
+              </button>
+              <div className="flex-1">
+                <div className="flex gap-2">
+                  <input type="text" value={revisaoTexto} onChange={e => setRevisaoTexto(e.target.value)}
+                    placeholder="Motivo da revisão solicitada pelo cliente..."
+                    className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+                  <button onClick={handleRevisao} disabled={!revisaoTexto.trim()}
+                    className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 disabled:opacity-50 whitespace-nowrap">
+                    ✗ Revisão
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3 p-4 bg-green-50 rounded-xl border border-green-200">
+              <p className="text-sm text-green-800 font-medium">Aprovar BM e criar receita financeira?</p>
+              <div>
+                <label className="block text-xs font-semibold text-green-700 mb-1">Valor do BM (R$)</label>
+                <input type="number" step="0.01" value={valorBM} onChange={e => setValorBM(e.target.value)}
+                  placeholder="0,00"
+                  className="w-48 px-3 py-2 border border-green-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={handleAprovar}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
+                  Confirmar Aprovação
+                </button>
+                <button onClick={handleAprovarSemReceita}
+                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50">
+                  Aprovar sem receita
+                </button>
+                <button onClick={() => setShowCriarReceita(false)}
+                  className="px-4 py-2 text-gray-400 text-sm hover:text-gray-600">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Revisões anteriores */}
+          {bm.revisoes_solicitadas && bm.revisoes_solicitadas.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-500 mb-2">Revisões solicitadas:</p>
+              {bm.revisoes_solicitadas.map((r: any, i: number) => (
+                <div key={i} className="text-xs text-gray-600 py-1 border-b border-gray-50 last:border-0">
+                  <span className="text-gray-400">{new Date(r.data).toLocaleDateString('pt-BR')}</span> — {r.descricao}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Histórico */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <h2 className="text-sm font-semibold mb-4">Histórico</h2>
+        <div className="space-y-2">
+          {buildHistorico().map((h, i) => (
+            <div key={i} className="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
+              <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${h.color}`} />
+              <div>
+                <div className="text-xs text-gray-400">{h.data}</div>
+                <div className="text-sm text-gray-700">{h.texto}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   )
