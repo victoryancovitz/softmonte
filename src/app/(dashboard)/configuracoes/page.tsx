@@ -6,11 +6,11 @@ import { useToast } from '@/components/Toast'
 export default function ConfiguracoesPage() {
   const toast = useToast()
   const [form, setForm] = useState<any>({
-    id: 1,
-    razao_social: '', nome_fantasia: '', cnpj: '', ie: '',
-    endereco: '', cidade: '', estado: '', cep: '',
+    id: null,
+    razao_social: '', nome_fantasia: '', cnpj: '', inscricao_estadual: '',
+    endereco: '', cidade: '', estado: '', cep: '', telefone: '',
     email_principal: '', email_financeiro: '', email_rh: '',
-    banco: '', agencia: '', conta: '', pix: '',
+    banco_principal: '', agencia: '', conta: '', pix: '',
   })
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
@@ -35,24 +35,32 @@ export default function ConfiguracoesPage() {
     setError('')
     setSuccess(false)
 
-    const { error: err } = await supabase.from('empresa_config').upsert({
-      id: form.id || 1,
+    const payload: any = {
       razao_social: form.razao_social,
       nome_fantasia: form.nome_fantasia,
       cnpj: form.cnpj,
-      ie: form.ie,
+      inscricao_estadual: form.inscricao_estadual,
       endereco: form.endereco,
       cidade: form.cidade,
       estado: form.estado,
       cep: form.cep,
+      telefone: form.telefone,
       email_principal: form.email_principal,
       email_financeiro: form.email_financeiro,
       email_rh: form.email_rh,
-      banco: form.banco,
+      banco_principal: form.banco_principal,
       agencia: form.agencia,
       conta: form.conta,
       pix: form.pix,
-    }, { onConflict: 'id' })
+    }
+    let err: any = null
+    if (form.id) {
+      const res = await supabase.from('empresa_config').update(payload).eq('id', form.id)
+      err = res.error
+    } else {
+      const res = await supabase.from('empresa_config').insert(payload)
+      err = res.error
+    }
 
     if (err) { setError(err.message); setLoading(false); return }
     setSuccess(true)
@@ -84,7 +92,7 @@ export default function ConfiguracoesPage() {
               <div><label className={lbl}>CNPJ</label>
                 <input type="text" value={form.cnpj} onChange={e => set('cnpj', e.target.value)} className={inp} placeholder="00.000.000/0000-00" /></div>
               <div><label className={lbl}>Inscrição Estadual</label>
-                <input type="text" value={form.ie} onChange={e => set('ie', e.target.value)} className={inp} /></div>
+                <input type="text" value={form.inscricao_estadual} onChange={e => set('inscricao_estadual', e.target.value)} className={inp} /></div>
             </div>
           </section>
 
@@ -121,7 +129,7 @@ export default function ConfiguracoesPage() {
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Dados bancários</h3>
             <div className="grid grid-cols-2 gap-3">
               <div><label className={lbl}>Banco</label>
-                <input type="text" value={form.banco} onChange={e => set('banco', e.target.value)} className={inp} /></div>
+                <input type="text" value={form.banco_principal} onChange={e => set('banco_principal', e.target.value)} className={inp} /></div>
               <div><label className={lbl}>Agência</label>
                 <input type="text" value={form.agencia} onChange={e => set('agencia', e.target.value)} className={inp} /></div>
               <div><label className={lbl}>Conta</label>
