@@ -29,6 +29,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   const [valorBM, setValorBM] = useState('')
   const [showCriarReceita, setShowCriarReceita] = useState(false)
   const [clienteData, setClienteData] = useState<any>(null)
+  const [valorPrevisto, setValorPrevisto] = useState(0)
   const [mailtoAberto, setMailtoAberto] = useState(false)
   const supabase = createClient()
   const router = useRouter()
@@ -48,7 +49,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
 
     if (bmData) {
       const { data: efetivo } = await supabase.from('efetivo_diario')
-        .select('funcionario_id, data, tipo_dia, funcionarios(nome, cargo)')
+        .select('funcionario_id, data, tipo_dia, funcionarios(nome, cargo, custo_hora)')
         .eq('obra_id', bmData.obras.id)
         .gte('data', bmData.data_inicio)
         .lte('data', bmData.data_fim)
@@ -69,6 +70,15 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
         dias_domingo: dias.domingo_feriado.size,
         total_dias: dias.util.size + dias.sabado.size + dias.domingo_feriado.size
       })).sort((a, b) => a.cargo.localeCompare(b.cargo))
+
+      // Calcular valor previsto (custo_hora × 8h × multiplicador por tipo_dia)
+      let custoTotal = 0
+      ;(efetivo ?? []).forEach((e: any) => {
+        const ch = Number(e.funcionarios?.custo_hora ?? 0)
+        const mult = e.tipo_dia === 'sabado' ? 1.7 : e.tipo_dia === 'domingo_feriado' ? 2.0 : 1.0
+        custoTotal += ch * 8 * mult
+      })
+      setValorPrevisto(custoTotal)
 
       setResumo(rows)
 
@@ -337,18 +347,37 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-4 gap-4 mb-5">
-        {[
-          { label: 'Total pessoas-dia', value: totalDias },
-          { label: 'Dias úteis', value: resumo.reduce((s, r) => s + r.dias_util, 0) },
-          { label: 'Sábados', value: resumo.reduce((s, r) => s + r.dias_sabado, 0) },
-          { label: 'Dom/Feriado', value: resumo.reduce((s, r) => s + r.dias_domingo, 0) },
-        ].map(k => (
-          <div key={k.label} className="bg-gray-100 rounded-xl p-4">
-            <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">{k.label}</div>
-            <div className="text-2xl font-semibold">{k.value}</div>
+      <div className="grid grid-cols-5 gap-4 mb-5">
+        <div className="bg-gray-100 rounded-xl p-4">
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Pessoas-dia</div>
+          <div className="text-2xl font-semibold">{totalDias}</div>
+        </div>
+        <div className="bg-gray-100 rounded-xl p-4">
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Dias úteis</div>
+          <div className="text-2xl font-semibold">{resumo.reduce((s, r) => s + r.dias_util, 0)}</div>
+        </div>
+        <div className="bg-gray-100 rounded-xl p-4">
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Sábados</div>
+          <div className="text-2xl font-semibold">{resumo.reduce((s, r) => s + r.dias_sabado, 0)}</div>
+        </div>
+        <div className="bg-gray-100 rounded-xl p-4">
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Dom/Feriado</div>
+          <div className="text-2xl font-semibold">{resumo.reduce((s, r) => s + r.dias_domingo, 0)}</div>
+        </div>
+        <div className={`rounded-xl p-4 ${bm.valor_aprovado ? 'bg-green-50 border border-green-200' : 'bg-brand/5 border border-brand/10'}`}>
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+            {bm.valor_aprovado ? 'Valor Aprovado' : 'Valor Previsto'}
           </div>
-        ))}
+          <div className={`text-xl font-bold font-display ${bm.valor_aprovado ? 'text-green-700' : 'text-brand'}`}>
+            R$ {Number(bm.valor_aprovado || valorPrevisto).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </div>
+          {bm.valor_aprovado && valorPrevisto > 0 && (
+            <div className="text-[10px] text-gray-400 mt-0.5">
+              Custo base: R$ {valorPrevisto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ·
+              Margem: {((Number(bm.valor_aprovado) - valorPrevisto) / Number(bm.valor_aprovado) * 100).toFixed(0)}%
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Resumo por função */}
