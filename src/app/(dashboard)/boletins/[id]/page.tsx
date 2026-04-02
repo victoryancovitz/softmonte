@@ -26,6 +26,8 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   const [revisaoTexto, setRevisaoTexto] = useState('')
   const [valorBM, setValorBM] = useState('')
   const [showCriarReceita, setShowCriarReceita] = useState(false)
+  const [clienteData, setClienteData] = useState<any>(null)
+  const [mailtoAberto, setMailtoAberto] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -66,6 +68,23 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       })).sort((a, b) => a.cargo.localeCompare(b.cargo))
 
       setResumo(rows)
+
+      // Fetch client contacts
+      if (bmData.obras?.cliente) {
+        const { data: cliente } = await supabase.from('clientes')
+          .select('email_principal,email_medicao,email_fiscal,contatos')
+          .ilike('nome', bmData.obras.cliente)
+          .limit(1)
+          .single()
+        if (cliente) {
+          setClienteData(cliente)
+          // Pre-populate envioEmails if empty
+          if (!envioEmails) {
+            const mainEmail = cliente.email_medicao || cliente.email_principal || ''
+            setEnvioEmails(mainEmail)
+          }
+        }
+      }
     }
     setLoading(false)
   }
@@ -97,7 +116,59 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     setExporting(false)
   }
 
-  async function handleRegistrarEnvio() {
+  function handleAbrirMailto() {
+    const emails = envioEmails.split(',').map(e => e.trim()).filter(Boolean)
+    if (emails.length === 0) return
+
+    const toEmail = emails[0]
+    const ccEmails = emails.slice(1)
+
+    // Build extra CC from client contacts
+    const contatoEmails: string[] = []
+    if (clienteData?.contatos) {
+      (clienteData.contatos as any[]).forEach((c: any) => {
+        if (c.email && !emails.includes(c.email)) contatoEmails.push(c.email)
+      })
+    }
+    const allCc = [...ccEmails, ...contatoEmails]
+
+    const mesInicio = new Date(bm.data_inicio + 'T12:00:00')
+    const mesFim = new Date(bm.data_fim + 'T12:00:00')
+    const periodo = `${mesInicio.toLocaleDateString('pt-BR')} a ${mesFim.toLocaleDateString('pt-BR')}`
+
+    const subject = encodeURIComponent(
+      `BM ${String(bm.numero).padStart(2,'0')} - ${bm.obras.nome} - ${periodo}`
+    )
+
+    const body = encodeURIComponent(
+      `Prezados,\n\n` +
+      `Segue em anexo o Boletim de Medição Nº ${String(bm.numero).padStart(2,'0')} referente à obra ${bm.obras.nome}, ` +
+      `período de ${periodo}.\n\n` +
+      `Total de pessoas-dia: ${totalDias}\n` +
+      (envioObs ? `Observação: ${envioObs}\n\n` : '\n') +
+      `Ficamos à disposição para quaisquer esclarecimentos.\n\n` +
+      `Atenciosamente,\n` +
+      `Tecnomonte Montagens Industriais`
+    )
+
+    const mailtoLink = `mailto:${toEmail}` +
+      (allCc.length > 0 ? `?cc=${allCc.join(',')}` : '?') +
+      `${allCc.length > 0 ? '&' : ''}subject=${subject}&body=${body}`
+
+    window.open(mailtoLink, '_blank')
+
+    // Log that mailto was opened
+    supabase.from('email_logs').insert({
+      tipo: 'envio_bm',
+      destinatarios: emails,
+      assunto: `BM ${String(bm.numero).padStart(2,'0')} - ${bm.obras.nome}`,
+      status: 'mailto_aberto',
+    }).catch(() => {})
+
+    setMailtoAberto(true)
+  }
+
+  async function handleConfirmarEnvio() {
     setEnviando(true)
     const emails = envioEmails.split(',').map(e => e.trim()).filter(Boolean)
     await supabase.from('boletins_medicao').update({
@@ -106,15 +177,15 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       enviado_em: new Date().toISOString(),
       observacao_envio: envioObs || null,
     }).eq('id', params.id)
-    // Log the email
     await supabase.from('email_logs').insert({
       tipo: 'envio_bm',
       destinatarios: emails,
       assunto: `BM ${String(bm.numero).padStart(2,'0')} - ${bm.obras.nome}`,
-      status: 'registrado',
-    }).catch(() => {}) // ignore if table doesn't exist
+      status: 'enviado',
+    }).catch(() => {})
     await loadBM()
     setEnviando(false)
+    setMailtoAberto(false)
     setEnvioEmails('')
     setEnvioObs('')
   }
@@ -358,24 +429,67 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       {bm.status === 'fechado' && (
         <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
           <h2 className="text-sm font-semibold mb-4">Envio ao Cliente</h2>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Enviar para (emails separados por vírgula)</label>
-              <input type="text" value={envioEmails} onChange={e => setEnvioEmails(e.target.value)}
-                placeholder="email@cliente.com, medicao@cliente.com"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+
+          {/* Contatos do cliente detectados */}
+          {clienteData && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
+              <span className="font-semibold">Contatos encontrados:</span>{' '}
+              {clienteData.email_medicao && <span className="inline-block bg-blue-100 px-2 py-0.5 rounded mr-1">{clienteData.email_medicao} (medição)</span>}
+              {clienteData.email_principal && clienteData.email_principal !== clienteData.email_medicao && (
+                <span className="inline-block bg-blue-100 px-2 py-0.5 rounded mr-1">{clienteData.email_principal} (principal)</span>
+              )}
+              {(clienteData.contatos as any[])?.map((c: any, i: number) => (
+                c.email && <span key={i} className="inline-block bg-blue-100 px-2 py-0.5 rounded mr-1">{c.email} ({c.funcao || c.nome})</span>
+              ))}
             </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Observação / Número NF</label>
-              <input type="text" value={envioObs} onChange={e => setEnvioObs(e.target.value)}
-                placeholder="NF 12345 ou observação"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+          )}
+
+          {!mailtoAberto ? (
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Enviar para (emails separados por vírgula)</label>
+                <input type="text" value={envioEmails} onChange={e => setEnvioEmails(e.target.value)}
+                  placeholder="email@cliente.com, medicao@cliente.com"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Observação / Número NF (opcional)</label>
+                <input type="text" value={envioObs} onChange={e => setEnvioObs(e.target.value)}
+                  placeholder="NF 12345 ou observação"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+              </div>
+              <button onClick={handleAbrirMailto} disabled={!envioEmails.trim()}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-all">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="2" stroke="white" strokeWidth="1.3"/><path d="M1 5l7 4 7-4" stroke="white" strokeWidth="1.3" strokeLinejoin="round"/></svg>
+                Enviar BM por Email
+              </button>
             </div>
-            <button onClick={handleRegistrarEnvio} disabled={!envioEmails.trim() || enviando}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-              {enviando ? 'Registrando...' : 'Registrar Envio'}
-            </button>
-          </div>
+          ) : (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3">
+              <div className="flex items-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="text-amber-600 flex-shrink-0">
+                  <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5"/>
+                  <path d="M10 6v5M10 13v1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+                <p className="text-sm text-amber-800 font-medium">Email aberto no seu cliente de email!</p>
+              </div>
+              <p className="text-xs text-amber-700">Após enviar o email, confirme abaixo para registrar o envio no sistema.</p>
+              <div className="flex gap-2">
+                <button onClick={handleConfirmarEnvio} disabled={enviando}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-50 transition-all">
+                  {enviando ? 'Confirmando...' : '✓ Confirmar envio'}
+                </button>
+                <button onClick={handleAbrirMailto}
+                  className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm hover:bg-gray-50 transition-all">
+                  Reabrir email
+                </button>
+                <button onClick={() => setMailtoAberto(false)}
+                  className="px-4 py-2 text-gray-400 text-sm hover:text-gray-600 transition-all">
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
