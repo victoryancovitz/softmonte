@@ -3,43 +3,91 @@ import Link from 'next/link'
 
 const STATUS_COLOR: Record<string, string> = {
   disponivel: 'bg-green-100 text-green-700',
-  alocado: 'bg-blue-100 text-blue-700',
-  afastado: 'bg-yellow-100 text-yellow-700',
-  inativo: 'bg-gray-100 text-gray-500',
+  alocado:    'bg-blue-100 text-blue-700',
+  afastado:   'bg-yellow-100 text-yellow-700',
+  inativo:    'bg-gray-100 text-gray-500',
 }
 
-export default async function FuncionariosPage() {
+export default async function FuncionariosPage({
+  searchParams,
+}: {
+  searchParams: { q?: string; status?: string; cargo?: string }
+}) {
   const supabase = createClient()
-  const { data: funcs } = await supabase.from('funcionarios').select('*').order('nome')
+  const q      = searchParams.q?.toLowerCase() ?? ''
+  const status = searchParams.status ?? ''
+  const cargo  = searchParams.cargo ?? ''
 
-  const vencendo = funcs?.filter((f: any) => {
-    const prazo = f.prazo1
-    if (!prazo) return false
-    const dias = Math.ceil((new Date(prazo).getTime() - Date.now()) / 86400000)
+  let query = supabase.from('funcionarios').select('*').order('nome')
+  if (status) query = query.eq('status', status)
+  if (cargo)  query = query.ilike('cargo', `%${cargo}%`)
+
+  const { data: all } = await query
+
+  const funcs = q
+    ? (all ?? []).filter(f =>
+        f.nome?.toLowerCase().includes(q) ||
+        f.matricula?.toLowerCase().includes(q) ||
+        f.cargo?.toLowerCase().includes(q)
+      )
+    : (all ?? [])
+
+  const hoje = new Date()
+  const vencendo = funcs.filter(f => {
+    if (!f.prazo1) return false
+    const dias = Math.ceil((new Date(f.prazo1+'T12:00').getTime() - hoje.getTime()) / 86400000)
     return dias <= 30 && dias >= 0
-  }) ?? []
+  })
+
+  const { data: cargos } = await supabase.from('funcionarios').select('cargo').order('cargo')
+  const cargosUnicos = [...new Set(cargos?.map((c: any) => c.cargo).filter(Boolean))]
 
   return (
     <div className="p-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-5">
         <div>
-          <h1 className="text-xl font-semibold">Funcionários</h1>
+          <h1 className="text-xl font-bold font-display text-brand">Funcionários</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {funcs?.length ?? 0} cadastrados
+            {funcs.length} encontrado(s)
             {vencendo.length > 0 && <span className="ml-2 text-amber-600 font-medium">· {vencendo.length} contrato(s) vencendo</span>}
           </p>
         </div>
-        <Link href="/funcionarios/novo" className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark">+ Novo funcionário</Link>
+        <div className="flex items-center gap-2">
+          <Link href="/cadastros/funcoes" className="text-xs text-brand hover:underline">Gerenciar funções →</Link>
+          <Link href="/funcionarios/novo" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark">+ Novo</Link>
+        </div>
       </div>
 
       {vencendo.length > 0 && (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-center gap-2">
-          <span>⚠️</span>
-          <span>Contratos vencendo em 30 dias: <strong>{vencendo.map((f: any) => f.nome.split(' ')[0]).join(', ')}</strong></span>
+          ⚠️ <span>Contratos vencendo: <strong>{vencendo.map(f => f.nome.split(' ')[0]).join(', ')}</strong></span>
         </div>
       )}
 
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      {/* Filtros */}
+      <form method="GET" className="flex gap-3 mb-5">
+        <input name="q" defaultValue={q} placeholder="Buscar por nome, matrícula ou cargo..."
+          className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white"/>
+        <select name="status" defaultValue={status}
+          className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+          <option value="">Todos os status</option>
+          <option value="disponivel">Disponível</option>
+          <option value="alocado">Alocado</option>
+          <option value="afastado">Afastado</option>
+          <option value="inativo">Inativo</option>
+        </select>
+        <select name="cargo" defaultValue={cargo}
+          className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+          <option value="">Todos os cargos</option>
+          {cargosUnicos.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <button type="submit" className="px-4 py-2.5 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-dark">Buscar</button>
+        {(q || status || cargo) && (
+          <a href="/funcionarios" className="px-4 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50">Limpar</a>
+        )}
+      </form>
+
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
@@ -49,10 +97,10 @@ export default async function FuncionariosPage() {
             </tr>
           </thead>
           <tbody>
-            {funcs && funcs.length > 0 ? funcs.map((f: any) => {
-              const p1 = f.prazo1 ? new Date(f.prazo1 + 'T12:00') : null
-              const diasP1 = p1 ? Math.ceil((p1.getTime() - Date.now()) / 86400000) : null
-              const alerta = diasP1 !== null && diasP1 <= 30 && diasP1 >= 0
+            {funcs.length > 0 ? funcs.map((f: any) => {
+              const p1 = f.prazo1 ? new Date(f.prazo1+'T12:00') : null
+              const dias = p1 ? Math.ceil((p1.getTime() - hoje.getTime()) / 86400000) : null
+              const alerta = dias !== null && dias <= 30 && dias >= 0
               return (
                 <tr key={f.id} className="border-b border-gray-50 hover:bg-gray-50 group">
                   <td className="px-4 py-3 text-gray-400 text-xs font-mono">{f.matricula}</td>
@@ -63,10 +111,10 @@ export default async function FuncionariosPage() {
                   <td className="px-4 py-3 text-gray-500 text-xs">{f.vt_estrutura ?? '—'}</td>
                   <td className={`px-4 py-3 text-xs font-medium ${alerta ? 'text-amber-600' : 'text-gray-500'}`}>
                     {p1 ? p1.toLocaleDateString('pt-BR') : '—'}
-                    {alerta && <span className="ml-1 bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded text-[10px]">{diasP1}d</span>}
+                    {alerta && <span className="ml-1 bg-amber-100 text-amber-700 px-1.5 rounded text-[10px]">{dias}d</span>}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>{f.status}</span>
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>{f.status}</span>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
@@ -77,7 +125,9 @@ export default async function FuncionariosPage() {
                 </tr>
               )
             }) : (
-              <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">Nenhum funcionário cadastrado ainda.</td></tr>
+              <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">
+                {q ? `Nenhum resultado para "${q}"` : 'Nenhum funcionário encontrado.'}
+              </td></tr>
             )}
           </tbody>
         </table>

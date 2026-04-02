@@ -8,15 +8,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) redirect('/login')
 
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('user_id', user.id)
-    .single()
+    .from('profiles').select('*').eq('user_id', user.id).single()
 
   return (
     <div className="flex min-h-screen">
       <Sidebar profile={profile} />
-      <main className="flex-1 overflow-auto min-h-screen bg-[#F4F6FA]">
+      <main className="flex-1 overflow-auto min-h-screen bg-[#F4F6FA] pt-0 lg:pt-0">
         {children}
       </main>
     </div>
