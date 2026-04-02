@@ -56,7 +56,7 @@ export default function UsuariosPage() {
         ⚠️ Alterar o nível de acesso afeta imediatamente o que o usuário pode ver e fazer no sistema.
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
@@ -98,7 +98,7 @@ export default function UsuariosPage() {
         </table>
       </div>
 
-      <div className="mt-5 p-4 bg-gray-50 rounded-xl border border-gray-200">
+      <div className="mt-5 p-4 bg-gray-50 rounded-xl shadow-sm border border-gray-100">
         <h3 className="text-sm font-bold text-gray-700 mb-2">Níveis de acesso</h3>
         <div className="grid grid-cols-2 gap-2 text-xs text-gray-600">
           <div><span className="font-semibold text-purple-700">Administrador</span> — acesso total: edita, exclui, vê financeiro e auditoria</div>

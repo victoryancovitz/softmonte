@@ -75,7 +75,7 @@ export default function NovoClientePage() {
         <span className="font-medium">Novo</span>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h1 className="text-lg font-bold font-display text-brand mb-6">Novo cliente</h1>
 
         {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200">{error}</div>}

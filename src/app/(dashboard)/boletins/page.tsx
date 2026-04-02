@@ -14,7 +14,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 function BMCard({ bm }: { bm: any }) {
   return (
-    <div className="bg-white rounded-xl border border-gray-200 p-5 flex items-center justify-between hover:border-gray-300 hover:shadow-sm transition-all group">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 flex items-center justify-between hover:border-gray-300 hover:shadow-md transition-all group">
       <Link href={`/boletins/${bm.id}`} className="flex items-center gap-4 flex-1 min-w-0">
         <div className="w-12 h-12 bg-brand/10 rounded-xl flex items-center justify-center flex-shrink-0">
           <span className="text-brand font-bold text-sm">BM{String(bm.numero).padStart(2,'0')}</span>
@@ -98,7 +98,7 @@ export default async function BoletinsPage() {
             {aguardando.map((bm: any) => {
               const diasEnviado = bm.enviado_em ? Math.ceil((Date.now() - new Date(bm.enviado_em).getTime()) / 86400000) : null
               return (
-                <div key={bm.id} className="bg-white rounded-xl border border-amber-200 p-5 flex items-center justify-between hover:shadow-sm transition-all group">
+                <div key={bm.id} className="bg-white rounded-xl border border-amber-200 p-5 flex items-center justify-between hover:shadow-md transition-all group">
                   <Link href={`/boletins/${bm.id}`} className="flex items-center gap-4 flex-1 min-w-0">
                     <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
                       <span className="text-amber-700 font-bold text-sm">BM{String(bm.numero).padStart(2,'0')}</span>
@@ -143,7 +143,7 @@ export default async function BoletinsPage() {
 
       {/* Empty state */}
       {(!bms || bms.length === 0) && (
-        <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center">
           <p className="text-gray-500 text-sm">Nenhum boletim de medição criado ainda.</p>
           <Link href="/boletins/nova" className="mt-4 inline-block px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark">Criar primeiro BM</Link>
         </div>

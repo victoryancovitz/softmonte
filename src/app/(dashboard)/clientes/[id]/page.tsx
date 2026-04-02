@@ -54,7 +54,7 @@ export default async function ClientePage({ params }: { params: { id: string } }
 
       <div className="grid grid-cols-2 gap-5">
         {/* Dados cadastrais */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h2 className="text-sm font-bold text-brand font-display mb-4">Dados cadastrais</h2>
           <div className="space-y-3">
             {campos.filter(c => c.value).map(c => (
@@ -67,7 +67,7 @@ export default async function ClientePage({ params }: { params: { id: string } }
         </div>
 
         {/* Contatos */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h2 className="text-sm font-bold text-brand font-display mb-4">Contatos</h2>
           {contatos.length > 0 ? (
             <div className="space-y-2">
@@ -91,7 +91,7 @@ export default async function ClientePage({ params }: { params: { id: string } }
       </div>
 
       {/* Obras vinculadas */}
-      <div className="mt-5 bg-white rounded-2xl border border-gray-200 p-5">
+      <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <h2 className="text-sm font-bold text-brand font-display mb-4">Obras vinculadas</h2>
         {obras && obras.length > 0 ? (
           <div className="space-y-2">
@@ -116,7 +116,7 @@ export default async function ClientePage({ params }: { params: { id: string } }
       </div>
 
       {/* Emails enviados */}
-      <div className="mt-5 bg-white rounded-2xl border border-gray-200 p-5">
+      <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <h2 className="text-sm font-bold text-brand font-display mb-4">Emails enviados</h2>
         {emailLogs && emailLogs.length > 0 ? (
           <div className="overflow-hidden rounded-xl border border-gray-100">

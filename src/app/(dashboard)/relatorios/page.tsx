@@ -77,8 +77,8 @@ export default async function RelatoriosPage() {
 
       <div className="grid grid-cols-2 gap-5 mb-5">
         {/* Efetivo do mês */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <h2 className="text-sm font-bold font-display text-brand mb-4">📋 Efetivo — {mesEfetivo ? new Date(mesEfetivo + '-15').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }) : hoje.toLocaleDateString('pt-BR', { month: 'short' })}</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <h2 className="text-sm font-bold font-display text-brand mb-4">Efetivo — {mesEfetivo ? new Date(mesEfetivo + '-15').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }) : hoje.toLocaleDateString('pt-BR', { month: 'short' })}</h2>
           {Object.keys(efetivoMes).length > 0 ? (
             <div className="space-y-2">
               {Object.entries(efetivoMes).sort((a,b) => b[1]-a[1]).map(([obra, total]) => (
@@ -96,8 +96,8 @@ export default async function RelatoriosPage() {
         </div>
 
         {/* HH por obra */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <h2 className="text-sm font-bold font-display text-brand mb-4">⏱️ HH por Obra</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <h2 className="text-sm font-bold font-display text-brand mb-4">HH por Obra</h2>
           {Object.keys(hhObra).length > 0 ? (
             <div className="space-y-2">
               {Object.entries(hhObra).map(([obra, h]) => (
@@ -114,8 +114,8 @@ export default async function RelatoriosPage() {
         </div>
 
         {/* Financeiro por obra */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <h2 className="text-sm font-bold font-display text-brand mb-4">💰 Resultado Financeiro por Obra</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <h2 className="text-sm font-bold font-display text-brand mb-4">Resultado Financeiro por Obra</h2>
           {Object.keys(finObra).length > 0 ? (
             <div className="space-y-2">
               {Object.entries(finObra).map(([obra, f]) => {
@@ -136,8 +136,8 @@ export default async function RelatoriosPage() {
         </div>
 
         {/* Alertas de vencimento */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
-          <h2 className="text-sm font-bold font-display text-brand mb-4">🚨 Alertas de Vencimento</h2>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <h2 className="text-sm font-bold font-display text-brand mb-4">Alertas de Vencimento</h2>
           {vencContratos.length === 0 && vencDocs.length === 0 ? (
             <div className="text-center py-4">
               <div className="text-2xl mb-2">✅</div>
@@ -167,9 +167,9 @@ export default async function RelatoriosPage() {
       </div>
 
       {/* Tabela de funcionários por cargo */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
-          <h2 className="text-sm font-bold text-gray-700">👷 Equipe por Cargo</h2>
+          <h2 className="text-sm font-bold text-gray-700">Equipe por Cargo</h2>
         </div>
         <div className="p-5">
           {(() => {

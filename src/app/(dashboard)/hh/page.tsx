@@ -51,7 +51,7 @@ export default async function HHPage() {
           { label: 'Horas noturnas', value: totalNot.toFixed(0) + 'h', color: 'text-blue-600' },
           { label: 'Custo estimado', value: fmt(totalCusto), color: 'text-green-700' },
         ].map(k => (
-          <div key={k.label} className="bg-white rounded-2xl border border-gray-200 p-4">
+          <div key={k.label} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
             <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">{k.label}</div>
             <div className={`text-xl font-bold font-display ${k.color}`}>{k.value}</div>
           </div>
@@ -59,7 +59,7 @@ export default async function HHPage() {
       </div>
 
       {/* Tabela de lançamentos */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
@@ -74,7 +74,7 @@ export default async function HHPage() {
               const custo = Number(l.horas_normais ?? 0) * ch + Number(l.horas_extras ?? 0) * ch * 1.7 + Number(l.horas_noturnas ?? 0) * ch * 1.4
               const total = Number(l.horas_normais ?? 0) + Number(l.horas_extras ?? 0) + Number(l.horas_noturnas ?? 0)
               return (
-                <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                   <td className="px-4 py-3">
                     <div className="font-semibold text-gray-900">{l.funcionarios?.nome}</div>
                     <div className="text-xs text-gray-400">{l.funcionarios?.cargo}</div>

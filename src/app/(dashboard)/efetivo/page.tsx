@@ -120,7 +120,7 @@ export default function EfetivoDiarioPage() {
       </div>
 
       {/* Seleção de obra e data */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Obra</label>
@@ -154,9 +154,9 @@ export default function EfetivoDiarioPage() {
       {obraId && (
         <>
           {loading ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400 text-sm">Carregando...</div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400 text-sm">Carregando...</div>
           ) : funcionarios.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
               <p className="text-gray-500 text-sm">Nenhum funcionário alocado nesta obra.</p>
               <p className="text-gray-400 text-xs mt-1">Faça a alocação primeiro na tela de Alocação.</p>
             </div>
@@ -182,7 +182,7 @@ export default function EfetivoDiarioPage() {
               {/* Lista por cargo */}
               <div className="space-y-3">
                 {Object.entries(byCargo).sort().map(([cargo, funcs]) => (
-                  <div key={cargo} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                  <div key={cargo} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                     <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
                       <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">{cargo}</span>
                       <span className="text-xs text-gray-400">

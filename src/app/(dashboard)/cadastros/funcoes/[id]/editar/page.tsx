@@ -62,7 +62,7 @@ export default function EditarFuncaoPage({ params }: { params: { id: string } })
         <span className="text-gray-300">/</span>
         <span className="font-medium">{form.nome}</span>
       </div>
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-lg font-bold font-display text-brand">Editar função</h1>
           <button onClick={toggleAtivo}

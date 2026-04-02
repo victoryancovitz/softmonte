@@ -278,7 +278,7 @@ ${context}`,
 
       {/* Input */}
       <div className="flex-shrink-0 px-6 py-4 bg-white border-t border-gray-100">
-        <div className="flex items-end gap-2 bg-gray-50 rounded-2xl border border-gray-200 px-4 py-3 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 transition-all">
+        <div className="flex items-end gap-2 bg-gray-50 rounded-xl shadow-sm border border-gray-100 px-4 py-3 focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/20 transition-all">
           <button onClick={() => fileRef.current?.click()}
             title="Enviar arquivo" className="text-gray-400 hover:text-brand transition-colors flex-shrink-0 mb-0.5">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

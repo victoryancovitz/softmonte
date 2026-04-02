@@ -89,7 +89,7 @@ export default function NovaFaltaPage() {
         <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">{error}</div>
       )}
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-200 p-6 space-y-5">
+      <form onSubmit={handleSubmit} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           {/* Funcionário */}
           <div>

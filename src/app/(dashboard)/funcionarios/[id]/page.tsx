@@ -61,7 +61,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
 
       {alertaP1 && (
         <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-center gap-2">
-          ⚠️ <span>Contrato vencendo em <strong>{diasP1} dias</strong> ({p1?.toLocaleDateString('pt-BR')})</span>
+          <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> <span>Contrato vencendo em <strong>{diasP1} dias</strong> ({p1?.toLocaleDateString('pt-BR')})</span>
         </div>
       )}
 
@@ -76,7 +76,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
         <div className="flex items-center gap-2">
           <Link href={`/funcionarios/${f.id}/editar`}
             className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
-            ✏️ Editar
+            Editar
           </Link>
           {f.status !== 'inativo' && <DesativarFuncionarioBtn funcId={f.id} role={role} />}
         </div>
@@ -84,7 +84,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
 
       <div className="grid grid-cols-2 gap-5">
         {/* Dados */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h2 className="text-sm font-bold text-brand font-display mb-4">Dados cadastrais</h2>
           <div className="space-y-3">
             {campos.filter(c => c.value).map(c => (
@@ -103,7 +103,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
         </div>
 
         {/* Alocações */}
-        <div className="bg-white rounded-2xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h2 className="text-sm font-bold text-brand font-display mb-4">Obras</h2>
           {alocacoes && alocacoes.length > 0 ? (
             <div className="space-y-2">
@@ -125,7 +125,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
       </div>
 
       {/* Faltas e Atestados */}
-      <div className="mt-5 bg-white rounded-2xl border border-gray-200 p-5">
+      <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-bold text-brand font-display">Faltas e Atestados</h2>
           <Link href="/faltas/nova" className="text-xs text-brand hover:underline">+ Registrar</Link>
@@ -169,7 +169,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
       </div>
 
       {/* Histórico de Ponto (últimos 30 dias) */}
-      <div className="mt-5 bg-white rounded-2xl border border-gray-200 p-5">
+      <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <h2 className="text-sm font-bold text-brand font-display mb-4">Ponto — últimos 30 dias</h2>
         {efetivo30 && efetivo30.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
@@ -184,7 +184,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
       </div>
 
       {/* Documentos */}
-      <div className="mt-5 bg-white rounded-2xl border border-gray-200 p-5">
+      <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-bold text-brand font-display">Documentos</h2>
           <Link href={`/documentos/novo?funcionario=${f.id}`} className="text-xs text-brand hover:underline">+ Novo</Link>
@@ -212,7 +212,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
       </div>
 
       {/* Advertências e Termos */}
-      <div className="mt-5 bg-white rounded-2xl border border-gray-200 p-5">
+      <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-bold text-brand font-display">Advertências e Termos</h2>
           <Link href="/documentos/gerar" className="text-xs text-brand hover:underline">Gerar novo</Link>

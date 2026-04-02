@@ -31,7 +31,7 @@ export default async function AuditPage() {
       </div>
 
       {logs && logs.length > 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
@@ -71,7 +71,7 @@ export default async function AuditPage() {
           </table>
         </div>
       ) : (
-        <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center">
           <div className="text-4xl mb-3">🔍</div>
           <p className="text-gray-500 text-sm font-medium">Nenhuma ação registrada ainda</p>
           <p className="text-gray-400 text-xs mt-1">As ações aparecerão aqui conforme os usuários interagem com o sistema</p>

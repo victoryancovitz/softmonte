@@ -53,7 +53,7 @@ export default async function FuncoesPage() {
 
       <div className="space-y-5">
         {Object.entries(byCat).sort().map(([cat, funcs]) => (
-          <div key={cat} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div key={cat} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className={`text-xs px-2.5 py-1 rounded-full font-bold ${CAT_COLOR[cat] ?? 'bg-gray-100 text-gray-600'}`}>

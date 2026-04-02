@@ -51,26 +51,26 @@ export default async function FaltasPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Faltas Injustificadas (mês)</p>
           <p className="text-2xl font-bold text-red-600 mt-1">{faltasInjustificadasMes}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Atestados (mês)</p>
           <p className="text-2xl font-bold text-blue-600 mt-1">{atestadosMes}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Total no mês</p>
           <p className="text-2xl font-bold text-gray-800 mt-1">{doMes.length}</p>
         </div>
-        <div className="bg-white rounded-2xl border border-gray-200 p-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Total geral</p>
           <p className="text-2xl font-bold text-gray-800 mt-1">{rows.length}</p>
         </div>
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
@@ -86,7 +86,7 @@ export default async function FaltasPage() {
                 ? new Date(f.data + 'T12:00:00').toLocaleDateString('pt-BR')
                 : '—'
               return (
-                <tr key={f.id} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr key={f.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                   <td className="px-4 py-3">
                     <div className="font-semibold">{f.funcionarios?.nome ?? '—'}</div>
                     <div className="text-xs text-gray-400">{f.funcionarios?.cargo} · {f.funcionarios?.matricula}</div>

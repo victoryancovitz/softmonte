@@ -16,7 +16,7 @@ export default async function ClientesPage() {
         <Link href="/clientes/novo" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark">+ Novo cliente</Link>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
@@ -30,7 +30,7 @@ export default async function ClientesPage() {
               const contatos = Array.isArray(c.contatos) ? c.contatos : []
               const ativo = c.ativo !== false
               return (
-                <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50 group">
+                <tr key={c.id} className="border-b border-gray-50 hover:bg-gray-50/80 group">
                   <td className="px-4 py-3 font-semibold">
                     <Link href={`/clientes/${c.id}`} className="hover:text-brand transition-colors">{c.nome}</Link>
                   </td>

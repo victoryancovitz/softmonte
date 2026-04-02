@@ -50,7 +50,7 @@ export default function CategoriasPage() {
       </div>
 
       {/* Adicionar nova */}
-      <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-5">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
         <h2 className="text-sm font-bold text-gray-700 mb-3">Adicionar nova categoria</h2>
         <div className="flex gap-3">
           <select value={tipo} onChange={e => setTipo(e.target.value as any)}
@@ -72,7 +72,7 @@ export default function CategoriasPage() {
         {[{ label: 'Receitas', icon: '↑', items: receitas, color: 'text-green-700', bg: 'bg-green-50 border-green-100', badge: 'bg-green-100 text-green-700' },
           { label: 'Despesas', icon: '↓', items: despesas, color: 'text-red-700', bg: 'bg-red-50 border-red-100', badge: 'bg-red-100 text-red-700' }
         ].map(({ label, icon, items, color, bg, badge }) => (
-          <div key={label} className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div key={label} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className={`px-5 py-3 ${bg} border-b flex items-center gap-2`}>
               <span className={`font-bold ${color}`}>{icon}</span>
               <span className="text-sm font-bold text-gray-700">{label} ({items.length})</span>

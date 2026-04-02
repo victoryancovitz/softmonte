@@ -60,7 +60,7 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
         <span className="font-medium text-gray-700">Editar</span>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h1 className="text-lg font-semibold font-display text-brand mb-6">Editar obra</h1>
 
         {success && (

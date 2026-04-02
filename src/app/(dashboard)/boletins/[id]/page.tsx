@@ -301,7 +301,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* Header */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3 mb-1">
@@ -381,7 +381,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* Resumo por função */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-5">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-5">
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
           <h2 className="text-sm font-semibold">Resumo por Função</h2>
           <span className="text-xs text-gray-400">Carga horária: 07:00 às 17:00</span>
@@ -427,7 +427,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       </div>
 
       {/* Timeline de Status */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
         <h2 className="text-sm font-semibold mb-4">Acompanhamento</h2>
         <div className="flex items-center gap-0">
           {(['aberto','fechado','enviado','aprovado'] as const).map((s, i) => {
@@ -463,7 +463,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
 
       {/* Envio ao Cliente */}
       {bm.status === 'fechado' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
           <h2 className="text-sm font-semibold mb-4">Envio ao Cliente</h2>
 
           {/* Contatos do cliente detectados */}
@@ -531,7 +531,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
 
       {/* Retorno do Cliente */}
       {bm.status === 'enviado' && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 mb-5">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
           <h2 className="text-sm font-semibold mb-4">Retorno do Cliente</h2>
 
           {!showCriarReceita ? (
@@ -593,7 +593,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       )}
 
       {/* Histórico */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <h2 className="text-sm font-semibold mb-4">Histórico</h2>
         <div className="space-y-2">
           {buildHistorico().map((h, i) => (

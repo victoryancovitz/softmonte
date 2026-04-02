@@ -57,7 +57,7 @@ export default function MovimentarEstoquePage({ params }: { params: { id: string
         <span className="text-gray-300">/</span>
         <span className="font-medium">{item.nome}</span>
       </div>
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h1 className="text-lg font-bold font-display text-brand">{item.nome}</h1>

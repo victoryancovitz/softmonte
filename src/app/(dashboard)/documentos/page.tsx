@@ -48,20 +48,20 @@ export default async function DocumentosPage() {
         <div className="grid grid-cols-2 gap-4 mb-5">
           {vencidos.length > 0 && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-              <div className="font-semibold text-red-800 text-sm mb-1">🚨 {vencidos.length} documento(s) VENCIDO(S)</div>
+              <div className="font-semibold text-red-800 text-sm mb-1 flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> {vencidos.length} documento(s) VENCIDO(S)</div>
               <div className="text-xs text-red-600">{vencidos.map((d: any) => `${d.funcionarios?.nome?.split(' ')[0]} — ${d.tipo}`).join(' · ')}</div>
             </div>
           )}
           {vencendo.length > 0 && (
             <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-              <div className="font-semibold text-amber-800 text-sm mb-1">⚠️ {vencendo.length} documento(s) vencendo em 30 dias</div>
+              <div className="font-semibold text-amber-800 text-sm mb-1 flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> {vencendo.length} documento(s) vencendo em 30 dias</div>
               <div className="text-xs text-amber-600">{vencendo.map((d: any) => `${d.funcionarios?.nome?.split(' ')[0]} — ${d.tipo}`).join(' · ')}</div>
             </div>
           )}
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
@@ -72,7 +72,7 @@ export default async function DocumentosPage() {
           </thead>
           <tbody>
             {docsComDias.length > 0 ? docsComDias.map((d: any) => (
-              <tr key={d.id} className="border-b border-gray-50 hover:bg-gray-50 group">
+              <tr key={d.id} className="border-b border-gray-50 hover:bg-gray-50/80 group">
                 <td className="px-4 py-3 font-semibold">
                   <Link href={`/funcionarios/${d.funcionario_id}`} className="hover:text-brand">{d.funcionarios?.nome}</Link>
                   <div className="text-xs text-gray-400">{d.funcionarios?.cargo}</div>

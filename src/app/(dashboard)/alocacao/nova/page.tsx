@@ -60,7 +60,7 @@ export default function NovaAlocacaoPage() {
         <span className="text-gray-300">/</span>
         <span className="font-medium">Nova alocação</span>
       </div>
-      <div className="bg-white rounded-2xl border border-gray-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h1 className="text-lg font-bold font-display text-brand mb-6">Nova alocação</h1>
         {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200">{error}</div>}
         {conflito && <div className="mb-4 p-3 bg-amber-50 text-amber-800 text-sm rounded-xl border border-amber-200">⚠️ {conflito}</div>}

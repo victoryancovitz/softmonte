@@ -143,7 +143,7 @@ export default function FinanceiroPage() {
 
       <div className="grid grid-cols-3 gap-5 mb-5">
         {/* Fluxo de caixa chart */}
-        <div className="col-span-2 bg-white rounded-xl border border-gray-200 p-5">
+        <div className="col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold">Fluxo de Caixa Mensal</h2>
             <div className="flex items-center gap-3 text-xs text-gray-400">
@@ -209,7 +209,7 @@ export default function FinanceiroPage() {
         </div>
 
         {/* Despesas por categoria */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h2 className="text-sm font-semibold mb-4">Despesas por Categoria</h2>
           <div className="space-y-2.5">
             {catsSorted.map(([cat, val]) => (
@@ -229,7 +229,7 @@ export default function FinanceiroPage() {
       </div>
 
       {/* Tabela de fluxo mensal */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden mb-5">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-5">
         <div className="px-5 py-3 border-b border-gray-100 flex gap-3">
           {(['fluxo', 'lancamentos'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
@@ -250,7 +250,7 @@ export default function FinanceiroPage() {
             </thead>
             <tbody>
               {fluxo.map(m => (
-                <tr key={m.mes} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr key={m.mes} className="border-b border-gray-50 hover:bg-gray-50/80">
                   <td className="px-4 py-2.5 font-medium text-sm">
                     {new Date(m.mes + '-01').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '').replace(' ', "'")}
                   </td>
@@ -279,7 +279,7 @@ export default function FinanceiroPage() {
             </thead>
             <tbody>
               {lancamentos.map(l => (
-                <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                   <td className="px-4 py-2.5 text-gray-500 text-xs">{new Date(l.data_competencia+'T12:00:00').toLocaleDateString('pt-BR')}</td>
                   <td className="px-4 py-2.5 font-medium">
                     {l.nome}

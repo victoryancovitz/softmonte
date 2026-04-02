@@ -30,7 +30,7 @@ export default async function AlocacaoPage() {
         <Link href="/alocacao/nova" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-dark">+ Nova alocação</Link>
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-5">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-5">
         <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
           <h2 className="text-sm font-semibold text-gray-700">Alocações ativas ({ativas.length})</h2>
         </div>
@@ -44,7 +44,7 @@ export default async function AlocacaoPage() {
           </thead>
           <tbody>
             {ativas.length > 0 ? ativas.map((a: any) => (
-              <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50 group">
+              <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50/80 group">
                 <td className="px-4 py-3 font-semibold text-gray-900">
                   <Link href={`/funcionarios/${a.funcionario_id}`} className="hover:text-brand">{a.funcionarios?.nome}</Link>
                 </td>
@@ -69,14 +69,14 @@ export default async function AlocacaoPage() {
       </div>
 
       {encerradas.length > 0 && (
-        <details className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <details className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <summary className="px-5 py-3 bg-gray-50 border-b border-gray-100 cursor-pointer text-sm font-semibold text-gray-500">
             Alocações encerradas ({encerradas.length})
           </summary>
           <table className="w-full text-sm">
             <tbody>
               {encerradas.map((a: any) => (
-                <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50">
+                <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                   <td className="px-4 py-2.5 text-gray-400 font-medium">{a.funcionarios?.nome}</td>
                   <td className="px-4 py-2.5 text-gray-400">{a.obras?.nome}</td>
                   <td className="px-4 py-2.5 text-gray-400 text-xs">{a.data_fim ? new Date(a.data_fim+'T12:00').toLocaleDateString('pt-BR') : '—'}</td>

@@ -14,7 +14,7 @@ export default async function CadastrosPage() {
   const cards = [
     {
       href: '/cadastros/funcoes',
-      icon: '🪖',
+      icon: '',
       title: 'Funções / Cargos',
       desc: 'Gerencie as funções e custos de hora para cada cargo da empresa.',
       count: funcoes.count ?? 0,
@@ -24,7 +24,7 @@ export default async function CadastrosPage() {
     },
     {
       href: '/obras',
-      icon: '🏗️',
+      icon: '',
       title: 'Obras',
       desc: 'Cadastre e gerencie obras, clientes e localidades.',
       count: obras.count ?? 0,
@@ -34,7 +34,7 @@ export default async function CadastrosPage() {
     },
     {
       href: '/funcionarios',
-      icon: '👷',
+      icon: '',
       title: 'Funcionários',
       desc: 'Cadastro completo: dados pessoais, bancários, documentação e contratos.',
       count: funcs.count ?? 0,
@@ -44,7 +44,7 @@ export default async function CadastrosPage() {
     },
     {
       href: '/cadastros/categorias',
-      icon: '🏷️',
+      icon: '',
       title: 'Categorias Financeiras',
       desc: 'Defina as categorias para classificar receitas e despesas.',
       count: cats.count ?? 0,
@@ -54,7 +54,7 @@ export default async function CadastrosPage() {
     },
     {
       href: '/documentos',
-      icon: '📎',
+      icon: '',
       title: 'Documentos',
       desc: 'ASO, NR-10, NR-35 e outros documentos dos funcionários com controle de vencimento.',
       count: null,
@@ -64,7 +64,7 @@ export default async function CadastrosPage() {
     },
     {
       href: '/estoque/novo',
-      icon: '📦',
+      icon: '',
       title: 'Itens de Estoque',
       desc: 'Gerencie EPIs, ferramentas, materiais e consumíveis.',
       count: null,
@@ -104,7 +104,7 @@ export default async function CadastrosPage() {
       </div>
 
       {/* Atalhos rápidos */}
-      <div className="mt-8 p-5 bg-white rounded-2xl border border-gray-200">
+      <div className="mt-8 p-5 bg-white rounded-xl shadow-sm border border-gray-100">
         <h3 className="text-sm font-bold text-brand font-display mb-4">Ações rápidas de cadastro</h3>
         <div className="grid grid-cols-4 gap-3">
           {[

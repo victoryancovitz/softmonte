@@ -115,7 +115,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
       </div>
 
       {/* Tab bar */}
-      <div className="flex gap-1 mb-5 bg-white rounded-xl border border-gray-200 p-1">
+      <div className="flex gap-1 mb-5 bg-white rounded-xl shadow-sm border border-gray-100 p-1">
         {tabs.map(t => (
           <Link key={t.key} href={`/obras/${params.id}?tab=${t.key}`}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
@@ -132,24 +132,24 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
       {activeTab === 'geral' && (
         <>
           <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
               <div className="text-xs text-gray-500 mb-1">Equipe alocada</div>
               <div className="text-2xl font-bold">{alocados?.length ?? 0}</div>
               <div className="text-xs text-gray-400">funcionários</div>
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
               <div className="text-xs text-gray-500 mb-1">Boletins</div>
               <div className="text-2xl font-bold">{boletins?.length ?? 0}</div>
               <div className="text-xs text-gray-400">medições</div>
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
               <div className="text-xs text-gray-500 mb-1">Período</div>
               <div className="text-sm font-semibold">{obra.data_inicio ? new Date(obra.data_inicio + 'T12:00').toLocaleDateString('pt-BR') : '—'}</div>
               <div className="text-xs text-gray-400">até {obra.data_prev_fim ? new Date(obra.data_prev_fim + 'T12:00').toLocaleDateString('pt-BR') : '—'}</div>
             </div>
           </div>
 
-          <div className="bg-white rounded-xl border border-gray-200 p-5">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <h2 className="text-sm font-semibold mb-4">Informações da Obra</h2>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
@@ -194,7 +194,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
                 const nome = a.funcionarios?.nome ?? 'Sem nome'
                 const initials = nome.split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
                 return (
-                  <div key={a.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-3">
+                  <div key={a.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-brand/10 text-brand flex items-center justify-center text-sm font-bold shrink-0">
                       {initials}
                     </div>
@@ -209,7 +209,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               })}
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 px-4 py-12 text-center text-gray-400 text-sm">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-12 text-center text-gray-400 text-sm">
               Nenhum funcionário alocado nesta obra.
             </div>
           )}
@@ -224,7 +224,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
             <Link href="/efetivo" className="text-xs text-brand hover:underline font-medium">Ir para Efetivo</Link>
           </div>
           {efetivoSorted.length > 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
               {efetivoSorted.map(([data, info]) => (
                 <div key={data} className="px-4 py-3 flex items-center justify-between">
                   <div>
@@ -242,7 +242,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 px-4 py-12 text-center text-gray-400 text-sm">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-12 text-center text-gray-400 text-sm">
               Nenhum registro de efetivo nos últimos 30 dias.
             </div>
           )}
@@ -257,7 +257,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
             <Link href="/boletins/nova" className="text-xs text-brand hover:underline font-medium">+ Novo BM</Link>
           </div>
           {boletins && boletins.length > 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
               {boletins.map((b: any) => (
                 <Link key={b.id} href={`/boletins/${b.id}`} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 block">
                   <div>
@@ -271,7 +271,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 px-4 py-12 text-center text-gray-400 text-sm">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-12 text-center text-gray-400 text-sm">
               Nenhum boletim criado para esta obra.
             </div>
           )}
@@ -282,15 +282,15 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
       {activeTab === 'financeiro' && (
         <div>
           <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
               <div className="text-xs text-gray-500 mb-1">Total Receita</div>
               <div className="text-xl font-bold text-green-700">{fmt(totalReceita)}</div>
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
               <div className="text-xs text-gray-500 mb-1">Total Despesa</div>
               <div className="text-xl font-bold text-red-700">{fmt(totalDespesa)}</div>
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 p-4">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
               <div className="text-xs text-gray-500 mb-1">Margem</div>
               <div className={`text-xl font-bold ${margem >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(margem)}</div>
             </div>
@@ -301,7 +301,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
             <Link href="/financeiro" className="text-xs text-brand hover:underline font-medium">Ir para Financeiro</Link>
           </div>
           {lancamentos && lancamentos.length > 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
               {lancamentos.map((l: any) => (
                 <div key={l.id} className="px-4 py-3 flex items-center justify-between">
                   <div>
@@ -324,7 +324,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 px-4 py-12 text-center text-gray-400 text-sm">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-12 text-center text-gray-400 text-sm">
               Nenhum lançamento financeiro para esta obra.
             </div>
           )}
@@ -339,7 +339,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
             <Link href="/documentos/novo" className="text-xs text-brand hover:underline font-medium">+ Novo documento</Link>
           </div>
           {docsComDias.length > 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden divide-y divide-gray-100">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
               {docsComDias.map((d: any) => (
                 <div key={d.id} className="px-4 py-3 flex items-center justify-between">
                   <div>
@@ -356,7 +356,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-xl border border-gray-200 px-4 py-12 text-center text-gray-400 text-sm">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-12 text-center text-gray-400 text-sm">
               Nenhum documento encontrado para os funcionários alocados.
             </div>
           )}

@@ -32,7 +32,7 @@ export default async function EstoquePage() {
         </div>
       )}
 
-      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
@@ -45,7 +45,7 @@ export default async function EstoquePage() {
             {itens && itens.length > 0 ? itens.map((i: any) => {
               const critico = Number(i.quantidade) <= Number(i.quantidade_minima ?? 0)
               return (
-                <tr key={i.id} className={`border-b border-gray-50 hover:bg-gray-50 group ${critico ? 'bg-amber-50/30' : ''}`}>
+                <tr key={i.id} className={`border-b border-gray-50 hover:bg-gray-50/80 group ${critico ? 'bg-amber-50/30' : ''}`}>
                   <td className="px-4 py-3 text-gray-400 font-mono text-xs">{i.codigo}</td>
                   <td className="px-4 py-3 font-semibold text-gray-900">{i.nome}</td>
                   <td className="px-4 py-3">

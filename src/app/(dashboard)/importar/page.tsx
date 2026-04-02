@@ -85,7 +85,7 @@ export default function ImportarPage() {
       </div>
 
       {mode === 'funcionarios' && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-6">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-base font-bold font-display text-brand mb-4">Importar Funcionários via CSV</h2>
 
           {/* Instruções */}
@@ -152,7 +152,7 @@ export default function ImportarPage() {
       )}
 
       {mode === 'efetivo' && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
           <div className="text-4xl mb-3">🚧</div>
           <div className="text-gray-600 font-semibold">Importador de efetivo</div>
           <div className="text-sm text-gray-400 mt-1">Em desenvolvimento — disponível em breve</div>
