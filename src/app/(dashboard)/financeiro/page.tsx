@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import ConfirmButton from '@/components/ConfirmButton'
+import SearchInput from '@/components/SearchInput'
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const fmtK = (v: number) => {
@@ -28,6 +29,7 @@ export default function FinanceiroPage() {
   const [showProvisoes, setShowProvisoes] = useState(true)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'fluxo' | 'lancamentos'>('fluxo')
+  const [busca, setBusca] = useState('')
   const supabase = createClient()
 
   useEffect(() => {
@@ -239,6 +241,12 @@ export default function FinanceiroPage() {
           ))}
         </div>
 
+        {tab === 'lancamentos' && (
+          <div className="px-5 pt-3">
+            <SearchInput value={busca} onChange={setBusca} placeholder="Buscar lançamento..." />
+          </div>
+        )}
+
         {tab === 'fluxo' ? (
           <table className="w-full text-sm">
             <thead>
@@ -278,7 +286,7 @@ export default function FinanceiroPage() {
               </tr>
             </thead>
             <tbody>
-              {lancamentos.map(l => (
+              {lancamentos.filter(l => !busca || l.nome?.toLowerCase().includes(busca.toLowerCase()) || l.categoria?.toLowerCase().includes(busca.toLowerCase()) || l.tipo?.toLowerCase().includes(busca.toLowerCase())).map(l => (
                 <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                   <td className="px-4 py-2.5 text-gray-500 text-xs">{new Date(l.data_competencia+'T12:00:00').toLocaleDateString('pt-BR')}</td>
                   <td className="px-4 py-2.5 font-medium">

@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
+import SearchInput from '@/components/SearchInput'
 import { Clock, Users, TrendingUp, TrendingDown, Lock, AlertTriangle } from 'lucide-react'
 
 interface BancoHorasRow {
@@ -50,6 +51,7 @@ export default function BancoHorasPage() {
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null)
   const [editValue, setEditValue] = useState('')
   const [fechando, setFechando] = useState(false)
+  const [busca, setBusca] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -286,6 +288,11 @@ export default function BancoHorasPage() {
         </div>
       )}
 
+      {/* Search */}
+      <div className="mb-4">
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar funcionário..." />
+      </div>
+
       {/* Table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
         <table className="w-full text-sm">
@@ -307,7 +314,7 @@ export default function BancoHorasPage() {
                   {obraId ? 'Nenhum registro para este periodo.' : 'Selecione uma obra.'}
                 </td>
               </tr>
-            ) : rows.map(row => (
+            ) : rows.filter(row => !busca || row.funcionarios?.nome?.toLowerCase().includes(busca.toLowerCase())).map(row => (
               <tr key={row.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                 <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{row.funcionarios?.nome ?? '—'}</td>
                 <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{row.funcionarios?.cargo ?? '—'}</td>

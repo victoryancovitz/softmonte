@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
+import SearchInput from '@/components/SearchInput'
 import {
   UserMinus, CheckCircle2, Clock, ChevronDown, ChevronRight,
   Plus, CalendarCheck, MessageSquare, AlertTriangle, FileText,
@@ -91,6 +92,7 @@ export default function DesligamentosPage() {
   const [newTipo, setNewTipo] = useState('')
   const [newDataSaida, setNewDataSaida] = useState('')
   const [saving, setSaving] = useState(false)
+  const [busca, setBusca] = useState('')
 
   useEffect(() => {
     loadData()
@@ -226,8 +228,9 @@ export default function DesligamentosPage() {
     loadData()
   }
 
-  const emAndamento = desligamentos.filter(d => d.status === 'em_andamento')
-  const concluidos = desligamentos.filter(d => d.status === 'concluido')
+  const filteredDesligamentos = desligamentos.filter(d => !busca || d.funcionarios?.nome?.toLowerCase().includes(busca.toLowerCase()))
+  const emAndamento = filteredDesligamentos.filter(d => d.status === 'em_andamento')
+  const concluidos = filteredDesligamentos.filter(d => d.status === 'concluido')
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -328,6 +331,11 @@ export default function DesligamentosPage() {
           </div>
         </div>
       )}
+
+      {/* Search */}
+      <div className="mb-4">
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar desligamento..." />
+      </div>
 
       {/* Cards */}
       {loading ? (

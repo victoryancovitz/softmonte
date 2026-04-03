@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import BackButton from '@/components/BackButton'
+import SearchInput from '@/components/SearchInput'
 
 const ROLE_CONFIG: Record<string, { label: string; color: string }> = {
   admin: { label: 'Administrador', color: 'bg-red-100 text-red-700' },
@@ -36,6 +37,7 @@ export default function AdminUsuariosPage() {
   const [tab, setTab] = useState<'usuarios' | 'convites'>('usuarios')
   const [loading, setLoading] = useState(true)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [busca, setBusca] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
@@ -69,9 +71,10 @@ export default function AdminUsuariosPage() {
   const now = new Date()
   const ativos = profiles.filter((p: any) => p.ativo !== false)
   const bloqueados = profiles.filter((p: any) => p.ativo === false)
-  const convitesPendentes = convites.filter((c: any) => c.ativo && !c.usado_em && new Date(c.expires_at) > now)
-  const convitesAceitos = convites.filter((c: any) => c.usado_em)
-  const convitesExpirados = convites.filter((c: any) => (!c.ativo || new Date(c.expires_at) <= now) && !c.usado_em)
+  const buscaFilter = (c: any) => !busca || c.nome_convidado?.toLowerCase().includes(busca.toLowerCase()) || c.email?.toLowerCase().includes(busca.toLowerCase())
+  const convitesPendentes = convites.filter((c: any) => c.ativo && !c.usado_em && new Date(c.expires_at) > now).filter(buscaFilter)
+  const convitesAceitos = convites.filter((c: any) => c.usado_em).filter(buscaFilter)
+  const convitesExpirados = convites.filter((c: any) => (!c.ativo || new Date(c.expires_at) <= now) && !c.usado_em).filter(buscaFilter)
 
   if (loading) return <div className="p-6 text-sm text-gray-400">Carregando...</div>
 
@@ -141,6 +144,11 @@ export default function AdminUsuariosPage() {
         </button>
       </div>
 
+      {/* Search */}
+      <div className="mb-4">
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar usuário..." />
+      </div>
+
       {/* Tab: Usuários */}
       {tab === 'usuarios' && (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -153,7 +161,7 @@ export default function AdminUsuariosPage() {
               </tr>
             </thead>
             <tbody>
-              {profiles.length > 0 ? profiles.map((p: any) => {
+              {profiles.length > 0 ? profiles.filter((p: any) => !busca || p.nome?.toLowerCase().includes(busca.toLowerCase()) || p.email?.toLowerCase().includes(busca.toLowerCase())).map((p: any) => {
                 const initials = (p.nome || '??').split(' ').map((w: string) => w[0]).slice(0, 2).join('').toUpperCase()
                 const roleConf = ROLE_CONFIG[p.role] || { label: p.role || '--', color: 'bg-gray-100 text-gray-600' }
                 const modulosCount = Array.isArray(p.acessos) ? p.acessos.length : 0

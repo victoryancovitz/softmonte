@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
+import SearchInput from '@/components/SearchInput'
 import { Palmtree, AlertCircle, CalendarCheck, Clock, Users, Check, X } from 'lucide-react'
 
 interface Funcionario {
@@ -57,6 +58,7 @@ export default function FeriasPage() {
   const [formOpen, setFormOpen] = useState<string | null>(null)
   const [formData, setFormData] = useState({ data_inicio_gozo: '', data_fim_gozo: '', dias_vendidos: 0 })
   const [saving, setSaving] = useState(false)
+  const [busca, setBusca] = useState('')
 
   useEffect(() => {
     loadData()
@@ -123,7 +125,7 @@ export default function FeriasPage() {
     if (tab === 'vencidas') return c.isVencida
     if (tab === 'programadas') return c.activeFeria != null
     return true
-  })
+  }).filter(c => !busca || c.nome?.toLowerCase().includes(busca.toLowerCase()))
 
   const totalVencidas = consolidated.filter(c => c.isVencida).length
   const totalProgramadas = consolidated.filter(c => c.activeFeria != null).length
@@ -222,6 +224,11 @@ export default function FeriasPage() {
             {t.label}
           </button>
         ))}
+      </div>
+
+      {/* Search */}
+      <div className="mb-4">
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar funcionário..." />
       </div>
 
       {/* Table */}

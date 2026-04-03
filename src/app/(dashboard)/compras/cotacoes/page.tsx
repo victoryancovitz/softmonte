@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { Plus, X, ChevronDown, ChevronUp, Check, AlertTriangle, Trash2 } from 'lucide-react'
+import SearchInput from '@/components/SearchInput'
 
 interface Obra {
   id: string
@@ -64,6 +65,7 @@ export default function CotacoesPage() {
 
   // Approve form state
   const [approveForm, setApproveForm] = useState({ fornecedor: '', valor: '', motivo: '' })
+  const [busca, setBusca] = useState('')
 
   async function loadData() {
     setLoading(true)
@@ -284,14 +286,21 @@ export default function CotacoesPage() {
         </div>
       )}
 
+      {/* Search */}
+      <div className="mb-4">
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar cotação..." />
+      </div>
+
       {/* List */}
-      {loading ? (
+      {(() => {
+        const filteredCotacoes = cotacoes.filter(c => !busca || c.descricao?.toLowerCase().includes(busca.toLowerCase()) || c.obras?.nome?.toLowerCase().includes(busca.toLowerCase()) || c.numero?.toLowerCase().includes(busca.toLowerCase()))
+        return loading ? (
         <p className="text-sm text-gray-400">Carregando...</p>
-      ) : cotacoes.length === 0 ? (
+      ) : filteredCotacoes.length === 0 ? (
         <p className="text-sm text-gray-400">Nenhuma cotação encontrada.</p>
       ) : (
         <div className="space-y-3">
-          {cotacoes.map((c) => {
+          {filteredCotacoes.map((c) => {
             const isExpanded = expandedId === c.id
             const convidados = Array.isArray(c.fornecedores_convidados) ? c.fornecedores_convidados : []
             const itens = Array.isArray(c.itens) ? c.itens : []
@@ -458,7 +467,8 @@ export default function CotacoesPage() {
             )
           })}
         </div>
-      )}
+      )
+      })()}
     </div>
   )
 }

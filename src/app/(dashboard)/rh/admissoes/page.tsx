@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
+import SearchInput from '@/components/SearchInput'
 import {
   UserPlus, CheckCircle2, Clock, ChevronDown, ChevronRight,
   Plus, Users, CalendarCheck, FileText, MessageSquare,
@@ -90,6 +91,7 @@ export default function AdmissoesPage() {
   const [newObraId, setNewObraId] = useState('')
   const [newDataPrevista, setNewDataPrevista] = useState('')
   const [saving, setSaving] = useState(false)
+  const [busca, setBusca] = useState('')
 
   useEffect(() => {
     loadData()
@@ -192,7 +194,8 @@ export default function AdmissoesPage() {
     loadData()
   }
 
-  const emAndamento = admissoes.filter(a => a.status === 'em_andamento')
+  const filteredAdmissoes = admissoes.filter(a => !busca || a.funcionarios?.nome?.toLowerCase().includes(busca.toLowerCase()))
+  const emAndamento = filteredAdmissoes.filter(a => a.status === 'em_andamento')
   const now = new Date()
   const mesAtual = now.getMonth()
   const anoAtual = now.getFullYear()
@@ -299,6 +302,11 @@ export default function AdmissoesPage() {
           </div>
         </div>
       )}
+
+      {/* Search */}
+      <div className="mb-4">
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar admissão..." />
+      </div>
 
       {/* Cards */}
       {loading ? (
@@ -411,7 +419,7 @@ export default function AdmissoesPage() {
       )}
 
       {/* Concluidas section */}
-      {admissoes.filter(a => a.status === 'concluida').length > 0 && (
+      {filteredAdmissoes.filter(a => a.status === 'concluida').length > 0 && (
         <div className="mt-8">
           <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Concluidas</h2>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
@@ -424,7 +432,7 @@ export default function AdmissoesPage() {
                 </tr>
               </thead>
               <tbody>
-                {admissoes.filter(a => a.status === 'concluida').map(adm => (
+                {filteredAdmissoes.filter(a => a.status === 'concluida').map(adm => (
                   <tr key={adm.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                     <td className="px-4 py-3 font-semibold text-gray-900">{adm.funcionarios?.nome ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600">{adm.funcionarios?.cargo ?? '—'}</td>

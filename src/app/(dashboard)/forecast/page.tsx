@@ -3,12 +3,14 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { TrendingUp, DollarSign, Calendar, ArrowLeft, Check, X } from 'lucide-react'
+import SearchInput from '@/components/SearchInput'
 
 export default function ForecastPage() {
   const [forecast, setForecast] = useState<any[]>([])
   const [detalhe, setDetalhe] = useState<any[] | null>(null)
   const [obraAtiva, setObraAtiva] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [busca, setBusca] = useState('')
   const supabase = createClient()
 
   useEffect(() => { loadForecast() }, [])
@@ -162,6 +164,11 @@ export default function ForecastPage() {
         </div>
       </div>
 
+      {/* Search */}
+      <div className="mb-4">
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar contrato..." />
+      </div>
+
       {/* Tabela por contrato */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
         <table className="w-full text-sm">
@@ -173,7 +180,7 @@ export default function ForecastPage() {
             </tr>
           </thead>
           <tbody>
-            {forecast.length > 0 ? forecast.map((f: any) => {
+            {forecast.length > 0 ? forecast.filter((f: any) => !busca || f.obra?.toLowerCase().includes(busca.toLowerCase()) || f.cliente?.toLowerCase().includes(busca.toLowerCase())).map((f: any) => {
               const diff = Number(f.receita_total_realizada || 0) - Number(f.receita_total_prevista || 0)
               return (
                 <tr key={f.obra_id} className="border-b border-gray-50 hover:bg-gray-50/80 cursor-pointer group" onClick={() => abrirDetalhe(f)}>
