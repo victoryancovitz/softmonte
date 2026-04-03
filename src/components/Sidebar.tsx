@@ -170,15 +170,17 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
         <NavGroup label="Análise" forceOpen={hasActiveChild(['/financeiro','/relatorios','/forecast','/assistente'])}>
           <NavItem href="/financeiro" label="Financeiro" icon={ic.fin} />
           <NavItem href="/forecast" label="Forecast" icon={ic.report} />
+          <NavItem href="/relatorios/margem" label="Margem por Contrato" icon={ic.fin} />
           <NavItem href="/relatorios" label="Relatórios" icon={ic.report} />
           {isAdmin && <NavItem href="/assistente" label="Assistente IA" icon={ic.ai} badge="IA" />}
         </NavGroup>
       )}
 
       {isAdmin && (
-        <NavGroup label="Cadastros" forceOpen={hasActiveChild(['/cadastros','/clientes','/importar'])}>
+        <NavGroup label="Cadastros" forceOpen={hasActiveChild(['/cadastros','/clientes','/tipos-contrato','/importar'])}>
           <NavItem href="/cadastros" label="Todos os cadastros" icon={ic.cad} />
           <NavItem href="/clientes" label="Clientes" icon={ic.client} />
+          <NavItem href="/tipos-contrato" label="Tipos de Contrato" icon={ic.bm} />
           <NavItem href="/importar" label="Importar dados" icon={ic.import} />
         </NavGroup>
       )}
