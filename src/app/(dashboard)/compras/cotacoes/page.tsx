@@ -33,14 +33,14 @@ interface Cotacao {
 
 const STATUS_COLORS: Record<string, string> = {
   aberta: 'bg-blue-100 text-blue-700',
-  em_cotacao: 'bg-yellow-100 text-yellow-700',
+  em_analise: 'bg-yellow-100 text-yellow-700',
   aprovada: 'bg-green-100 text-green-700',
   cancelada: 'bg-gray-100 text-gray-500',
 }
 
 const STATUS_LABELS: Record<string, string> = {
   aberta: 'Aberta',
-  em_cotacao: 'Em Cotação',
+  em_analise: 'Em Cotação',
   aprovada: 'Aprovada',
   cancelada: 'Cancelada',
 }
@@ -85,7 +85,7 @@ export default function CotacoesPage() {
   const now = new Date()
   const mesAtual = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const abertas = cotacoes.filter((c) => c.status === 'aberta').length
-  const emCotacao = cotacoes.filter((c) => c.status === 'em_cotacao').length
+  const emCotacao = cotacoes.filter((c) => c.status === 'em_analise').length
   const aprovadasMes = cotacoes.filter(
     (c) => c.status === 'aprovada' && c.created_at?.startsWith(mesAtual)
   ).length

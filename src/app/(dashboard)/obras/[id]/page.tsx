@@ -441,9 +441,9 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
                     </div>
                     <div className="flex items-center gap-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        e.status === 'concluida' ? 'bg-green-100 text-green-700' :
+                        e.status === 'concluido' ? 'bg-green-100 text-green-700' :
                         e.status === 'em_andamento' ? 'bg-blue-100 text-blue-700' :
-                        e.status === 'atrasada' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'
+                        e.status === 'atrasado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'
                       }`}>{e.status}</span>
                       <span className="text-xs text-gray-400">{e.percentual_fisico}%</span>
                     </div>

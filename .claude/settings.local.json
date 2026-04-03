@@ -20,7 +20,9 @@
       "mcp__claude_ai_Supabase__list_tables",
       "mcp__claude_ai_Supabase__execute_sql",
       "Bash(grep -rn \"flex items-center gap-2 mb-6 text-sm\\\\|flex items-center gap-3 mb-6\\\\|Boletins.*\\\\/.*span\" src/app/\\\\\\(dashboard\\\\\\)/*/page.tsx src/app/\\\\\\(dashboard\\\\\\)/*/*/page.tsx src/app/\\\\\\(dashboard\\\\\\)/*/*/*/page.tsx)",
-      "Bash(node -e ':*)"
+      "Bash(node -e ':*)",
+      "Bash(find src:*)",
+      "Bash([ -f \"C:/Users/User/AppData/Local/Temp/claude/C--Users-User-Downloads-softmonte-git/d5faf8c9-eb88-4d2b-9fa7-d0797ba4d30a/tasks/a6dc42569f78c7a23.output\" ])"
     ]
   }
 }
