@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase-server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import { ToastProvider } from '@/components/Toast'
+import InstallPrompt from '@/components/InstallPrompt'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -16,6 +17,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Sidebar profile={profile} />
       <main className="flex-1 overflow-auto min-h-screen bg-[#F4F6FA] pt-0 lg:pt-0">
         <ToastProvider>{children}</ToastProvider>
+        <InstallPrompt />
       </main>
     </div>
   )
