@@ -4,78 +4,47 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
+import Tooltip from '@/components/ui/Tooltip'
+import { useToast } from '@/components/Toast'
+import { formatSupabaseError } from '@/lib/errors'
 
 export default function NovoFuncionarioPage() {
-  const [funcoes, setFuncoes] = useState<any[]>([])
   const [form, setForm] = useState<any>({
-    nome: '', matricula: '', cargo: '', funcao_id: '',
-    turno: 'diurno', jornada_horas: 8, status: 'disponivel',
-    re: '', cpf: '', pis: '', banco: '', agencia_conta: '', pix: '',
-    vt_estrutura: '', tamanho_bota: '', tamanho_uniforme: '',
-    admissao: '', tipo_vinculo: 'experiencia_45_45',
-    salario_base: '', insalubridade_pct: '0', periculosidade_pct: '0',
-    vt_mensal: '', vr_diario: '', va_mensal: '', plano_saude_mensal: '', outros_beneficios: '', horas_mes: '189',
+    nome: '', matricula: '', cpf: '', data_nascimento: '',
+    funcao_id: '', cargo: '', turno: 'diurno', tipo_vinculo: 'experiencia_45_45',
+    admissao: '', obra_id: '',
+    salario_base: '', horas_mes: '189', insalubridade_pct: '0', periculosidade_pct: '0',
+    vt_mensal: '', vr_diario: '', va_mensal: '', plano_saude_mensal: '', outros_beneficios: '',
+    pis: '', banco: '', agencia_conta: '', pix: '', vt_estrutura: '',
+    tamanho_bota: '', tamanho_uniforme: '', re: '',
   })
+  const [etapa, setEtapa] = useState(1)
+  const [funcoes, setFuncoes] = useState<any[]>([])
+  const [obras, setObras] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
   const supabase = createClient()
+  const toast = useToast()
 
   useEffect(() => {
     supabase.from('funcoes').select('*').eq('ativo', true).order('nome')
       .then(({ data }) => setFuncoes(data ?? []))
+    supabase.from('obras').select('*').eq('status', 'ativo').order('nome')
+      .then(({ data }) => setObras(data ?? []))
   }, [])
 
   function set(field: string, value: any) {
     setForm((f: any) => {
       const next = { ...f, [field]: value }
-      // Auto-preencher custo quando seleciona função
       if (field === 'funcao_id' && value) {
         const fn = funcoes.find(fn => fn.id === value)
         if (fn) {
           next.cargo = fn.nome
-          next.custo_hora = fn.custo_hora?.toString() ?? ''
-          next.custo_hora_extra = fn.custo_hora && fn.multiplicador_extra
-            ? (fn.custo_hora * fn.multiplicador_extra).toFixed(2) : ''
-          next.custo_hora_noturno = fn.custo_hora && fn.multiplicador_noturno
-            ? (fn.custo_hora * fn.multiplicador_noturno).toFixed(2) : ''
         }
       }
       return next
     })
-  }
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    const { error } = await supabase.from('funcionarios').insert({
-      nome: form.nome.trim().toUpperCase(),
-      matricula: form.matricula.trim(),
-      cargo: form.cargo.trim().toUpperCase() || form.cargo,
-      funcao_id: form.funcao_id || null,
-      turno: form.turno,
-      jornada_horas: parseInt(form.jornada_horas) || 8,
-      status: form.status,
-      re: form.re || null, cpf: form.cpf || null, pis: form.pis || null,
-      banco: form.banco || null, agencia_conta: form.agencia_conta || null, pix: form.pix || null,
-      vt_estrutura: form.vt_estrutura || null,
-      tamanho_bota: form.tamanho_bota || null, tamanho_uniforme: form.tamanho_uniforme || null,
-      admissao: form.admissao || null,
-      tipo_vinculo: form.tipo_vinculo || 'experiencia_45_45',
-      salario_base: parseFloat(form.salario_base) || null,
-      insalubridade_pct: parseFloat(form.insalubridade_pct) || 0,
-      periculosidade_pct: parseFloat(form.periculosidade_pct) || 0,
-      vt_mensal: parseFloat(form.vt_mensal) || 0,
-      vr_diario: parseFloat(form.vr_diario) || 0,
-      va_mensal: parseFloat(form.va_mensal) || 0,
-      plano_saude_mensal: parseFloat(form.plano_saude_mensal) || 0,
-      outros_beneficios: parseFloat(form.outros_beneficios) || 0,
-      horas_mes: parseFloat(form.horas_mes) || 189,
-      custo_hora: custoHora > 0 ? custoHora : null,
-    })
-    if (error) { setError(error.message); setLoading(false); return }
-    router.push('/funcionarios')
   }
 
   // CLT cost calculations
@@ -83,14 +52,88 @@ export default function NovoFuncionarioPage() {
   const insalubridade = salarioBase * (parseFloat(form.insalubridade_pct) || 0) / 100
   const periculosidade = salarioBase * (parseFloat(form.periculosidade_pct) || 0) / 100
   const salarioTotal = salarioBase + insalubridade + periculosidade
-  const encargos = salarioTotal * 0.374 // INSS 20% + FGTS 8% + RAT 3% + Sistema S 6.4%
-  const provisoes = salarioTotal * 0.21 // 13º + Férias + 1/3 + FGTS sobre elas
-  const vrMensal = (parseFloat(form.vr_diario) || 0) * 22
+  const encargos = salarioTotal * 0.374
+  const provisoes = salarioTotal * 0.21
+  const vrMensal = (parseFloat(form.vr_diario) || 0) * 21
   const totalBeneficios = (parseFloat(form.vt_mensal) || 0) + vrMensal + (parseFloat(form.va_mensal) || 0) + (parseFloat(form.plano_saude_mensal) || 0) + (parseFloat(form.outros_beneficios) || 0)
   const custoTotal = salarioTotal + encargos + provisoes + totalBeneficios
   const horasMes = parseFloat(form.horas_mes) || 189
   const custoHora = horasMes > 0 ? Math.round(custoTotal / horasMes * 100) / 100 : 0
   const fmtR = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+  function handleNext() {
+    setError('')
+    if (etapa === 1) {
+      if (!form.nome.trim() || !form.matricula.trim()) {
+        setError('Nome e matrícula são obrigatórios.')
+        return
+      }
+    }
+    if (etapa === 2) {
+      if (!form.admissao) {
+        setError('Data de admissão é obrigatória.')
+        return
+      }
+    }
+    if (etapa === 3) {
+      if (!form.salario_base || parseFloat(form.salario_base) <= 0) {
+        setError('Salário base é obrigatório.')
+        return
+      }
+    }
+    setEtapa(etapa + 1)
+  }
+
+  async function handleSave() {
+    setLoading(true)
+    setError('')
+    const { data, error: insertError } = await supabase.from('funcionarios').insert({
+      nome: form.nome.trim().toUpperCase(),
+      matricula: form.matricula.trim(),
+      cpf: form.cpf || null,
+      data_nascimento: form.data_nascimento || null,
+      funcao_id: form.funcao_id || null,
+      cargo: form.cargo.trim().toUpperCase() || null,
+      turno: form.turno,
+      tipo_vinculo: form.tipo_vinculo || 'experiencia_45_45',
+      admissao: form.admissao || null,
+      salario_base: parseFloat(form.salario_base) || null,
+      horas_mes: parseFloat(form.horas_mes) || 189,
+      insalubridade_pct: parseFloat(form.insalubridade_pct) || 0,
+      periculosidade_pct: parseFloat(form.periculosidade_pct) || 0,
+      vt_mensal: parseFloat(form.vt_mensal) || 0,
+      vr_diario: parseFloat(form.vr_diario) || 0,
+      va_mensal: parseFloat(form.va_mensal) || 0,
+      plano_saude_mensal: parseFloat(form.plano_saude_mensal) || 0,
+      outros_beneficios: parseFloat(form.outros_beneficios) || 0,
+      custo_hora: custoHora > 0 ? custoHora : null,
+      pis: form.pis || null,
+      banco: form.banco || null,
+      agencia_conta: form.agencia_conta || null,
+      pix: form.pix || null,
+      vt_estrutura: form.vt_estrutura || null,
+      tamanho_bota: form.tamanho_bota || null,
+      tamanho_uniforme: form.tamanho_uniforme || null,
+      re: form.re || null,
+    }).select('id').single()
+
+    if (insertError) {
+      setError(formatSupabaseError(insertError))
+      setLoading(false)
+      return
+    }
+
+    if (form.obra_id && data?.id) {
+      await supabase.from('alocacoes').insert({
+        funcionario_id: data.id,
+        obra_id: form.obra_id,
+        data_inicio: form.admissao || new Date().toISOString().split('T')[0],
+      })
+    }
+
+    toast.show('Funcionário cadastrado!')
+    router.push('/funcionarios/' + data?.id)
+  }
 
   const inp = "w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand"
   const lbl = "block text-xs font-semibold text-gray-600 mb-1"
@@ -103,82 +146,165 @@ export default function NovoFuncionarioPage() {
         <span className="text-gray-300">/</span>
         <span className="font-medium">Novo</span>
       </div>
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h1 className="text-lg font-bold font-display text-brand mb-6">Novo funcionário</h1>
-        {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200">{error}</div>}
-        <form onSubmit={handleSubmit} className="space-y-6">
 
-          {/* Identificação */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+        <h1 className="text-lg font-bold font-display text-brand mb-4">Novo Funcionário</h1>
+
+        {/* Progress Bar */}
+        <div className="flex items-center gap-2 mb-6">
+          {[{n:1,label:'Identificação'},{n:2,label:'Cargo'},{n:3,label:'Remuneração'},{n:4,label:'Documentos'}].map(step => (
+            <div key={step.n} className="flex-1">
+              <div className={`h-1.5 rounded-full ${etapa > step.n ? 'bg-green-500' : etapa === step.n ? 'bg-brand' : 'bg-gray-200'}`} />
+              <p className={`text-[10px] mt-1 font-medium ${etapa === step.n ? 'text-brand' : etapa > step.n ? 'text-green-600' : 'text-gray-400'}`}>
+                {etapa > step.n ? '✓ ' : ''}{step.label}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200">{error}</div>}
+
+        {/* Step 1 — Identificação */}
+        {etapa === 1 && (
           <section>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Identificação</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="col-span-1 sm:col-span-2"><label className={lbl}>Nome completo *</label>
-                <input required type="text" value={form.nome} onChange={e => set('nome', e.target.value)} className={inp} placeholder="NOME SOBRENOME" style={{textTransform:'uppercase'}}/></div>
-              <div><label className={lbl}>Matrícula *</label>
-                <input required type="text" value={form.matricula} onChange={e => set('matricula', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>RE</label>
-                <input type="text" value={form.re} onChange={e => set('re', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>CPF</label>
-                <input type="text" value={form.cpf} onChange={e => set('cpf', e.target.value)} className={inp} placeholder="000.000.000-00"/></div>
-              <div><label className={lbl}>PIS</label>
-                <input type="text" value={form.pis} onChange={e => set('pis', e.target.value)} className={inp}/></div>
+              <div className="col-span-1 sm:col-span-2">
+                <label className={lbl}>Nome completo *</label>
+                <input type="text" value={form.nome} onChange={e => set('nome', e.target.value)} className={inp} placeholder="NOME SOBRENOME" style={{textTransform:'uppercase'}} />
+              </div>
+              <div>
+                <label className={lbl}>Matrícula *</label>
+                <input type="text" value={form.matricula} onChange={e => set('matricula', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>CPF</label>
+                <input type="text" value={form.cpf} onChange={e => set('cpf', e.target.value)} className={inp} placeholder="000.000.000-00" />
+              </div>
+              <div>
+                <label className={lbl}>Data de nascimento</label>
+                <input type="date" value={form.data_nascimento} onChange={e => set('data_nascimento', e.target.value)} className={inp} />
+              </div>
             </div>
           </section>
+        )}
 
-          {/* Função */}
+        {/* Step 2 — Cargo e Contrato */}
+        {etapa === 2 && (
           <section>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Função</h3>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Cargo e Contrato</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="col-span-1 sm:col-span-2">
                 <label className={lbl}>Função cadastrada</label>
-                <select value={form.funcao_id} onChange={e => set('funcao_id', e.target.value)}
-                  className={inp + ' bg-white'}>
+                <select value={form.funcao_id} onChange={e => set('funcao_id', e.target.value)} className={inp + ' bg-white'}>
                   <option value="">Selecione uma função...</option>
                   {funcoes.map(f => (
                     <option key={f.id} value={f.id}>{f.nome}</option>
                   ))}
                 </select>
               </div>
-              <div><label className={lbl}>Cargo (texto livre)</label>
-                <input type="text" value={form.cargo} onChange={e => set('cargo', e.target.value)} className={inp}/></div>
+              <div>
+                <label className={lbl}>Cargo (texto livre)</label>
+                <input type="text" value={form.cargo} onChange={e => set('cargo', e.target.value)} className={inp} />
+              </div>
               <div>
                 <label className={lbl}>Turno</label>
                 <select value={form.turno} onChange={e => set('turno', e.target.value)} className={inp + ' bg-white'}>
-                  <option value="diurno">Diurno</option><option value="noturno">Noturno</option><option value="misto">Misto</option>
+                  <option value="diurno">Diurno</option>
+                  <option value="noturno">Noturno</option>
+                  <option value="misto">Misto</option>
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>
+                  Tipo de vínculo
+                  <Tooltip text="Tipo de contrato de trabalho. Na maioria dos casos é Experiência 45+45 dias." />
+                </label>
+                <select value={form.tipo_vinculo} onChange={e => set('tipo_vinculo', e.target.value)} className={inp + ' bg-white'}>
+                  <option value="experiencia_45_45">Experiência 45+45 dias</option>
+                  <option value="experiencia_30_60">Experiência 30+60 dias</option>
+                  <option value="experiencia_90">Experiência 90 dias</option>
+                  <option value="determinado_6m">Determinado 6 meses</option>
+                  <option value="determinado_12m">Determinado 12 meses</option>
+                  <option value="indeterminado">Indeterminado (CLT)</option>
+                  <option value="temporario">Temporário</option>
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>Data de admissão *</label>
+                <input type="date" value={form.admissao} onChange={e => set('admissao', e.target.value)} className={inp} />
+              </div>
+              <div className="col-span-1 sm:col-span-2">
+                <label className={lbl}>Obra (opcional)</label>
+                <select value={form.obra_id} onChange={e => set('obra_id', e.target.value)} className={inp + ' bg-white'}>
+                  <option value="">Nenhuma obra selecionada</option>
+                  {obras.map(o => (
+                    <option key={o.id} value={o.id}>{o.nome}</option>
+                  ))}
                 </select>
               </div>
             </div>
           </section>
+        )}
 
-          {/* Remuneração CLT */}
+        {/* Step 3 — Remuneração */}
+        {etapa === 3 && (
           <section>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Remuneração e Custo CLT</h3>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Remuneração</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className={lbl}>Salário base (R$/mês) *</label>
-                <input type="number" step="0.01" value={form.salario_base} onChange={e => set('salario_base', e.target.value)} className={inp} placeholder="0,00"/></div>
-              <div><label className={lbl}>Horas/mês</label>
-                <input type="number" step="0.5" value={form.horas_mes} onChange={e => set('horas_mes', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Insalubridade (%)</label>
+              <div>
+                <label className={lbl}>Salário base (R$/mês) *</label>
+                <input type="number" step="0.01" value={form.salario_base} onChange={e => set('salario_base', e.target.value)} className={inp} placeholder="0,00" />
+              </div>
+              <div>
+                <label className={lbl}>Horas/mês</label>
+                <input type="number" step="0.5" value={form.horas_mes} onChange={e => set('horas_mes', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>
+                  Insalubridade (%)
+                  <Tooltip text="Adicional de insalubridade calculado sobre o salário base. Grau médio 20%, grau máximo 40%." />
+                </label>
                 <select value={form.insalubridade_pct} onChange={e => set('insalubridade_pct', e.target.value)} className={inp + ' bg-white'}>
-                  <option value="0">Nenhuma (0%)</option><option value="20">Grau médio (20%)</option><option value="40">Grau máximo (40%)</option>
-                </select></div>
-              <div><label className={lbl}>Periculosidade (%)</label>
+                  <option value="0">Nenhuma (0%)</option>
+                  <option value="20">Grau médio (20%)</option>
+                  <option value="40">Grau máximo (40%)</option>
+                </select>
+              </div>
+              <div>
+                <label className={lbl}>
+                  Periculosidade (%)
+                  <Tooltip text="Adicional de periculosidade de 30% sobre o salário base para atividades de risco." />
+                </label>
                 <select value={form.periculosidade_pct} onChange={e => set('periculosidade_pct', e.target.value)} className={inp + ' bg-white'}>
-                  <option value="0">Nenhuma (0%)</option><option value="30">Sim (30%)</option>
-                </select></div>
+                  <option value="0">Nenhuma (0%)</option>
+                  <option value="30">Sim (30%)</option>
+                </select>
+              </div>
             </div>
+
             <h4 className="text-xs font-semibold text-gray-400 mt-4 mb-2">Benefícios</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className={lbl}>VT mensal (R$)</label>
-                <input type="number" step="0.01" value={form.vt_mensal} onChange={e => set('vt_mensal', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>VR por dia (R$)</label>
-                <input type="number" step="0.01" value={form.vr_diario} onChange={e => set('vr_diario', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>VA mensal (R$)</label>
-                <input type="number" step="0.01" value={form.va_mensal} onChange={e => set('va_mensal', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Plano de saúde (R$/mês)</label>
-                <input type="number" step="0.01" value={form.plano_saude_mensal} onChange={e => set('plano_saude_mensal', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Outros benefícios (R$/mês)</label>
-                <input type="number" step="0.01" value={form.outros_beneficios} onChange={e => set('outros_beneficios', e.target.value)} className={inp}/></div>
+              <div>
+                <label className={lbl}>VT mensal (R$)</label>
+                <input type="number" step="0.01" value={form.vt_mensal} onChange={e => set('vt_mensal', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>VR por dia (R$)</label>
+                <input type="number" step="0.01" value={form.vr_diario} onChange={e => set('vr_diario', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>VA mensal (R$)</label>
+                <input type="number" step="0.01" value={form.va_mensal} onChange={e => set('va_mensal', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Plano de saúde (R$/mês)</label>
+                <input type="number" step="0.01" value={form.plano_saude_mensal} onChange={e => set('plano_saude_mensal', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Outros benefícios (R$/mês)</label>
+                <input type="number" step="0.01" value={form.outros_beneficios} onChange={e => set('outros_beneficios', e.target.value)} className={inp} />
+              </div>
             </div>
 
             {/* Preview de custo */}
@@ -196,68 +322,73 @@ export default function NovoFuncionarioPage() {
               </div>
             )}
           </section>
+        )}
 
-          {/* Contrato */}
+        {/* Step 4 — Documentos */}
+        {etapa === 4 && (
           <section>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Contrato</h3>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Documentos e Dados Complementares</h3>
+            <p className="text-xs text-gray-400 mb-3">Estes campos são opcionais. Você pode preencher depois.</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className={lbl}>Data de admissão *</label>
-                <input type="date" required value={form.admissao} onChange={e => set('admissao', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Tipo de vínculo</label>
-                <select value={form.tipo_vinculo} onChange={e => set('tipo_vinculo', e.target.value)} className={inp + ' bg-white'}>
-                  <option value="experiencia_45_45">Experiência 45+45 dias</option>
-                  <option value="experiencia_30_60">Experiência 30+60 dias</option>
-                  <option value="experiencia_90">Experiência 90 dias</option>
-                  <option value="determinado_6m">Determinado 6 meses</option>
-                  <option value="determinado_12m">Determinado 12 meses</option>
-                  <option value="indeterminado">Indeterminado (CLT)</option>
-                  <option value="temporario">Temporário</option>
-                </select>
-                <p className="text-xs text-gray-400 mt-1">Os prazos são calculados automaticamente a partir da admissão</p>
+              <div>
+                <label className={lbl}>PIS</label>
+                <input type="text" value={form.pis} onChange={e => set('pis', e.target.value)} className={inp} />
               </div>
-              <div><label className={lbl}>VT Estrutura</label>
-                <input type="text" value={form.vt_estrutura} onChange={e => set('vt_estrutura', e.target.value)} placeholder="10+7,25+7,25" className={inp}/></div>
-              <div><label className={lbl}>Status inicial</label>
-                <select value={form.status} onChange={e => set('status', e.target.value)} className={inp + ' bg-white'}>
-                  <option value="disponivel">Disponível</option>
-                  <option value="alocado">Alocado</option>
-                </select>
+              <div>
+                <label className={lbl}>Banco</label>
+                <input type="text" value={form.banco} onChange={e => set('banco', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Agência / Conta</label>
+                <input type="text" value={form.agencia_conta} onChange={e => set('agencia_conta', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>PIX</label>
+                <input type="text" value={form.pix} onChange={e => set('pix', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>VT Estrutura</label>
+                <input type="text" value={form.vt_estrutura} onChange={e => set('vt_estrutura', e.target.value)} placeholder="10+7,25+7,25" className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Tamanho Bota</label>
+                <input type="text" value={form.tamanho_bota} onChange={e => set('tamanho_bota', e.target.value)} placeholder="42" className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Tamanho Uniforme</label>
+                <input type="text" value={form.tamanho_uniforme} onChange={e => set('tamanho_uniforme', e.target.value)} placeholder="G" className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>RE</label>
+                <input type="text" value={form.re} onChange={e => set('re', e.target.value)} className={inp} />
               </div>
             </div>
           </section>
+        )}
 
-          {/* Banco */}
-          <section>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Dados bancários</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className={lbl}>Banco</label>
-                <input type="text" value={form.banco} onChange={e => set('banco', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Agência / Conta</label>
-                <input type="text" value={form.agencia_conta} onChange={e => set('agencia_conta', e.target.value)} className={inp}/></div>
-              <div className="col-span-1 sm:col-span-2"><label className={lbl}>PIX</label>
-                <input type="text" value={form.pix} onChange={e => set('pix', e.target.value)} className={inp}/></div>
-            </div>
-          </section>
-
-          {/* EPI */}
-          <section>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">EPI</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className={lbl}>Tamanho Bota</label>
-                <input type="text" value={form.tamanho_bota} onChange={e => set('tamanho_bota', e.target.value)} placeholder="42" className={inp}/></div>
-              <div><label className={lbl}>Tamanho Uniforme</label>
-                <input type="text" value={form.tamanho_uniforme} onChange={e => set('tamanho_uniforme', e.target.value)} placeholder="G" className={inp}/></div>
-            </div>
-          </section>
-
-          <div className="flex gap-3 pt-2 border-t border-gray-100">
-            <button type="submit" disabled={loading}
-              className="px-6 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50">
-              {loading ? 'Salvando...' : 'Criar funcionário'}
+        {/* Navigation buttons */}
+        <div className="flex gap-3 pt-4 border-t border-gray-100">
+          {etapa > 1 && (
+            <button type="button" onClick={() => setEtapa(etapa - 1)} className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">
+              Voltar
             </button>
-            <Link href="/funcionarios" className="px-6 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</Link>
-          </div>
-        </form>
+          )}
+          {etapa < 4 && (
+            <button type="button" onClick={handleNext} className="px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark">
+              Próximo
+            </button>
+          )}
+          {etapa === 4 && (
+            <button type="button" onClick={handleSave} disabled={loading} className="px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50">
+              {loading ? 'Salvando...' : 'Salvar funcionário'}
+            </button>
+          )}
+          {etapa === 4 && (
+            <button type="button" onClick={handleSave} className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50">
+              Pular por agora
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

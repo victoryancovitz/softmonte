@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
+import Tooltip from '@/components/ui/Tooltip'
+import { formatSupabaseError } from '@/lib/errors'
 
 export default function EditarFuncionarioPage({ params }: { params: { id: string } }) {
   const [form, setForm] = useState<any>({})
@@ -61,7 +63,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
       horas_mes: parseFloat(form.horas_mes) || 189,
       custo_hora: custoHora > 0 ? custoHora : null,
     }).eq('id', params.id)
-    if (error) { setError(error.message); setSaving(false); return }
+    if (error) { setError(formatSupabaseError(error)); setSaving(false); return }
     setSuccess(true)
     setTimeout(() => router.push(`/funcionarios/${params.id}`), 1200)
   }
@@ -143,11 +145,11 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
                 <input type="number" step="0.01" value={form.salario_base ?? ''} onChange={e => set('salario_base', e.target.value)} className={inp} placeholder="0,00"/></div>
               <div><label className={lbl}>Horas/mês</label>
                 <input type="number" step="0.5" value={form.horas_mes ?? 189} onChange={e => set('horas_mes', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Insalubridade (%)</label>
+              <div><label className={lbl}>Insalubridade (%) <Tooltip text="Adicional pago para quem trabalha em condições prejudiciais à saúde. Pergunte ao engenheiro de segurança." /></label>
                 <select value={form.insalubridade_pct ?? 0} onChange={e => set('insalubridade_pct', e.target.value)} className={inp + ' bg-white'}>
                   <option value="0">Nenhuma (0%)</option><option value="20">Grau médio (20%)</option><option value="40">Grau máximo (40%)</option>
                 </select></div>
-              <div><label className={lbl}>Periculosidade (%)</label>
+              <div><label className={lbl}>Periculosidade (%) <Tooltip text="Adicional de 30% para atividades de risco de vida como trabalho com energia elétrica ou substâncias inflamáveis." /></label>
                 <select value={form.periculosidade_pct ?? 0} onChange={e => set('periculosidade_pct', e.target.value)} className={inp + ' bg-white'}>
                   <option value="0">Nenhuma (0%)</option><option value="30">Sim (30%)</option>
                 </select></div>

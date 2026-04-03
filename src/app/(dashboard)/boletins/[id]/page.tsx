@@ -384,6 +384,15 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
         <span className="text-sm font-medium">BM {String(bm.numero).padStart(2,'0')} — {bm.obras.nome}</span>
       </div>
 
+      {/* Banner informativo */}
+      {bm.status === 'aberto' && !sessionStorage?.getItem?.('bm-banner-closed') && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800 flex items-start gap-2 relative">
+          <span className="text-base flex-shrink-0">💡</span>
+          <span>Preencha quantos dias cada profissional trabalhou. Os valores por hora já vêm do contrato — só ajuste se houve diferença.</span>
+          <button onClick={() => { sessionStorage.setItem('bm-banner-closed','1'); }} className="absolute top-2 right-2 text-blue-300 hover:text-blue-500 text-xs">✕</button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
         <div className="flex items-start justify-between">
