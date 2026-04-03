@@ -13,7 +13,8 @@ export default function NovoFuncionarioPage() {
     re: '', cpf: '', pis: '', banco: '', agencia_conta: '', pix: '',
     vt_estrutura: '', tamanho_bota: '', tamanho_uniforme: '',
     admissao: '', prazo1: '', prazo2: '', periodo_contrato: '45 DIAS',
-    custo_hora: '', custo_hora_extra: '', custo_hora_noturno: '',
+    salario_base: '', insalubridade_pct: '0', periculosidade_pct: '0',
+    vt_mensal: '', vr_diario: '', va_mensal: '', plano_saude_mensal: '', outros_beneficios: '', horas_mes: '189',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -62,13 +63,34 @@ export default function NovoFuncionarioPage() {
       tamanho_bota: form.tamanho_bota || null, tamanho_uniforme: form.tamanho_uniforme || null,
       admissao: form.admissao || null, prazo1: form.prazo1 || null, prazo2: form.prazo2 || null,
       periodo_contrato: form.periodo_contrato || '45 DIAS',
-      custo_hora: parseFloat(form.custo_hora) || null,
-      custo_hora_extra: parseFloat(form.custo_hora_extra) || null,
-      custo_hora_noturno: parseFloat(form.custo_hora_noturno) || null,
+      salario_base: parseFloat(form.salario_base) || null,
+      insalubridade_pct: parseFloat(form.insalubridade_pct) || 0,
+      periculosidade_pct: parseFloat(form.periculosidade_pct) || 0,
+      vt_mensal: parseFloat(form.vt_mensal) || 0,
+      vr_diario: parseFloat(form.vr_diario) || 0,
+      va_mensal: parseFloat(form.va_mensal) || 0,
+      plano_saude_mensal: parseFloat(form.plano_saude_mensal) || 0,
+      outros_beneficios: parseFloat(form.outros_beneficios) || 0,
+      horas_mes: parseFloat(form.horas_mes) || 189,
+      custo_hora: custoHora > 0 ? custoHora : null,
     })
     if (error) { setError(error.message); setLoading(false); return }
     router.push('/funcionarios')
   }
+
+  // CLT cost calculations
+  const salarioBase = parseFloat(form.salario_base) || 0
+  const insalubridade = salarioBase * (parseFloat(form.insalubridade_pct) || 0) / 100
+  const periculosidade = salarioBase * (parseFloat(form.periculosidade_pct) || 0) / 100
+  const salarioTotal = salarioBase + insalubridade + periculosidade
+  const encargos = salarioTotal * 0.374 // INSS 20% + FGTS 8% + RAT 3% + Sistema S 6.4%
+  const provisoes = salarioTotal * 0.21 // 13º + Férias + 1/3 + FGTS sobre elas
+  const vrMensal = (parseFloat(form.vr_diario) || 0) * 22
+  const totalBeneficios = (parseFloat(form.vt_mensal) || 0) + vrMensal + (parseFloat(form.va_mensal) || 0) + (parseFloat(form.plano_saude_mensal) || 0) + (parseFloat(form.outros_beneficios) || 0)
+  const custoTotal = salarioTotal + encargos + provisoes + totalBeneficios
+  const horasMes = parseFloat(form.horas_mes) || 189
+  const custoHora = horasMes > 0 ? Math.round(custoTotal / horasMes * 100) / 100 : 0
+  const fmtR = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
   const inp = "w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand"
   const lbl = "block text-xs font-semibold text-gray-600 mb-1"
@@ -105,10 +127,7 @@ export default function NovoFuncionarioPage() {
 
           {/* Função */}
           <section>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">
-              Função e custos
-              <Link href="/cadastros/funcoes/nova" className="ml-2 text-brand normal-case font-normal hover:underline">(+ nova função)</Link>
-            </h3>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Função</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="col-span-1 sm:col-span-2">
                 <label className={lbl}>Função cadastrada</label>
@@ -116,10 +135,9 @@ export default function NovoFuncionarioPage() {
                   className={inp + ' bg-white'}>
                   <option value="">Selecione uma função...</option>
                   {funcoes.map(f => (
-                    <option key={f.id} value={f.id}>{f.nome} — {f.custo_hora ? 'R$'+Number(f.custo_hora).toFixed(2)+'/h' : 'sem custo'}</option>
+                    <option key={f.id} value={f.id}>{f.nome}</option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-400 mt-1">Ao selecionar, cargo e custos são preenchidos automaticamente</p>
               </div>
               <div><label className={lbl}>Cargo (texto livre)</label>
                 <input type="text" value={form.cargo} onChange={e => set('cargo', e.target.value)} className={inp}/></div>
@@ -129,11 +147,54 @@ export default function NovoFuncionarioPage() {
                   <option value="diurno">Diurno</option><option value="noturno">Noturno</option><option value="misto">Misto</option>
                 </select>
               </div>
-              <div><label className={lbl}>Custo/hora normal (R$)</label>
-                <input type="number" step="0.01" value={form.custo_hora} onChange={e => set('custo_hora', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Custo hora extra (R$)</label>
-                <input type="number" step="0.01" value={form.custo_hora_extra} onChange={e => set('custo_hora_extra', e.target.value)} className={inp}/></div>
             </div>
+          </section>
+
+          {/* Remuneração CLT */}
+          <section>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Remuneração e Custo CLT</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label className={lbl}>Salário base (R$/mês) *</label>
+                <input type="number" step="0.01" value={form.salario_base} onChange={e => set('salario_base', e.target.value)} className={inp} placeholder="0,00"/></div>
+              <div><label className={lbl}>Horas/mês</label>
+                <input type="number" step="0.5" value={form.horas_mes} onChange={e => set('horas_mes', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>Insalubridade (%)</label>
+                <select value={form.insalubridade_pct} onChange={e => set('insalubridade_pct', e.target.value)} className={inp + ' bg-white'}>
+                  <option value="0">Nenhuma (0%)</option><option value="20">Grau médio (20%)</option><option value="40">Grau máximo (40%)</option>
+                </select></div>
+              <div><label className={lbl}>Periculosidade (%)</label>
+                <select value={form.periculosidade_pct} onChange={e => set('periculosidade_pct', e.target.value)} className={inp + ' bg-white'}>
+                  <option value="0">Nenhuma (0%)</option><option value="30">Sim (30%)</option>
+                </select></div>
+            </div>
+            <h4 className="text-xs font-semibold text-gray-400 mt-4 mb-2">Benefícios</h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label className={lbl}>VT mensal (R$)</label>
+                <input type="number" step="0.01" value={form.vt_mensal} onChange={e => set('vt_mensal', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>VR por dia (R$)</label>
+                <input type="number" step="0.01" value={form.vr_diario} onChange={e => set('vr_diario', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>VA mensal (R$)</label>
+                <input type="number" step="0.01" value={form.va_mensal} onChange={e => set('va_mensal', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>Plano de saúde (R$/mês)</label>
+                <input type="number" step="0.01" value={form.plano_saude_mensal} onChange={e => set('plano_saude_mensal', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>Outros benefícios (R$/mês)</label>
+                <input type="number" step="0.01" value={form.outros_beneficios} onChange={e => set('outros_beneficios', e.target.value)} className={inp}/></div>
+            </div>
+
+            {/* Preview de custo */}
+            {salarioBase > 0 && (
+              <div className="mt-4 p-4 bg-brand/5 rounded-xl border border-brand/10">
+                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Preview de Custo CLT</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+                  <div><p className="text-xs text-gray-400">Salário total</p><p className="font-bold text-gray-900">{fmtR(salarioTotal)}</p></div>
+                  <div><p className="text-xs text-gray-400">Encargos (37,4%)</p><p className="font-bold text-red-600">{fmtR(encargos)}</p></div>
+                  <div><p className="text-xs text-gray-400">Provisões (21%)</p><p className="font-bold text-amber-600">{fmtR(provisoes)}</p></div>
+                  <div><p className="text-xs text-gray-400">Benefícios</p><p className="font-bold text-purple-600">{fmtR(totalBeneficios)}</p></div>
+                  <div className="bg-brand/10 rounded-lg p-2"><p className="text-xs text-brand">Custo total/mês</p><p className="text-lg font-bold text-brand">{fmtR(custoTotal)}</p></div>
+                  <div className="bg-brand/10 rounded-lg p-2"><p className="text-xs text-brand">Custo/hora real</p><p className="text-lg font-bold text-brand">{fmtR(custoHora)}/h</p></div>
+                </div>
+              </div>
+            )}
           </section>
 
           {/* Contratos */}
