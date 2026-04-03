@@ -184,10 +184,11 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
       )}
 
       {isAdmin && (
-        <NavGroup label="Admin" forceOpen={hasActiveChild(['/admin/usuarios','/usuarios','/audit','/configuracoes'])}>
+        <NavGroup label="Admin" forceOpen={hasActiveChild(['/admin/usuarios','/usuarios','/audit','/configuracoes','/manual'])}>
           <NavItem href="/admin/usuarios" label="Usuários & Acesso" icon={ic.users} />
           <NavItem href="/audit" label="Auditoria" icon={ic.audit} />
           <NavItem href="/configuracoes" label="Configurações" icon={ic.config} />
+          <NavItem href="/manual" label="Manual" icon={ic.docs} />
         </NavGroup>
       )}
     </nav>
