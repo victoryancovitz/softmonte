@@ -129,70 +129,61 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
     <nav className="flex-1 px-2 py-2 overflow-y-auto scrollbar-none">
       <NavItem href="/dashboard" label="Dashboard" icon={ic.home} />
 
-      <NavGroup label="Obras" forceOpen={hasActiveChild(['/obras','/efetivo','/boletins','/ponto','/faltas'])}>
-        {isOp && <NavItem href="/obras" label="Obras" icon={ic.obras} />}
-        {isOp && <NavItem href="/efetivo" label="Efetivo Diário" icon={ic.efetivo} />}
-        {isOp && <NavItem href="/boletins" label="Boletins (BM)" icon={ic.bm} />}
-        {isOp && <NavItem href="/ponto" label="Ponto" icon={ic.ponto} />}
-        {isOp && <NavItem href="/faltas" label="Faltas" icon={ic.faltas} />}
+      <NavGroup label="Contratos HH" forceOpen={hasActiveChild(['/obras','/tipos-contrato','/efetivo','/faltas'])}>
+        {isOp && <NavItem href="/obras" label="Contratos" icon={ic.obras} />}
+        {isAdmin && <NavItem href="/tipos-contrato" label="Tipos de Contrato" icon={ic.bm} />}
       </NavGroup>
 
-      <NavGroup label="Equipe" forceOpen={hasActiveChild(['/funcionarios','/alocacao','/documentos'])}>
+      <NavGroup label="Equipe" forceOpen={hasActiveChild(['/funcionarios','/alocacao','/ponto','/rh/banco-horas','/rh/ferias'])}>
         {isAdmin && <NavItem href="/funcionarios" label="Funcionários" icon={ic.func} />}
         {isOp && <NavItem href="/alocacao" label="Alocação" icon={ic.alloc} />}
-        {isOp && <NavItem href="/documentos" label="Documentos" icon={ic.docs} />}
+        {isOp && <NavItem href="/ponto" label="Ponto" icon={ic.ponto} />}
+        {isOp && <NavItem href="/rh/banco-horas" label="Banco de Horas" icon={ic.hh} />}
+        {isOp && <NavItem href="/rh/ferias" label="Férias" icon={ic.efetivo} />}
       </NavGroup>
 
       {isOp && (
-        <NavGroup label="RH" forceOpen={hasActiveChild(['/rh'])}>
-          <NavItem href="/rh/banco-horas" label="Banco de Horas" icon={ic.hh} />
-          <NavItem href="/rh/ferias" label="Férias" icon={ic.efetivo} />
-          <NavItem href="/rh/treinamentos" label="Treinamentos" icon={ic.audit} />
+        <NavGroup label="RH & Legal" forceOpen={hasActiveChild(['/rh/treinamentos','/rh/admissoes','/rh/desligamentos','/documentos'])}>
+          <NavItem href="/rh/treinamentos" label="Treinamentos NR" icon={ic.audit} />
+          <NavItem href="/documentos" label="Documentos" icon={ic.docs} />
           <NavItem href="/rh/admissoes" label="Admissões" icon={ic.func} />
           <NavItem href="/rh/desligamentos" label="Desligamentos" icon={ic.faltas} />
         </NavGroup>
       )}
 
-      <NavGroup label="Operacional" forceOpen={hasActiveChild(['/estoque','/hh'])}>
-        {isStock && <NavItem href="/estoque" label="Estoque" icon={ic.stock} />}
-        {isOp && <NavItem href="/hh" label="Gestão de HH" icon={ic.hh} />}
-        {role === 'funcionario' && <NavItem href="/hh" label="Meu HH" icon={ic.hh} />}
-      </NavGroup>
-
       {isOp && (
-        <NavGroup label="Compras" forceOpen={hasActiveChild(['/compras'])}>
-          <NavItem href="/compras/fornecedores" label="Fornecedores" icon={ic.client} />
-          <NavItem href="/compras/cotacoes" label="Cotações" icon={ic.bm} />
+        <NavGroup label="Faturamento" forceOpen={hasActiveChild(['/boletins','/forecast','/financeiro'])}>
+          <NavItem href="/boletins" label="Boletins (BM)" icon={ic.bm} />
+          <NavItem href="/forecast" label="Forecast" icon={ic.report} />
+          <NavItem href="/financeiro" label="Financeiro" icon={ic.fin} />
         </NavGroup>
       )}
 
       {isOp && (
-        <NavGroup label="Análise" forceOpen={hasActiveChild(['/financeiro','/relatorios','/forecast','/assistente'])}>
-          <NavItem href="/financeiro" label="Financeiro" icon={ic.fin} />
-          <NavItem href="/forecast" label="Forecast" icon={ic.report} />
-          <NavItem href="/relatorios/margem" label="Margem por Contrato" icon={ic.fin} />
+        <NavGroup label="Campo" forceOpen={hasActiveChild(['/efetivo','/faltas','/compras','/relatorios','/estoque'])}>
+          <NavItem href="/efetivo" label="Efetivo Diário" icon={ic.efetivo} />
+          <NavItem href="/faltas" label="Faltas" icon={ic.faltas} />
+          {isStock && <NavItem href="/estoque" label="Estoque" icon={ic.stock} />}
+          <NavItem href="/compras/cotacoes" label="Cotações" icon={ic.bm} />
+          <NavItem href="/compras/fornecedores" label="Fornecedores" icon={ic.client} />
           <NavItem href="/relatorios" label="Relatórios" icon={ic.report} />
+          <NavItem href="/relatorios/margem" label="Margem" icon={ic.fin} />
           {isAdmin && <NavItem href="/assistente" label="Assistente IA" icon={ic.ai} badge="IA" />}
         </NavGroup>
       )}
 
       {isAdmin && (
-        <NavGroup label="Cadastros" forceOpen={hasActiveChild(['/cadastros','/clientes','/tipos-contrato','/importar'])}>
-          <NavItem href="/cadastros" label="Todos os cadastros" icon={ic.cad} />
+        <NavGroup label="Configurações" forceOpen={hasActiveChild(['/admin/usuarios','/configuracoes','/cadastros','/clientes','/importar','/audit','/manual'])}>
+          <NavItem href="/admin/usuarios" label="Usuários" icon={ic.users} />
+          <NavItem href="/configuracoes" label="Empresa" icon={ic.config} />
+          <NavItem href="/cadastros" label="Cadastros" icon={ic.cad} />
           <NavItem href="/clientes" label="Clientes" icon={ic.client} />
-          <NavItem href="/tipos-contrato" label="Tipos de Contrato" icon={ic.bm} />
-          <NavItem href="/importar" label="Importar dados" icon={ic.import} />
-        </NavGroup>
-      )}
-
-      {isAdmin && (
-        <NavGroup label="Admin" forceOpen={hasActiveChild(['/admin/usuarios','/usuarios','/audit','/configuracoes','/manual'])}>
-          <NavItem href="/admin/usuarios" label="Usuários & Acesso" icon={ic.users} />
-          <NavItem href="/audit" label="Auditoria" icon={ic.audit} />
-          <NavItem href="/configuracoes" label="Configurações" icon={ic.config} />
+          <NavItem href="/importar" label="Importar" icon={ic.import} />
           <NavItem href="/manual" label="Manual" icon={ic.docs} />
         </NavGroup>
       )}
+
+      {role === 'funcionario' && <NavItem href="/hh" label="Meu HH" icon={ic.hh} />}
     </nav>
   )
 
@@ -269,6 +260,36 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
             </aside>
           </>
         )}
+
+        {/* Bottom tab bar */}
+        <nav className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 flex items-center justify-around px-2 py-1.5 safe-area-pb">
+          {[
+            { href: '/dashboard', label: 'Início', icon: ic.home },
+            { href: '/obras', label: 'Contratos', icon: ic.obras },
+            { href: '/funcionarios', label: 'Equipe', icon: ic.func },
+            { href: '/boletins', label: 'BMs', icon: ic.bm },
+            { href: '#', label: 'Menu', icon: ic.cad, isMenu: true },
+          ].map(tab => {
+            const isActive = tab.href !== '#' && (pathname === tab.href || (tab.href !== '/dashboard' && pathname.startsWith(tab.href)))
+            if (tab.isMenu) {
+              return (
+                <button key="menu" onClick={() => setMobileOpen(!mobileOpen)}
+                  className="flex flex-col items-center gap-0.5 px-2 py-1 text-gray-400">
+                  <span className="w-5 h-5">{tab.icon}</span>
+                  <span className="text-[10px]">{tab.label}</span>
+                </button>
+              )
+            }
+            return (
+              <Link key={tab.href} href={tab.href}
+                className={`flex flex-col items-center gap-0.5 px-2 py-1 transition-colors ${isActive ? 'text-brand' : 'text-gray-400'}`}>
+                <span className="w-5 h-5">{tab.icon}</span>
+                <span className="text-[10px] font-medium">{tab.label}</span>
+              </Link>
+            )
+          })}
+        </nav>
+        <div className="h-16" /> {/* Spacer for bottom tab */}
       </div>
     </>
   )

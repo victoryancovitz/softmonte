@@ -31,6 +31,9 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   const [clienteData, setClienteData] = useState<any>(null)
   const [valorPrevisto, setValorPrevisto] = useState(0)
   const [mailtoAberto, setMailtoAberto] = useState(false)
+  const [bmItens, setBmItens] = useState<any[]>([])
+  const [composicaoData, setComposicaoData] = useState<any[]>([])
+  const [salvandoItens, setSalvandoItens] = useState(false)
   const supabase = createClient()
   const router = useRouter()
   const toast = useToast()
@@ -81,6 +84,39 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       setValorPrevisto(custoTotal)
 
       setResumo(rows)
+
+      // Fetch composicao and bm_itens
+      const { data: composicao } = await supabase.from('contrato_composicao').select('*').eq('obra_id', bmData.obras.id).eq('ativo', true).order('funcao_nome')
+      const { data: itensExistentes } = await supabase.from('bm_itens').select('*').eq('bm_id', params.id)
+
+      const comp = composicao ?? []
+      setComposicaoData(comp)
+
+      // Build editable items from composicao + existing bm_itens
+      const secoes: ('hora_normal' | 'he_70' | 'he_100')[] = ['hora_normal', 'he_70', 'he_100']
+      const itens: any[] = []
+      comp.forEach((c: any) => {
+        secoes.forEach(secao => {
+          const existing = (itensExistentes ?? []).find(
+            (it: any) => it.funcao_nome === c.funcao_nome && it.secao === secao
+          )
+          const baseHH = Number(c.custo_hora_contratado ?? 0)
+          const valorHH = secao === 'he_70'
+            ? baseHH * (c.he_multiplicador_70 ?? 1.7)
+            : secao === 'he_100'
+              ? baseHH * (c.he_multiplicador_100 ?? 2.0)
+              : baseHH
+          const diasDefault = Number(c.horas_mes ?? 0) / 8
+          itens.push({
+            secao,
+            funcao_nome: c.funcao_nome,
+            efetivo: existing ? Number(existing.efetivo) : 0,
+            dias: existing ? Number(existing.dias) : diasDefault,
+            valor_hh: existing ? Number(existing.valor_hh) : valorHH,
+          })
+        })
+      })
+      setBmItens(itens)
 
       // Fetch client contacts
       if (bmData.obras?.cliente) {
@@ -250,6 +286,54 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     await loadBM()
     setShowCriarReceita(false)
     toast.show('BM aprovado com sucesso!')
+  }
+
+  function updateItem(index: number, field: string, value: number) {
+    setBmItens(prev => {
+      const next = [...prev]
+      next[index] = { ...next[index], [field]: value }
+      return next
+    })
+  }
+
+  function calcTotal(item: any) {
+    return (Number(item.efetivo) || 0) * (Number(item.dias) || 0) * (Number(item.valor_hh) || 0) * 8
+  }
+
+  function secaoTotal(secao: string) {
+    return bmItens.filter(i => i.secao === secao).reduce((s, i) => s + calcTotal(i), 0)
+  }
+
+  const totalGeralItens = secaoTotal('hora_normal') + secaoTotal('he_70') + secaoTotal('he_100')
+
+  async function handleSalvarItens() {
+    setSalvandoItens(true)
+    try {
+      // Delete existing
+      await supabase.from('bm_itens').delete().eq('bm_id', params.id)
+      // Insert non-zero items
+      const rows = bmItens
+        .filter(i => (Number(i.efetivo) || 0) > 0)
+        .map(i => ({
+          bm_id: params.id,
+          secao: i.secao,
+          funcao_nome: i.funcao_nome,
+          efetivo: Number(i.efetivo),
+          dias: Number(i.dias),
+          valor_hh: Number(i.valor_hh),
+          total: calcTotal(i),
+        }))
+      if (rows.length > 0) {
+        await supabase.from('bm_itens').insert(rows)
+      }
+      // Update BM total value
+      await supabase.from('boletins_medicao').update({ valor_previsto: totalGeralItens }).eq('id', params.id)
+      toast.show('BM salvo com sucesso!')
+    } catch (e) {
+      console.error(e)
+      toast.show('Erro ao salvar BM')
+    }
+    setSalvandoItens(false)
   }
 
   function buildHistorico() {
@@ -425,6 +509,78 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
           </div>
         )}
       </div>
+
+      {/* Itens Editáveis do BM */}
+      {composicaoData.length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-sm font-semibold">Composição do BM</h2>
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-500">
+                Total Geral: <span className="font-bold text-brand text-sm">R$ {totalGeralItens.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              </span>
+              <button onClick={handleSalvarItens} disabled={salvandoItens}
+                className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50">
+                {salvandoItens ? 'Salvando...' : 'Salvar BM'}
+              </button>
+            </div>
+          </div>
+
+          {(['hora_normal', 'he_70', 'he_100'] as const).map(secao => {
+            const label = secao === 'hora_normal' ? 'Hora Normal' : secao === 'he_70' ? 'Hora Extra 70%' : 'Hora Extra 100%'
+            const labelColor = secao === 'hora_normal' ? 'text-blue-700 bg-blue-50' : secao === 'he_70' ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50'
+            const itensSecao = bmItens
+              .map((item, idx) => ({ ...item, _idx: idx }))
+              .filter(i => i.secao === secao)
+
+            return (
+              <div key={secao} className="mb-4 last:mb-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded ${labelColor}`}>{label}</span>
+                  <span className="text-xs text-gray-400">
+                    Subtotal: R$ {secaoTotal(secao).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </span>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Função</th>
+                        <th className="text-center px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide w-24">Efetivo</th>
+                        <th className="text-center px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide w-24">Dias</th>
+                        <th className="text-center px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide w-32">Valor HH (R$)</th>
+                        <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide w-36">Total (R$)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {itensSecao.map(item => (
+                        <tr key={item._idx} className="border-b border-gray-50 hover:bg-gray-50">
+                          <td className="px-3 py-2 font-medium text-gray-700">{item.funcao_nome}</td>
+                          <td className="px-3 py-2 text-center">
+                            <input type="number" min="0" value={item.efetivo} onChange={e => updateItem(item._idx, 'efetivo', Number(e.target.value))}
+                              className="w-20 px-2 py-1 border border-gray-200 rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <input type="number" min="0" step="0.5" value={item.dias} onChange={e => updateItem(item._idx, 'dias', Number(e.target.value))}
+                              className="w-20 px-2 py-1 border border-gray-200 rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <input type="number" min="0" step="0.01" value={item.valor_hh} onChange={e => updateItem(item._idx, 'valor_hh', Number(e.target.value))}
+                              className="w-28 px-2 py-1 border border-gray-200 rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+                          </td>
+                          <td className="px-3 py-2 text-right font-semibold text-gray-700">
+                            {calcTotal(item).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
 
       {/* Timeline de Status */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
