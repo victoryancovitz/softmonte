@@ -12,7 +12,7 @@ export default function NovoFuncionarioPage() {
     turno: 'diurno', jornada_horas: 8, status: 'disponivel',
     re: '', cpf: '', pis: '', banco: '', agencia_conta: '', pix: '',
     vt_estrutura: '', tamanho_bota: '', tamanho_uniforme: '',
-    admissao: '', prazo1: '', prazo2: '', periodo_contrato: '45 DIAS',
+    admissao: '', tipo_vinculo: 'experiencia_45_45',
     salario_base: '', insalubridade_pct: '0', periculosidade_pct: '0',
     vt_mensal: '', vr_diario: '', va_mensal: '', plano_saude_mensal: '', outros_beneficios: '', horas_mes: '189',
   })
@@ -61,8 +61,8 @@ export default function NovoFuncionarioPage() {
       banco: form.banco || null, agencia_conta: form.agencia_conta || null, pix: form.pix || null,
       vt_estrutura: form.vt_estrutura || null,
       tamanho_bota: form.tamanho_bota || null, tamanho_uniforme: form.tamanho_uniforme || null,
-      admissao: form.admissao || null, prazo1: form.prazo1 || null, prazo2: form.prazo2 || null,
-      periodo_contrato: form.periodo_contrato || '45 DIAS',
+      admissao: form.admissao || null,
+      tipo_vinculo: form.tipo_vinculo || 'experiencia_45_45',
       salario_base: parseFloat(form.salario_base) || null,
       insalubridade_pct: parseFloat(form.insalubridade_pct) || 0,
       periculosidade_pct: parseFloat(form.periculosidade_pct) || 0,
@@ -197,18 +197,24 @@ export default function NovoFuncionarioPage() {
             )}
           </section>
 
-          {/* Contratos */}
+          {/* Contrato */}
           <section>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Datas contratuais</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div><label className={lbl}>Admissão</label>
-                <input type="date" value={form.admissao} onChange={e => set('admissao', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Prazo 1</label>
-                <input type="date" value={form.prazo1} onChange={e => set('prazo1', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Prazo 2</label>
-                <input type="date" value={form.prazo2} onChange={e => set('prazo2', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Período contrato</label>
-                <input type="text" value={form.periodo_contrato} onChange={e => set('periodo_contrato', e.target.value)} className={inp}/></div>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Contrato</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label className={lbl}>Data de admissão *</label>
+                <input type="date" required value={form.admissao} onChange={e => set('admissao', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>Tipo de vínculo</label>
+                <select value={form.tipo_vinculo} onChange={e => set('tipo_vinculo', e.target.value)} className={inp + ' bg-white'}>
+                  <option value="experiencia_45_45">Experiência 45+45 dias</option>
+                  <option value="experiencia_30_60">Experiência 30+60 dias</option>
+                  <option value="experiencia_90">Experiência 90 dias</option>
+                  <option value="determinado_6m">Determinado 6 meses</option>
+                  <option value="determinado_12m">Determinado 12 meses</option>
+                  <option value="indeterminado">Indeterminado (CLT)</option>
+                  <option value="temporario">Temporário</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">Os prazos são calculados automaticamente a partir da admissão</p>
+              </div>
               <div><label className={lbl}>VT Estrutura</label>
                 <input type="text" value={form.vt_estrutura} onChange={e => set('vt_estrutura', e.target.value)} placeholder="10+7,25+7,25" className={inp}/></div>
               <div><label className={lbl}>Status inicial</label>

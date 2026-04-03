@@ -34,8 +34,13 @@ export default async function FuncionariosPage({
     return dias <= 30 && dias >= -30
   })
 
-  const { data: cargos } = await supabase.from('funcionarios').select('cargo').order('cargo')
+  const [{ data: cargos }, { data: prazosLegais }] = await Promise.all([
+    supabase.from('funcionarios').select('cargo').order('cargo'),
+    supabase.from('vw_prazos_legais').select('funcionario_id,alerta_tipo'),
+  ])
   const cargosUnicos = Array.from(new Set(cargos?.map((c: any) => c.cargo).filter(Boolean)))
+  const alertaMap: Record<string, string> = {}
+  ;(prazosLegais ?? []).forEach((p: any) => { if (p.alerta_tipo && p.alerta_tipo !== 'ok') alertaMap[p.funcionario_id] = p.alerta_tipo })
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
@@ -77,7 +82,7 @@ export default async function FuncionariosPage({
         )}
       </form>
 
-      <FuncionariosView funcs={funcs} hoje={hojeStr} />
+      <FuncionariosView funcs={funcs} hoje={hojeStr} alertas={alertaMap} />
     </div>
   )
 }

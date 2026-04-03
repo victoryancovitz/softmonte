@@ -14,13 +14,15 @@ export default async function FuncionarioPage({ params }: { params: { id: string
   const hoje = new Date()
   const trintaDiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
 
-  const [{ data: alocacoes }, { data: faltas }, { data: docsFunc }, { data: efetivo30 }, { data: docsGerados }] = await Promise.all([
+  const [{ data: alocacoes }, { data: faltas }, { data: docsFunc }, { data: efetivo30 }, { data: docsGerados }, { data: prazosArr }] = await Promise.all([
     supabase.from('alocacoes').select('*, obras(nome, status)').eq('funcionario_id', params.id).order('data_inicio', { ascending: false }),
     supabase.from('faltas').select('*').eq('funcionario_id', params.id).order('data', { ascending: false }).limit(20),
     supabase.from('documentos').select('*').eq('funcionario_id', params.id).order('vencimento'),
     supabase.from('efetivo_diario').select('data,tipo_dia,obras(nome)').eq('funcionario_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
     supabase.from('documentos_gerados').select('*').eq('funcionario_id', params.id).order('created_at', { ascending: false }),
+    supabase.from('vw_prazos_legais').select('*').eq('funcionario_id', params.id).limit(1),
   ])
+  const prazos = prazosArr?.[0] ?? null
 
   const campos = [
     { label: 'Matrícula', value: f.matricula },
@@ -46,9 +48,13 @@ export default async function FuncionarioPage({ params }: { params: { id: string
     inativo: 'bg-gray-100 text-gray-500',
   }
 
-  const p1 = f.prazo1 ? new Date(f.prazo1+'T12:00') : null
-  const diasP1 = p1 ? Math.ceil((p1.getTime() - Date.now()) / 86400000) : null
-  const alertaP1 = diasP1 !== null && diasP1 <= 30 && diasP1 >= 0
+  const ALERTA_BADGE: Record<string, { label: string; cls: string }> = {
+    experiencia_1_vencendo: { label: 'Exp. 1 vence', cls: 'bg-amber-100 text-amber-700' },
+    experiencia_2_vencendo: { label: 'Exp. vence', cls: 'bg-red-100 text-red-700' },
+    ferias_vencidas: { label: 'Férias vencidas', cls: 'bg-red-100 text-red-700' },
+    ferias_urgente: { label: 'Férias urgente', cls: 'bg-orange-100 text-orange-700' },
+    contrato_vencendo: { label: 'Contrato vence', cls: 'bg-amber-100 text-amber-700' },
+  }
 
   return (
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
@@ -59,9 +65,12 @@ export default async function FuncionarioPage({ params }: { params: { id: string
         <span className="font-medium text-gray-700">{f.nome}</span>
       </div>
 
-      {alertaP1 && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" /> <span>Contrato vencendo em <strong>{diasP1} dias</strong> ({p1?.toLocaleDateString('pt-BR')})</span>
+      {prazos?.alerta_tipo && prazos.alerta_tipo !== 'ok' && (
+        <div className={`mb-4 p-3 rounded-xl text-sm flex items-center gap-2 border ${
+          prazos.alerta_tipo.includes('vencid') || prazos.alerta_tipo.includes('experiencia_2') ? 'bg-red-50 border-red-200 text-red-800' : 'bg-amber-50 border-amber-200 text-amber-800'
+        }`}>
+          <span className={`w-2 h-2 rounded-full inline-block ${prazos.alerta_tipo.includes('vencid') || prazos.alerta_tipo.includes('experiencia_2') ? 'bg-red-500' : 'bg-amber-500'}`} />
+          <span>{ALERTA_BADGE[prazos.alerta_tipo]?.label ?? prazos.alerta_tipo}</span>
         </div>
       )}
 
@@ -123,6 +132,61 @@ export default async function FuncionarioPage({ params }: { params: { id: string
           )}
         </div>
       </div>
+
+      {/* Prazos Legais */}
+      {prazos && (
+        <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <h2 className="text-sm font-bold text-brand font-display mb-4">Prazos Legais</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {prazos.prazo_experiencia_1 && (
+              <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
+                <span className="text-xs text-gray-500">1º Prazo experiência</span>
+                <span className="text-sm font-medium">{new Date(prazos.prazo_experiencia_1+'T12:00').toLocaleDateString('pt-BR')}</span>
+              </div>
+            )}
+            {prazos.prazo_experiencia_2 && (
+              <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
+                <span className="text-xs text-gray-500">Fim da experiência</span>
+                <span className="text-sm font-medium">{new Date(prazos.prazo_experiencia_2+'T12:00').toLocaleDateString('pt-BR')}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
+              <span className="text-xs text-gray-500">Converteu para CLT</span>
+              <span className={`text-sm font-medium ${prazos.ja_converteu_clt ? 'text-green-700' : 'text-gray-400'}`}>
+                {prazos.ja_converteu_clt ? `Sim — ${prazos.converte_clt_em ? new Date(prazos.converte_clt_em+'T12:00').toLocaleDateString('pt-BR') : ''}` : 'Não'}
+              </span>
+            </div>
+            {prazos.periodo_aquisitivo_atual_inicio && (
+              <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
+                <span className="text-xs text-gray-500">Período aquisitivo</span>
+                <span className="text-xs font-medium">{new Date(prazos.periodo_aquisitivo_atual_inicio+'T12:00').toLocaleDateString('pt-BR')} → {prazos.periodo_aquisitivo_atual_fim ? new Date(prazos.periodo_aquisitivo_atual_fim+'T12:00').toLocaleDateString('pt-BR') : '—'}</span>
+              </div>
+            )}
+            {prazos.concessivo_limite && (
+              <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
+                <span className="text-xs text-gray-500">Limite férias</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{new Date(prazos.concessivo_limite+'T12:00').toLocaleDateString('pt-BR')}</span>
+                  {prazos.ferias_vencidas && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-bold">VENCIDO</span>}
+                </div>
+              </div>
+            )}
+            <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
+              <span className="text-xs text-gray-500">Saldo de férias</span>
+              <span className="text-sm font-bold text-brand">{prazos.saldo_ferias ?? 0} dias</span>
+            </div>
+            {prazos.proximas_ferias_inicio && (
+              <div className="flex justify-between items-center py-1.5 border-b border-gray-50 col-span-1 sm:col-span-2">
+                <span className="text-xs text-gray-500">Próximas férias</span>
+                <span className="text-xs font-medium text-green-700">
+                  {new Date(prazos.proximas_ferias_inicio+'T12:00').toLocaleDateString('pt-BR')} → {prazos.proximas_ferias_fim ? new Date(prazos.proximas_ferias_fim+'T12:00').toLocaleDateString('pt-BR') : '—'}
+                  {prazos.proximas_ferias_status && <span className="ml-2 bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-[10px]">{prazos.proximas_ferias_status}</span>}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Faltas e Atestados */}
       <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">

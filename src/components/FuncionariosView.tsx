@@ -9,7 +9,15 @@ const STATUS_COLOR: Record<string, string> = {
   inativo:    'bg-gray-100 text-gray-500',
 }
 
-export default function FuncionariosView({ funcs, hoje }: { funcs: any[]; hoje: string }) {
+const ALERTA_BADGE: Record<string, { label: string; cls: string }> = {
+  experiencia_1_vencendo: { label: 'Exp. 1 vence', cls: 'bg-amber-100 text-amber-700' },
+  experiencia_2_vencendo: { label: 'Exp. vence', cls: 'bg-red-100 text-red-700' },
+  ferias_vencidas: { label: 'Férias vencidas', cls: 'bg-red-100 text-red-700' },
+  ferias_urgente: { label: 'Férias urgente', cls: 'bg-orange-100 text-orange-700' },
+  contrato_vencendo: { label: 'Contrato vence', cls: 'bg-amber-100 text-amber-700' },
+}
+
+export default function FuncionariosView({ funcs, hoje, alertas = {} }: { funcs: any[]; hoje: string; alertas?: Record<string, string> }) {
   const [view, setView] = useState<'cards' | 'table'>('cards')
   const hojeDate = new Date(hoje + 'T12:00:00')
 
@@ -59,6 +67,13 @@ export default function FuncionariosView({ funcs, hoje }: { funcs: any[]; hoje: 
                         {vencido && <span className="ml-1 bg-red-100 text-red-700 px-1.5 rounded text-[10px] font-bold">VENCIDO</span>}
                         {alerta && <span className="ml-1 bg-amber-100 text-amber-700 px-1.5 rounded text-[10px]">{dias}d</span>}
                       </div>
+                    </div>
+                  )}
+                  {alertas[f.id] && ALERTA_BADGE[alertas[f.id]] && (
+                    <div className="mt-2 pt-2 border-t border-gray-100">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${ALERTA_BADGE[alertas[f.id]].cls}`}>
+                        {ALERTA_BADGE[alertas[f.id]].label}
+                      </span>
                     </div>
                   )}
                 </Link>
