@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
+import { useToast } from '@/components/Toast'
 import {
   GraduationCap, CheckCircle2, Clock, XCircle, AlertTriangle,
   ChevronDown, ChevronRight, Plus, Users, ShieldAlert,
@@ -54,6 +55,7 @@ function formatDate(d: string | null): string {
 
 export default function TreinamentosPage() {
   const supabase = createClient()
+  const toast = useToast()
   const [tab, setTab] = useState<TabType>('por_funcionario')
   const [treinamentos, setTreinamentos] = useState<TreinamentoFuncionario[]>([])
   const [tipos, setTipos] = useState<TreinamentoTipo[]>([])
@@ -156,15 +158,15 @@ export default function TreinamentosPage() {
 
   async function handleSubmit() {
     if (selectedFuncs.size === 0) {
-      alert('Selecione pelo menos um funcionario.')
+      toast.warning('Selecione pelo menos um funcionario.')
       return
     }
     if (!formTipoId) {
-      alert('Selecione o tipo de treinamento.')
+      toast.warning('Selecione o tipo de treinamento.')
       return
     }
     if (!formDataRealizacao || !formDataVencimento) {
-      alert('Preencha as datas.')
+      toast.warning('Preencha as datas.')
       return
     }
 

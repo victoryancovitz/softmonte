@@ -225,9 +225,11 @@ const MANUAL: Secao[] = [
     id: 'usuarios', icon: Users, titulo: 'Usuários & Convites', desc: 'Gestão de acesso', link: '/admin/usuarios',
     conteudo: [
       { subtitulo: 'Roles', texto: '7 perfis: Administrador (acesso total), Encarregado (obras e equipe), RH, Financeiro, Almoxarife, Funcionário (próprios dados), Visualizador (somente leitura).' },
-      { subtitulo: 'Convites', texto: 'Crie convites com role, módulos permitidos e mensagem personalizada. O sistema gera um link único que o convidado usa para criar a conta.' },
-      { subtitulo: 'Página de convite', texto: 'Página pública com visual especial: card de boas-vindas com iniciais, role, módulos e botão de criar conta com barra de força de senha.' },
-      { subtitulo: 'Gerenciar', texto: 'Edite role e módulos de cada usuário. Toggle ativo/bloqueado para suspender acesso sem excluir.', dica: 'Convites expiram após o prazo definido (1-30 dias). Convites não usados podem ser revogados.' },
+      { subtitulo: 'Convites (um ou múltiplos)', texto: 'Crie convites para um ou vários emails de uma vez — cole os emails separados por vírgula ou um por linha. O sistema gera um link individual para cada email com o mesmo role, módulos e mensagem de boas-vindas. Na tela de sucesso, copie os links individualmente ou todos de uma vez.' },
+      { subtitulo: 'Validade do convite', texto: '4 opções de validade: Indeterminado (sem expiração), Dias fixos (1 dia a 1 ano), Data específica (escolha no calendário), ou Vinculado ao contrato do funcionário (calcula automaticamente com base na data de admissão e período contratual).', dica: 'Para convites vinculados ao contrato, selecione primeiro o funcionário. O sistema calcula a data limite usando admissão + período (ex: 45 dias).' },
+      { subtitulo: 'Página de convite', texto: 'Página pública com visual especial: card de boas-vindas com iniciais, role, módulos e botão de criar conta com barra de força de senha. Convites indeterminados mostram "Sem data de expiração".' },
+      { subtitulo: 'Gerenciar convites', texto: 'Na aba Convites: convites pendentes mostram a data de expiração clicável — clique para editar a validade ou tornar indeterminado. Botão "Revogar" cancela o convite. Convites expirados ou revogados podem ser reativados com "+7 dias" de validade.' },
+      { subtitulo: 'Gerenciar usuários', texto: 'A tabela de usuários mostra nome, role, status (Ativo/Bloqueado), módulos e último acesso. Clique em qualquer linha ou "Editar" para abrir o painel do usuário: altere role, módulos permitidos e toggle ativo/bloqueado para suspender acesso sem excluir a conta.' },
     ]
   },
   {

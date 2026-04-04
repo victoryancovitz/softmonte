@@ -2,70 +2,25 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
+import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import SearchInput from '@/components/SearchInput'
+import { useToast } from '@/components/Toast'
 import {
   UserMinus, CheckCircle2, Clock, ChevronDown, ChevronRight,
-  Plus, CalendarCheck, MessageSquare, AlertTriangle, FileText,
+  Plus, CalendarCheck, FileText,
 } from 'lucide-react'
 
-interface DesligamentoWorkflow {
-  id: string
-  funcionario_id: string
-  obra_id: string | null
-  tipo_desligamento: string
-  data_prevista_saida: string
-  status: string
-  saldo_banco_horas: number | null
-  dias_ferias_proporcionais: number | null
-  aviso_previo: boolean
-  aviso_previo_data: string | null
-  aviso_previo_obs: string | null
-  devolucao_epi: boolean
-  devolucao_epi_data: string | null
-  devolucao_epi_obs: string | null
-  devolucao_ferramentas: boolean
-  devolucao_ferramentas_data: string | null
-  devolucao_ferramentas_obs: string | null
-  exame_demissional: boolean
-  exame_demissional_data: string | null
-  exame_demissional_obs: string | null
-  baixa_ctps: boolean
-  baixa_ctps_data: string | null
-  baixa_ctps_obs: string | null
-  calculo_rescisao: boolean
-  calculo_rescisao_data: string | null
-  calculo_rescisao_obs: string | null
-  homologacao: boolean
-  homologacao_data: string | null
-  homologacao_obs: string | null
-  esocial: boolean
-  esocial_data: string | null
-  esocial_obs: string | null
-  acerto_banco_horas: boolean
-  acerto_banco_horas_data: string | null
-  acerto_banco_horas_obs: string | null
-  funcionarios: { nome: string; cargo: string } | null
-  obras: { nome: string } | null
-}
-
-interface Funcionario {
-  id: string
-  nome: string
-  cargo: string
-  status: string
-}
-
-const CHECKLIST_ITEMS = [
-  { key: 'aviso_previo', label: 'Aviso Previo' },
-  { key: 'devolucao_epi', label: 'Devolucao de EPI' },
-  { key: 'devolucao_ferramentas', label: 'Devolucao de Ferramentas' },
-  { key: 'exame_demissional', label: 'Exame Demissional' },
-  { key: 'baixa_ctps', label: 'Baixa CTPS' },
-  { key: 'calculo_rescisao', label: 'Calculo Rescisao' },
-  { key: 'homologacao', label: 'Homologacao' },
-  { key: 'esocial', label: 'eSocial' },
-  { key: 'acerto_banco_horas', label: 'Acerto Banco de Horas' },
+const ETAPAS = [
+  { key: 'etapa_aviso_previo', label: 'Aviso Previo' },
+  { key: 'etapa_devolucao_epi', label: 'Devolucao de EPI' },
+  { key: 'etapa_devolucao_ferramentas', label: 'Devolucao de Ferramentas' },
+  { key: 'etapa_exame_demissional', label: 'Exame Demissional' },
+  { key: 'etapa_baixa_ctps', label: 'Baixa CTPS' },
+  { key: 'etapa_calculo_rescisao', label: 'Calculo Rescisao' },
+  { key: 'etapa_homologacao', label: 'Homologacao' },
+  { key: 'etapa_esocial', label: 'eSocial' },
+  { key: 'etapa_acerto_banco_horas', label: 'Acerto Banco de Horas' },
 ] as const
 
 const TIPO_LABELS: Record<string, { label: string; cls: string }> = {
@@ -81,156 +36,79 @@ function formatDate(d: string | null): string {
   return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR')
 }
 
+function getProgress(desl: any): { done: number; total: number; pct: number; nextPending: string | null } {
+  const total = ETAPAS.length
+  let done = 0
+  let nextPending: string | null = null
+  for (const etapa of ETAPAS) {
+    const val = desl[etapa.key]
+    if (val?.ok === true) {
+      done++
+    } else if (!nextPending) {
+      nextPending = etapa.label
+    }
+  }
+  return { done, total, pct: Math.round((done / total) * 100), nextPending }
+}
+
 export default function DesligamentosPage() {
   const supabase = createClient()
-  const [desligamentos, setDesligamentos] = useState<DesligamentoWorkflow[]>([])
-  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
+  const toast = useToast()
+  const [desligamentos, setDesligamentos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
-  const [showNewForm, setShowNewForm] = useState(false)
-  const [newFuncId, setNewFuncId] = useState('')
-  const [newTipo, setNewTipo] = useState('')
-  const [newDataSaida, setNewDataSaida] = useState('')
-  const [saving, setSaving] = useState(false)
   const [busca, setBusca] = useState('')
 
-  useEffect(() => {
-    loadData()
-  }, [])
+  useEffect(() => { loadData() }, [])
 
   async function loadData() {
     setLoading(true)
-    const [deslRes, funcRes] = await Promise.all([
-      supabase
-        .from('desligamentos_workflow')
-        .select('*, funcionarios(nome, cargo), obras(nome)')
-        .order('data_prevista_saida', { ascending: true }),
-      supabase
-        .from('funcionarios')
-        .select('id, nome, cargo, status')
-        .eq('status', 'alocado')
-        .order('nome'),
-    ])
-    setDesligamentos(deslRes.data ?? [])
-    setFuncionarios(funcRes.data ?? [])
+    const { data } = await supabase
+      .from('desligamentos_workflow')
+      .select('*, funcionarios(id, nome, cargo), obras(nome)')
+      .order('created_at', { ascending: false })
+    setDesligamentos(data ?? [])
     setLoading(false)
   }
 
   function toggleExpand(id: string) {
     setExpanded(prev => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      next.has(id) ? next.delete(id) : next.add(id)
       return next
     })
   }
 
-  function getProgress(desl: DesligamentoWorkflow): number {
-    const total = CHECKLIST_ITEMS.length
-    const done = CHECKLIST_ITEMS.filter(item => (desl as any)[item.key] === true).length
-    return Math.round((done / total) * 100)
-  }
-
-  function allChecked(desl: DesligamentoWorkflow): boolean {
-    return CHECKLIST_ITEMS.every(item => (desl as any)[item.key] === true)
-  }
-
-  async function toggleCheckItem(deslId: string, key: string, currentValue: boolean) {
-    const updates: Record<string, any> = {
-      [key]: !currentValue,
-    }
-    if (!currentValue) {
-      updates[`${key}_data`] = new Date().toISOString().split('T')[0]
-    } else {
-      updates[`${key}_data`] = null
-    }
-
-    await supabase.from('desligamentos_workflow').update(updates).eq('id', deslId)
+  async function toggleEtapa(deslId: string, key: string, currentVal: any) {
+    const isOk = currentVal?.ok === true
+    const updated = isOk ? { ok: false } : { ok: true, data: new Date().toISOString().split('T')[0] }
+    await supabase.from('desligamentos_workflow').update({ [key]: updated, updated_at: new Date().toISOString() }).eq('id', deslId)
     loadData()
   }
 
-  async function updateObs(deslId: string, key: string, value: string) {
-    await supabase.from('desligamentos_workflow').update({ [`${key}_obs`]: value || null }).eq('id', deslId)
-  }
+  async function concluirDesligamento(desl: any) {
+    if (!window.confirm('Concluir este desligamento? O funcionario sera marcado como inativo.')) return
 
-  async function updateDateField(deslId: string, key: string, value: string) {
-    await supabase.from('desligamentos_workflow').update({ [`${key}_data`]: value || null }).eq('id', deslId)
-  }
+    await supabase.from('desligamentos_workflow').update({
+      status: 'concluido',
+      concluido_em: new Date().toISOString(),
+      data_real_saida: desl.data_prevista_saida || new Date().toISOString().split('T')[0],
+    }).eq('id', desl.id)
 
-  async function concluirDesligamento(desl: DesligamentoWorkflow) {
-    const confirmed = window.confirm('Concluir este desligamento? O funcionario sera marcado como inativo e suas alocacoes serao encerradas.')
-    if (!confirmed) return
-
-    // Update workflow status
-    await supabase.from('desligamentos_workflow').update({ status: 'concluido' }).eq('id', desl.id)
-
-    // Update funcionario status to inativo
     await supabase.from('funcionarios').update({ status: 'inativo' }).eq('id', desl.funcionario_id)
 
-    // Encerrar alocacoes ativas
-    await supabase
-      .from('alocacoes')
-      .update({ ativo: false, data_fim: new Date().toISOString().split('T')[0] })
-      .eq('funcionario_id', desl.funcionario_id)
-      .eq('ativo', true)
+    await supabase.from('alocacoes').update({
+      ativo: false,
+      data_fim: desl.data_prevista_saida || new Date().toISOString().split('T')[0],
+    }).eq('funcionario_id', desl.funcionario_id).eq('ativo', true)
 
+    toast.success('Desligamento concluido!', `Funcionario marcado como inativo`)
     loadData()
   }
 
-  async function handleNovoDesligamento() {
-    if (!newFuncId || !newTipo || !newDataSaida) {
-      alert('Preencha todos os campos.')
-      return
-    }
-    setSaving(true)
-
-    // Get funcionario's current obra from active alocacao
-    const { data: alocacao } = await supabase
-      .from('alocacoes')
-      .select('obra_id')
-      .eq('funcionario_id', newFuncId)
-      .eq('ativo', true)
-      .limit(1)
-      .single()
-
-    // Get banco de horas saldo
-    const { data: bancoHoras } = await supabase
-      .from('banco_horas')
-      .select('saldo_acumulado')
-      .eq('funcionario_id', newFuncId)
-      .order('ano', { ascending: false })
-      .order('mes', { ascending: false })
-      .limit(1)
-      .single()
-
-    const insertData: Record<string, any> = {
-      funcionario_id: newFuncId,
-      obra_id: alocacao?.obra_id ?? null,
-      tipo_desligamento: newTipo,
-      data_prevista_saida: newDataSaida,
-      status: 'em_andamento',
-      saldo_banco_horas: bancoHoras?.saldo_acumulado ?? 0,
-      dias_ferias_proporcionais: null,
-    }
-    CHECKLIST_ITEMS.forEach(item => {
-      insertData[item.key] = false
-      insertData[`${item.key}_data`] = null
-      insertData[`${item.key}_obs`] = null
-    })
-
-    await supabase.from('desligamentos_workflow').insert(insertData)
-
-    setShowNewForm(false)
-    setNewFuncId('')
-    setNewTipo('')
-    setNewDataSaida('')
-    setSaving(false)
-    loadData()
-  }
-
-  const filteredDesligamentos = desligamentos.filter(d => !busca || d.funcionarios?.nome?.toLowerCase().includes(busca.toLowerCase()))
-  const emAndamento = filteredDesligamentos.filter(d => d.status === 'em_andamento')
-  const concluidos = filteredDesligamentos.filter(d => d.status === 'concluido')
+  const filtered = desligamentos.filter(d => !busca || d.funcionarios?.nome?.toLowerCase().includes(busca.toLowerCase()))
+  const emAndamento = filtered.filter(d => d.status === 'em_andamento')
+  const concluidos = filtered.filter(d => d.status === 'concluido')
 
   return (
     <div className="p-4 sm:p-6 max-w-7xl mx-auto">
@@ -239,16 +117,14 @@ export default function DesligamentosPage() {
           <BackButton fallback="/rh" />
           <div>
             <h1 className="text-xl font-bold font-display text-brand">Desligamentos</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{emAndamento.length} desligamento(s) em andamento</p>
+            <p className="text-sm text-gray-500 mt-0.5">{emAndamento.length} em andamento</p>
           </div>
         </div>
-        <button
-          onClick={() => setShowNewForm(!showNewForm)}
-          className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark flex items-center gap-2"
-        >
+        <Link href="/rh/desligamentos/novo"
+          className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark flex items-center gap-2">
           <Plus className="w-4 h-4" />
           Novo Desligamento
-        </button>
+        </Link>
       </div>
 
       {/* KPIs */}
@@ -269,69 +145,6 @@ export default function DesligamentosPage() {
         </div>
       </div>
 
-      {/* New desligamento form */}
-      {showNewForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
-          <h2 className="text-sm font-bold text-gray-700 mb-4 flex items-center gap-2">
-            <UserMinus className="w-4 h-4" /> Novo Desligamento
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Funcionario</label>
-              <select
-                value={newFuncId}
-                onChange={e => setNewFuncId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-              >
-                <option value="">Selecione...</option>
-                {funcionarios.map(f => (
-                  <option key={f.id} value={f.id}>{f.nome} — {f.cargo}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Tipo Desligamento</label>
-              <select
-                value={newTipo}
-                onChange={e => setNewTipo(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-              >
-                <option value="">Selecione...</option>
-                <option value="sem_justa_causa">Sem Justa Causa</option>
-                <option value="justa_causa">Justa Causa</option>
-                <option value="pedido_demissao">Pedido de Demissao</option>
-                <option value="termino_contrato">Termino de Contrato</option>
-                <option value="acordo">Acordo</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Data Prevista Saida</label>
-              <input
-                type="date"
-                value={newDataSaida}
-                onChange={e => setNewDataSaida(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleNovoDesligamento}
-              disabled={saving}
-              className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50"
-            >
-              {saving ? 'Salvando...' : 'Criar Desligamento'}
-            </button>
-            <button
-              onClick={() => setShowNewForm(false)}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-300"
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* Search */}
       <div className="mb-4">
         <SearchInput value={busca} onChange={setBusca} placeholder="Buscar desligamento..." />
@@ -349,8 +162,7 @@ export default function DesligamentosPage() {
           {emAndamento.map(desl => {
             const isOpen = expanded.has(desl.id)
             const progress = getProgress(desl)
-            const done = CHECKLIST_ITEMS.filter(item => (desl as any)[item.key] === true).length
-            const canComplete = allChecked(desl)
+            const allDone = progress.done === progress.total
             const tipoInfo = TIPO_LABELS[desl.tipo_desligamento] ?? { label: desl.tipo_desligamento, cls: 'bg-gray-100 text-gray-600' }
 
             return (
@@ -364,7 +176,10 @@ export default function DesligamentosPage() {
                     {isOpen ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
                     <div className="text-left">
                       <div className="flex items-center gap-2">
-                        <p className="font-semibold text-gray-900">{desl.funcionarios?.nome ?? '—'}</p>
+                        <Link href={`/funcionarios/${desl.funcionarios?.id}`} className="font-semibold text-gray-900 hover:text-brand"
+                          onClick={e => e.stopPropagation()}>
+                          {desl.funcionarios?.nome ?? '—'}
+                        </Link>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tipoInfo.cls}`}>{tipoInfo.label}</span>
                       </div>
                       <p className="text-xs text-gray-500">
@@ -373,14 +188,19 @@ export default function DesligamentosPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs font-semibold text-gray-500">{done}/{CHECKLIST_ITEMS.length}</span>
+                    {progress.nextPending && (
+                      <span className="hidden sm:inline text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
+                        Proximo: {progress.nextPending}
+                      </span>
+                    )}
+                    <span className="text-xs font-semibold text-gray-500">{progress.done}/{progress.total}</span>
                     <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
                       <div
-                        className={`h-full rounded-full transition-all ${progress === 100 ? 'bg-green-500' : progress >= 50 ? 'bg-amber-400' : 'bg-brand'}`}
-                        style={{ width: `${progress}%` }}
+                        className={`h-full rounded-full transition-all ${progress.pct === 100 ? 'bg-green-500' : progress.pct >= 50 ? 'bg-amber-400' : 'bg-brand'}`}
+                        style={{ width: `${progress.pct}%` }}
                       />
                     </div>
-                    <span className="text-xs font-bold text-gray-600">{progress}%</span>
+                    <span className="text-xs font-bold text-gray-600">{progress.pct}%</span>
                   </div>
                 </button>
 
@@ -392,69 +212,62 @@ export default function DesligamentosPage() {
                       <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-xl px-3 py-2">
                         <Clock className="w-4 h-4 text-blue-500" />
                         <div>
-                          <p className="text-xs text-blue-600 font-semibold">Saldo Banco de Horas</p>
+                          <p className="text-xs text-blue-600 font-semibold">Banco de Horas</p>
                           <p className="text-sm font-bold text-blue-800">
-                            {desl.saldo_banco_horas != null ? `${desl.saldo_banco_horas >= 0 ? '+' : ''}${desl.saldo_banco_horas}h` : 'N/A'}
+                            {desl.saldo_banco_horas_saida != null ? `${Number(desl.saldo_banco_horas_saida) >= 0 ? '+' : ''}${desl.saldo_banco_horas_saida}h` : 'N/A'}
                           </p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
                         <FileText className="w-4 h-4 text-green-500" />
                         <div>
-                          <p className="text-xs text-green-600 font-semibold">Ferias Proporcionais</p>
+                          <p className="text-xs text-green-600 font-semibold">Ferias</p>
                           <p className="text-sm font-bold text-green-800">
-                            {desl.dias_ferias_proporcionais != null ? `${desl.dias_ferias_proporcionais} dia(s)` : 'N/A'}
+                            {desl.saldo_ferias_saida != null ? `${desl.saldo_ferias_saida} dia(s)` : 'N/A'}
                           </p>
                         </div>
                       </div>
+                      {desl.prazo_esocial_s2299 && (
+                        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                          <CalendarCheck className="w-4 h-4 text-amber-500" />
+                          <div>
+                            <p className="text-xs text-amber-600 font-semibold">Prazo eSocial</p>
+                            <p className="text-sm font-bold text-amber-800">{formatDate(desl.prazo_esocial_s2299)}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     <div className="space-y-3">
-                      {CHECKLIST_ITEMS.map(item => {
-                        const checked = (desl as any)[item.key] === true
-                        const dateVal = (desl as any)[`${item.key}_data`] ?? ''
-                        const obsVal = (desl as any)[`${item.key}_obs`] ?? ''
+                      {ETAPAS.map(etapa => {
+                        const val = desl[etapa.key] ?? {}
+                        const checked = val.ok === true
 
                         return (
-                          <div key={item.key} className={`flex flex-col sm:flex-row sm:items-start gap-3 p-3 rounded-xl border ${checked ? 'bg-green-50/50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                          <div key={etapa.key} className={`flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl border ${checked ? 'bg-green-50/50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
                             <label className="flex items-center gap-3 min-w-[220px] cursor-pointer">
                               <input
                                 type="checkbox"
                                 checked={checked}
-                                onChange={() => toggleCheckItem(desl.id, item.key, checked)}
+                                onChange={() => toggleEtapa(desl.id, etapa.key, val)}
                                 className="rounded border-gray-300 text-brand focus:ring-brand/30 w-5 h-5"
                               />
                               <span className={`text-sm font-medium ${checked ? 'text-green-700 line-through' : 'text-gray-800'}`}>
-                                {item.label}
+                                {etapa.label}
                               </span>
                             </label>
-                            <div className="flex-1 flex flex-col sm:flex-row gap-2">
-                              <div className="flex items-center gap-2">
-                                <CalendarCheck className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                                <input
-                                  type="date"
-                                  value={dateVal}
-                                  onChange={e => updateDateField(desl.id, item.key, e.target.value)}
-                                  className="px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand/30 w-36"
-                                />
-                              </div>
-                              <div className="flex items-center gap-2 flex-1">
-                                <MessageSquare className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                                <textarea
-                                  defaultValue={obsVal}
-                                  onBlur={e => updateObs(desl.id, item.key, e.target.value)}
-                                  placeholder="Observacao..."
-                                  rows={1}
-                                  className="w-full px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand/30 resize-none"
-                                />
-                              </div>
-                            </div>
+                            {val.data && (
+                              <span className="flex items-center gap-1 text-xs text-gray-400">
+                                <CalendarCheck className="w-3.5 h-3.5" />
+                                {formatDate(val.data)}
+                              </span>
+                            )}
                           </div>
                         )
                       })}
                     </div>
 
-                    {canComplete && (
+                    {allDone && (
                       <div className="mt-4 flex justify-end">
                         <button
                           onClick={() => concluirDesligamento(desl)}
@@ -481,7 +294,7 @@ export default function DesligamentosPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  {['Funcionario', 'Cargo', 'Tipo', 'Data Saida', 'Status'].map(h => (
+                  {['Funcionario', 'Cargo', 'Tipo', 'Data Saida', 'Concluido em'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -491,14 +304,20 @@ export default function DesligamentosPage() {
                   const tipoInfo = TIPO_LABELS[desl.tipo_desligamento] ?? { label: desl.tipo_desligamento, cls: 'bg-gray-100 text-gray-600' }
                   return (
                     <tr key={desl.id} className="border-b border-gray-50 hover:bg-gray-50/80">
-                      <td className="px-4 py-3 font-semibold text-gray-900">{desl.funcionarios?.nome ?? '—'}</td>
+                      <td className="px-4 py-3">
+                        <Link href={`/funcionarios/${desl.funcionarios?.id}`} className="font-semibold text-gray-900 hover:text-brand">
+                          {desl.funcionarios?.nome ?? '—'}
+                        </Link>
+                      </td>
                       <td className="px-4 py-3 text-gray-600">{desl.funcionarios?.cargo ?? '—'}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tipoInfo.cls}`}>{tipoInfo.label}</span>
                       </td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(desl.data_prevista_saida)}</td>
                       <td className="px-4 py-3">
-                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">Concluido</span>
+                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                          {desl.concluido_em ? new Date(desl.concluido_em).toLocaleDateString('pt-BR') : 'Concluido'}
+                        </span>
                       </td>
                     </tr>
                   )

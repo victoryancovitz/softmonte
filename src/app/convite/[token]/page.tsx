@@ -42,7 +42,7 @@ export default function ConvitePage() {
       if (!data) { setEtapa('invalido'); setErro('Convite não encontrado.'); return }
       if (data.usado_em) { setEtapa('invalido'); setErro('Este convite já foi utilizado.'); return }
       if (!data.ativo) { setEtapa('invalido'); setErro('Este convite foi revogado.'); return }
-      if (new Date(data.expires_at) < new Date()) { setEtapa('invalido'); setErro('Este convite expirou.'); return }
+      if (data.expires_at && new Date(data.expires_at) < new Date()) { setEtapa('invalido'); setErro('Este convite expirou.'); return }
 
       setConvite(data)
       setForm(f => ({ ...f, email: data.email || '' }))
@@ -175,7 +175,9 @@ export default function ConvitePage() {
               Criar minha conta
             </button>
             <p className="text-center text-xs text-gray-400 mt-3">
-              Convite válido até {new Date(convite.expires_at).toLocaleDateString('pt-BR')}
+              {convite.expires_at
+                ? `Convite válido até ${new Date(convite.expires_at).toLocaleDateString('pt-BR')}`
+                : 'Convite sem data de expiração'}
             </p>
           </div>
         </div>

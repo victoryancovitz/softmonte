@@ -14,27 +14,31 @@ export default async function FuncionarioPage({ params }: { params: { id: string
   const hoje = new Date()
   const trintaDiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
 
-  const [{ data: alocacoes }, { data: faltas }, { data: docsFunc }, { data: efetivo30 }, { data: docsGerados }, { data: prazosArr }] = await Promise.all([
+  const [{ data: alocacoes }, { data: faltas }, { data: docsFunc }, { data: efetivo30 }, { data: docsGerados }, { data: prazosArr }, { data: admissaoArr }, { data: desligamentoArr }] = await Promise.all([
     supabase.from('alocacoes').select('*, obras(nome, status)').eq('funcionario_id', params.id).order('data_inicio', { ascending: false }),
     supabase.from('faltas').select('*').eq('funcionario_id', params.id).order('data', { ascending: false }).limit(20),
     supabase.from('documentos').select('*').eq('funcionario_id', params.id).order('vencimento'),
     supabase.from('efetivo_diario').select('data,tipo_dia,obras(nome)').eq('funcionario_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
     supabase.from('documentos_gerados').select('*').eq('funcionario_id', params.id).order('created_at', { ascending: false }),
     supabase.from('vw_prazos_legais').select('*').eq('funcionario_id', params.id).limit(1),
+    supabase.from('admissoes_workflow').select('id, status, concluida_em, created_at').eq('funcionario_id', params.id).order('created_at', { ascending: false }).limit(1),
+    supabase.from('desligamentos_workflow').select('id, status, concluido_em, created_at').eq('funcionario_id', params.id).eq('status', 'em_andamento').order('created_at', { ascending: false }).limit(1),
   ])
   const prazos = prazosArr?.[0] ?? null
+  const admissao = admissaoArr?.[0] ?? null
+  const desligamento = desligamentoArr?.[0] ?? null
 
   const campos = [
-    { label: 'Matrícula', value: f.matricula },
+    { label: 'Matricula', value: f.matricula },
     { label: 'RE', value: f.re },
     { label: 'CPF', value: f.cpf },
     { label: 'PIS', value: f.pis },
     { label: 'Data de Nascimento', value: f.data_nascimento ? new Date(f.data_nascimento+'T12:00').toLocaleDateString('pt-BR') : null },
-    { label: 'Admissão', value: f.admissao ? new Date(f.admissao+'T12:00').toLocaleDateString('pt-BR') : null },
+    { label: 'Admissao', value: f.admissao ? new Date(f.admissao+'T12:00').toLocaleDateString('pt-BR') : null },
     { label: 'Prazo 1', value: f.prazo1 ? new Date(f.prazo1+'T12:00').toLocaleDateString('pt-BR') : null },
     { label: 'Prazo 2', value: f.prazo2 ? new Date(f.prazo2+'T12:00').toLocaleDateString('pt-BR') : null },
     { label: 'Banco', value: f.banco },
-    { label: 'Agência / Conta', value: f.agencia_conta },
+    { label: 'Agencia / Conta', value: f.agencia_conta },
     { label: 'PIX', value: f.pix },
     { label: 'VT Estrutura', value: f.vt_estrutura },
     { label: 'Tamanho Bota', value: f.tamanho_bota },
@@ -51,8 +55,8 @@ export default async function FuncionarioPage({ params }: { params: { id: string
   const ALERTA_BADGE: Record<string, { label: string; cls: string }> = {
     experiencia_1_vencendo: { label: 'Exp. 1 vence', cls: 'bg-amber-100 text-amber-700' },
     experiencia_2_vencendo: { label: 'Exp. vence', cls: 'bg-red-100 text-red-700' },
-    ferias_vencidas: { label: 'Férias vencidas', cls: 'bg-red-100 text-red-700' },
-    ferias_urgente: { label: 'Férias urgente', cls: 'bg-orange-100 text-orange-700' },
+    ferias_vencidas: { label: 'Ferias vencidas', cls: 'bg-red-100 text-red-700' },
+    ferias_urgente: { label: 'Ferias urgente', cls: 'bg-orange-100 text-orange-700' },
     contrato_vencendo: { label: 'Contrato vence', cls: 'bg-amber-100 text-amber-700' },
   }
 
@@ -60,10 +64,53 @@ export default async function FuncionarioPage({ params }: { params: { id: string
     <div className="p-4 sm:p-6 max-w-4xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/funcionarios" />
-        <Link href="/funcionarios" className="text-gray-400 hover:text-gray-600">Funcionários</Link>
+        <Link href="/funcionarios" className="text-gray-400 hover:text-gray-600">Funcionarios</Link>
         <span className="text-gray-300">/</span>
         <span className="font-medium text-gray-700">{f.nome}</span>
       </div>
+
+      {/* Admission banner */}
+      {!admissao && f.status !== 'inativo' && (
+        <div className="mb-4 p-4 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-blue-800">Este funcionario ainda nao tem processo de admissao registrado.</p>
+            <p className="text-xs text-blue-600 mt-0.5">Inicie o checklist de admissao para documentos, exame, EPI e eSocial.</p>
+          </div>
+          <Link href={`/rh/admissoes/novo?funcionario_id=${f.id}`}
+            className="px-4 py-2 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 flex-shrink-0 ml-4">
+            Iniciar Admissao
+          </Link>
+        </div>
+      )}
+      {admissao?.status === 'em_andamento' && (
+        <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="text-sm font-semibold text-amber-800">Admissao em andamento</span>
+          </div>
+          <Link href={`/rh/admissoes`} className="text-xs text-amber-700 font-semibold hover:underline">Continuar</Link>
+        </div>
+      )}
+      {admissao?.status === 'concluida' && (
+        <div className="mb-4 p-3 rounded-xl bg-green-50 border border-green-200 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-green-500" />
+          <span className="text-sm font-semibold text-green-700">Admissao concluida</span>
+          {admissao.concluida_em && (
+            <span className="text-xs text-green-600">em {new Date(admissao.concluida_em).toLocaleDateString('pt-BR')}</span>
+          )}
+        </div>
+      )}
+
+      {/* Dismissal in progress banner */}
+      {desligamento && (
+        <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-sm font-semibold text-red-800">Desligamento em andamento</span>
+          </div>
+          <Link href={`/rh/desligamentos`} className="text-xs text-red-700 font-semibold hover:underline">Continuar</Link>
+        </div>
+      )}
 
       {prazos?.alerta_tipo && prazos.alerta_tipo !== 'ok' && (
         <div className={`mb-4 p-3 rounded-xl text-sm flex items-center gap-2 border ${
@@ -82,11 +129,17 @@ export default async function FuncionarioPage({ params }: { params: { id: string
             <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>{f.status}</span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Link href={`/funcionarios/${f.id}/editar`}
             className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
             Editar
           </Link>
+          {f.status !== 'inativo' && !desligamento && (
+            <Link href={`/rh/desligamentos/novo?funcionario_id=${f.id}`}
+              className="px-4 py-2 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors">
+              Iniciar Desligamento
+            </Link>
+          )}
           {f.status !== 'inativo' && <DesativarFuncionarioBtn funcId={f.id} role={role} />}
         </div>
       </div>
@@ -111,7 +164,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
           </div>
         </div>
 
-        {/* Alocações */}
+        {/* Alocacoes */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h2 className="text-sm font-bold text-brand font-display mb-4">Obras</h2>
           {alocacoes && alocacoes.length > 0 ? (
@@ -128,7 +181,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-400">Sem alocações.</p>
+            <p className="text-sm text-gray-400">Sem alocacoes.</p>
           )}
         </div>
       </div>
@@ -140,31 +193,31 @@ export default async function FuncionarioPage({ params }: { params: { id: string
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {prazos.prazo_experiencia_1 && (
               <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
-                <span className="text-xs text-gray-500">1º Prazo experiência</span>
+                <span className="text-xs text-gray-500">1o Prazo experiencia</span>
                 <span className="text-sm font-medium">{new Date(prazos.prazo_experiencia_1+'T12:00').toLocaleDateString('pt-BR')}</span>
               </div>
             )}
             {prazos.prazo_experiencia_2 && (
               <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
-                <span className="text-xs text-gray-500">Fim da experiência</span>
+                <span className="text-xs text-gray-500">Fim da experiencia</span>
                 <span className="text-sm font-medium">{new Date(prazos.prazo_experiencia_2+'T12:00').toLocaleDateString('pt-BR')}</span>
               </div>
             )}
             <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
               <span className="text-xs text-gray-500">Converteu para CLT</span>
               <span className={`text-sm font-medium ${prazos.ja_converteu_clt ? 'text-green-700' : 'text-gray-400'}`}>
-                {prazos.ja_converteu_clt ? `Sim — ${prazos.converte_clt_em ? new Date(prazos.converte_clt_em+'T12:00').toLocaleDateString('pt-BR') : ''}` : 'Não'}
+                {prazos.ja_converteu_clt ? `Sim — ${prazos.converte_clt_em ? new Date(prazos.converte_clt_em+'T12:00').toLocaleDateString('pt-BR') : ''}` : 'Nao'}
               </span>
             </div>
             {prazos.periodo_aquisitivo_atual_inicio && (
               <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
-                <span className="text-xs text-gray-500">Período aquisitivo</span>
+                <span className="text-xs text-gray-500">Periodo aquisitivo</span>
                 <span className="text-xs font-medium">{new Date(prazos.periodo_aquisitivo_atual_inicio+'T12:00').toLocaleDateString('pt-BR')} → {prazos.periodo_aquisitivo_atual_fim ? new Date(prazos.periodo_aquisitivo_atual_fim+'T12:00').toLocaleDateString('pt-BR') : '—'}</span>
               </div>
             )}
             {prazos.concessivo_limite && (
               <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
-                <span className="text-xs text-gray-500">Limite férias</span>
+                <span className="text-xs text-gray-500">Limite ferias</span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-medium">{new Date(prazos.concessivo_limite+'T12:00').toLocaleDateString('pt-BR')}</span>
                   {prazos.ferias_vencidas && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-bold">VENCIDO</span>}
@@ -172,12 +225,12 @@ export default async function FuncionarioPage({ params }: { params: { id: string
               </div>
             )}
             <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
-              <span className="text-xs text-gray-500">Saldo de férias</span>
+              <span className="text-xs text-gray-500">Saldo de ferias</span>
               <span className="text-sm font-bold text-brand">{prazos.saldo_ferias ?? 0} dias</span>
             </div>
             {prazos.proximas_ferias_inicio && (
               <div className="flex justify-between items-center py-1.5 border-b border-gray-50 col-span-1 sm:col-span-2">
-                <span className="text-xs text-gray-500">Próximas férias</span>
+                <span className="text-xs text-gray-500">Proximas ferias</span>
                 <span className="text-xs font-medium text-green-700">
                   {new Date(prazos.proximas_ferias_inicio+'T12:00').toLocaleDateString('pt-BR')} → {prazos.proximas_ferias_fim ? new Date(prazos.proximas_ferias_fim+'T12:00').toLocaleDateString('pt-BR') : '—'}
                   {prazos.proximas_ferias_status && <span className="ml-2 bg-green-100 text-green-700 px-1.5 py-0.5 rounded text-[10px]">{prazos.proximas_ferias_status}</span>}
@@ -214,7 +267,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
                 atestado_medico: 'ATESTADO', atestado_acidente: 'ACIDENTE',
                 licenca_maternidade: 'LIC. MAT.', licenca_paternidade: 'LIC. PAT.',
                 folga_compensatoria: 'FOLGA', feriado: 'FERIADO',
-                suspensao: 'SUSPENSÃO', outro: 'OUTRO',
+                suspensao: 'SUSPENSAO', outro: 'OUTRO',
               }
               return (
                 <div key={ft.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
@@ -232,9 +285,9 @@ export default async function FuncionarioPage({ params }: { params: { id: string
         ) : <p className="text-sm text-gray-400">Nenhuma falta ou atestado registrado.</p>}
       </div>
 
-      {/* Histórico de Ponto (últimos 30 dias) */}
+      {/* Historico de Ponto (ultimos 30 dias) */}
       <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-        <h2 className="text-sm font-bold text-brand font-display mb-4">Ponto — últimos 30 dias</h2>
+        <h2 className="text-sm font-bold text-brand font-display mb-4">Ponto — ultimos 30 dias</h2>
         {efetivo30 && efetivo30.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
             {efetivo30.map((e: any, i: number) => (
@@ -243,7 +296,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
               </div>
             ))}
           </div>
-        ) : <p className="text-sm text-gray-400">Nenhum registro de ponto nos últimos 30 dias.</p>}
+        ) : <p className="text-sm text-gray-400">Nenhum registro de ponto nos ultimos 30 dias.</p>}
         <p className="text-xs text-gray-400 mt-2">{efetivo30?.length ?? 0} dias presentes</p>
       </div>
 
@@ -275,10 +328,10 @@ export default async function FuncionarioPage({ params }: { params: { id: string
         ) : <p className="text-sm text-gray-400">Nenhum documento cadastrado.</p>}
       </div>
 
-      {/* Advertências e Termos */}
+      {/* Advertencias e Termos */}
       <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-bold text-brand font-display">Advertências e Termos</h2>
+          <h2 className="text-sm font-bold text-brand font-display">Advertencias e Termos</h2>
           <Link href="/documentos/gerar" className="text-xs text-brand hover:underline">Gerar novo</Link>
         </div>
         {docsGerados && docsGerados.length > 0 ? (
@@ -291,7 +344,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
                 comunicado: 'bg-purple-100 text-purple-700',
               }
               const CAT_LABEL: Record<string, string> = {
-                advertencia: 'ADVERTÊNCIA',
+                advertencia: 'ADVERTENCIA',
                 termo: 'TERMO',
                 comunicado: 'COMUNICADO',
               }
@@ -308,7 +361,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
               )
             })}
           </div>
-        ) : <p className="text-sm text-gray-400">Nenhuma advertência ou termo registrado.</p>}
+        ) : <p className="text-sm text-gray-400">Nenhuma advertencia ou termo registrado.</p>}
       </div>
     </div>
   )

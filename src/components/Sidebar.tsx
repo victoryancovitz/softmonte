@@ -143,9 +143,10 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
       </NavGroup>
 
       {isOp && (
-        <NavGroup label="RH & Legal" forceOpen={hasActiveChild(['/rh/treinamentos','/rh/admissoes','/rh/desligamentos','/documentos'])}>
+        <NavGroup label="RH & Legal" forceOpen={hasActiveChild(['/rh/treinamentos','/rh/admissoes','/rh/desligamentos','/documentos','/rastreio'])}>
           <NavItem href="/rh/treinamentos" label="Treinamentos NR" icon={ic.audit} />
           <NavItem href="/documentos" label="Documentos" icon={ic.docs} />
+          <NavItem href="/rastreio" label="Vencimentos" icon={ic.audit} />
           <NavItem href="/rh/admissoes" label="Admissões" icon={ic.func} />
           <NavItem href="/rh/desligamentos" label="Desligamentos" icon={ic.faltas} />
         </NavGroup>

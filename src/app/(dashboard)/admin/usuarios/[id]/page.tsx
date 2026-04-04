@@ -114,8 +114,8 @@ export default function EditarUsuarioPage() {
                 {currentRoleConf.label}
               </span>
               <span className="text-xs text-gray-400">
-                Último acesso: {profile.last_sign_in_at
-                  ? new Date(profile.last_sign_in_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                Último acesso: {profile.ultimo_acesso
+                  ? new Date(profile.ultimo_acesso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
                   : '--'}
               </span>
             </div>

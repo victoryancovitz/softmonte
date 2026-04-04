@@ -23,6 +23,8 @@ export default function NovoFuncionarioPage() {
   const [obras, setObras] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showModal, setShowModal] = useState(false)
+  const [savedId, setSavedId] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
   const toast = useToast()
@@ -131,8 +133,10 @@ export default function NovoFuncionarioPage() {
       })
     }
 
-    toast.show('Funcionário cadastrado!')
-    router.push('/funcionarios/' + data?.id)
+    toast.show('Funcionario cadastrado!')
+    setSavedId(data?.id ?? null)
+    setShowModal(true)
+    setLoading(false)
   }
 
   const inp = "w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand"
@@ -390,6 +394,47 @@ export default function NovoFuncionarioPage() {
           )}
         </div>
       </div>
+
+      {/* Completion Modal */}
+      {showModal && savedId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-8 max-w-md w-full mx-4 animate-slide-up">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 rounded-full bg-brand/10 text-brand flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-black font-display">
+                  {form.nome.trim().split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() || '??'}
+                </span>
+              </div>
+              <h2 className="text-lg font-bold font-display text-brand">Funcionario cadastrado!</h2>
+              <p className="text-sm text-gray-500 mt-1">{form.nome.trim().toUpperCase()} — {form.cargo || 'Sem cargo'}</p>
+            </div>
+
+            <div className="space-y-3 mb-6">
+              <button
+                onClick={() => router.push(`/rh/admissoes/novo?funcionario_id=${savedId}`)}
+                className="w-full p-4 rounded-xl border-2 border-brand bg-brand/5 hover:bg-brand/10 transition-colors text-left group"
+              >
+                <p className="text-sm font-bold text-brand group-hover:underline">Iniciar processo de admissao agora</p>
+                <p className="text-xs text-gray-500 mt-0.5">Documentos, exame admissional, EPI, eSocial...</p>
+              </button>
+
+              <button
+                onClick={() => router.push(`/funcionarios/${savedId}`)}
+                className="w-full p-4 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-left"
+              >
+                <p className="text-sm font-semibold text-gray-700">Ver perfil do funcionario</p>
+                <p className="text-xs text-gray-400 mt-0.5">Visualizar dados cadastrados</p>
+              </button>
+            </div>
+
+            <div className="text-center">
+              <button onClick={() => router.push('/funcionarios')} className="text-xs text-gray-400 hover:text-gray-600 hover:underline">
+                Fazer isso depois
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

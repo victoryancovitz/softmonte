@@ -38,6 +38,9 @@ export default function AdminUsuariosPage() {
   const [loading, setLoading] = useState(true)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [busca, setBusca] = useState('')
+  const [editandoValidade, setEditandoValidade] = useState<string | null>(null)
+  const [novaValidade, setNovaValidade] = useState('')
+  const [salvandoConvite, setSalvandoConvite] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -61,6 +64,24 @@ export default function AdminUsuariosPage() {
     await loadData()
   }
 
+  async function reativarConvite(id: string, diasExtra: number = 7) {
+    setSalvandoConvite(id)
+    const newExpires = new Date(Date.now() + diasExtra * 86400000).toISOString()
+    await supabase.from('convites').update({ ativo: true, expires_at: newExpires }).eq('id', id)
+    await loadData()
+    setSalvandoConvite(null)
+  }
+
+  async function salvarValidade(id: string, indeterminado: boolean = false) {
+    setSalvandoConvite(id)
+    const newExpires = indeterminado ? null : novaValidade ? new Date(novaValidade + 'T23:59:59').toISOString() : null
+    await supabase.from('convites').update({ expires_at: newExpires }).eq('id', id)
+    await loadData()
+    setEditandoValidade(null)
+    setNovaValidade('')
+    setSalvandoConvite(null)
+  }
+
   function copyLink(token: string, id: string) {
     const link = `${window.location.origin}/convite/${token}`
     navigator.clipboard.writeText(link)
@@ -72,9 +93,9 @@ export default function AdminUsuariosPage() {
   const ativos = profiles.filter((p: any) => p.ativo !== false)
   const bloqueados = profiles.filter((p: any) => p.ativo === false)
   const buscaFilter = (c: any) => !busca || c.nome_convidado?.toLowerCase().includes(busca.toLowerCase()) || c.email?.toLowerCase().includes(busca.toLowerCase())
-  const convitesPendentes = convites.filter((c: any) => c.ativo && !c.usado_em && new Date(c.expires_at) > now).filter(buscaFilter)
+  const convitesPendentes = convites.filter((c: any) => c.ativo && !c.usado_em && (!c.expires_at || new Date(c.expires_at) > now)).filter(buscaFilter)
   const convitesAceitos = convites.filter((c: any) => c.usado_em).filter(buscaFilter)
-  const convitesExpirados = convites.filter((c: any) => (!c.ativo || new Date(c.expires_at) <= now) && !c.usado_em).filter(buscaFilter)
+  const convitesExpirados = convites.filter((c: any) => (!c.ativo || (c.expires_at && new Date(c.expires_at) <= now)) && !c.usado_em).filter(buscaFilter)
 
   if (loading) return <div className="p-6 text-sm text-gray-400">Carregando...</div>
 
@@ -155,7 +176,7 @@ export default function AdminUsuariosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {['Usuário', 'Role', 'Módulos', 'Último acesso', 'Ações'].map(h => (
+                {['Usuário', 'Role', 'Status', 'Módulos', 'Último acesso', 'Ações'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -183,11 +204,18 @@ export default function AdminUsuariosPage() {
                         {roleConf.label}
                       </span>
                     </td>
+                    <td className="px-4 py-3">
+                      {p.ativo === false ? (
+                        <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-red-100 text-red-700">Bloqueado</span>
+                      ) : (
+                        <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-green-100 text-green-700">Ativo</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-600">
                       {modulosCount > 0 ? `${modulosCount} módulos` : '--'}
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">
-                      {formatRelativeTime(p.last_sign_in_at || p.updated_at)}
+                      {formatRelativeTime(p.ultimo_acesso || p.updated_at)}
                     </td>
                     <td className="px-4 py-3">
                       <Link
@@ -202,7 +230,7 @@ export default function AdminUsuariosPage() {
                 )
               }) : (
                 <tr>
-                  <td colSpan={5} className="px-4 py-10 text-center text-gray-400">Nenhum usuário cadastrado.</td>
+                  <td colSpan={6} className="px-4 py-10 text-center text-gray-400">Nenhum usuário cadastrado.</td>
                 </tr>
               )}
             </tbody>
@@ -230,9 +258,50 @@ export default function AdminUsuariosPage() {
                         <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${roleConf.color}`}>
                           {roleConf.label}
                         </span>
-                        <span className="text-xs text-gray-400">
-                          Expira em {new Date(c.expires_at).toLocaleDateString('pt-BR')}
-                        </span>
+                        {editandoValidade === c.id ? (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <input
+                              type="date"
+                              value={novaValidade}
+                              onChange={e => setNovaValidade(e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                              className="px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand"
+                            />
+                            <button
+                              onClick={() => salvarValidade(c.id)}
+                              disabled={!novaValidade || salvandoConvite === c.id}
+                              className="px-2 py-1 text-xs font-medium rounded-lg bg-brand text-white hover:bg-brand-dark transition-colors disabled:opacity-40"
+                            >
+                              {salvandoConvite === c.id ? '...' : 'Salvar'}
+                            </button>
+                            <button
+                              onClick={() => salvarValidade(c.id, true)}
+                              disabled={salvandoConvite === c.id}
+                              className="px-2 py-1 text-xs font-medium rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-40"
+                            >
+                              Indeterminado
+                            </button>
+                            <button
+                              onClick={() => { setEditandoValidade(null); setNovaValidade('') }}
+                              className="px-2 py-1 text-xs font-medium rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+                            >
+                              Cancelar
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => {
+                              setEditandoValidade(c.id)
+                              setNovaValidade(c.expires_at ? new Date(c.expires_at).toISOString().split('T')[0] : '')
+                            }}
+                            className="text-xs text-gray-400 hover:text-brand hover:underline transition-colors"
+                            title="Clique para editar validade"
+                          >
+                            {c.expires_at
+                              ? `Expira em ${new Date(c.expires_at).toLocaleDateString('pt-BR')}`
+                              : 'Sem expiração'}
+                          </button>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <button
@@ -297,20 +366,30 @@ export default function AdminUsuariosPage() {
             <h2 className="text-sm font-bold text-gray-700 mb-3 uppercase tracking-wide">Expirados / Revogados</h2>
             {convitesExpirados.length > 0 ? (
               <div className="space-y-2">
-                {convitesExpirados.map((c: any) => (
-                  <div key={c.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4 text-gray-400">
-                    <div>
-                      <div className="font-medium">{c.nome_convidado}</div>
-                      <div className="text-xs">{c.email}</div>
+                {convitesExpirados.map((c: any) => {
+                  const isRevogado = !c.ativo
+                  return (
+                    <div key={c.id} className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4 text-gray-400">
+                      <div>
+                        <div className="font-medium">{c.nome_convidado}</div>
+                        <div className="text-xs">{c.email}</div>
+                      </div>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${isRevogado ? 'bg-red-50 text-red-500' : 'bg-gray-100 text-gray-500'}`}>
+                        {isRevogado ? 'Revogado' : 'Expirado'}
+                      </span>
+                      <span className="text-xs">
+                        {c.expires_at ? new Date(c.expires_at).toLocaleDateString('pt-BR') : 'Sem expiração'}
+                      </span>
+                      <button
+                        onClick={() => reativarConvite(c.id)}
+                        disabled={salvandoConvite === c.id}
+                        className="ml-auto px-3 py-1.5 text-xs font-medium rounded-lg border border-green-200 text-green-600 hover:bg-green-50 transition-colors disabled:opacity-40"
+                      >
+                        {salvandoConvite === c.id ? 'Reativando...' : 'Reativar (+7 dias)'}
+                      </button>
                     </div>
-                    <span className="text-xs">
-                      {!c.ativo ? 'Revogado' : 'Expirado'}
-                    </span>
-                    <span className="text-xs ml-auto">
-                      {new Date(c.expires_at).toLocaleDateString('pt-BR')}
-                    </span>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-sm text-gray-400">

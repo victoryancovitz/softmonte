@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import SearchInput from '@/components/SearchInput'
+import { useToast } from '@/components/Toast'
 import { Palmtree, AlertCircle, CalendarCheck, Clock, Users, Check, X } from 'lucide-react'
 
 interface Funcionario {
@@ -51,6 +52,7 @@ function formatDate(d: string | null): string {
 
 export default function FeriasPage() {
   const supabase = createClient()
+  const toast = useToast()
   const [ferias, setFerias] = useState<Ferias[]>([])
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
   const [tab, setTab] = useState<TabFilter>('todos')
@@ -132,7 +134,7 @@ export default function FeriasPage() {
 
   async function handleProgramar(funcId: string) {
     if (!formData.data_inicio_gozo || !formData.data_fim_gozo) {
-      alert('Preencha as datas de inicio e fim.')
+      toast.warning('Preencha as datas de inicio e fim.')
       return
     }
     setSaving(true)
