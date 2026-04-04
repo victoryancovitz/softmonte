@@ -18,7 +18,7 @@ interface BancoHorasRow {
   hh_faltas: number
   hh_compensadas: number
   saldo_mes: number
-  saldo_acumulado: number
+  saldo_acumulado_final: number
   fechado: boolean
   funcionarios: { nome: string; cargo: string } | null
 }
@@ -112,7 +112,7 @@ export default function BancoHorasPage() {
       .update({
         [field]: numValue,
         saldo_mes: saldoMes,
-        saldo_acumulado: (updatedRow.saldo_acumulado - row.saldo_mes) + saldoMes,
+        saldo_acumulado_final: (updatedRow.saldo_acumulado_final - row.saldo_mes) + saldoMes,
       })
       .eq('id', id)
 
@@ -326,8 +326,8 @@ export default function BancoHorasPage() {
                 <td className={`px-4 py-3 ${saldoColor(row.saldo_mes)}`}>
                   {(row.saldo_mes >= 0 ? '+' : '')}{(row.saldo_mes || 0).toFixed(1)}h
                 </td>
-                <td className={`px-4 py-3 ${saldoColor(row.saldo_acumulado)}`}>
-                  {(row.saldo_acumulado >= 0 ? '+' : '')}{(row.saldo_acumulado || 0).toFixed(1)}h
+                <td className={`px-4 py-3 ${saldoColor(row.saldo_acumulado_final)}`}>
+                  {(row.saldo_acumulado_final >= 0 ? '+' : '')}{(row.saldo_acumulado_final || 0).toFixed(1)}h
                 </td>
               </tr>
             ))}

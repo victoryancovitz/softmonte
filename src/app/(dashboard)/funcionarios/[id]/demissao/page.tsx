@@ -83,7 +83,7 @@ export default function DemissaoWizardPage() {
     const [funcRes, wfRes, bhRes, feriasRes, alocRes] = await Promise.all([
       supabase.from('funcionarios').select('*').eq('id', id).single(),
       supabase.from('desligamentos_workflow').select('*').eq('funcionario_id', id).eq('status', 'em_andamento').order('created_at', { ascending: false }).limit(1),
-      supabase.from('banco_horas').select('saldo_acumulado').eq('funcionario_id', id).order('ano', { ascending: false }).order('mes', { ascending: false }).limit(1),
+      supabase.from('banco_horas').select('saldo_acumulado_final').eq('funcionario_id', id).order('ano', { ascending: false }).order('mes', { ascending: false }).limit(1),
       supabase.from('ferias').select('*').eq('funcionario_id', id).order('created_at', { ascending: false }).limit(1),
       supabase.from('alocacoes').select('obra_id').eq('funcionario_id', id).eq('ativo', true).limit(1),
     ])
@@ -92,7 +92,7 @@ export default function DemissaoWizardPage() {
     if (!f) { router.push('/funcionarios'); return }
     setFunc(f)
 
-    const saldoBH = bhRes.data?.[0]?.saldo_acumulado ?? 0
+    const saldoBH = bhRes.data?.[0]?.saldo_acumulado_final ?? 0
     // Calculate proportional vacation days
     const admissao = f.admissao ? new Date(f.admissao + 'T12:00:00') : null
     const now = new Date()

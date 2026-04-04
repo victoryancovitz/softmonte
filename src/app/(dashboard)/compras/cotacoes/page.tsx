@@ -143,15 +143,27 @@ export default function CotacoesPage() {
   }
 
   async function gerarPedido(cotacao: Cotacao) {
+    // Check if already generated
+    const { data: existing } = await supabase.from('requisicoes')
+      .select('id').eq('observacao', `Gerado automaticamente da cotacao #${cotacao.numero}`).limit(1)
+    if (existing && existing.length > 0) {
+      toast.warning('Pedido ja foi gerado para esta cotacao.')
+      return
+    }
     setGerandoPedido(cotacao.id)
     const { data: { user } } = await supabase.auth.getUser()
-    await supabase.from('requisicoes').insert({
+    const { error: insertErr } = await supabase.from('requisicoes').insert({
       obra_id: cotacao.obra_id,
       itens: cotacao.itens ?? [],
       status: 'aprovado',
       observacao: `Gerado automaticamente da cotacao #${cotacao.numero}`,
       solicitante_id: user?.id ?? null,
     })
+    if (insertErr) {
+      toast.error('Erro ao gerar pedido: ' + insertErr.message)
+      setGerandoPedido(null)
+      return
+    }
     toast.success('Pedido de compra gerado!', `Cotacao ${cotacao.numero}`)
     setGerandoPedido(null)
     loadData()

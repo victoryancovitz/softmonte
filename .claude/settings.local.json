@@ -25,7 +25,9 @@
       "Bash([ -f \"C:/Users/User/AppData/Local/Temp/claude/C--Users-User-Downloads-softmonte-git/d5faf8c9-eb88-4d2b-9fa7-d0797ba4d30a/tasks/a6dc42569f78c7a23.output\" ])",
       "Bash(npx tsc:*)",
       "Bash(node_modules/.bin/tsc --noEmit --pretty)",
-      "Bash(where.exe node:*)"
+      "Bash(where.exe node:*)",
+      "WebFetch(domain:softmonte.vercel.app)",
+      "mcp__claude_ai_Vercel__get_runtime_logs"
     ]
   }
 }

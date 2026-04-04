@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import BackButton from '@/components/BackButton'
+import Breadcrumb from '@/components/ui/Breadcrumb'
 import Tooltip from '@/components/ui/Tooltip'
 import { formatSupabaseError } from '@/lib/errors'
 
@@ -75,14 +75,11 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
-      <div className="flex items-center gap-2 mb-6 text-sm">
-        <BackButton fallback="/funcionarios" />
-        <Link href="/funcionarios" className="text-gray-400 hover:text-gray-600">Funcionários</Link>
-        <span className="text-gray-300">/</span>
-        <Link href={`/funcionarios/${params.id}`} className="text-gray-400 hover:text-gray-600">{form.nome}</Link>
-        <span className="text-gray-300">/</span>
-        <span className="font-medium text-gray-700">Editar</span>
-      </div>
+      <Breadcrumb fallback="/funcionarios" items={[
+        { label: 'Funcionarios', href: '/funcionarios' },
+        { label: form.nome || '...', href: `/funcionarios/${params.id}` },
+        { label: 'Editar' },
+      ]} />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h1 className="text-lg font-bold font-display text-brand mb-6">Editar funcionário</h1>

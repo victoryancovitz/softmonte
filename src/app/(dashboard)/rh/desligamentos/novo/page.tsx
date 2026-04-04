@@ -84,7 +84,7 @@ export default function NovoDesligamentoPage() {
     // Get current obra and banco de horas
     const [{ data: alocacao }, { data: bancoHoras }] = await Promise.all([
       supabase.from('alocacoes').select('obra_id').eq('funcionario_id', funcId).eq('ativo', true).limit(1).single(),
-      supabase.from('banco_horas').select('saldo_acumulado').eq('funcionario_id', funcId).order('ano', { ascending: false }).order('mes', { ascending: false }).limit(1).single(),
+      supabase.from('banco_horas').select('saldo_acumulado_final').eq('funcionario_id', funcId).order('ano', { ascending: false }).order('mes', { ascending: false }).limit(1).single(),
     ])
 
     const insertData: Record<string, any> = {
@@ -95,7 +95,7 @@ export default function NovoDesligamentoPage() {
       data_aviso: dataAviso || null,
       data_prevista_saida: dataSaida,
       status: 'em_andamento',
-      saldo_banco_horas_saida: bancoHoras?.saldo_acumulado ?? 0,
+      saldo_banco_horas_saida: bancoHoras?.saldo_acumulado_final ?? 0,
       observacoes: observacoes || null,
     }
 

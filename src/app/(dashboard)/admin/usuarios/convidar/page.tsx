@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import BackButton from '@/components/BackButton'
+import Breadcrumb from '@/components/ui/Breadcrumb'
 
 const ROLES = [
   { key: 'admin', label: 'Administrador', desc: 'Acesso total ao sistema', color: 'bg-red-50 border-red-200 text-red-700' },
@@ -164,15 +164,11 @@ export default function ConvidarUsuarioPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 mb-6 text-sm">
-        <BackButton fallback="/admin/usuarios" />
-        <Link href="/admin/usuarios" className="text-gray-400 hover:text-gray-600">Admin</Link>
-        <span className="text-gray-300">/</span>
-        <Link href="/admin/usuarios" className="text-gray-400 hover:text-gray-600">Usuários</Link>
-        <span className="text-gray-300">/</span>
-        <span className="text-gray-700 font-medium">Convidar</span>
-      </div>
+      <Breadcrumb fallback="/admin/usuarios" items={[
+        { label: 'Admin', href: '/admin/usuarios' },
+        { label: 'Usuarios', href: '/admin/usuarios' },
+        { label: 'Convidar' },
+      ]} />
 
       <h1 className="text-xl font-bold font-display text-brand mb-6">Convidar Usuário</h1>
 

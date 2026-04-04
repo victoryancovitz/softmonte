@@ -473,6 +473,7 @@ export default function RastreioPage() {
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Data prevista do exame</label>
                 <input type="date" value={asoDate} onChange={e => setAsoDate(e.target.value)}
+                  min={new Date().toISOString().split('T')[0]}
                   className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
               </div>
               <div>

@@ -226,12 +226,19 @@ export default function TreinamentosPage() {
       }
     }
 
+    // Mark old record as replaced
+    await supabase.from('treinamentos_funcionarios')
+      .update({ status: 'substituido' })
+      .eq('id', renewTarget.id)
+
     await supabase.from('treinamentos_funcionarios').insert({
       funcionario_id: renewTarget.funcionario_id,
       tipo_id: renewTarget.tipo_id,
       data_realizacao: renewForm.data_realizacao,
       data_vencimento: renewForm.data_vencimento,
       numero_certificado: renewForm.certificado || null,
+      instituicao: renewForm.instituicao || null,
+      status: 'valido',
       ...(arquivo_url ? { arquivo_url, arquivo_nome } : {}),
     })
 

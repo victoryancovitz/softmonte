@@ -84,7 +84,7 @@ export default async function DashboardPage() {
   const kpisAlert = [
     { label: 'Contratos Vencidos', value: nContratosVencidos, href: '/funcionarios', icon: icons.alertTriangle, accent: 'border-l-red-500', bg: nContratosVencidos > 0 ? 'bg-red-50/60' : '', valColor: nContratosVencidos > 0 ? 'text-red-700' : 'text-gray-400' },
     { label: 'Vencendo 30d', value: nContratosVencendo, href: '/funcionarios', icon: icons.shield, accent: 'border-l-amber-500', bg: nContratosVencendo > 0 ? 'bg-amber-50/60' : '', valColor: nContratosVencendo > 0 ? 'text-amber-700' : 'text-gray-400' },
-    { label: 'Docs Vencendo', value: nDocs, href: '/documentos', icon: icons.fileCheck, accent: 'border-l-orange-500', bg: nDocs > 0 ? 'bg-orange-50/60' : '', valColor: nDocs > 0 ? 'text-orange-700' : 'text-gray-400' },
+    { label: 'Docs Vencendo', value: nDocs, href: '/rastreio', icon: icons.fileCheck, accent: 'border-l-orange-500', bg: nDocs > 0 ? 'bg-orange-50/60' : '', valColor: nDocs > 0 ? 'text-orange-700' : 'text-gray-400' },
     { label: 'BMs Aguardando', value: nBMsEnviados, href: '/boletins', icon: icons.inbox, accent: 'border-l-yellow-500', bg: nBMsEnviados > 0 ? 'bg-yellow-50/60' : '', valColor: nBMsEnviados > 0 ? 'text-yellow-700' : 'text-gray-400' },
   ]
 

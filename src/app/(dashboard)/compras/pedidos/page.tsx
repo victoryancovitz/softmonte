@@ -56,14 +56,31 @@ export default function PedidosPage() {
     for (let i = 0; i < itens.length; i++) {
       const qtd = qtdRecebida[i] ?? itens[i].quantidade ?? 1
       if (qtd > 0) {
+        // Try to find matching estoque_itens by name
+        const descItem = itens[i].descricao ?? ''
+        const { data: estoqueItem } = descItem
+          ? await supabase.from('estoque_itens').select('id').ilike('nome', `%${descItem}%`).limit(1).single()
+          : { data: null }
+
         await supabase.from('estoque_movimentacoes').insert({
+          item_id: estoqueItem?.id ?? null,
           tipo: 'entrada',
           quantidade: qtd,
           obra_id: pedido.obra_id,
           motivo: `Recebimento pedido #${pedido.numero ?? pedido.id.slice(0, 8)}`,
-          observacao: obsReceb || null,
+          observacao: `${descItem}${obsReceb ? ' — ' + obsReceb : ''}`,
           created_by: user?.id ?? null,
         })
+
+        // Update estoque quantity if item found
+        if (estoqueItem?.id) {
+          const { data: current } = await supabase.from('estoque_itens').select('quantidade').eq('id', estoqueItem.id).single()
+          if (current) {
+            await supabase.from('estoque_itens').update({
+              quantidade: (current.quantidade ?? 0) + qtd,
+            }).eq('id', estoqueItem.id)
+          }
+        }
       }
     }
 
