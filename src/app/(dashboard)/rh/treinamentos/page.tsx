@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
+import EmptyState from '@/components/ui/EmptyState'
 import {
   GraduationCap, CheckCircle2, Clock, XCircle, AlertTriangle,
   ChevronDown, ChevronRight, Plus, Users, ShieldAlert,
@@ -70,6 +71,12 @@ export default function TreinamentosPage() {
   const [formCertificado, setFormCertificado] = useState('')
   const [saving, setSaving] = useState(false)
   const [funcSearchTerm, setFuncSearchTerm] = useState('')
+
+  // Renew modal state
+  const [renewTarget, setRenewTarget] = useState<TreinamentoFuncionario | null>(null)
+  const [renewForm, setRenewForm] = useState({ data_realizacao: '', data_vencimento: '', instituicao: '', certificado: '' })
+  const [renewFile, setRenewFile] = useState<File | null>(null)
+  const [renewSaving, setRenewSaving] = useState(false)
 
   useEffect(() => {
     loadData()
@@ -189,6 +196,48 @@ export default function TreinamentosPage() {
     setFormCertificado('')
     setFuncSearchTerm('')
     setSaving(false)
+    loadData()
+  }
+
+  function openRenew(t: TreinamentoFuncionario) {
+    const hoje = new Date().toISOString().split('T')[0]
+    const validadeMeses = t.treinamentos_tipos?.validade_meses ?? 12
+    const venc = new Date(hoje + 'T12:00:00')
+    venc.setMonth(venc.getMonth() + validadeMeses)
+    setRenewForm({ data_realizacao: hoje, data_vencimento: venc.toISOString().split('T')[0], instituicao: '', certificado: '' })
+    setRenewFile(null)
+    setRenewTarget(t)
+  }
+
+  async function handleRenew() {
+    if (!renewTarget || !renewForm.data_realizacao || !renewForm.data_vencimento) return
+    setRenewSaving(true)
+
+    let arquivo_url = null
+    let arquivo_nome = null
+    if (renewFile) {
+      const ext = renewFile.name.split('.').pop()
+      const path = `treinamentos/${renewTarget.funcionario_id}/${renewTarget.tipo_id}_${Date.now()}.${ext}`
+      const { error: upErr } = await supabase.storage.from('softmonte').upload(path, renewFile)
+      if (!upErr) {
+        const { data: urlData } = supabase.storage.from('softmonte').getPublicUrl(path)
+        arquivo_url = urlData.publicUrl
+        arquivo_nome = renewFile.name
+      }
+    }
+
+    await supabase.from('treinamentos_funcionarios').insert({
+      funcionario_id: renewTarget.funcionario_id,
+      tipo_id: renewTarget.tipo_id,
+      data_realizacao: renewForm.data_realizacao,
+      data_vencimento: renewForm.data_vencimento,
+      numero_certificado: renewForm.certificado || null,
+      ...(arquivo_url ? { arquivo_url, arquivo_nome } : {}),
+    })
+
+    toast.success('Treinamento renovado com sucesso')
+    setRenewTarget(null)
+    setRenewSaving(false)
     loadData()
   }
 
@@ -383,9 +432,12 @@ export default function TreinamentosPage() {
         /* Por Funcionario - Accordion */
         <div className="space-y-2">
           {Object.entries(byFuncionario).length === 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">
-              Nenhum treinamento registrado.
-            </div>
+            <EmptyState
+              titulo="Nenhum treinamento registrado"
+              descricao="Registre treinamentos NR para acompanhar vencimentos e conformidade."
+              icone={<GraduationCap className="w-12 h-12" />}
+              acao={{ label: 'Registrar Treinamento', href: '#' }}
+            />
           ) : Object.entries(byFuncionario).map(([funcId, { func, items }]) => {
             const isOpen = expanded.has(funcId)
             const vencidos = items.filter(i => daysUntil(i.data_vencimento) < 0).length
@@ -424,7 +476,7 @@ export default function TreinamentosPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-gray-50">
-                          {['Treinamento', 'NR', 'Realizacao', 'Vencimento', 'Certificado', 'Status'].map(h => (
+                          {['Treinamento', 'NR', 'Realizacao', 'Vencimento', 'Certificado', 'Status', ''].map(h => (
                             <th key={h} className="text-left px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                           ))}
                         </tr>
@@ -449,6 +501,11 @@ export default function TreinamentosPage() {
                                   {st.icon} {st.label} {days >= 0 ? `(${days}d)` : `(${Math.abs(days)}d atras)`}
                                 </span>
                               </td>
+                              <td className="px-4 py-2">
+                                {days <= 60 && (
+                                  <button onClick={() => openRenew(item)} className="text-xs text-brand font-semibold hover:underline">Renovar</button>
+                                )}
+                              </td>
                             </tr>
                           )
                         })}
@@ -466,7 +523,7 @@ export default function TreinamentosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {['Funcionario', 'Treinamento', 'NR', 'Vencimento', 'Dias', 'Urgencia'].map(h => (
+                {['Funcionario', 'Treinamento', 'NR', 'Vencimento', 'Dias', 'Urgencia', ''].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -496,11 +553,71 @@ export default function TreinamentosPage() {
                         {st.icon} {st.label}
                       </span>
                     </td>
+                    <td className="px-4 py-3">
+                      {item.daysLeft <= 60 && (
+                        <button onClick={() => openRenew(item)} className="text-xs text-brand font-semibold hover:underline">Renovar</button>
+                      )}
+                    </td>
                   </tr>
                 )
               })}
             </tbody>
           </table>
+        </div>
+      )}
+      {/* Renew Modal */}
+      {renewTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setRenewTarget(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 max-w-md w-full mx-4" onClick={e => e.stopPropagation()}>
+            <h2 className="text-sm font-bold font-display text-brand mb-1">
+              Renovar {renewTarget.treinamentos_tipos?.nome ?? 'Treinamento'}
+            </h2>
+            <p className="text-xs text-gray-500 mb-4">{renewTarget.funcionarios?.nome}</p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Data de realizacao</label>
+                <input type="date" value={renewForm.data_realizacao}
+                  onChange={e => {
+                    const v = e.target.value
+                    const venc = new Date(v + 'T12:00:00')
+                    venc.setMonth(venc.getMonth() + (renewTarget.treinamentos_tipos?.validade_meses ?? 12))
+                    setRenewForm(f => ({ ...f, data_realizacao: v, data_vencimento: venc.toISOString().split('T')[0] }))
+                  }}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Data de vencimento</label>
+                <input type="date" value={renewForm.data_vencimento}
+                  onChange={e => setRenewForm(f => ({ ...f, data_vencimento: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Instituicao</label>
+                <input type="text" value={renewForm.instituicao} placeholder="Opcional"
+                  onChange={e => setRenewForm(f => ({ ...f, instituicao: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Numero do certificado</label>
+                <input type="text" value={renewForm.certificado} placeholder="Opcional"
+                  onChange={e => setRenewForm(f => ({ ...f, certificado: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Certificado PDF</label>
+                <input type="file" accept=".pdf,.jpg,.jpeg,.png" onChange={e => setRenewFile(e.target.files?.[0] ?? null)}
+                  className="w-full text-sm text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand file:text-white" />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-4 pt-3 border-t border-gray-100">
+              <button onClick={handleRenew} disabled={renewSaving}
+                className="px-5 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50">
+                {renewSaving ? 'Salvando...' : 'Salvar renovacao'}
+              </button>
+              <button onClick={() => setRenewTarget(null)}
+                className="px-5 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</button>
+            </div>
+          </div>
         </div>
       )}
     </div>

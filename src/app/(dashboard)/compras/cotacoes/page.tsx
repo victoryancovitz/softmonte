@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
-import { Plus, X, ChevronDown, ChevronUp, Check, AlertTriangle, Trash2 } from 'lucide-react'
+import { Plus, X, ChevronDown, ChevronUp, Check, AlertTriangle, Trash2, ShoppingCart } from 'lucide-react'
 import SearchInput from '@/components/SearchInput'
+import { useToast } from '@/components/Toast'
+import EmptyState from '@/components/ui/EmptyState'
 
 interface Obra {
   id: string
@@ -48,6 +50,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export default function CotacoesPage() {
   const supabase = createClient()
+  const toast = useToast()
   const [cotacoes, setCotacoes] = useState<Cotacao[]>([])
   const [obras, setObras] = useState<Obra[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,6 +69,7 @@ export default function CotacoesPage() {
   // Approve form state
   const [approveForm, setApproveForm] = useState({ fornecedor: '', valor: '', motivo: '' })
   const [busca, setBusca] = useState('')
+  const [gerandoPedido, setGerandoPedido] = useState<string | null>(null)
 
   async function loadData() {
     setLoading(true)
@@ -135,6 +139,21 @@ export default function CotacoesPage() {
     setApproving(null)
     setApproveForm({ fornecedor: '', valor: '', motivo: '' })
     setSaving(false)
+    loadData()
+  }
+
+  async function gerarPedido(cotacao: Cotacao) {
+    setGerandoPedido(cotacao.id)
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('requisicoes').insert({
+      obra_id: cotacao.obra_id,
+      itens: cotacao.itens ?? [],
+      status: 'aprovado',
+      observacao: `Gerado automaticamente da cotacao #${cotacao.numero}`,
+      solicitante_id: user?.id ?? null,
+    })
+    toast.success('Pedido de compra gerado!', `Cotacao ${cotacao.numero}`)
+    setGerandoPedido(null)
     loadData()
   }
 
@@ -297,7 +316,7 @@ export default function CotacoesPage() {
         return loading ? (
         <p className="text-sm text-gray-400">Carregando...</p>
       ) : filteredCotacoes.length === 0 ? (
-        <p className="text-sm text-gray-400">Nenhuma cotação encontrada.</p>
+        <EmptyState titulo="Nenhuma cotacao aberta" descricao="Crie uma cotacao para iniciar o processo de compras." acao={{ label: 'Nova Cotacao', href: '#' }} />
       ) : (
         <div className="space-y-3">
           {filteredCotacoes.map((c) => {
@@ -373,13 +392,23 @@ export default function CotacoesPage() {
 
                     {/* Aprovação info */}
                     {c.status === 'aprovada' && c.fornecedor_escolhido && (
-                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3">
-                        <p className="text-xs text-green-700">
-                          <strong>Aprovada:</strong> {c.fornecedor_escolhido} - {c.valor_aprovado != null ? fmt(c.valor_aprovado) : ''}
-                        </p>
-                        {c.motivo_escolha && (
-                          <p className="text-xs text-green-600 mt-1">Motivo: {c.motivo_escolha}</p>
-                        )}
+                      <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-xs text-green-700">
+                            <strong>Aprovada:</strong> {c.fornecedor_escolhido} - {c.valor_aprovado != null ? fmt(c.valor_aprovado) : ''}
+                          </p>
+                          {c.motivo_escolha && (
+                            <p className="text-xs text-green-600 mt-1">Motivo: {c.motivo_escolha}</p>
+                          )}
+                        </div>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); gerarPedido(c) }}
+                          disabled={gerandoPedido === c.id}
+                          className="inline-flex items-center gap-1.5 bg-green-600 text-white px-4 py-2 rounded-lg text-xs font-bold hover:bg-green-700 disabled:opacity-50 flex-shrink-0"
+                        >
+                          <ShoppingCart size={14} />
+                          {gerandoPedido === c.id ? 'Gerando...' : 'Gerar Pedido de Compra'}
+                        </button>
                       </div>
                     )}
 

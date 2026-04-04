@@ -6,6 +6,7 @@ import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import SearchInput from '@/components/SearchInput'
 import { useToast } from '@/components/Toast'
+import EmptyState from '@/components/ui/EmptyState'
 import {
   UserPlus, CheckCircle2, Clock, ChevronDown, ChevronRight,
   Plus, CalendarCheck, MessageSquare,
@@ -143,6 +144,13 @@ export default function AdmissoesPage() {
       {/* Cards */}
       {loading ? (
         <div className="text-center py-12 text-gray-400">Carregando...</div>
+      ) : emAndamento.length === 0 && concluidas.length === 0 ? (
+        <EmptyState
+          titulo="Nenhuma admissao registrada"
+          descricao="Cadastre um funcionario e inicie o processo de admissao."
+          icone={<UserPlus className="w-12 h-12" />}
+          acao={{ label: 'Ir para Funcionarios', href: '/funcionarios' }}
+        />
       ) : emAndamento.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">
           Nenhuma admissao em andamento.

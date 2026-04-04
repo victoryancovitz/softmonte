@@ -6,6 +6,7 @@ import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import SearchInput from '@/components/SearchInput'
 import { useToast } from '@/components/Toast'
+import EmptyState from '@/components/ui/EmptyState'
 import {
   UserMinus, CheckCircle2, Clock, ChevronDown, ChevronRight,
   Plus, CalendarCheck, FileText,
@@ -153,6 +154,12 @@ export default function DesligamentosPage() {
       {/* Cards */}
       {loading ? (
         <div className="text-center py-12 text-gray-400">Carregando...</div>
+      ) : emAndamento.length === 0 && concluidos.length === 0 ? (
+        <EmptyState
+          titulo="Nenhum desligamento registrado"
+          descricao="Desligamentos podem ser iniciados a partir do perfil do funcionario."
+          icone={<UserMinus className="w-12 h-12" />}
+        />
       ) : emAndamento.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">
           Nenhum desligamento em andamento.

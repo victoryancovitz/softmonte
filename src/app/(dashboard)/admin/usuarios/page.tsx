@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import BackButton from '@/components/BackButton'
 import SearchInput from '@/components/SearchInput'
+import { useToast } from '@/components/Toast'
 
 const ROLE_CONFIG: Record<string, { label: string; color: string }> = {
   admin: { label: 'Administrador', color: 'bg-red-100 text-red-700' },
@@ -43,6 +44,7 @@ export default function AdminUsuariosPage() {
   const [salvandoConvite, setSalvandoConvite] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
+  const toast = useToast()
 
   useEffect(() => {
     loadData()
@@ -60,7 +62,9 @@ export default function AdminUsuariosPage() {
   }
 
   async function revogarConvite(id: string) {
+    if (!window.confirm('Cancelar este convite? O link deixara de funcionar.')) return
     await supabase.from('convites').update({ ativo: false }).eq('id', id)
+    toast.success('Convite cancelado')
     await loadData()
   }
 
@@ -68,6 +72,7 @@ export default function AdminUsuariosPage() {
     setSalvandoConvite(id)
     const newExpires = new Date(Date.now() + diasExtra * 86400000).toISOString()
     await supabase.from('convites').update({ ativo: true, expires_at: newExpires }).eq('id', id)
+    toast.success('Convite reativado por mais 7 dias')
     await loadData()
     setSalvandoConvite(null)
   }
@@ -76,6 +81,7 @@ export default function AdminUsuariosPage() {
     setSalvandoConvite(id)
     const newExpires = indeterminado ? null : novaValidade ? new Date(novaValidade + 'T23:59:59').toISOString() : null
     await supabase.from('convites').update({ expires_at: newExpires }).eq('id', id)
+    toast.success('Validade atualizada')
     await loadData()
     setEditandoValidade(null)
     setNovaValidade('')

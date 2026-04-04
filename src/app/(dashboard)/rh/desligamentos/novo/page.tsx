@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import BackButton from '@/components/BackButton'
+import Breadcrumb from '@/components/ui/Breadcrumb'
 import { useToast } from '@/components/Toast'
 import { formatSupabaseError } from '@/lib/errors'
 import { UserMinus } from 'lucide-react'
@@ -125,14 +125,11 @@ export default function NovoDesligamentoPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6 text-sm">
-        <BackButton fallback="/rh/desligamentos" />
-        <span className="text-gray-400">RH</span>
-        <span className="text-gray-300">/</span>
-        <span className="text-gray-400 hover:text-gray-600 cursor-pointer" onClick={() => router.push('/rh/desligamentos')}>Desligamentos</span>
-        <span className="text-gray-300">/</span>
-        <span className="font-medium">Novo</span>
-      </div>
+      <Breadcrumb fallback="/rh/desligamentos" items={[
+        { label: 'RH', href: '/rh/desligamentos' },
+        { label: 'Desligamentos', href: '/rh/desligamentos' },
+        { label: 'Novo desligamento' },
+      ]} />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex items-center gap-3 mb-6">

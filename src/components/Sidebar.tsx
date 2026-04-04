@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import type { Profile } from '@/lib/types'
+import NotificationBell from '@/components/NotificationBell'
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Administrador', encarregado: 'Encarregado',
@@ -166,6 +167,7 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
           <NavItem href="/faltas" label="Faltas" icon={ic.faltas} />
           {isStock && <NavItem href="/estoque" label="Estoque" icon={ic.stock} />}
           <NavItem href="/compras/cotacoes" label="Cotações" icon={ic.bm} />
+          <NavItem href="/compras/pedidos" label="Pedidos" icon={ic.stock} />
           <NavItem href="/compras/fornecedores" label="Fornecedores" icon={ic.client} />
           <NavItem href="/relatorios" label="Relatórios" icon={ic.report} />
           <NavItem href="/relatorios/margem" label="Margem" icon={ic.fin} />
@@ -197,6 +199,9 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
         <div className="flex-1 min-w-0">
           <div className="text-xs font-semibold truncate text-white">{profile?.nome ?? 'Usuário'}</div>
           <div className="text-[10px] text-blue-300">{ROLE_LABELS[role]}</div>
+        </div>
+        <div className="text-blue-300">
+          <NotificationBell />
         </div>
         <button onClick={handleLogout} title="Sair"
           className="text-blue-400 hover:text-white transition-colors p-1 rounded hover:bg-white/10">

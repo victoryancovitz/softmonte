@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import BackButton from '@/components/BackButton'
+import Breadcrumb from '@/components/ui/Breadcrumb'
 import { useToast } from '@/components/Toast'
 import { formatSupabaseError } from '@/lib/errors'
 import { UserPlus } from 'lucide-react'
@@ -112,14 +112,11 @@ export default function NovaAdmissaoPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
-      <div className="flex items-center gap-2 mb-6 text-sm">
-        <BackButton fallback="/rh/admissoes" />
-        <span className="text-gray-400">RH</span>
-        <span className="text-gray-300">/</span>
-        <span className="text-gray-400 hover:text-gray-600 cursor-pointer" onClick={() => router.push('/rh/admissoes')}>Admissoes</span>
-        <span className="text-gray-300">/</span>
-        <span className="font-medium">Nova</span>
-      </div>
+      <Breadcrumb fallback="/rh/admissoes" items={[
+        { label: 'RH', href: '/rh/admissoes' },
+        { label: 'Admissoes', href: '/rh/admissoes' },
+        { label: 'Nova admissao' },
+      ]} />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex items-center gap-3 mb-6">

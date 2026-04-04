@@ -3,9 +3,10 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
+import { useToast } from '@/components/Toast'
 import {
   FileText, GraduationCap, Stethoscope,
-  CheckCircle2, XCircle, Clock, AlertTriangle,
+  CheckCircle2, XCircle, Clock, AlertTriangle, CalendarPlus,
 } from 'lucide-react'
 
 interface DocAlerta {
@@ -56,6 +57,7 @@ type StatusFilter = 'todos' | 'vencido' | 'a_vencer'
 
 export default function RastreioPage() {
   const supabase = createClient()
+  const toast = useToast()
   const [docs, setDocs] = useState<DocAlerta[]>([])
   const [treins, setTreins] = useState<TreinAlerta[]>([])
   const [asos, setAsos] = useState<FuncAso[]>([])
@@ -63,6 +65,11 @@ export default function RastreioPage() {
   const [obraFiltro, setObraFiltro] = useState('')
   const [statusFiltro, setStatusFiltro] = useState<StatusFilter>('todos')
   const [loading, setLoading] = useState(true)
+
+  const [agendandoAso, setAgendandoAso] = useState<FuncAso | null>(null)
+  const [asoDate, setAsoDate] = useState('')
+  const [asoObs, setAsoObs] = useState('')
+  const [asoSaving, setAsoSaving] = useState(false)
 
   // Allocation map for obra filtering
   const [alocMap, setAlocMap] = useState<Map<string, string>>(new Map())
@@ -117,6 +124,26 @@ export default function RastreioPage() {
     }).filter((f: FuncAso) => f.aso_tipo !== null)
     setAsos(pendentes)
     setLoading(false)
+  }
+
+  async function agendarAso() {
+    if (!agendandoAso || !asoDate) return
+    setAsoSaving(true)
+    const venc = new Date(asoDate + 'T12:00:00')
+    venc.setFullYear(venc.getFullYear() + 1)
+    await supabase.from('documentos').insert({
+      funcionario_id: agendandoAso.id,
+      tipo: 'ASO',
+      emissao: asoDate,
+      vencimento: venc.toISOString().split('T')[0],
+      observacao: asoObs || 'Agendado',
+    })
+    toast.success('ASO agendado!', 'Aparecera em documentos para acompanhamento.')
+    setAgendandoAso(null)
+    setAsoDate('')
+    setAsoObs('')
+    setAsoSaving(false)
+    loadData()
   }
 
   // Filter helpers
@@ -417,6 +444,10 @@ export default function RastreioPage() {
                               </span>
                             </>
                           )}
+                          <button onClick={() => { setAgendandoAso(f); setAsoDate(new Date().toISOString().split('T')[0]); setAsoObs('') }}
+                            className="text-xs text-amber-600 font-semibold hover:underline flex items-center gap-1">
+                            <CalendarPlus className="w-3 h-3" /> Agendar
+                          </button>
                           <Link href={`/documentos/novo?funcionario=${f.id}&tipo=ASO`}
                             className="text-xs text-brand font-semibold hover:underline">
                             {f.aso_tipo === 'sem_aso' ? 'Adicionar' : 'Renovar'}
@@ -431,6 +462,36 @@ export default function RastreioPage() {
           </div>
         )}
       </div>
+
+      {/* Agendar ASO Modal */}
+      {agendandoAso && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setAgendandoAso(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
+            <h2 className="text-sm font-bold font-display text-brand mb-1">Agendar ASO</h2>
+            <p className="text-xs text-gray-500 mb-4">{agendandoAso.nome} — {agendandoAso.cargo}</p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Data prevista do exame</label>
+                <input type="date" value={asoDate} onChange={e => setAsoDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Observacao</label>
+                <input type="text" value={asoObs} onChange={e => setAsoObs(e.target.value)} placeholder="Opcional"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button onClick={agendarAso} disabled={asoSaving || !asoDate}
+                className="px-5 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50">
+                {asoSaving ? 'Salvando...' : 'Agendar'}
+              </button>
+              <button onClick={() => setAgendandoAso(null)}
+                className="px-5 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

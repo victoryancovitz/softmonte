@@ -264,7 +264,24 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
                       <div className="text-xs text-gray-500">{a.cargo_na_obra ?? a.funcionarios?.cargo ?? '—'}</div>
                       <div className="text-xs text-gray-400">Mat. {a.funcionarios?.matricula ?? '—'}</div>
                     </div>
-                    <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded shrink-0">Ativo</span>
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end shrink-0">
+                      {(() => {
+                        const funcDocs = docsComDias.filter((d: any) => d.funcionario_id === a.funcionarios?.id)
+                        const aso = funcDocs.find((d: any) => d.tipo === 'ASO')
+                        const badges: { label: string; cls: string; title: string }[] = []
+                        if (!aso) {
+                          badges.push({ label: 'Sem ASO', cls: 'bg-red-100 text-red-700', title: 'Nenhum ASO cadastrado' })
+                        } else if (aso.dias !== null && aso.dias < 0) {
+                          badges.push({ label: 'ASO vencido', cls: 'bg-red-100 text-red-700', title: `ASO vencido ha ${Math.abs(aso.dias)} dia(s)` })
+                        } else if (aso.dias !== null && aso.dias <= 30) {
+                          badges.push({ label: `ASO ${aso.dias}d`, cls: 'bg-amber-100 text-amber-700', title: `ASO vence em ${aso.dias} dia(s)` })
+                        }
+                        return badges.map((b, i) => (
+                          <span key={i} className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${b.cls}`} title={b.title}>{b.label}</span>
+                        ))
+                      })()}
+                      <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">Ativo</span>
+                    </div>
                   </div>
                 )
               })}
