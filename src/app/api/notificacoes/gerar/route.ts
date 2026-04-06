@@ -13,9 +13,14 @@ export async function POST() {
     // Get destinatarios: admins + encarregados
     const { data: destinatarios, error: destErr } = await supabase
       .from('profiles')
-      .select('user_id, role')
+      .select('id, role')
       .in('role', ['admin', 'encarregado'])
-    if (destErr || !destinatarios || destinatarios.length === 0) {
+    if (destErr) {
+      console.error('[notificacoes/gerar] Erro ao buscar admins:', destErr.message)
+      return NextResponse.json({ criadas: 0, aviso: 'Erro ao buscar destinatarios' })
+    }
+    if (!destinatarios || destinatarios.length === 0) {
+      console.error('[notificacoes/gerar] Nenhum admin/encarregado encontrado na tabela profiles')
       return NextResponse.json({ criadas: 0, aviso: 'Nenhum destinatario encontrado' })
     }
 
@@ -40,7 +45,7 @@ export async function POST() {
       const funcNome = (doc as any).funcionarios?.nome ?? 'Funcionario'
       for (const dest of destinatarios) {
         await supabase.from('notificacoes').insert({
-          destinatario_id: dest.user_id,
+          destinatario_id: dest.id,
           tipo: 'documento_vencendo',
           titulo: dias < 0 ? `${doc.tipo} vencido — ${funcNome}` : `${doc.tipo} vence em ${dias}d — ${funcNome}`,
           mensagem: `Documento ${doc.tipo} de ${funcNome} requer atencao.`,
@@ -72,7 +77,7 @@ export async function POST() {
       const funcNome = (t as any).funcionarios?.nome ?? 'Funcionario'
       for (const dest of destinatarios) {
         await supabase.from('notificacoes').insert({
-          destinatario_id: dest.user_id,
+          destinatario_id: dest.id,
           tipo: 'treinamento_vencendo',
           titulo: dias < 0 ? `${codigo} vencido — ${funcNome}` : `${codigo} vence em ${dias}d — ${funcNome}`,
           mensagem: `Treinamento ${codigo} de ${funcNome} requer renovacao.`,
