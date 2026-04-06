@@ -33,7 +33,10 @@
       "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx\\)$\")",
       "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
       "mcp__claude_ai_Supabase__list_projects",
-      "Bash(find /Users/victoryancovitz/softmonte-git -type f -name *funcao* -o -name *funcoes*)"
+      "Bash(find /Users/victoryancovitz/softmonte-git -type f -name *funcao* -o -name *funcoes*)",
+      "mcp__claude_ai_Vercel__list_projects",
+      "mcp__claude_ai_Vercel__list_teams",
+      "mcp__claude_ai_Vercel__list_deployments"
     ]
   }
 }

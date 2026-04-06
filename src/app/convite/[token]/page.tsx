@@ -81,14 +81,19 @@ export default function ConvitePage() {
     if (authError) { setErro(authError.message); setLoading(false); return }
 
     if (authData.user) {
-      const { error: rpcError } = await supabase.rpc('usar_convite', {
+      // Call RPC to mark convite as used and create profile
+      const { data: rpcResult, error: rpcError } = await supabase.rpc('usar_convite', {
         p_token: params.token as string,
         p_user_id: authData.user.id,
         p_email: form.email,
       })
-      if (rpcError) {
-        // If RPC doesn't exist, update manually
-        await supabase.from('convites').update({ usado_em: new Date().toISOString() }).eq('token', params.token as string)
+
+      // Check both RPC-level error and function-level {ok: false}
+      const rpcFailed = rpcError || (rpcResult && rpcResult.ok === false)
+
+      if (rpcFailed) {
+        // Fallback: update manually
+        await supabase.from('convites').update({ usado_em: new Date().toISOString(), ativo: false }).eq('token', params.token as string)
         await supabase.from('profiles').upsert({
           user_id: authData.user.id,
           nome: convite.nome_convidado,
