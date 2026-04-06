@@ -78,7 +78,7 @@ export function ObraStatusBtns({ obraId, status, role }: { obraId: string; statu
 export function EncerrarAlocacaoBtn({ alocacaoId, funcId, role }: { alocacaoId: string; funcId: string; role: string }) {
   const router = useRouter()
   const supabase = createClient()
-  if (role !== 'admin' && role !== 'encarregado') return null
+  if (role !== 'admin' && role !== 'encarregado' && role !== 'engenheiro') return null
 
   return (
     <InlineConfirm label="Encerrar"

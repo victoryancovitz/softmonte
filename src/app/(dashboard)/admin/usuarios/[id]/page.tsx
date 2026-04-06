@@ -8,6 +8,7 @@ import { useToast } from '@/components/Toast'
 
 const ROLES = [
   { key: 'admin', label: 'Administrador', desc: 'Acesso total ao sistema', color: 'bg-red-50 border-red-200 text-red-700' },
+  { key: 'engenheiro', label: 'Engenheiro', desc: 'Obras, boletins e engenharia', color: 'bg-cyan-50 border-cyan-200 text-cyan-700' },
   { key: 'encarregado', label: 'Encarregado', desc: 'Gestão de obras e equipes', color: 'bg-blue-50 border-blue-200 text-blue-700' },
   { key: 'rh', label: 'RH', desc: 'Funcionários, faltas, documentos', color: 'bg-pink-50 border-pink-200 text-pink-700' },
   { key: 'financeiro', label: 'Financeiro', desc: 'Lançamentos e relatórios financeiros', color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
@@ -18,6 +19,7 @@ const ROLES = [
 
 const ROLE_CONFIG: Record<string, { label: string; color: string }> = {
   admin: { label: 'Administrador', color: 'bg-red-100 text-red-700' },
+  engenheiro: { label: 'Engenheiro', color: 'bg-cyan-100 text-cyan-700' },
   encarregado: { label: 'Encarregado', color: 'bg-blue-100 text-blue-700' },
   rh: { label: 'RH', color: 'bg-pink-100 text-pink-700' },
   financeiro: { label: 'Financeiro', color: 'bg-emerald-100 text-emerald-700' },

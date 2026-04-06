@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 
 const ROLE_CONFIG: Record<string,{label:string;color:string}> = {
   admin:{label:'Administrador',color:'text-red-400'},
+  engenheiro:{label:'Engenheiro',color:'text-cyan-400'},
   encarregado:{label:'Encarregado',color:'text-blue-400'},
   rh:{label:'RH',color:'text-pink-400'},
   financeiro:{label:'Financeiro',color:'text-emerald-400'},

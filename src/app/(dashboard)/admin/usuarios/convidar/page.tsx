@@ -8,6 +8,7 @@ import { useToast } from '@/components/Toast'
 
 const ROLES = [
   { key: 'admin', label: 'Administrador', desc: 'Acesso total ao sistema', color: 'bg-red-50 border-red-200 text-red-700' },
+  { key: 'engenheiro', label: 'Engenheiro', desc: 'Obras, boletins e engenharia', color: 'bg-cyan-50 border-cyan-200 text-cyan-700' },
   { key: 'encarregado', label: 'Encarregado', desc: 'Gestão de obras e equipes', color: 'bg-blue-50 border-blue-200 text-blue-700' },
   { key: 'rh', label: 'RH', desc: 'Funcionários, faltas, documentos', color: 'bg-pink-50 border-pink-200 text-pink-700' },
   { key: 'financeiro', label: 'Financeiro', desc: 'Lançamentos e relatórios financeiros', color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
@@ -587,9 +588,10 @@ export default function ConvidarUsuarioPage() {
                   }`}>
                   <div className="flex items-center gap-2 mb-1">
                     <div className={`w-2.5 h-2.5 rounded-full ${
-                      role.key === 'admin' ? 'bg-red-500' : role.key === 'encarregado' ? 'bg-blue-500' :
-                      role.key === 'rh' ? 'bg-pink-500' : role.key === 'financeiro' ? 'bg-emerald-500' :
-                      role.key === 'almoxarife' ? 'bg-amber-500' : role.key === 'funcionario' ? 'bg-gray-500' : 'bg-purple-500'
+                      role.key === 'admin' ? 'bg-red-500' : role.key === 'engenheiro' ? 'bg-cyan-500' :
+                      role.key === 'encarregado' ? 'bg-blue-500' : role.key === 'rh' ? 'bg-pink-500' :
+                      role.key === 'financeiro' ? 'bg-emerald-500' : role.key === 'almoxarife' ? 'bg-amber-500' :
+                      role.key === 'funcionario' ? 'bg-gray-500' : 'bg-purple-500'
                     }`} />
                     <span className="text-sm font-bold">{role.label}</span>
                   </div>

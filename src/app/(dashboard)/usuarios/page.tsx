@@ -2,17 +2,22 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 
-const ROLES = ['admin','encarregado','almoxarife','funcionario'] as const
+const ROLES = ['admin','engenheiro','encarregado','rh','financeiro','almoxarife','funcionario','visualizador'] as const
 type Role = typeof ROLES[number]
 const ROLE_LABEL: Record<Role, string> = {
-  admin: 'Administrador', encarregado: 'Encarregado',
-  almoxarife: 'Almoxarife', funcionario: 'Funcionário',
+  admin: 'Administrador', engenheiro: 'Engenheiro', encarregado: 'Encarregado',
+  rh: 'RH', financeiro: 'Financeiro',
+  almoxarife: 'Almoxarife', funcionario: 'Funcionário', visualizador: 'Visualizador',
 }
 const ROLE_COLOR: Record<Role, string> = {
   admin: 'bg-purple-100 text-purple-700',
+  engenheiro: 'bg-cyan-100 text-cyan-700',
   encarregado: 'bg-blue-100 text-blue-700',
+  rh: 'bg-pink-100 text-pink-700',
+  financeiro: 'bg-emerald-100 text-emerald-700',
   almoxarife: 'bg-amber-100 text-amber-700',
   funcionario: 'bg-gray-100 text-gray-600',
+  visualizador: 'bg-purple-100 text-purple-700',
 }
 
 export default function UsuariosPage() {

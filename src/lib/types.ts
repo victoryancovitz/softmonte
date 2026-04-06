@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'encarregado' | 'almoxarife' | 'funcionario'
+export type UserRole = 'admin' | 'encarregado' | 'engenheiro' | 'almoxarife' | 'funcionario' | 'rh' | 'financeiro' | 'visualizador'
 
 export interface Profile {
   id: string
