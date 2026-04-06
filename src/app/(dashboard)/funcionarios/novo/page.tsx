@@ -24,9 +24,38 @@ export default function NovoFuncionarioPage() {
   const [error, setError] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [savedId, setSavedId] = useState<string | null>(null)
+  const [showNovaFuncao, setShowNovaFuncao] = useState(false)
+  const [novaFuncaoNome, setNovaFuncaoNome] = useState('')
+  const [novaFuncaoCat, setNovaFuncaoCat] = useState('Montagem')
+  const [criandoFuncao, setCriandoFuncao] = useState(false)
   const router = useRouter()
   const supabase = createClient()
   const toast = useToast()
+
+  const CATEGORIAS_FUNCAO = ['Montagem', 'Elétrica', 'Gestão', 'Qualidade', 'Suporte', 'Tubulação', 'Pintura', 'Mecânica', 'Equipamentos', 'Operacional', 'Administrativo', 'Engenharia']
+
+  async function handleCriarFuncaoInline() {
+    if (!novaFuncaoNome.trim()) return
+    setCriandoFuncao(true)
+    const { data, error: fErr } = await supabase.from('funcoes').insert({
+      nome: novaFuncaoNome.trim().toUpperCase(),
+      categoria: novaFuncaoCat,
+      multiplicador_extra: 1.7,
+      multiplicador_noturno: 1.4,
+      ativo: true,
+    }).select().single()
+    if (fErr) {
+      toast.error('Erro ao criar função: ' + fErr.message)
+    } else {
+      toast.success(`Função "${data.nome}" criada!`)
+      const { data: updated } = await supabase.from('funcoes').select('*').eq('ativo', true).order('nome')
+      setFuncoes(updated ?? [])
+      set('funcao_id', data.id)
+      setShowNovaFuncao(false)
+      setNovaFuncaoNome('')
+    }
+    setCriandoFuncao(false)
+  }
 
   useEffect(() => {
     supabase.from('funcoes').select('*').eq('ativo', true).order('nome')
@@ -197,12 +226,38 @@ export default function NovoFuncionarioPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="col-span-1 sm:col-span-2">
                 <label className={lbl}>Função cadastrada</label>
-                <select value={form.funcao_id} onChange={e => set('funcao_id', e.target.value)} className={inp + ' bg-white'}>
-                  <option value="">Selecione uma função...</option>
-                  {funcoes.map(f => (
-                    <option key={f.id} value={f.id}>{f.nome}</option>
-                  ))}
-                </select>
+                <div className="flex gap-2">
+                  <select value={form.funcao_id} onChange={e => set('funcao_id', e.target.value)} className={inp + ' bg-white flex-1'}>
+                    <option value="">Selecione uma função...</option>
+                    {funcoes.map(f => (
+                      <option key={f.id} value={f.id}>{f.nome}</option>
+                    ))}
+                  </select>
+                  <button type="button" onClick={() => setShowNovaFuncao(true)}
+                    className="px-3 py-2 border border-gray-200 rounded-xl text-sm text-brand font-medium hover:bg-gray-50 whitespace-nowrap flex-shrink-0">
+                    + Nova
+                  </button>
+                </div>
+                {showNovaFuncao && (
+                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-blue-800">Criar nova função</span>
+                      <button type="button" onClick={() => setShowNovaFuncao(false)} className="text-blue-400 hover:text-blue-600 text-xs">Cancelar</button>
+                    </div>
+                    <div className="flex gap-2">
+                      <input type="text" value={novaFuncaoNome} onChange={e => setNovaFuncaoNome(e.target.value)}
+                        placeholder="Ex: ENGENHEIRO CIVIL" className="flex-1 px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand" />
+                      <select value={novaFuncaoCat} onChange={e => setNovaFuncaoCat(e.target.value)}
+                        className="px-2 py-2 border border-blue-200 rounded-lg text-sm bg-white">
+                        {CATEGORIAS_FUNCAO.map(c => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                      <button type="button" onClick={handleCriarFuncaoInline} disabled={!novaFuncaoNome.trim() || criandoFuncao}
+                        className="px-3 py-2 bg-brand text-white rounded-lg text-xs font-medium hover:bg-brand-dark disabled:opacity-50">
+                        {criandoFuncao ? '...' : 'Criar'}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
               <div>
                 <label className={lbl}>Cargo (texto livre)</label>
