@@ -100,6 +100,10 @@ export default function NovoFuncionarioPage() {
       }
     }
     if (etapa === 2) {
+      if (!form.cargo.trim() && !form.funcao_id) {
+        setError('Selecione uma função ou preencha o cargo.')
+        return
+      }
       if (!form.admissao) {
         setError('Data de admissão é obrigatória.')
         return
@@ -123,7 +127,7 @@ export default function NovoFuncionarioPage() {
       cpf: form.cpf || null,
       data_nascimento: form.data_nascimento || null,
       funcao_id: form.funcao_id || null,
-      cargo: form.cargo.trim().toUpperCase() || null,
+      cargo: form.cargo.trim().toUpperCase() || 'OUTROS',
       turno: form.turno,
       tipo_vinculo: form.tipo_vinculo || 'experiencia_45_45',
       admissao: form.admissao || null,

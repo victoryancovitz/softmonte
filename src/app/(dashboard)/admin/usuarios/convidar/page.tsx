@@ -63,7 +63,7 @@ export default function ConvidarUsuarioPage() {
   const toast = useToast()
 
   useEffect(() => {
-    supabase.from('funcionarios').select('id, nome, cargo, periodo_contrato, admissao').is('deleted_at', null).order('nome').then(({ data }) => {
+    supabase.from('funcionarios').select('id, nome, cargo, periodo_contrato, admissao').is('deleted_at', null).order('nome').then(({ data }: any) => {
       setFuncionarios(data ?? [])
     })
     loadFuncoes()
