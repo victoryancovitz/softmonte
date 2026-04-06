@@ -4,6 +4,7 @@ export interface Profile {
   id: string
   user_id: string
   nome: string
+  email?: string
   role: UserRole
   created_at: string
 }
