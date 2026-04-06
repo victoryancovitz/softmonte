@@ -29,7 +29,10 @@
       "WebFetch(domain:softmonte.vercel.app)",
       "mcp__claude_ai_Vercel__get_runtime_logs",
       "Bash(git commit:*)",
-      "Bash(ls -la /Users/victoryancovitz/softmonte-git/src/app/\\\\\\(dashboard\\\\\\)/)"
+      "Bash(ls -la /Users/victoryancovitz/softmonte-git/src/app/\\\\\\(dashboard\\\\\\)/)",
+      "Bash(grep -E \"\\\\.\\(ts|tsx|js|jsx\\)$\")",
+      "Bash(grep -E \"\\\\.\\(ts|tsx\\)$\")",
+      "mcp__claude_ai_Supabase__list_projects"
     ]
   }
 }

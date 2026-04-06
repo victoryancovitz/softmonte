@@ -13,13 +13,15 @@ const STATUS_BADGE: Record<string, string> = {
   enviado: 'bg-amber-100 text-amber-700',
   aprovado: 'bg-green-100 text-green-700',
 }
-const TIPO_DIA_LABEL: Record<string, string> = {
-  util: 'Úteis', sabado: 'Sábados', domingo_feriado: 'Dom/Fer'
+const TIPO_HORA_LABEL: Record<string, string> = {
+  normal: 'Hora Normal', he70: 'HE 70%', he100: 'HE 100%',
+}
+const TIPO_HORA_COLOR: Record<string, string> = {
+  normal: 'text-blue-700 bg-blue-50', he70: 'text-amber-700 bg-amber-50', he100: 'text-red-700 bg-red-50',
 }
 
 export default function BMDetailPage({ params }: { params: { id: string } }) {
   const [bm, setBm] = useState<any>(null)
-  const [resumo, setResumo] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
   const [envioEmails, setEnvioEmails] = useState('')
@@ -29,10 +31,8 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   const [valorBM, setValorBM] = useState('')
   const [showCriarReceita, setShowCriarReceita] = useState(false)
   const [clienteData, setClienteData] = useState<any>(null)
-  const [valorPrevisto, setValorPrevisto] = useState(0)
   const [mailtoAberto, setMailtoAberto] = useState(false)
   const [bmItens, setBmItens] = useState<any[]>([])
-  const [composicaoData, setComposicaoData] = useState<any[]>([])
   const [salvandoItens, setSalvandoItens] = useState(false)
   const supabase = createClient()
   const router = useRouter()
@@ -40,9 +40,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
 
   const STATUS_ORDER = ['aberto','fechado','enviado','aprovado']
 
-  useEffect(() => {
-    loadBM()
-  }, [params.id])
+  useEffect(() => { loadBM() }, [params.id])
 
   async function loadBM() {
     const { data: bmData } = await supabase.from('boletins_medicao')
@@ -51,91 +49,90 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     setBm(bmData)
 
     if (bmData) {
-      const { data: efetivo } = await supabase.from('efetivo_diario')
-        .select('funcionario_id, data, tipo_dia, funcionarios(nome, cargo, custo_hora)')
-        .eq('obra_id', bmData.obras.id)
-        .gte('data', bmData.data_inicio)
-        .lte('data', bmData.data_fim)
-        .order('data')
-
-      // Aggregate by cargo + tipo_dia
-      const agg: Record<string, Record<string, Set<string>>> = {}
-      ;(efetivo ?? []).forEach((e: any) => {
-        const cargo = e.funcionarios?.cargo ?? 'OUTROS'
-        if (!agg[cargo]) agg[cargo] = { util: new Set(), sabado: new Set(), domingo_feriado: new Set() }
-        agg[cargo][e.tipo_dia].add(e.data)
-      })
-
-      const rows = Object.entries(agg).map(([cargo, dias]) => ({
-        cargo,
-        dias_util: dias.util.size,
-        dias_sabado: dias.sabado.size,
-        dias_domingo: dias.domingo_feriado.size,
-        total_dias: dias.util.size + dias.sabado.size + dias.domingo_feriado.size
-      })).sort((a, b) => a.cargo.localeCompare(b.cargo))
-
-      // Calcular valor previsto (custo_hora × 8h × multiplicador por tipo_dia)
-      let custoTotal = 0
-      ;(efetivo ?? []).forEach((e: any) => {
-        const ch = Number(e.funcionarios?.custo_hora ?? 0)
-        const mult = e.tipo_dia === 'sabado' ? 1.7 : e.tipo_dia === 'domingo_feriado' ? 2.0 : 1.0
-        custoTotal += ch * 8 * mult
-      })
-      setValorPrevisto(custoTotal)
-
-      setResumo(rows)
-
-      // Fetch composicao and bm_itens
-      const { data: composicao } = await supabase.from('contrato_composicao').select('*').eq('obra_id', bmData.obras.id).eq('ativo', true).order('funcao_nome')
-      const { data: itensExistentes } = await supabase.from('bm_itens').select('*').eq('bm_id', params.id)
-
-      const comp = composicao ?? []
-      setComposicaoData(comp)
-
-      // Build editable items from composicao + existing bm_itens
-      const secoes: ('hora_normal' | 'he_70' | 'he_100')[] = ['hora_normal', 'he_70', 'he_100']
-      const itens: any[] = []
-      comp.forEach((c: any) => {
-        secoes.forEach(secao => {
-          const existing = (itensExistentes ?? []).find(
-            (it: any) => it.funcao_nome === c.funcao_nome && it.secao === secao
-          )
-          const baseHH = Number(c.custo_hora_contratado ?? 0)
-          const valorHH = secao === 'he_70'
-            ? baseHH * (c.he_multiplicador_70 ?? 1.7)
-            : secao === 'he_100'
-              ? baseHH * (c.he_multiplicador_100 ?? 2.0)
-              : baseHH
-          const diasDefault = Number(c.horas_mes ?? 0) / 8
-          itens.push({
-            secao,
-            funcao_nome: c.funcao_nome,
-            efetivo: existing ? Number(existing.efetivo) : 0,
-            dias: existing ? Number(existing.dias) : diasDefault,
-            valor_hh: existing ? Number(existing.valor_hh) : valorHH,
-          })
-        })
-      })
-      setBmItens(itens)
+      // Fetch bm_itens
+      const { data: itens } = await supabase.from('bm_itens')
+        .select('*').eq('boletim_id', params.id).order('ordem')
+      setBmItens(itens ?? [])
 
       // Fetch client contacts
       if (bmData.obras?.cliente) {
         const { data: cliente } = await supabase.from('clientes')
           .select('email_principal,email_medicao,email_fiscal,contatos')
           .ilike('nome', bmData.obras.cliente)
-          .limit(1)
-          .single()
+          .limit(1).single()
         if (cliente) {
           setClienteData(cliente)
-          // Pre-populate envioEmails if empty
           if (!envioEmails) {
-            const mainEmail = cliente.email_medicao || cliente.email_principal || ''
-            setEnvioEmails(mainEmail)
+            setEnvioEmails(cliente.email_medicao || cliente.email_principal || '')
           }
         }
       }
     }
     setLoading(false)
+  }
+
+  // Determine if this BM has per-employee items (new format)
+  const hasEmployeeData = bmItens.some(i => i.funcionario_id)
+
+  // Group items by funcao for subtotals
+  function getGroupedItems() {
+    const funcoes: string[] = []
+    bmItens.forEach(i => { if (!funcoes.includes(i.funcao_nome)) funcoes.push(i.funcao_nome) })
+    return funcoes.map(f => ({
+      funcao: f,
+      items: bmItens.filter(i => i.funcao_nome === f),
+      subtotal: bmItens.filter(i => i.funcao_nome === f).reduce((s, i) => s + Number(i.valor_total ?? 0), 0),
+      subtotalHH: bmItens.filter(i => i.funcao_nome === f).reduce((s, i) => s + Number(i.hh_total ?? 0), 0),
+    }))
+  }
+
+  function calcItemTotal(item: any) {
+    return Number(item.hh_total ?? 0) * Number(item.valor_hh ?? 0)
+  }
+
+  function updateItem(index: number, field: string, value: number) {
+    setBmItens(prev => {
+      const next = [...prev]
+      const item = { ...next[index], [field]: value }
+      if (field === 'valor_hh' || field === 'hh_total') {
+        item.valor_total = Number(item.hh_total ?? 0) * Number(item.valor_hh ?? 0)
+      }
+      next[index] = item
+      return next
+    })
+  }
+
+  const totalGeral = bmItens.reduce((s, i) => s + Number(i.valor_total ?? 0), 0)
+  const totalHH = bmItens.reduce((s, i) => s + Number(i.hh_total ?? 0), 0)
+  const totalFuncionarios = new Set(bmItens.filter(i => i.funcionario_id).map(i => i.funcionario_id)).size
+
+  async function handleSalvarItens() {
+    setSalvandoItens(true)
+    try {
+      await supabase.from('bm_itens').delete().eq('boletim_id', params.id)
+      const rows = bmItens.map((i, idx) => ({
+        boletim_id: params.id,
+        funcionario_id: i.funcionario_id || null,
+        funcionario_nome: i.funcionario_nome || null,
+        funcao_nome: i.funcao_nome,
+        tipo_hora: i.tipo_hora,
+        efetivo: Number(i.efetivo ?? 1),
+        dias: Number(i.dias ?? 0),
+        carga_horaria_dia: Number(i.carga_horaria_dia ?? 8),
+        hh_total: Number(i.hh_total ?? 0),
+        valor_hh: Number(i.valor_hh ?? 0),
+        valor_total: Number(i.valor_total ?? 0),
+        ordem: idx,
+      }))
+      if (rows.length > 0) {
+        await supabase.from('bm_itens').insert(rows)
+      }
+      toast.success('BM salvo com sucesso!')
+    } catch (e) {
+      console.error(e)
+      toast.error('Erro ao salvar BM')
+    }
+    setSalvandoItens(false)
   }
 
   async function updateStatus(status: string) {
@@ -159,9 +156,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
         a.download = `BM${String(bm.numero).padStart(2,'0')}_${bm.obras.nome.replace(/\s/g,'_')}.xlsx`
         a.click()
       }
-    } catch (e) {
-      console.error(e)
-    }
+    } catch (e) { console.error(e) }
     setExporting(false)
   }
 
@@ -171,8 +166,6 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
 
     const toEmail = emails[0]
     const ccEmails = emails.slice(1)
-
-    // Build extra CC from client contacts
     const contatoEmails: string[] = []
     if (clienteData?.contatos) {
       (clienteData.contatos as any[]).forEach((c: any) => {
@@ -188,12 +181,11 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     const subject = encodeURIComponent(
       `BM ${String(bm.numero).padStart(2,'0')} - ${bm.obras.nome} - ${periodo}`
     )
-
     const body = encodeURIComponent(
       `Prezados,\n\n` +
       `Segue em anexo o Boletim de Medição Nº ${String(bm.numero).padStart(2,'0')} referente à obra ${bm.obras.nome}, ` +
       `período de ${periodo}.\n\n` +
-      `Total de pessoas-dia: ${totalDias}\n` +
+      `Total de HH: ${totalHH}h\n` +
       (envioObs ? `Observação: ${envioObs}\n\n` : '\n') +
       `Ficamos à disposição para quaisquer esclarecimentos.\n\n` +
       `Atenciosamente,\n` +
@@ -205,15 +197,12 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       `${allCc.length > 0 ? '&' : ''}subject=${subject}&body=${body}`
 
     window.open(mailtoLink, '_blank')
-
-    // Log that mailto was opened
     supabase.from('email_logs').insert({
       tipo: 'envio_bm',
       destinatarios: emails,
       assunto: `BM ${String(bm.numero).padStart(2,'0')} - ${bm.obras.nome}`,
       status: 'mailto_aberto',
     }).then(() => {})
-
     setMailtoAberto(true)
   }
 
@@ -260,7 +249,6 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       aprovado_em: new Date().toISOString(),
       valor_aprovado: valor || null,
     }).eq('id', params.id)
-    // Create financial entry if valor provided
     if (valor > 0) {
       await supabase.from('financeiro_lancamentos').insert({
         obra_id: bm.obras.id,
@@ -286,54 +274,6 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     await loadBM()
     setShowCriarReceita(false)
     toast.show('BM aprovado com sucesso!')
-  }
-
-  function updateItem(index: number, field: string, value: number) {
-    setBmItens(prev => {
-      const next = [...prev]
-      next[index] = { ...next[index], [field]: value }
-      return next
-    })
-  }
-
-  function calcTotal(item: any) {
-    return (Number(item.efetivo) || 0) * (Number(item.dias) || 0) * (Number(item.valor_hh) || 0) * 8
-  }
-
-  function secaoTotal(secao: string) {
-    return bmItens.filter(i => i.secao === secao).reduce((s, i) => s + calcTotal(i), 0)
-  }
-
-  const totalGeralItens = secaoTotal('hora_normal') + secaoTotal('he_70') + secaoTotal('he_100')
-
-  async function handleSalvarItens() {
-    setSalvandoItens(true)
-    try {
-      // Delete existing
-      await supabase.from('bm_itens').delete().eq('bm_id', params.id)
-      // Insert non-zero items
-      const rows = bmItens
-        .filter(i => (Number(i.efetivo) || 0) > 0)
-        .map(i => ({
-          bm_id: params.id,
-          secao: i.secao,
-          funcao_nome: i.funcao_nome,
-          efetivo: Number(i.efetivo),
-          dias: Number(i.dias),
-          valor_hh: Number(i.valor_hh),
-          total: calcTotal(i),
-        }))
-      if (rows.length > 0) {
-        await supabase.from('bm_itens').insert(rows)
-      }
-      // Update BM total value
-      await supabase.from('boletins_medicao').update({ valor_previsto: totalGeralItens }).eq('id', params.id)
-      toast.show('BM salvo com sucesso!')
-    } catch (e) {
-      console.error(e)
-      toast.show('Erro ao salvar BM')
-    }
-    setSalvandoItens(false)
   }
 
   function buildHistorico() {
@@ -372,26 +312,17 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   if (loading) return <div className="p-6 text-sm text-gray-400">Carregando...</div>
   if (!bm) return <div className="p-6 text-sm text-red-500">Boletim não encontrado.</div>
 
-  const totalDias = resumo.reduce((s, r) => s + r.total_dias, 0)
   const dias = Math.ceil((new Date(bm.data_fim).getTime() - new Date(bm.data_inicio).getTime()) / 86400000) + 1
+  const grouped = getGroupedItems()
 
   return (
-    <div className="p-4 sm:p-6 max-w-4xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <BackButton fallback="/boletins" />
         <Link href="/boletins" className="text-gray-400 hover:text-gray-600 text-sm">Boletins</Link>
         <span className="text-gray-300">/</span>
         <span className="text-sm font-medium">BM {String(bm.numero).padStart(2,'0')} — {bm.obras.nome}</span>
       </div>
-
-      {/* Banner informativo */}
-      {bm.status === 'aberto' && !sessionStorage?.getItem?.('bm-banner-closed') && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-800 flex items-start gap-2 relative">
-          <span className="text-base flex-shrink-0">💡</span>
-          <span>Preencha quantos dias cada profissional trabalhou. Os valores por hora já vêm do contrato — só ajuste se houve diferença.</span>
-          <button onClick={() => { sessionStorage.setItem('bm-banner-closed','1'); }} className="absolute top-2 right-2 text-blue-300 hover:text-blue-500 text-xs">✕</button>
-        </div>
-      )}
 
       {/* Header */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
@@ -430,6 +361,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
                   className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50"
                   confirmClassName="text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700"
                   onConfirm={async () => {
+                    await supabase.from('bm_itens').delete().eq('boletim_id', params.id)
                     await supabase.from('boletins_medicao').delete().eq('id', params.id)
                     router.push('/boletins')
                   }} />
@@ -442,154 +374,101 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 lg:gap-4 mb-5">
         <div className="bg-gray-100 rounded-xl p-4">
-          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Pessoas-dia</div>
-          <div className="text-2xl font-semibold">{totalDias}</div>
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Funcionários</div>
+          <div className="text-2xl font-semibold">{totalFuncionarios || bmItens.length}</div>
         </div>
         <div className="bg-gray-100 rounded-xl p-4">
-          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Dias úteis</div>
-          <div className="text-2xl font-semibold">{resumo.reduce((s, r) => s + r.dias_util, 0)}</div>
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">HH Total</div>
+          <div className="text-2xl font-semibold">{totalHH}h</div>
         </div>
         <div className="bg-gray-100 rounded-xl p-4">
-          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Sábados</div>
-          <div className="text-2xl font-semibold">{resumo.reduce((s, r) => s + r.dias_sabado, 0)}</div>
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Funções</div>
+          <div className="text-2xl font-semibold">{grouped.length}</div>
         </div>
         <div className="bg-gray-100 rounded-xl p-4">
-          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Dom/Feriado</div>
-          <div className="text-2xl font-semibold">{resumo.reduce((s, r) => s + r.dias_domingo, 0)}</div>
+          <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">Itens</div>
+          <div className="text-2xl font-semibold">{bmItens.length}</div>
         </div>
         <div className={`rounded-xl p-4 ${bm.valor_aprovado ? 'bg-green-50 border border-green-200' : 'bg-brand/5 border border-brand/10'}`}>
           <div className="text-xs text-gray-500 uppercase tracking-wide mb-1">
-            {bm.valor_aprovado ? 'Valor Aprovado' : 'Valor Previsto'}
+            {bm.valor_aprovado ? 'Valor Aprovado' : 'Valor Total'}
           </div>
           <div className={`text-xl font-bold font-display ${bm.valor_aprovado ? 'text-green-700' : 'text-brand'}`}>
-            R$ {Number(bm.valor_aprovado || valorPrevisto).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            R$ {Number(bm.valor_aprovado || totalGeral).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
           </div>
-          {bm.valor_aprovado && valorPrevisto > 0 && (
+          {bm.valor_aprovado && totalGeral > 0 && (
             <div className="text-[10px] text-gray-400 mt-0.5">
-              Custo base: R$ {valorPrevisto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ·
-              Margem: {((Number(bm.valor_aprovado) - valorPrevisto) / Number(bm.valor_aprovado) * 100).toFixed(0)}%
+              Custo base: R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ·
+              Margem: {((Number(bm.valor_aprovado) - totalGeral) / Number(bm.valor_aprovado) * 100).toFixed(0)}%
             </div>
           )}
         </div>
       </div>
 
-      {/* Resumo por função */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-5">
-        <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Resumo por Função</h2>
-          <span className="text-xs text-gray-400">Carga horária: 07:00 às 17:00</span>
-        </div>
-        {resumo.length > 0 ? (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                <th className="text-left px-5 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Função</th>
-                <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Dias Úteis</th>
-                <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Sábados</th>
-                <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Dom/Fer</th>
-                <th className="text-center px-4 py-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {resumo.map(r => (
-                <tr key={r.cargo} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="px-5 py-3 font-medium">{r.cargo}</td>
-                  <td className="px-4 py-3 text-center">{r.dias_util}</td>
-                  <td className="px-4 py-3 text-center text-amber-600 font-medium">{r.dias_sabado || '-'}</td>
-                  <td className="px-4 py-3 text-center text-red-600 font-medium">{r.dias_domingo || '-'}</td>
-                  <td className="px-4 py-3 text-center font-semibold text-brand">{r.total_dias}</td>
-                </tr>
-              ))}
-              <tr className="border-t-2 border-gray-200 bg-gray-50">
-                <td className="px-5 py-3 font-bold text-xs uppercase tracking-wide text-gray-600">Total</td>
-                <td className="px-4 py-3 text-center font-bold">{resumo.reduce((s, r) => s + r.dias_util, 0)}</td>
-                <td className="px-4 py-3 text-center font-bold text-amber-600">{resumo.reduce((s, r) => s + r.dias_sabado, 0) || '-'}</td>
-                <td className="px-4 py-3 text-center font-bold text-red-600">{resumo.reduce((s, r) => s + r.dias_domingo, 0) || '-'}</td>
-                <td className="px-4 py-3 text-center font-bold text-brand">{totalDias}</td>
-              </tr>
-            </tbody>
-          </table>
-        ) : (
-          <div className="p-8 text-center text-gray-400 text-sm">
-            Nenhum efetivo registrado para este período ainda.<br/>
-            <Link href="/efetivo" className="text-brand hover:underline mt-1 inline-block">
-              Registrar efetivo diário →
-            </Link>
-          </div>
-        )}
-      </div>
-
-      {/* Itens Editáveis do BM */}
-      {composicaoData.length > 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold">Composição do BM</h2>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-500">
-                Total Geral: <span className="font-bold text-brand text-sm">R$ {totalGeralItens.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-              </span>
+      {/* Itens do BM */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-semibold">Composição do BM</h2>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-gray-500">
+              Total: <span className="font-bold text-brand text-sm">R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+            </span>
+            {bm.status === 'aberto' && (
               <button onClick={handleSalvarItens} disabled={salvandoItens}
                 className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50">
                 {salvandoItens ? 'Salvando...' : 'Salvar BM'}
               </button>
-            </div>
+            )}
           </div>
-
-          {(['hora_normal', 'he_70', 'he_100'] as const).map(secao => {
-            const label = secao === 'hora_normal' ? 'Hora Normal' : secao === 'he_70' ? 'Hora Extra 70%' : 'Hora Extra 100%'
-            const labelColor = secao === 'hora_normal' ? 'text-blue-700 bg-blue-50' : secao === 'he_70' ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50'
-            const itensSecao = bmItens
-              .map((item, idx) => ({ ...item, _idx: idx }))
-              .filter(i => i.secao === secao)
-
-            return (
-              <div key={secao} className="mb-4 last:mb-0">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded ${labelColor}`}>{label}</span>
-                  <span className="text-xs text-gray-400">
-                    Subtotal: R$ {secaoTotal(secao).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">Função</th>
-                        <th className="text-center px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide w-24">Efetivo</th>
-                        <th className="text-center px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide w-24">Dias</th>
-                        <th className="text-center px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide w-32">Valor HH (R$)</th>
-                        <th className="text-right px-3 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide w-36">Total (R$)</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {itensSecao.map(item => (
-                        <tr key={item._idx} className="border-b border-gray-50 hover:bg-gray-50">
-                          <td className="px-3 py-2 font-medium text-gray-700">{item.funcao_nome}</td>
-                          <td className="px-3 py-2 text-center">
-                            <input type="number" min="0" value={item.efetivo} onChange={e => updateItem(item._idx, 'efetivo', Number(e.target.value))}
-                              className="w-20 px-2 py-1 border border-gray-200 rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <input type="number" min="0" step="0.5" value={item.dias} onChange={e => updateItem(item._idx, 'dias', Number(e.target.value))}
-                              className="w-20 px-2 py-1 border border-gray-200 rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
-                          </td>
-                          <td className="px-3 py-2 text-center">
-                            <input type="number" min="0" step="0.01" value={item.valor_hh} onChange={e => updateItem(item._idx, 'valor_hh', Number(e.target.value))}
-                              className="w-28 px-2 py-1 border border-gray-200 rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
-                          </td>
-                          <td className="px-3 py-2 text-right font-semibold text-gray-700">
-                            {calcTotal(item).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )
-          })}
         </div>
-      )}
+
+        {bmItens.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  {hasEmployeeData && (
+                    <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Funcionário</th>
+                  )}
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Função</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Tipo</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide w-20">Dias</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide w-24">HH Total</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide w-32">R$/HH</th>
+                  <th className="text-right px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide w-36">Total R$</th>
+                </tr>
+              </thead>
+              <tbody>
+                {grouped.map(group => (
+                  <GroupRows
+                    key={group.funcao}
+                    group={group}
+                    hasEmployeeData={hasEmployeeData}
+                    editable={bm.status === 'aberto'}
+                    allItems={bmItens}
+                    onUpdate={updateItem}
+                  />
+                ))}
+                <tr className="border-t-2 border-gray-200 bg-gray-50">
+                  <td colSpan={hasEmployeeData ? 4 : 3} className="px-3 py-3 font-bold text-xs uppercase tracking-wide text-gray-600">Total Geral</td>
+                  <td className="px-3 py-3 text-center font-bold">{totalHH}h</td>
+                  <td className="px-3 py-3" />
+                  <td className="px-3 py-3 text-right font-bold text-brand">
+                    R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-8 text-center text-gray-400 text-sm">
+            Nenhum item no BM. Este boletim pode ter sido criado sem registros de ponto.<br/>
+            <Link href="/ponto" className="text-brand hover:underline mt-1 inline-block">
+              Registrar ponto →
+            </Link>
+          </div>
+        )}
+      </div>
 
       {/* Timeline de Status */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
@@ -599,12 +478,8 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
             const reached = STATUS_ORDER.indexOf(bm.status) >= i
             const isCurrent = bm.status === s
             const LABELS: Record<string,string> = { aberto:'Aberto', fechado:'Fechado', enviado:'Enviado', aprovado:'Aprovado' }
-            // Timestamps from bm fields
             const timestamps: Record<string,string|null> = {
-              aberto: bm.created_at,
-              fechado: null, // we don't track this separately
-              enviado: bm.enviado_em,
-              aprovado: bm.aprovado_em,
+              aberto: bm.created_at, fechado: null, enviado: bm.enviado_em, aprovado: bm.aprovado_em,
             }
             return (
               <div key={s} className="flex items-center flex-1">
@@ -631,7 +506,6 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
           <h2 className="text-sm font-semibold mb-4">Envio ao Cliente</h2>
 
-          {/* Contatos do cliente detectados */}
           {clienteData && (
             <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
               <span className="font-semibold">Contatos encontrados:</span>{' '}
@@ -743,7 +617,6 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
             </div>
           )}
 
-          {/* Revisões anteriores */}
           {bm.revisoes_solicitadas && bm.revisoes_solicitadas.length > 0 && (
             <div className="mt-4 pt-4 border-t border-gray-100">
               <p className="text-xs font-semibold text-gray-500 mb-2">Revisões solicitadas:</p>
@@ -773,5 +646,66 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
         </div>
       </div>
     </div>
+  )
+}
+
+/* Sub-component: renders item rows grouped by função with subtotals */
+function GroupRows({ group, hasEmployeeData, editable, allItems, onUpdate }: {
+  group: { funcao: string; items: any[]; subtotal: number; subtotalHH: number }
+  hasEmployeeData: boolean
+  editable: boolean
+  allItems: any[]
+  onUpdate: (index: number, field: string, value: number) => void
+}) {
+  return (
+    <>
+      {/* Function subtotal header */}
+      <tr className="bg-gray-50 border-b border-gray-200">
+        <td colSpan={hasEmployeeData ? 5 : 4} className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-500">
+          {group.funcao}
+        </td>
+        <td className="px-3 py-2 text-center text-xs font-semibold text-gray-500">{group.subtotalHH}h</td>
+        <td className="px-3 py-2 text-right text-xs font-semibold text-gray-600">
+          R$ {group.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+        </td>
+      </tr>
+      {group.items.map(item => {
+        const globalIdx = allItems.indexOf(item)
+        const tipoLabel = TIPO_HORA_LABEL[item.tipo_hora] ?? item.tipo_hora
+        const tipoColor = TIPO_HORA_COLOR[item.tipo_hora] ?? 'text-gray-700 bg-gray-50'
+        return (
+          <tr key={item.id || globalIdx} className="border-b border-gray-50 hover:bg-gray-50">
+            {hasEmployeeData && (
+              <td className="px-3 py-2.5 font-medium text-gray-800">{item.funcionario_nome || '—'}</td>
+            )}
+            <td className="px-3 py-2.5 text-gray-600">{item.funcao_nome}</td>
+            <td className="px-3 py-2.5">
+              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded ${tipoColor}`}>{tipoLabel}</span>
+            </td>
+            <td className="px-3 py-2.5 text-center">{Number(item.dias)}</td>
+            <td className="px-3 py-2.5 text-center">{Number(item.hh_total ?? 0)}h</td>
+            <td className="px-3 py-2.5 text-center">
+              {editable ? (
+                <input
+                  type="number" min="0" step="0.01"
+                  value={Number(item.valor_hh ?? 0)}
+                  onChange={e => onUpdate(globalIdx, 'valor_hh', Number(e.target.value))}
+                  className={`w-28 px-2 py-1 border rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand ${
+                    Number(item.valor_hh ?? 0) === 0 ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                  }`}
+                />
+              ) : (
+                <span className={Number(item.valor_hh ?? 0) === 0 ? 'text-red-500 font-medium' : ''}>
+                  R$ {Number(item.valor_hh ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </span>
+              )}
+            </td>
+            <td className="px-3 py-2.5 text-right font-semibold text-gray-700">
+              {Number(item.valor_total ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </td>
+          </tr>
+        )
+      })}
+    </>
   )
 }
