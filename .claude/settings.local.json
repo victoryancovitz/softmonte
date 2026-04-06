@@ -27,7 +27,9 @@
       "Bash(node_modules/.bin/tsc --noEmit --pretty)",
       "Bash(where.exe node:*)",
       "WebFetch(domain:softmonte.vercel.app)",
-      "mcp__claude_ai_Vercel__get_runtime_logs"
+      "mcp__claude_ai_Vercel__get_runtime_logs",
+      "Bash(git commit:*)",
+      "Bash(ls -la /Users/victoryancovitz/softmonte-git/src/app/\\\\\\(dashboard\\\\\\)/)"
     ]
   }
 }

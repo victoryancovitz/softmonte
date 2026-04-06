@@ -41,7 +41,7 @@ export default function InstallPrompt() {
   if (!show || dismissed) return null
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 lg:left-auto lg:right-6 lg:max-w-sm animate-slide-up">
+    <div className="fixed bottom-4 left-4 right-4 z-50 lg:left-4 lg:right-auto lg:max-w-sm animate-slide-up">
       <div className="bg-brand text-white rounded-xl shadow-2xl p-4 flex items-center gap-3">
         <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
           <Download className="w-5 h-5" />
