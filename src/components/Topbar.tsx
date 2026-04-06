@@ -10,27 +10,25 @@ const ic = {
   home:    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="1" y="9" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>,
   func:    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="5.5" cy="4" r="2.5"/><path d="M1 13c0-3 2-5 4.5-5s4.5 2 4.5 5" opacity=".5"/><circle cx="12" cy="5" r="2"/><path d="M10 13c0-2.5 1.5-4 3-4.5" opacity=".5"/></svg>,
   obras:   <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1 14V6l7-4 7 4v8H1z" opacity=".2"/><path d="M1 6l7-4 7 4M6 14v-5h4v5" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinejoin="round"/></svg>,
-  efetivo: <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="2" width="12" height="12" rx="2" opacity=".15"/><path d="M5 8l2.5 2.5 3.5-3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>,
   bm:      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h10a1 1 0 011 1v11a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" opacity=".2"/><path d="M5 6h6M5 9h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" fill="none"/></svg>,
-  alloc:   <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="3" width="14" height="2" rx="1"/><rect x="1" y="7" width="10" height="2" rx="1"/><rect x="1" y="11" width="12" height="2" rx="1"/></svg>,
   stock:   <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="9" width="14" height="6" rx="1.5" opacity=".3"/><rect x="3" y="5" width="10" height="5" rx="1"/><rect x="5" y="1" width="6" height="5" rx="1"/></svg>,
-  hh:      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" fill="none"/><path d="M8 5v3.5l2.5 1.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/></svg>,
   fin:     <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 10c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.3" fill="none" strokeLinecap="round"/><circle cx="8" cy="11" r="2" opacity=".7"/></svg>,
   report:  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="2" width="12" height="1.5" rx=".75"/><rect x="2" y="5.5" width="8" height="1.5" rx=".75"/><rect x="2" y="9" width="10" height="1.5" rx=".75"/><rect x="2" y="12.5" width="6" height="1.5" rx=".75"/></svg>,
   docs:    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M3 2h7l3 3v9a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" opacity=".4"/><path d="M10 2v3h3" stroke="currentColor" strokeWidth="1.2" fill="none"/></svg>,
-  users:   <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5" opacity=".5"/></svg>,
-  audit:   <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1L1 4v5c0 3.9 3 7.1 7 8 4-0.9 7-4.1 7-8V4L8 1z" opacity=".2"/><path d="M5 8l2 2 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none"/></svg>,
   faltas:  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="2" y="2" width="12" height="12" rx="2" opacity=".15"/><path d="M5 5l6 6M11 5l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/></svg>,
-  ponto:   <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3" fill="none"/><path d="M8 4.5v4l2.5 1.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" fill="none"/><path d="M5 8l2 2 3.5-3.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity=".5"/></svg>,
   client:  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="3" width="14" height="10" rx="2" opacity=".2"/><path d="M4 7h8M4 10h5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" fill="none"/></svg>,
-  config:  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.3" fill="none"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M13 3l-1.5 1.5M4.5 11.5L3 13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>,
   cad:     <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="14" rx="1.5" opacity=".3"/><rect x="9" y="1" width="6" height="6" rx="1.5"/><rect x="9" y="9" width="6" height="6" rx="1.5"/></svg>,
+  config:  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="2.5" stroke="currentColor" strokeWidth="1.3" fill="none"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M13 3l-1.5 1.5M4.5 11.5L3 13" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/></svg>,
+  users:   <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="6" r="3"/><path d="M2 14c0-3.3 2.7-5 6-5s6 1.7 6 5" opacity=".5"/></svg>,
+  manual:  <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M2 2h5v12H2z" opacity=".2"/><path d="M9 2h5v12H9z" opacity=".15"/><path d="M7 2v12M2 2h12v12H2z" stroke="currentColor" strokeWidth="1.2" fill="none" strokeLinejoin="round"/></svg>,
+  logout:  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M6 2H3a1 1 0 00-1 1v10a1 1 0 001 1h3M11 11l3-3-3-3M14 8H6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>,
 }
 
 interface NavLink {
   href: string
   label: string
   icon: React.ReactNode
+  disabled?: boolean
 }
 
 interface NavGroupDef {
@@ -40,63 +38,50 @@ interface NavGroupDef {
 
 const NAV_GROUPS: NavGroupDef[] = [
   {
-    label: 'Contratos',
-    links: [
-      { href: '/contratos', label: 'Contratos', icon: ic.obras },
-      { href: '/tipos-contrato', label: 'Tipos de contrato', icon: ic.bm },
-    ],
-  },
-  {
-    label: 'Equipe',
-    links: [
-      { href: '/funcionarios', label: 'Funcionários', icon: ic.func },
-      { href: '/alocacao', label: 'Alocação', icon: ic.alloc },
-      { href: '/ponto', label: 'Ponto', icon: ic.ponto },
-      { href: '/rh/banco-horas', label: 'Banco de horas', icon: ic.hh },
-      { href: '/rh/ferias', label: 'Férias', icon: ic.efetivo },
-    ],
-  },
-  {
-    label: 'RH & Legal',
-    links: [
-      { href: '/rh/treinamentos', label: 'Treinamentos NR', icon: ic.audit },
-      { href: '/documentos', label: 'Documentos', icon: ic.docs },
-      { href: '/rh/admissoes', label: 'Admissões', icon: ic.func },
-      { href: '/rh/desligamentos', label: 'Desligamentos', icon: ic.faltas },
-      { href: '/rastreio', label: 'Vencimentos', icon: ic.audit },
-    ],
-  },
-  {
-    label: 'Obras',
+    label: 'Engenharia',
     links: [
       { href: '/obras', label: 'Obras', icon: ic.obras },
-      { href: '/boletins', label: 'Boletins', icon: ic.bm },
-      { href: '/hh', label: 'Efetivo', icon: ic.hh },
+      { href: '/boletins', label: 'Boletins de Medição', icon: ic.bm },
+    ],
+  },
+  {
+    label: 'Administrativo',
+    links: [
+      { href: '/funcionarios', label: 'Funcionários', icon: ic.func },
       { href: '/faltas', label: 'Faltas', icon: ic.faltas },
-      { href: '/estoque', label: 'Estoque', icon: ic.stock },
+      { href: '/contratos', label: 'Contratos', icon: ic.docs },
+      { href: '/rh/treinamentos', label: 'Treinamentos NR', icon: ic.docs },
+      { href: '/rh/admissoes', label: 'Admissões', icon: ic.func },
+      { href: '/rh/desligamentos', label: 'Desligamentos', icon: ic.faltas },
+      { href: '/documentos', label: 'Documentos', icon: ic.docs },
+      { href: '/rastreio', label: 'Vencimentos', icon: ic.docs },
+    ],
+  },
+  {
+    label: 'Compras',
+    links: [
+      { href: '/estoque', label: 'Almoxarifado', icon: ic.stock },
+      { href: '/compras/fornecedores', label: 'Fornecedores', icon: ic.client },
+      { href: '/compras/cotacoes', label: 'Cotações', icon: ic.bm },
+      { href: '/compras/pedidos', label: 'Pedidos', icon: ic.stock },
     ],
   },
   {
     label: 'Financeiro',
     links: [
-      { href: '/financeiro', label: 'Financeiro', icon: ic.fin },
-      { href: '/forecast', label: 'Forecast', icon: ic.report },
+      { href: '/financeiro', label: 'Lançamentos', icon: ic.fin },
       { href: '/relatorios', label: 'Relatórios', icon: ic.report },
       { href: '/relatorios/margem', label: 'Margem', icon: ic.fin },
+      { href: '/forecast', label: 'Forecast', icon: ic.report },
     ],
   },
   {
-    label: 'Admin',
+    label: 'Cadastros',
     links: [
-      { href: '/admin/usuarios', label: 'Usuários', icon: ic.users },
+      { href: '/cadastros/funcoes', label: 'Funções', icon: ic.cad },
+      { href: '/cadastros/categorias', label: 'Categorias', icon: ic.cad },
       { href: '/clientes', label: 'Clientes', icon: ic.client },
-      { href: '/compras/fornecedores', label: 'Fornecedores', icon: ic.client },
-      { href: '/compras/cotacoes', label: 'Cotações', icon: ic.bm },
-      { href: '/compras/pedidos', label: 'Pedidos', icon: ic.stock },
-      { href: '/cadastros', label: 'Cadastros', icon: ic.cad },
-      { href: '/configuracoes', label: 'Configurações', icon: ic.config },
-      { href: '/manual', label: 'Manual', icon: ic.docs },
-      { href: '/audit', label: 'Auditoria', icon: ic.audit },
+      { href: '/tipos-contrato', label: 'Tipos de Contrato', icon: ic.docs },
     ],
   },
 ]
@@ -105,26 +90,37 @@ const NAV_GROUPS: NavGroupDef[] = [
 const PATH_MAP: Record<string, { group: string; label: string }> = {}
 NAV_GROUPS.forEach(g => {
   g.links.forEach(l => {
-    PATH_MAP[l.href] = { group: g.label, label: l.label }
+    if (!l.disabled) PATH_MAP[l.href] = { group: g.label, label: l.label }
   })
 })
 PATH_MAP['/dashboard'] = { group: '', label: 'Dashboard' }
+PATH_MAP['/configuracoes'] = { group: '', label: 'Configurações' }
+PATH_MAP['/admin/usuarios'] = { group: '', label: 'Gerenciar Usuários' }
+PATH_MAP['/manual'] = { group: '', label: 'Manual' }
+PATH_MAP['/ponto'] = { group: 'Administrativo', label: 'Ponto' }
+PATH_MAP['/alocacao'] = { group: 'Administrativo', label: 'Alocação' }
+PATH_MAP['/efetivo'] = { group: 'Engenharia', label: 'Efetivo' }
+PATH_MAP['/hh'] = { group: 'Engenharia', label: 'Efetivo' }
+PATH_MAP['/rh/banco-horas'] = { group: 'Administrativo', label: 'Banco de Horas' }
+PATH_MAP['/rh/ferias'] = { group: 'Administrativo', label: 'Férias' }
 
 function getActiveGroup(pathname: string): string | null {
+  // Check PATH_MAP first for extra routes
+  for (const [path, info] of Object.entries(PATH_MAP)) {
+    if (info.group && (pathname === path || pathname.startsWith(path + '/'))) return info.group
+  }
   for (const g of NAV_GROUPS) {
     for (const l of g.links) {
-      if (pathname === l.href || pathname.startsWith(l.href + '/')) return g.label
+      if (!l.disabled && (pathname === l.href || pathname.startsWith(l.href + '/'))) return g.label
     }
   }
   return null
 }
 
 function getBreadcrumb(pathname: string): { group: string; page: string } | null {
-  // Exact match first
   if (PATH_MAP[pathname]) {
     return { group: PATH_MAP[pathname].group, page: PATH_MAP[pathname].label }
   }
-  // Try prefix match for nested routes like /funcionarios/[id]
   const segments = pathname.split('/').filter(Boolean)
   for (let i = segments.length; i >= 1; i--) {
     const prefix = '/' + segments.slice(0, i).join('/')
@@ -141,14 +137,26 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
   const supabase = createClient()
   const [mobileOpen, setMobileOpen] = useState(false)
   const [openGroup, setOpenGroup] = useState<string | null>(null)
-  const hoverTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [avatarOpen, setAvatarOpen] = useState(false)
+  const avatarRef = useRef<HTMLDivElement>(null)
+  const navRef = useRef<HTMLDivElement>(null)
 
   const initials = profile?.nome?.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() ?? 'U'
   const activeGroup = getActiveGroup(pathname)
   const breadcrumb = getBreadcrumb(pathname)
+  const isAdmin = profile?.role === 'admin'
 
-  // Close mobile drawer on navigation
-  useEffect(() => { setMobileOpen(false) }, [pathname])
+  useEffect(() => { setMobileOpen(false); setOpenGroup(null); setAvatarOpen(false) }, [pathname])
+
+  // Close avatar dropdown on outside click
+  useEffect(() => {
+    function handle(e: MouseEvent) {
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) setAvatarOpen(false)
+      if (navRef.current && !navRef.current.contains(e.target as Node)) setOpenGroup(null)
+    }
+    document.addEventListener('mousedown', handle)
+    return () => document.removeEventListener('mousedown', handle)
+  }, [])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -156,13 +164,8 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
     router.refresh()
   }
 
-  function handleGroupEnter(label: string) {
-    if (hoverTimeout.current) clearTimeout(hoverTimeout.current)
-    setOpenGroup(label)
-  }
-
-  function handleGroupLeave() {
-    hoverTimeout.current = setTimeout(() => setOpenGroup(null), 150)
+  function toggleGroup(label: string) {
+    setOpenGroup(prev => prev === label ? null : label)
   }
 
   return (
@@ -170,60 +173,68 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
       {/* ─── DESKTOP TOPBAR ─── */}
       <header className="hidden lg:block fixed top-0 left-0 right-0 z-50">
         {/* Main bar — 48px */}
-        <div className="h-12 bg-brand flex items-center px-4">
+        <div className="h-12 bg-[#0f1e2e] flex items-center px-4">
           {/* Logo */}
           <Link href="/dashboard" className="flex items-center gap-2.5 mr-6 flex-shrink-0">
             <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
-              <rect x="4" y="20" width="8" height="10" rx="1" fill="#C4972A"/>
-              <rect x="13" y="12" width="8" height="18" rx="1" fill="#C4972A" opacity=".85"/>
-              <rect x="22" y="4" width="8" height="26" rx="1" fill="#C4972A" opacity=".65"/>
+              <rect x="4" y="20" width="8" height="10" rx="1" fill="#c8960c"/>
+              <rect x="13" y="12" width="8" height="18" rx="1" fill="#c8960c" opacity=".85"/>
+              <rect x="22" y="4" width="8" height="26" rx="1" fill="#c8960c" opacity=".65"/>
             </svg>
             <span className="font-display font-black text-white text-xs tracking-widest">SOFTMONTE</span>
           </Link>
 
           {/* Nav groups */}
-          <nav className="flex items-center h-full gap-0.5 flex-1 min-w-0">
+          <nav ref={navRef} className="flex items-center h-full gap-0.5 flex-1 min-w-0">
             {NAV_GROUPS.map(g => {
               const isActive = activeGroup === g.label
               const isOpen = openGroup === g.label
               return (
-                <div
-                  key={g.label}
-                  className="relative h-full flex items-center"
-                  onMouseEnter={() => handleGroupEnter(g.label)}
-                  onMouseLeave={handleGroupLeave}
-                >
+                <div key={g.label} className="relative h-full flex items-center">
                   <button
-                    className={`px-3 h-full text-[13px] font-medium transition-colors relative ${
-                      isActive ? 'text-white' : 'text-blue-200 hover:text-white'
+                    onClick={() => toggleGroup(g.label)}
+                    className={`px-3 h-full text-[13px] font-medium transition-colors relative flex items-center gap-1 ${
+                      isActive ? 'text-white' : 'text-blue-200/70 hover:text-white'
                     }`}
                   >
                     {g.label}
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" className={`transition-transform ${isOpen ? 'rotate-180' : ''}`}>
+                      <path d="M2.5 4l2.5 2.5L7.5 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                     {isActive && (
-                      <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-brand-gold rounded-t" />
+                      <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#c8960c] rounded-t" />
                     )}
                   </button>
 
                   {/* Dropdown */}
                   {isOpen && (
                     <div
-                      className="absolute top-full left-0 bg-white border border-gray-200 rounded-b-lg p-2 min-w-[200px]"
-                      style={{ boxShadow: '0 4px 16px rgba(0,0,21,0.12)' }}
+                      className="absolute top-full left-0 bg-white rounded-lg p-1.5 min-w-[220px] mt-0.5"
+                      style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.15)', borderRadius: '8px' }}
                     >
                       {g.links.map(link => {
+                        if (link.disabled) {
+                          return (
+                            <div key={link.href} className="flex items-center gap-2 px-2.5 py-[7px] rounded-md text-[13px] text-gray-300 cursor-not-allowed">
+                              <span className="flex-shrink-0 text-gray-300">{link.icon}</span>
+                              {link.label}
+                              <span className="ml-auto text-[10px] bg-gray-100 text-gray-400 px-1.5 py-0.5 rounded">Em breve</span>
+                            </div>
+                          )
+                        }
                         const linkActive = pathname === link.href || pathname.startsWith(link.href + '/')
                         return (
                           <Link
                             key={link.href}
                             href={link.href}
                             onClick={() => setOpenGroup(null)}
-                            className={`flex items-center gap-2 px-2.5 py-[7px] rounded-[5px] text-[13px] transition-colors ${
+                            className={`flex items-center gap-2 px-2.5 py-[7px] rounded-md text-[13px] transition-colors ${
                               linkActive
-                                ? 'text-[#00215B] bg-[rgba(0,33,91,0.07)] font-medium'
-                                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                                ? 'text-[#c8960c] bg-[#c8960c]/10 font-medium'
+                                : 'text-gray-700 hover:bg-[#c8960c]/5 hover:text-gray-900'
                             }`}
                           >
-                            <span className={`flex-shrink-0 ${linkActive ? 'text-[#00215B]' : 'text-gray-400'}`}>{link.icon}</span>
+                            <span className={`flex-shrink-0 ${linkActive ? 'text-[#c8960c]' : 'text-gray-400'}`}>{link.icon}</span>
                             {link.label}
                           </Link>
                         )
@@ -239,7 +250,7 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
           <div className="flex items-center gap-3 flex-shrink-0">
             {/* Sector badge */}
             {activeGroup && (
-              <span className="text-[11px] font-medium text-brand-gold border border-brand-gold/50 rounded px-2 py-0.5">
+              <span className="text-[11px] font-medium text-[#c8960c] border border-[#c8960c]/40 rounded px-2 py-0.5">
                 {activeGroup}
               </span>
             )}
@@ -249,14 +260,51 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
               <NotificationBell />
             </div>
 
-            {/* Avatar */}
-            <button
-              onClick={handleLogout}
-              title="Sair"
-              className="w-[30px] h-[30px] rounded-full bg-[#c8960c] flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 hover:opacity-90 transition-opacity"
-            >
-              {initials}
-            </button>
+            {/* Avatar with dropdown */}
+            <div ref={avatarRef} className="relative">
+              <button
+                onClick={() => setAvatarOpen(!avatarOpen)}
+                className="w-[30px] h-[30px] rounded-full bg-[#c8960c] flex items-center justify-center text-white text-[11px] font-bold flex-shrink-0 hover:opacity-90 transition-opacity"
+              >
+                {initials}
+              </button>
+
+              {avatarOpen && (
+                <div
+                  className="absolute right-0 top-full mt-1.5 w-56 bg-white rounded-lg overflow-hidden"
+                  style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.15)', borderRadius: '8px' }}
+                >
+                  {/* User info */}
+                  <div className="px-4 py-3 border-b border-gray-100">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{profile?.nome ?? 'Usuário'}</p>
+                    <p className="text-xs text-gray-400 truncate">{(profile as any)?.email ?? ''}</p>
+                  </div>
+                  {/* Menu items */}
+                  <div className="py-1">
+                    <Link href="/manual" onClick={() => setAvatarOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
+                      <span className="text-gray-400">{ic.manual}</span> Manual do usuário
+                    </Link>
+                    <Link href="/configuracoes" onClick={() => setAvatarOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
+                      <span className="text-gray-400">{ic.config}</span> Configurações
+                    </Link>
+                    {isAdmin && (
+                      <Link href="/admin/usuarios" onClick={() => setAvatarOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
+                        <span className="text-gray-400">{ic.users}</span> Gerenciar usuários
+                      </Link>
+                    )}
+                  </div>
+                  <div className="border-t border-gray-100 py-1">
+                    <button onClick={handleLogout}
+                      className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-red-600 hover:bg-red-50 transition-colors w-full text-left">
+                      <span className="text-red-400">{ic.logout}</span> Sair
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -266,7 +314,7 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
             <div className="flex items-center gap-1.5 text-[13px]">
               {breadcrumb.group && (
                 <>
-                  <span className="text-[#00215B] font-medium">{breadcrumb.group}</span>
+                  <span className="text-[#0f1e2e] font-medium">{breadcrumb.group}</span>
                   <span className="text-gray-300">›</span>
                 </>
               )}
@@ -278,18 +326,18 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
         </div>
       </header>
 
-      {/* Desktop spacer: 48px topbar + 34px breadcrumb = 82px */}
+      {/* Desktop spacer */}
       <div className="hidden lg:block h-[82px]" />
 
       {/* ─── MOBILE ─── */}
       <div className="lg:hidden">
         {/* Mobile top bar */}
-        <div className="fixed top-0 left-0 right-0 z-40 bg-brand flex items-center justify-between px-4 h-12">
+        <div className="fixed top-0 left-0 right-0 z-40 bg-[#0f1e2e] flex items-center justify-between px-4 h-12">
           <Link href="/dashboard" className="flex items-center gap-2">
             <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
-              <rect x="4" y="20" width="8" height="10" rx="1" fill="#C4972A"/>
-              <rect x="13" y="12" width="8" height="18" rx="1" fill="#C4972A" opacity=".85"/>
-              <rect x="22" y="4" width="8" height="26" rx="1" fill="#C4972A" opacity=".65"/>
+              <rect x="4" y="20" width="8" height="10" rx="1" fill="#c8960c"/>
+              <rect x="13" y="12" width="8" height="18" rx="1" fill="#c8960c" opacity=".85"/>
+              <rect x="22" y="4" width="8" height="26" rx="1" fill="#c8960c" opacity=".65"/>
             </svg>
             <span className="font-display font-black text-white text-sm tracking-wide">SOFTMONTE</span>
           </Link>
@@ -298,8 +346,7 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
               <NotificationBell />
             </div>
             <button
-              onClick={handleLogout}
-              title="Sair"
+              onClick={() => setAvatarOpen(!avatarOpen)}
               className="w-[30px] h-[30px] rounded-full bg-[#c8960c] flex items-center justify-center text-white text-[11px] font-bold"
             >
               {initials}
@@ -308,28 +355,60 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
         </div>
         <div className="h-12" />
 
+        {/* Mobile avatar dropdown */}
+        {avatarOpen && (
+          <>
+            <div className="fixed inset-0 z-30" onClick={() => setAvatarOpen(false)} />
+            <div className="fixed top-12 right-2 z-40 w-56 bg-white rounded-lg shadow-xl border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100">
+                <p className="text-sm font-semibold text-gray-900 truncate">{profile?.nome ?? 'Usuário'}</p>
+                <p className="text-xs text-gray-400 truncate">{(profile as any)?.email ?? ''}</p>
+              </div>
+              <div className="py-1">
+                <Link href="/manual" onClick={() => setAvatarOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                  <span className="text-gray-400">{ic.manual}</span> Manual
+                </Link>
+                <Link href="/configuracoes" onClick={() => setAvatarOpen(false)}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                  <span className="text-gray-400">{ic.config}</span> Configurações
+                </Link>
+                {isAdmin && (
+                  <Link href="/admin/usuarios" onClick={() => setAvatarOpen(false)}
+                    className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
+                    <span className="text-gray-400">{ic.users}</span> Gerenciar usuários
+                  </Link>
+                )}
+              </div>
+              <div className="border-t border-gray-100 py-1">
+                <button onClick={handleLogout}
+                  className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 w-full text-left">
+                  <span className="text-red-400">{ic.logout}</span> Sair
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+
         {/* Mobile drawer */}
         {mobileOpen && (
           <>
             <div className="fixed inset-0 z-30 bg-black/50" onClick={() => setMobileOpen(false)} />
-            <aside className="fixed top-12 left-0 bottom-0 z-40 w-64 bg-brand text-white flex flex-col shadow-2xl overflow-y-auto">
+            <aside className="fixed top-12 left-0 bottom-0 z-40 w-64 bg-[#0f1e2e] text-white flex flex-col shadow-2xl overflow-y-auto">
               <nav className="flex-1 px-2 py-2 overflow-y-auto scrollbar-none">
                 {NAV_GROUPS.map(g => (
                   <div key={g.label} className="mb-1">
                     <div className="text-[9px] font-black text-blue-400/60 uppercase tracking-widest px-3 pt-2 pb-0.5">{g.label}</div>
-                    {g.links.map(link => {
+                    {g.links.filter(l => !l.disabled).map(link => {
                       const active = pathname === link.href || pathname.startsWith(link.href + '/')
                       return (
-                        <Link
-                          key={link.href}
-                          href={link.href}
+                        <Link key={link.href} href={link.href}
                           className={`flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-sm transition-all duration-150 mb-0.5 ${
                             active
-                              ? 'bg-brand-gold/20 text-brand-gold font-semibold'
+                              ? 'bg-[#c8960c]/20 text-[#c8960c] font-semibold'
                               : 'text-blue-200 hover:bg-white/10 hover:text-white'
-                          }`}
-                        >
-                          <span className={`flex-shrink-0 ${active ? 'text-brand-gold' : 'text-blue-300'}`}>{link.icon}</span>
+                          }`}>
+                          <span className={`flex-shrink-0 ${active ? 'text-[#c8960c]' : 'text-blue-300'}`}>{link.icon}</span>
                           <span className="leading-none">{link.label}</span>
                         </Link>
                       )
@@ -362,7 +441,7 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
             }
             return (
               <Link key={tab.href} href={tab.href}
-                className={`flex flex-col items-center gap-0.5 px-2 py-1 transition-colors ${isActive ? 'text-brand' : 'text-gray-400'}`}>
+                className={`flex flex-col items-center gap-0.5 px-2 py-1 transition-colors ${isActive ? 'text-[#0f1e2e]' : 'text-gray-400'}`}>
                 <span className="w-5 h-5">{tab.icon}</span>
                 <span className="text-[10px] font-medium">{tab.label}</span>
               </Link>
