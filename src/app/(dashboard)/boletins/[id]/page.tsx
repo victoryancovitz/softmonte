@@ -167,9 +167,27 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     setExporting(false)
   }
 
-  function handleAbrirMailto() {
+  async function handleAbrirMailto() {
     const emails = envioEmails.split(',').map(e => e.trim()).filter(Boolean)
     if (emails.length === 0) return
+
+    // 1. Baixar o anexo Excel (formato Tecnomonte)
+    try {
+      const response = await fetch(`/api/boletins/${params.id}/excel`)
+      if (response.ok) {
+        const blob = await response.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = `BM${String(bm.numero).padStart(2,'0')}_${bm.obras.nome.replace(/\s/g,'_')}.xlsx`
+        a.click()
+        setTimeout(() => URL.revokeObjectURL(url), 1000)
+        toast.success('Planilha baixada — anexe ao email antes de enviar')
+      }
+    } catch (e) {
+      console.error('Erro ao gerar Excel:', e)
+      toast.error('Erro ao gerar planilha — abrindo email mesmo assim')
+    }
 
     const toEmail = emails[0]
     const ccEmails = emails.slice(1)
@@ -194,6 +212,8 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       `período de ${periodo}.\n\n` +
       `Total de HH: ${totalHH}h\n` +
       (envioObs ? `Observação: ${envioObs}\n\n` : '\n') +
+      `*** Importante: anexe o arquivo BM${String(bm.numero).padStart(2,'0')}_${bm.obras.nome.replace(/\s/g,'_')}.xlsx ` +
+      `que foi baixado automaticamente para sua pasta de Downloads. ***\n\n` +
       `Ficamos à disposição para quaisquer esclarecimentos.\n\n` +
       `Atenciosamente,\n` +
       `Tecnomonte Montagens Industriais`
