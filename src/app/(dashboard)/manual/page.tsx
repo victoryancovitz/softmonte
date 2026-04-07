@@ -5,8 +5,9 @@ import {
   Search, ChevronDown, ChevronRight, BookOpen, Building2, Users, Clock,
   FileText, DollarSign, Package, ClipboardList, Shield, UserPlus, UserMinus,
   Truck, ShoppingCart, BarChart3, TrendingUp, Settings, MessageSquare,
-  Calendar, AlertTriangle, CheckSquare, Star, Upload, Lock, Wallet,
+  Calendar, AlertTriangle, Star, Upload, Wallet,
   Database, History, PieChart, Building, Briefcase, FolderCog, ListChecks,
+  HardHat,
 } from 'lucide-react'
 
 type Secao = {
