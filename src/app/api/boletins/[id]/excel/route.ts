@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import ExcelJS from 'exceljs'
+import { readFileSync } from 'fs'
+import { join } from 'path'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -126,55 +128,66 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   ]
 
   // ══════════════════════════════════════════
-  // CABEÇALHO — logo em células + barras
+  // CABEÇALHO — logo (imagem) sobre fundo navy
   // ══════════════════════════════════════════
 
-  // Row 1-2: barra navy grande com logo + título
-  ws.getRow(1).height = 22
-  ws.getRow(2).height = 34
+  // Row 1-3: barra navy grande para o logo
+  ws.getRow(1).height = 18
+  ws.getRow(2).height = 18
+  ws.getRow(3).height = 18
 
-  // Logo block em B1:C2 — monograma "TM" em ouro sobre navy
-  ws.mergeCells('B1:C2')
-  const logo = ws.getCell('B1')
-  logo.value = 'TM'
-  logo.font = { name: 'Arial Black', size: 28, bold: true, color: { argb: GOLD } }
-  logo.alignment = { horizontal: 'center', vertical: 'middle' }
-  logo.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
-  logo.border = {
-    top: { style: 'medium', color: { argb: GOLD } },
-    left: { style: 'medium', color: { argb: GOLD } },
-    bottom: { style: 'medium', color: { argb: GOLD } },
-    right: { style: 'medium', color: { argb: GOLD } },
+  // Preenche o fundo da faixa superior em navy
+  for (let r = 1; r <= 3; r++) {
+    for (let c = 2; c <= 13; c++) {
+      ws.getCell(r, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
+    }
   }
 
-  // Título principal "TECNOMONTE" (D1:M1)
-  ws.mergeCells('D1:M1')
-  const t1 = ws.getCell('D1')
-  t1.value = 'TECNOMONTE'
-  t1.font = { name: 'Arial Black', size: 18, bold: true, color: { argb: WHITE } }
-  t1.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }
-  t1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
+  // Embute o logo Tecnomonte (versão dark — fundo navy, coerente com o header)
+  try {
+    const logoPath = join(process.cwd(), 'public', 'logos', 'tecnomonte-dark.jpg')
+    const logoBuf = readFileSync(logoPath)
+    const logoId = wb.addImage({ buffer: logoBuf as any, extension: 'jpeg' })
+    // Posiciona o logo nas colunas B..F, rows 1..3 (cobre a faixa navy à esquerda)
+    ws.addImage(logoId, {
+      tl: { col: 1.2, row: 0.3 } as any,   // top-left (col índice zero-based)
+      ext: { width: 230, height: 72 },
+      editAs: 'oneCell',
+    })
+  } catch (e) {
+    // Fallback: texto se o logo não carregar
+    ws.mergeCells('B1:F3')
+    const fallback = ws.getCell('B1')
+    fallback.value = 'TECNOMONTE'
+    fallback.font = { name: 'Arial Black', size: 18, bold: true, color: { argb: WHITE } }
+    fallback.alignment = { horizontal: 'center', vertical: 'middle' }
+  }
 
-  // Subtítulo (D2:M2)
-  ws.mergeCells('D2:M2')
-  const t2 = ws.getCell('D2')
-  t2.value = 'MONTAGEM E FABRICAÇÃO DE TANQUES INDUSTRIAIS EIRELI'
-  t2.font = { size: 9, color: { argb: GOLD_LIGHT }, italic: true }
-  t2.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }
-  t2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
+  // Lado direito: razão social + boletim ID
+  ws.mergeCells('G1:M2')
+  const sub = ws.getCell('G1')
+  sub.value = 'FABRICAÇÃO, MONTAGEM E MANUTENÇÃO INDUSTRIAL'
+  sub.font = { size: 10, bold: true, color: { argb: GOLD_LIGHT }, italic: true }
+  sub.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 }
 
-  // Row 3: barra ouro fina decorativa
-  ws.getRow(3).height = 4
+  ws.mergeCells('G3:M3')
+  const bmLabel = ws.getCell('G3')
+  bmLabel.value = `BOLETIM DE MEDIÇÃO Nº ${String(bm.numero).padStart(2,'0')}`
+  bmLabel.font = { size: 11, bold: true, color: { argb: WHITE } }
+  bmLabel.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 }
+
+  // Row 4: barra ouro fina decorativa
+  ws.getRow(4).height = 4
   for (let c = 2; c <= 13; c++) {
-    ws.getCell(3, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GOLD } }
+    ws.getCell(4, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GOLD } }
   }
 
-  // Row 4-5: bloco de título "RESUMO DE HORAS" + info do BM
-  ws.getRow(4).height = 26
-  ws.getRow(5).height = 22
+  // Row 5-6: bloco de título "RESUMO DE HORAS" + info do BM
+  ws.getRow(5).height = 26
+  ws.getRow(6).height = 22
 
-  ws.mergeCells('B4:E5')
-  const titBlock = ws.getCell('B4')
+  ws.mergeCells('B5:E6')
+  const titBlock = ws.getCell('B5')
   titBlock.value = `RESUMO DE HORAS\nBM ${String(bm.numero).padStart(2,'0')}`
   titBlock.font = { name: 'Arial', size: 13, bold: true, color: { argb: NAVY } }
   titBlock.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
@@ -186,52 +199,49 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     right: { style: 'thin', color: { argb: GOLD } },
   }
 
-  // Info do BM (F4:M5) em 2 linhas
-  // Linha 4: Cliente | Local | Período
+  // Info do BM (F5:M6) em 2 linhas
+  // Linha 5: Cliente | Local
   const labelStyle = { size: 8, bold: true, color: { argb: NAVY } } as const
   const valStyle = { size: 10, bold: true, color: { argb: 'FF333333' } } as const
 
-  ws.getCell('F4').value = 'CLIENTE'
-  ws.getCell('F4').font = labelStyle
-  ws.getCell('F4').alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 }
-  ws.mergeCells('G4:I4')
-  ws.getCell('G4').value = (bm.obras.cliente ?? '').toUpperCase()
-  ws.getCell('G4').font = valStyle
-  ws.getCell('G4').alignment = { horizontal: 'left', vertical: 'bottom' }
-
-  ws.getCell('J4').value = 'LOCAL'
-  ws.getCell('J4').font = labelStyle
-  ws.getCell('J4').alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 }
-  ws.mergeCells('K4:M4')
-  ws.getCell('K4').value = (bm.obras.local ?? '').toUpperCase()
-  ws.getCell('K4').font = valStyle
-  ws.getCell('K4').alignment = { horizontal: 'left', vertical: 'bottom' }
-
-  ws.getCell('F5').value = 'PERÍODO'
+  ws.getCell('F5').value = 'CLIENTE'
   ws.getCell('F5').font = labelStyle
-  ws.getCell('F5').alignment = { horizontal: 'left', vertical: 'top', indent: 1 }
+  ws.getCell('F5').alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 }
   ws.mergeCells('G5:I5')
-  const diasTotal = Math.ceil((new Date(bm.data_fim).getTime() - new Date(bm.data_inicio).getTime()) / 86400000) + 1
-  ws.getCell('G5').value = `${new Date(bm.data_inicio + 'T12:00').toLocaleDateString('pt-BR')} a ${new Date(bm.data_fim + 'T12:00').toLocaleDateString('pt-BR')}  (${diasTotal} dias)`
-  ws.getCell('G5').font = { size: 9, color: { argb: 'FF555555' } }
-  ws.getCell('G5').alignment = { horizontal: 'left', vertical: 'top' }
+  ws.getCell('G5').value = (bm.obras.cliente ?? '').toUpperCase()
+  ws.getCell('G5').font = valStyle
+  ws.getCell('G5').alignment = { horizontal: 'left', vertical: 'bottom' }
 
-  ws.getCell('J5').value = 'HORÁRIO'
+  ws.getCell('J5').value = 'LOCAL'
   ws.getCell('J5').font = labelStyle
-  ws.getCell('J5').alignment = { horizontal: 'left', vertical: 'top', indent: 1 }
+  ws.getCell('J5').alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 }
   ws.mergeCells('K5:M5')
-  ws.getCell('K5').value = '07:00 às 17:00'
-  ws.getCell('K5').font = { size: 9, color: { argb: 'FF555555' } }
-  ws.getCell('K5').alignment = { horizontal: 'left', vertical: 'top' }
+  ws.getCell('K5').value = (bm.obras.local ?? '').toUpperCase()
+  ws.getCell('K5').font = valStyle
+  ws.getCell('K5').alignment = { horizontal: 'left', vertical: 'bottom' }
 
-  // Row 6: outra barra fina ouro
-  ws.getRow(6).height = 3
+  ws.getCell('F6').value = 'PERÍODO'
+  ws.getCell('F6').font = labelStyle
+  ws.getCell('F6').alignment = { horizontal: 'left', vertical: 'top', indent: 1 }
+  ws.mergeCells('G6:I6')
+  const diasTotal = Math.ceil((new Date(bm.data_fim).getTime() - new Date(bm.data_inicio).getTime()) / 86400000) + 1
+  ws.getCell('G6').value = `${new Date(bm.data_inicio + 'T12:00').toLocaleDateString('pt-BR')} a ${new Date(bm.data_fim + 'T12:00').toLocaleDateString('pt-BR')}  (${diasTotal} dias)`
+  ws.getCell('G6').font = { size: 9, color: { argb: 'FF555555' } }
+  ws.getCell('G6').alignment = { horizontal: 'left', vertical: 'top' }
+
+  ws.getCell('J6').value = 'HORÁRIO'
+  ws.getCell('J6').font = labelStyle
+  ws.getCell('J6').alignment = { horizontal: 'left', vertical: 'top', indent: 1 }
+  ws.mergeCells('K6:M6')
+  ws.getCell('K6').value = '07:00 às 17:00'
+  ws.getCell('K6').font = { size: 9, color: { argb: 'FF555555' } }
+  ws.getCell('K6').alignment = { horizontal: 'left', vertical: 'top' }
+
+  // Row 7: outra barra fina ouro
+  ws.getRow(7).height = 3
   for (let c = 2; c <= 13; c++) {
-    ws.getCell(6, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GOLD } }
+    ws.getCell(7, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GOLD } }
   }
-
-  // Row 7: espaçamento
-  ws.getRow(7).height = 4
 
   // Start dates (needed below for other sheets)
   const start = new Date(bm.data_inicio + 'T12:00')
@@ -241,9 +251,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   // TABELA — formato preview (12 colunas)
   // ══════════════════════════════════════════
 
-  // Header rows 8-9 (2 linhas de cabeçalho agrupado)
-  const HEADER_TOP = 8
-  const HEADER_BOT = 9
+  // Header rows 9-10 (2 linhas de cabeçalho agrupado)
+  const HEADER_TOP = 9
+  const HEADER_BOT = 10
+  ws.getRow(8).height = 4  // pequeno respiro
   ws.getRow(HEADER_TOP).height = 22
   ws.getRow(HEADER_BOT).height = 22
 
