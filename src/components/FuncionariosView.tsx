@@ -36,6 +36,7 @@ export default function FuncionariosView({
 
   // Initial state from URL
   const [view, setView] = useState<'cards' | 'table'>('cards')
+  const [searchInput, setSearchInput] = useState(sp.get('q') ?? '')
   const [q, setQ] = useState(sp.get('q') ?? '')
   const [status, setStatus] = useState(sp.get('status') ?? '')
   const [cargo, setCargo] = useState(sp.get('cargo') ?? '')
@@ -43,6 +44,31 @@ export default function FuncionariosView({
   const [admAte, setAdmAte] = useState(sp.get('adm_ate') ?? '')
   const [sortField, setSortField] = useState<string | null>(sp.get('sort') ?? 'nome')
   const [sortDir, setSortDir] = useState<SortDir>((sp.get('dir') as SortDir) ?? 'asc')
+
+  // Restore from localStorage
+  useEffect(() => {
+    if (sp.toString()) return
+    if (typeof window === 'undefined') return
+    const saved = localStorage.getItem('funcionarios_filters')
+    if (saved) {
+      try {
+        const o = JSON.parse(saved)
+        if (o.q) { setQ(o.q); setSearchInput(o.q) }
+        if (o.status) setStatus(o.status)
+        if (o.cargo) setCargo(o.cargo)
+        if (o.admDe) setAdmDe(o.admDe)
+        if (o.admAte) setAdmAte(o.admAte)
+        if (o.sortField) setSortField(o.sortField)
+        if (o.sortDir) setSortDir(o.sortDir)
+      } catch {}
+    }
+  }, [])
+
+  // Debounce search
+  useEffect(() => {
+    const t = setTimeout(() => setQ(searchInput), 300)
+    return () => clearTimeout(t)
+  }, [searchInput])
 
   // Sync to URL
   useEffect(() => {
@@ -56,6 +82,9 @@ export default function FuncionariosView({
     if (sortDir && sortDir !== 'asc') params.set('dir', sortDir)
     const qs = params.toString()
     router.replace(qs ? `/funcionarios?${qs}` : '/funcionarios', { scroll: false })
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('funcionarios_filters', JSON.stringify({ q, status, cargo, admDe, admAte, sortField, sortDir }))
+    }
   }, [q, status, cargo, admDe, admAte, sortField, sortDir])
 
   function toggleSort(field: string) {
@@ -75,7 +104,10 @@ export default function FuncionariosView({
       const ql = q.toLowerCase()
       result = result.filter(f =>
         f.nome?.toLowerCase().includes(ql) ||
+        f.nome_guerra?.toLowerCase().includes(ql) ||
+        f.cpf?.replace(/\D/g, '').includes(ql.replace(/\D/g, '')) ||
         f.matricula?.toLowerCase().includes(ql) ||
+        f.id_ponto?.toLowerCase().includes(ql) ||
         f.cargo?.toLowerCase().includes(ql)
       )
     }
@@ -97,12 +129,17 @@ export default function FuncionariosView({
       {/* Filter bar */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 mb-4 space-y-3">
         <div className="flex flex-wrap gap-2 items-center">
-          <input
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            placeholder="Buscar por nome, ID Ponto ou cargo..."
-            className="flex-1 min-w-[200px] px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-          />
+          <div className="relative flex-1 min-w-[200px]">
+            <input
+              value={searchInput}
+              onChange={e => setSearchInput(e.target.value)}
+              placeholder="Buscar por nome, CPF, ID Ponto ou cargo..."
+              className="w-full px-3 py-2 pr-7 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+            {searchInput && (
+              <button onClick={() => setSearchInput('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">✕</button>
+            )}
+          </div>
           <select value={status} onChange={e => setStatus(e.target.value)}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
             <option value="">Todos os status</option>
