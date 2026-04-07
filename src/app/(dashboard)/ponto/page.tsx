@@ -32,6 +32,7 @@ export default function PontoPage() {
   const [grid, setGrid] = useState<Record<string, Record<number, CellData>>>({})
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<{ funcId: string; day: number } | null>(null)
+  const [incluirDesligados, setIncluirDesligados] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -51,14 +52,45 @@ export default function PontoPage() {
 
     const { data: alocacoes } = await supabase
       .from('alocacoes')
-      .select('funcionarios(id,nome,cargo,matricula,id_ponto)')
+      .select('funcionarios(id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao)')
       .eq('obra_id', obraId)
       .eq('ativo', true)
 
-    const funcs = (alocacoes ?? [])
+    const funcs: any[] = (alocacoes ?? [])
       .map((a: any) => a.funcionarios)
       .filter(Boolean)
-      .sort((a: any, b: any) => a.nome.localeCompare(b.nome))
+
+    // If toggle is on, also include soft-deleted funcionarios admitted before the visible period end
+    if (incluirDesligados) {
+      const { data: deleted } = await supabase
+        .from('funcionarios')
+        .select('id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao')
+        .not('deleted_at', 'is', null)
+        .lte('admissao', dateEnd)
+
+      const ids = new Set(funcs.map(f => f.id))
+      for (const d of deleted ?? []) {
+        if (!ids.has(d.id)) {
+          // Only show if their admissão was before/within the period (i.e. they could have worked)
+          funcs.push(d)
+          ids.add(d.id)
+        }
+      }
+
+      // Also include any funcionario (deleted or not) that has efetivo_diario records in this obra
+      const { data: comPonto } = await supabase
+        .from('efetivo_diario')
+        .select('funcionario_id, funcionarios(id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao)')
+        .eq('obra_id', obraId)
+      for (const r of (comPonto ?? []) as any[]) {
+        if (r.funcionarios && !ids.has(r.funcionarios.id)) {
+          funcs.push(r.funcionarios)
+          ids.add(r.funcionarios.id)
+        }
+      }
+    }
+
+    funcs.sort((a: any, b: any) => a.nome.localeCompare(b.nome))
     setFuncionarios(funcs)
 
     if (funcs.length === 0) { setGrid({}); setLoading(false); return }
@@ -100,7 +132,7 @@ export default function PontoPage() {
     })
     setGrid(g)
     setLoading(false)
-  }, [obraId, mes, ano])
+  }, [obraId, mes, ano, incluirDesligados])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -185,6 +217,11 @@ export default function PontoPage() {
             {[ano - 1, ano, ano + 1].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
+        <label className="flex items-center gap-2 cursor-pointer pb-2.5">
+          <input type="checkbox" checked={incluirDesligados} onChange={e => setIncluirDesligados(e.target.checked)}
+            className="w-4 h-4 rounded text-brand focus:ring-brand" />
+          <span className="text-xs font-medium text-gray-700">Incluir desligados</span>
+        </label>
       </div>
 
       {!obraId && (
@@ -216,29 +253,48 @@ export default function PontoPage() {
                 </tr>
               </thead>
               <tbody>
-                {funcionarios.map((func: any) => (
-                  <tr key={func.id} className="border-b border-gray-50 hover:bg-gray-50/30">
-                    <td className="px-3 py-1.5 font-medium text-gray-800 sticky left-0 bg-white z-10 border-r border-gray-100">
-                      <div className="truncate max-w-[170px]" title={func.nome}>{func.nome_guerra ?? func.nome}</div>
-                      <div className="text-[10px] text-gray-400">{func.cargo}{func.id_ponto ? ` · ID ${func.id_ponto}` : ''}</div>
-                    </td>
-                    {days.map(d => {
-                      const cell = getCellInfo(func.id, d)
-                      const isWk = isWeekend(ano, mes, d)
-                      return (
-                        <td key={d} className="p-0">
-                          <button
-                            disabled={isWk}
-                            onClick={() => setEditing({ funcId: func.id, day: d })}
-                            title={cell.title}
-                            className={`w-full px-1 py-1.5 text-center font-semibold cursor-pointer transition-colors ${cell.cls} ${isWk ? 'cursor-default' : ''}`}>
-                            {cell.label}
-                          </button>
-                        </td>
-                      )
-                    })}
-                  </tr>
-                ))}
+                {funcionarios.map((func: any) => {
+                  const desligado = func.deleted_at != null
+                  const demissaoDate = desligado ? new Date(func.deleted_at).toISOString().split('T')[0] : null
+                  const admissaoDate = func.admissao
+                  return (
+                    <tr key={func.id} className={`border-b border-gray-50 hover:bg-gray-50/30 ${desligado ? 'bg-gray-50/40' : ''}`}>
+                      <td className="px-3 py-1.5 font-medium text-gray-800 sticky left-0 z-10 border-r border-gray-100 ${desligado ? 'bg-gray-50/60' : 'bg-white'}">
+                        <div className="flex items-center gap-1.5">
+                          <div className="truncate max-w-[160px]" title={func.nome}>{func.nome_guerra ?? func.nome}</div>
+                          {desligado && <span className="text-[8px] bg-red-100 text-red-700 px-1 py-0.5 rounded font-bold">DESL.</span>}
+                        </div>
+                        <div className="text-[10px] text-gray-400">
+                          {func.cargo}{func.id_ponto ? ` · ID ${func.id_ponto}` : ''}
+                          {desligado && demissaoDate && <span className="ml-1 text-red-500">· até {new Date(demissaoDate+'T12:00').toLocaleDateString('pt-BR')}</span>}
+                        </div>
+                      </td>
+                      {days.map(d => {
+                        const cell = getCellInfo(func.id, d)
+                        const isWk = isWeekend(ano, mes, d)
+                        const dateStr = `${ano}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+                        const beforeAdm = admissaoDate && dateStr < admissaoDate
+                        const afterDem = demissaoDate && dateStr > demissaoDate
+                        const naoElegivel = beforeAdm || afterDem
+                        const cellCls = naoElegivel ? 'bg-gray-50 text-gray-200 cursor-not-allowed' : cell.cls
+                        const tooltip = naoElegivel
+                          ? (beforeAdm ? `Antes da admissão (${new Date(admissaoDate+'T12:00').toLocaleDateString('pt-BR')})` : `Após o desligamento (${new Date(demissaoDate!+'T12:00').toLocaleDateString('pt-BR')})`)
+                          : cell.title
+                        return (
+                          <td key={d} className="p-0">
+                            <button
+                              disabled={isWk || naoElegivel}
+                              onClick={() => setEditing({ funcId: func.id, day: d })}
+                              title={tooltip}
+                              className={`w-full px-1 py-1.5 text-center font-semibold transition-colors ${cellCls} ${(isWk || naoElegivel) ? 'cursor-default' : 'cursor-pointer'}`}>
+                              {naoElegivel ? '·' : cell.label}
+                            </button>
+                          </td>
+                        )
+                      })}
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
           </div>
