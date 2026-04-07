@@ -49,8 +49,10 @@ const NAV_GROUPS: NavGroupDef[] = [
     label: 'Administrativo',
     links: [
       { href: '/funcionarios', label: 'Funcionários', icon: ic.func },
+      { href: '/alocacao', label: 'Alocação de Equipes', icon: ic.func },
       { href: '/ponto', label: 'Ponto', icon: ic.faltas },
       { href: '/faltas', label: 'Faltas', icon: ic.faltas },
+      { href: '/hh', label: 'Lançamento de HH', icon: ic.report },
       { href: '/rh/banco-horas', label: 'Banco de Horas', icon: ic.docs },
       { href: '/rh/ferias', label: 'Férias', icon: ic.docs },
       { href: '/rh/treinamentos', label: 'Treinamentos NR', icon: ic.docs },
@@ -73,6 +75,7 @@ const NAV_GROUPS: NavGroupDef[] = [
     label: 'Financeiro',
     links: [
       { href: '/financeiro', label: 'Lançamentos', icon: ic.fin },
+      { href: '/financeiro/contas', label: 'Contas Correntes', icon: ic.fin },
       { href: '/relatorios', label: 'Relatórios', icon: ic.report },
       { href: '/relatorios/margem', label: 'Margem', icon: ic.fin },
       { href: '/forecast', label: 'Forecast', icon: ic.report },
@@ -81,8 +84,9 @@ const NAV_GROUPS: NavGroupDef[] = [
   {
     label: 'Cadastros',
     links: [
+      { href: '/cadastros', label: 'Visão Geral', icon: ic.cad },
       { href: '/cadastros/funcoes', label: 'Funções', icon: ic.cad },
-      { href: '/cadastros/categorias', label: 'Categorias', icon: ic.cad },
+      { href: '/cadastros/categorias', label: 'Categorias Financeiras', icon: ic.cad },
       { href: '/clientes', label: 'Clientes', icon: ic.client },
       { href: '/tipos-contrato', label: 'Tipos de Contrato', icon: ic.docs },
     ],
@@ -99,13 +103,13 @@ NAV_GROUPS.forEach(g => {
 PATH_MAP['/dashboard'] = { group: '', label: 'Dashboard' }
 PATH_MAP['/configuracoes'] = { group: '', label: 'Configurações' }
 PATH_MAP['/admin/usuarios'] = { group: '', label: 'Gerenciar Usuários' }
+PATH_MAP['/admin/usuarios/auditoria'] = { group: '', label: 'Auditoria' }
+PATH_MAP['/admin/usuarios/convidar'] = { group: '', label: 'Convidar Usuário' }
 PATH_MAP['/manual'] = { group: '', label: 'Manual' }
-PATH_MAP['/ponto'] = { group: 'Administrativo', label: 'Ponto' }
-PATH_MAP['/alocacao'] = { group: 'Administrativo', label: 'Alocação' }
-PATH_MAP['/efetivo'] = { group: 'Engenharia', label: 'Efetivo' }
-PATH_MAP['/hh'] = { group: 'Engenharia', label: 'Efetivo' }
-PATH_MAP['/rh/banco-horas'] = { group: 'Administrativo', label: 'Banco de Horas' }
-PATH_MAP['/rh/ferias'] = { group: 'Administrativo', label: 'Férias' }
+PATH_MAP['/importar'] = { group: '', label: 'Importar dados' }
+PATH_MAP['/assistente'] = { group: '', label: 'Assistente IA' }
+PATH_MAP['/audit'] = { group: '', label: 'Auditoria' }
+PATH_MAP['/hh'] = { group: 'Administrativo', label: 'Lançamento de HH' }
 
 function getActiveGroup(pathname: string): string | null {
   // Check PATH_MAP first for extra routes
@@ -290,13 +294,27 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
                     </Link>
                     <Link href="/configuracoes" onClick={() => setAvatarOpen(false)}
                       className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
-                      <span className="text-gray-400">{ic.config}</span> Configurações
+                      <span className="text-gray-400">{ic.config}</span> Empresa / Configurações
                     </Link>
                     {isAdmin && (
-                      <Link href="/admin/usuarios" onClick={() => setAvatarOpen(false)}
-                        className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
-                        <span className="text-gray-400">{ic.users}</span> Gerenciar usuários
-                      </Link>
+                      <>
+                        <Link href="/admin/usuarios" onClick={() => setAvatarOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
+                          <span className="text-gray-400">{ic.users}</span> Gerenciar usuários
+                        </Link>
+                        <Link href="/admin/usuarios/auditoria" onClick={() => setAvatarOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
+                          <span className="text-gray-400">{ic.docs}</span> Auditoria do sistema
+                        </Link>
+                        <Link href="/importar" onClick={() => setAvatarOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
+                          <span className="text-gray-400">{ic.docs}</span> Importar dados
+                        </Link>
+                        <Link href="/assistente" onClick={() => setAvatarOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
+                          <span className="text-gray-400">{ic.report}</span> Assistente IA
+                        </Link>
+                      </>
                     )}
                   </div>
                   <div className="border-t border-gray-100 py-1">
