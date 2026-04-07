@@ -35,6 +35,10 @@ interface CellState {
   arquivo_nome?: string | null
   observacao?: string | null
   horas_trabalhadas?: number | null
+  horas_normais?: number | null
+  horas_extras_50?: number | null
+  horas_extras_100?: number | null
+  horas_noturnas?: number | null
 }
 
 export default function PontoCellEditor({
@@ -61,10 +65,15 @@ export default function PontoCellEditor({
   )
   const [status, setStatus] = useState<StatusValue | null>(initial.status)
   const [observacao, setObservacao] = useState(initial.observacao ?? '')
-  const [horasTrabalhadas, setHorasTrabalhadas] = useState<string>(
-    initial.horas_trabalhadas != null ? String(initial.horas_trabalhadas) : ''
+  const [horasNormais, setHorasNormais] = useState<string>(
+    initial.horas_normais != null ? String(initial.horas_normais) :
+    (initial.horas_trabalhadas != null ? String(initial.horas_trabalhadas) : '')
   )
+  const [he50, setHe50] = useState<string>(initial.horas_extras_50 != null ? String(initial.horas_extras_50) : '')
+  const [he100, setHe100] = useState<string>(initial.horas_extras_100 != null ? String(initial.horas_extras_100) : '')
+  const [hNoturna, setHNoturna] = useState<string>(initial.horas_noturnas != null ? String(initial.horas_noturnas) : '')
   const [file, setFile] = useState<File | null>(null)
+  const totalHoras = (parseFloat(horasNormais) || 0) + (parseFloat(he50) || 0) + (parseFloat(he100) || 0)
   const [saving, setSaving] = useState(false)
   const supabase = createClient()
   const toast = useToast()
@@ -96,18 +105,27 @@ export default function PontoCellEditor({
 
     // 2) Insert new based on selected status
     if (status === 'presente') {
+      if (totalHoras > 24) {
+        toast.error('Total de horas não pode passar de 24h.')
+        setSaving(false)
+        return
+      }
       // determine tipo_dia by day of week
       const dt = new Date(data + 'T12:00')
       const dow = dt.getDay()
       const tipo_dia = dow === 6 ? 'sabado' : (dow === 0 ? 'domingo_feriado' : 'util')
-      const horas = parseFloat(horasTrabalhadas)
+      const hn = parseFloat(horasNormais); const h50 = parseFloat(he50); const h100 = parseFloat(he100); const hnot = parseFloat(hNoturna)
       const { error } = await supabase.from('efetivo_diario').insert({
         funcionario_id: funcionario.id,
         obra_id: obraId,
         data,
         tipo_dia,
         observacao: observacao || null,
-        horas_trabalhadas: isFinite(horas) && horas > 0 ? horas : null,
+        horas_normais:    isFinite(hn)   && hn   > 0 ? hn   : null,
+        horas_extras_50:  isFinite(h50)  && h50  > 0 ? h50  : 0,
+        horas_extras_100: isFinite(h100) && h100 > 0 ? h100 : 0,
+        horas_noturnas:   isFinite(hnot) && hnot > 0 ? hnot : 0,
+        horas_trabalhadas: totalHoras > 0 ? totalHoras : null,
         registrado_por: user?.id ?? null,
       })
       if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
@@ -193,20 +211,42 @@ export default function PontoCellEditor({
         </div>
 
         {status === 'presente' && (
-          <div className="mb-3">
-            <label className="block text-xs font-semibold text-gray-600 mb-1">
-              Horas trabalhadas <span className="text-gray-400 font-normal">(opcional — deixe em branco para usar a carga padrão do contrato)</span>
-            </label>
-            <input
-              type="number" step="0.5" min="0" max="24"
-              value={horasTrabalhadas}
-              onChange={e => setHorasTrabalhadas(e.target.value)}
-              placeholder="Ex: 9"
-              className="w-32 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-            />
-            <p className="text-[10px] text-gray-400 mt-1">
-              Para contratos cobrados por hora real. Contratos dia-pessoa usam a carga horária fixa do contrato.
-            </p>
+          <div className="mb-3 p-3 bg-gray-50 border border-gray-100 rounded-lg">
+            <label className="block text-xs font-semibold text-gray-700 mb-2">Horas do dia</label>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Normais</label>
+                <input type="number" step="0.5" min="0" max="24"
+                  value={horasNormais} onChange={e => setHorasNormais(e.target.value)}
+                  placeholder="9"
+                  className="w-full px-2 py-1.5 border border-gray-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-amber-600 mb-1">HE 50%/70% <span className="text-gray-400 font-normal">(dia útil)</span></label>
+                <input type="number" step="0.5" min="0" max="12"
+                  value={he50} onChange={e => setHe50(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-2 py-1.5 border border-amber-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-amber-400" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-red-600 mb-1">HE 100% <span className="text-gray-400 font-normal">(domingo/feriado)</span></label>
+                <input type="number" step="0.5" min="0" max="24"
+                  value={he100} onChange={e => setHe100(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-2 py-1.5 border border-red-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-400" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-violet-600 mb-1">Noturno <span className="text-gray-400 font-normal">(22h-5h)</span></label>
+                <input type="number" step="0.5" min="0" max="10"
+                  value={hNoturna} onChange={e => setHNoturna(e.target.value)}
+                  placeholder="0"
+                  className="w-full px-2 py-1.5 border border-violet-200 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-violet-400" />
+              </div>
+            </div>
+            <div className={`mt-2 text-[11px] font-semibold flex items-center justify-between ${totalHoras > 24 ? 'text-red-600' : 'text-gray-600'}`}>
+              <span>Total: {totalHoras.toFixed(1)}h {totalHoras > 24 && '— EXCEDE 24h'}</span>
+              <span className="text-gray-400 font-normal">Deixe vazio para usar carga padrão do contrato</span>
+            </div>
           </div>
         )}
 

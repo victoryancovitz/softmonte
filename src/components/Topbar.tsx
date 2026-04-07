@@ -56,6 +56,8 @@ const NAV_GROUPS: NavGroupDef[] = [
       { href: '/rh/treinamentos', label: 'Treinamentos NR', icon: ic.docs },
       { href: '/rh/admissoes', label: 'Admissões', icon: ic.func },
       { href: '/rh/desligamentos', label: 'Desligamentos', icon: ic.faltas },
+      { href: '/rh/folha', label: 'Folha de Pagamento', icon: ic.fin },
+      { href: '/rh/rescisoes', label: 'Rescisões', icon: ic.faltas },
       { href: '/documentos', label: 'Documentos', icon: ic.docs },
       { href: '/rastreio', label: 'Vencimentos', icon: ic.docs },
     ],
@@ -74,8 +76,12 @@ const NAV_GROUPS: NavGroupDef[] = [
     links: [
       { href: '/financeiro', label: 'Lançamentos', icon: ic.fin },
       { href: '/financeiro/contas', label: 'Contas Correntes', icon: ic.fin },
+      { href: '/financeiro/cashflow', label: 'Fluxo de Caixa 90d', icon: ic.report },
+      { href: '/financeiro/ofx', label: 'Conciliação OFX', icon: ic.fin },
       { href: '/relatorios', label: 'Relatórios', icon: ic.report },
-      { href: '/relatorios/margem', label: 'Margem', icon: ic.fin },
+      { href: '/relatorios/margem', label: 'Margem DRE', icon: ic.fin },
+      { href: '/relatorios/bm-comparativo', label: 'BM: Orçado × Real', icon: ic.report },
+      { href: '/relatorios/absenteismo', label: 'Absenteísmo', icon: ic.report },
       { href: '/forecast', label: 'Forecast', icon: ic.report },
     ],
   },
@@ -99,6 +105,8 @@ NAV_GROUPS.forEach(g => {
   })
 })
 PATH_MAP['/dashboard'] = { group: '', label: 'Dashboard' }
+PATH_MAP['/executivo'] = { group: '', label: 'Painel Executivo' }
+PATH_MAP['/portal'] = { group: '', label: 'Portal do Funcionário' }
 PATH_MAP['/configuracoes'] = { group: '', label: 'Configurações' }
 PATH_MAP['/admin/usuarios'] = { group: '', label: 'Gerenciar Usuários' }
 PATH_MAP['/admin/usuarios/auditoria'] = { group: '', label: 'Auditoria' }
