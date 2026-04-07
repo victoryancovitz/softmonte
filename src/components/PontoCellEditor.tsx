@@ -55,9 +55,10 @@ export default function PontoCellEditor({
   // Validação de período do vínculo
   const dataLimiteInicio = funcionario.admissao ?? null
   const dataLimiteFim = funcionario.deleted_at ? funcionario.deleted_at.split('T')[0] : null
-  const foraDoVinculo =
+  const foraDoVinculo: boolean = Boolean(
     (dataLimiteInicio && data < dataLimiteInicio) ||
     (dataLimiteFim && data > dataLimiteFim)
+  )
   const [status, setStatus] = useState<StatusValue | null>(initial.status)
   const [observacao, setObservacao] = useState(initial.observacao ?? '')
   const [horasTrabalhadas, setHorasTrabalhadas] = useState<string>(
