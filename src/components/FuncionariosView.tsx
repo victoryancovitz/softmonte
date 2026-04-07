@@ -201,8 +201,9 @@ export default function FuncionariosView({
                       {f.status === 'disponivel' ? 'Disponível' : f.status}
                     </span>
                   </div>
-                  <div className="font-semibold text-sm text-gray-900 group-hover:text-brand transition-colors">{f.nome}</div>
-                  <div className="text-xs text-gray-500 mt-0.5">{f.cargo} · ID {f.matricula}</div>
+                  <div className="font-semibold text-sm text-gray-900 group-hover:text-brand transition-colors">{f.nome_guerra ?? f.nome}</div>
+                  {f.nome_guerra && <div className="text-[10px] text-gray-400 truncate">{f.nome}</div>}
+                  <div className="text-xs text-gray-500 mt-0.5">{f.cargo}{f.id_ponto ? ` · ID ${f.id_ponto}` : f.matricula ? ` · Mat ${f.matricula}` : ''}</div>
                   {p1 && (
                     <div className="mt-3 pt-3 border-t border-gray-100">
                       <div className={`text-xs font-medium flex items-center gap-1 ${vencido ? 'text-red-600' : alerta ? 'text-amber-600' : 'text-gray-400'}`}>
@@ -228,7 +229,7 @@ export default function FuncionariosView({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <SortableHeader label="ID Ponto" field="matricula" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
+                  <SortableHeader label="ID Ponto" field="id_ponto" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Nome" field="nome" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Cargo" field="cargo" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Admissão" field="admissao" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
@@ -245,9 +246,12 @@ export default function FuncionariosView({
                   const alerta = dias !== null && dias <= 30 && dias >= 0
                   return (
                     <tr key={f.id} className="border-b border-gray-50 hover:bg-gray-50 group">
-                      <td className="px-4 py-3 text-gray-400 text-xs font-mono">{f.matricula}</td>
+                      <td className="px-4 py-3 text-gray-400 text-xs font-mono">{f.id_ponto ?? '—'}</td>
                       <td className="px-4 py-3 font-semibold">
-                        <Link href={`/funcionarios/${f.id}`} className="hover:text-brand transition-colors">{f.nome}</Link>
+                        <Link href={`/funcionarios/${f.id}`} className="hover:text-brand transition-colors">
+                          {f.nome_guerra ?? f.nome}
+                          {f.nome_guerra && <span className="ml-1 text-[10px] text-gray-400 font-normal">({f.nome})</span>}
+                        </Link>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{f.cargo}</td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{f.admissao ? new Date(f.admissao+'T12:00').toLocaleDateString('pt-BR') : '—'}</td>

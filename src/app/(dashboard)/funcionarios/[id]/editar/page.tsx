@@ -200,9 +200,9 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
                 <input type="text" value={form.agencia_conta ?? ''} onChange={e => set('agencia_conta', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>PIX</label>
                 <input type="text" value={form.pix ?? ''} onChange={e => set('pix', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Tamanho Bota</label>
+              <div><label className={lbl}>Tamanho Bota <span className="text-gray-400 font-normal">(Compras)</span></label>
                 <input type="text" value={form.tamanho_bota ?? ''} onChange={e => set('tamanho_bota', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Tamanho Uniforme</label>
+              <div><label className={lbl}>Tamanho Uniforme <span className="text-gray-400 font-normal">(Compras)</span></label>
                 <input type="text" value={form.tamanho_uniforme ?? ''} onChange={e => set('tamanho_uniforme', e.target.value)} className={inp}/></div>
             </div>
           </section>

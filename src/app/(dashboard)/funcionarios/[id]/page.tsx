@@ -271,10 +271,14 @@ export default async function FuncionarioPage({ params }: { params: { id: string
               </span>
             </div>
             <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
-              <span className="text-xs text-gray-500">Faltas no período</span>
-              <span className={`text-sm font-medium ${(faltasCount ?? 0) > 0 ? 'text-amber-700' : 'text-gray-400'}`}>
-                {faltasCount === 0 ? 'Nenhuma falta' : `${faltasCount} falta${(faltasCount ?? 0) > 1 ? 's' : ''}`}
-              </span>
+              <span className="text-xs text-gray-500">Faltas registradas</span>
+              {(faltasCount ?? 0) > 0 ? (
+                <Link href={`/faltas?funcionario=${f.id}`} className="text-sm font-medium text-amber-700 hover:underline">
+                  {faltasCount} falta{(faltasCount ?? 0) > 1 ? 's' : ''} registrada{(faltasCount ?? 0) > 1 ? 's' : ''} →
+                </Link>
+              ) : (
+                <span className="text-sm font-medium text-gray-400">Nenhuma falta registrada</span>
+              )}
             </div>
             {f.admissao && (
               <>
