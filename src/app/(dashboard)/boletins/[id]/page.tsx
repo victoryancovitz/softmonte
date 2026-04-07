@@ -359,22 +359,24 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
               {exporting ? 'Exportando...' : 'Exportar CSV'}
             </button>
             {bm.status === 'aberto' && (
-              <>
-                <button onClick={() => updateStatus('fechado')}
-                  className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark">
-                  Fechar BM
-                </button>
-                <ConfirmButton label="Excluir BM"
-                  confirmLabel="Esta ação não pode ser desfeita. Confirmar?"
-                  className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50"
-                  confirmClassName="text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700"
-                  onConfirm={async () => {
-                    await supabase.from('bm_itens').delete().eq('boletim_id', params.id)
-                    await supabase.from('boletins_medicao').delete().eq('id', params.id)
-                    router.push('/boletins')
-                  }} />
-              </>
+              <button onClick={() => updateStatus('fechado')}
+                className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark">
+                Fechar BM
+              </button>
             )}
+            <ConfirmButton label="Excluir BM"
+              confirmLabel="Esta ação não pode ser desfeita. Confirmar?"
+              className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50"
+              confirmClassName="text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700"
+              onConfirm={async () => {
+                const { data: { user } } = await supabase.auth.getUser()
+                await supabase.from('boletins_medicao')
+                  .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+                  .eq('id', params.id)
+                toast.success('BM excluído com sucesso')
+                router.push('/boletins')
+                router.refresh()
+              }} />
           </div>
         </div>
       </div>
