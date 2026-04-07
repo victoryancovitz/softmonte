@@ -7,16 +7,16 @@ import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
 
 interface PreviewRow {
-  funcionario_id: string
-  funcionario_nome: string
   funcao_nome: string
   carga_horaria_dia: number
-  // Dias por tipo de hora
+  efetivo: number              // qtd contratada (do contrato_composicao)
+  funcionarios_unicos: number  // pessoas distintas que trabalharam
+  // Dias-pessoa por tipo de hora
   dias_normais: number
   dias_he70: number
   dias_he100: number
-  // Datas presentes (para o calendário)
-  datas_presentes: string[]
+  // Lista de funcionários (para detalhamento)
+  funcionarios: Array<{ id: string; nome: string; dias_normais: number; dias_he70: number; dias_he100: number; datas: string[] }>
   // Valores R$/HH (editáveis)
   valor_hh_normal: number
   valor_hh_he70: number
@@ -132,49 +132,78 @@ export default function NovoBMPage() {
     const obra = obras.find(o => o.id === form.obra_id)
     const diaUnico = obra?.bm_dia_unico === true
 
-    // Group by funcionario only - consolidate all tipo_dia into a single row
-    const groups: Record<string, { func: any; datas: Set<string>; tipos: Record<string, Set<string>> }> = {}
+    // Step 1: aggregate by funcionario first (so we can list per function)
+    const perFunc: Record<string, { func: any; tipos: Record<string, Set<string>> }> = {}
     efetivo.forEach((e: any) => {
       const f = e.funcionarios
       if (!f) return
-      if (!groups[f.id]) {
-        groups[f.id] = { func: f, datas: new Set(), tipos: { util: new Set(), sabado: new Set(), domingo_feriado: new Set() } }
+      if (!perFunc[f.id]) {
+        perFunc[f.id] = { func: f, tipos: { util: new Set(), sabado: new Set(), domingo_feriado: new Set() } }
       }
-      groups[f.id].datas.add(e.data)
-      ;(groups[f.id].tipos[e.tipo_dia] ?? groups[f.id].tipos.util).add(e.data)
+      ;(perFunc[f.id].tipos[e.tipo_dia] ?? perFunc[f.id].tipos.util).add(e.data)
     })
 
-    const rows: PreviewRow[] = Object.values(groups).map(g => {
-      const cargo = g.func.cargo?.toUpperCase() ?? ''
-      const comp = compMap[cargo]
-      const cargaHoraDia = Number(comp?.carga_horaria_dia ?? 8)
+    // Step 2: group funcionarios by função (cargo)
+    const perFuncao: Record<string, {
+      cargo: string
+      funcs: Array<{ id: string; nome: string; dias_normais: number; dias_he70: number; dias_he100: number; datas: string[] }>
+    }> = {}
+
+    Object.values(perFunc).forEach(g => {
+      const cargo = g.func.cargo ?? 'OUTROS'
+      const cargoKey = cargo.toUpperCase()
 
       let dias_normais: number, dias_he70: number, dias_he100: number
+      let datas: string[]
+
+      const allArr = ([] as string[])
+        .concat(Array.from(g.tipos.util))
+        .concat(Array.from(g.tipos.sabado))
+        .concat(Array.from(g.tipos.domingo_feriado))
       if (diaUnico) {
-        dias_normais = g.datas.size
+        const all = new Set<string>(allArr)
+        dias_normais = all.size
         dias_he70 = 0
         dias_he100 = 0
+        datas = Array.from(all).sort()
       } else {
         dias_normais = g.tipos.util.size
         dias_he70 = g.tipos.sabado.size
         dias_he100 = g.tipos.domingo_feriado.size
+        datas = Array.from(new Set<string>(allArr)).sort()
       }
 
+      if (!perFuncao[cargoKey]) perFuncao[cargoKey] = { cargo, funcs: [] }
+      perFuncao[cargoKey].funcs.push({
+        id: g.func.id,
+        nome: g.func.nome_guerra ?? g.func.nome,
+        dias_normais, dias_he70, dias_he100, datas
+      })
+    })
+
+    // Step 3: build rows - one per função
+    const rows: PreviewRow[] = Object.entries(perFuncao).map(([cargoKey, group]) => {
+      const comp = compMap[cargoKey]
+      const cargaHoraDia = Number(comp?.carga_horaria_dia ?? 8)
+      const totalNormais = group.funcs.reduce((s, f) => s + f.dias_normais, 0)
+      const totalHe70 = group.funcs.reduce((s, f) => s + f.dias_he70, 0)
+      const totalHe100 = group.funcs.reduce((s, f) => s + f.dias_he100, 0)
+
       return {
-        funcionario_id: g.func.id,
-        funcionario_nome: g.func.nome_guerra ?? g.func.nome,
-        funcao_nome: g.func.cargo ?? 'OUTROS',
+        funcao_nome: group.cargo,
         carga_horaria_dia: cargaHoraDia,
-        dias_normais,
-        dias_he70,
-        dias_he100,
-        datas_presentes: Array.from(g.datas).sort(),
+        efetivo: Number(comp?.quantidade_contratada ?? group.funcs.length),
+        funcionarios_unicos: group.funcs.length,
+        dias_normais: totalNormais,
+        dias_he70: totalHe70,
+        dias_he100: totalHe100,
+        funcionarios: group.funcs.sort((a, b) => a.nome.localeCompare(b.nome)),
         valor_hh_normal: Number(comp?.custo_hora_contratado ?? 0),
         valor_hh_he70: Number(comp?.custo_hora_extra_70 ?? 0),
         valor_hh_he100: Number(comp?.custo_hora_extra_100 ?? 0),
         sem_contrato: !comp,
       }
-    }).sort((a, b) => a.funcao_nome.localeCompare(b.funcao_nome) || a.funcionario_nome.localeCompare(b.funcionario_nome))
+    }).sort((a, b) => a.funcao_nome.localeCompare(b.funcao_nome))
 
     setPreview(rows)
     setPreviewing(false)
@@ -225,30 +254,33 @@ export default function NovoBMPage() {
     if (bmErr || !bmData) { setError(bmErr?.message ?? 'Erro ao criar BM'); setSaving(false); return }
 
     // 2. Insert bm_itens — one row per (funcionario × tipo_hora) where dias > 0
+    //    The preview shows by função but we save per-person for traceability
     const itens: any[] = []
     let ordem = 0
     preview.forEach(r => {
-      const tipos: Array<{ tipo: 'normal'|'he70'|'he100'; dias: number; valor_hh: number }> = [
-        { tipo: 'normal', dias: r.dias_normais, valor_hh: r.valor_hh_normal },
-        { tipo: 'he70',   dias: r.dias_he70,    valor_hh: r.valor_hh_he70 },
-        { tipo: 'he100',  dias: r.dias_he100,   valor_hh: r.valor_hh_he100 },
-      ]
-      tipos.forEach(t => {
-        if (t.dias <= 0) return
-        const hh = t.dias * r.carga_horaria_dia
-        itens.push({
-          boletim_id: bmData.id,
-          funcionario_id: r.funcionario_id,
-          funcionario_nome: r.funcionario_nome,
-          funcao_nome: r.funcao_nome,
-          tipo_hora: t.tipo,
-          efetivo: 1,
-          dias: t.dias,
-          carga_horaria_dia: r.carga_horaria_dia,
-          hh_total: hh,
-          valor_hh: t.valor_hh,
-          valor_total: hh * t.valor_hh,
-          ordem: ordem++,
+      r.funcionarios.forEach(f => {
+        const tipos: Array<{ tipo: 'normal'|'he70'|'he100'; dias: number; valor_hh: number }> = [
+          { tipo: 'normal', dias: f.dias_normais, valor_hh: r.valor_hh_normal },
+          { tipo: 'he70',   dias: f.dias_he70,    valor_hh: r.valor_hh_he70 },
+          { tipo: 'he100',  dias: f.dias_he100,   valor_hh: r.valor_hh_he100 },
+        ]
+        tipos.forEach(t => {
+          if (t.dias <= 0) return
+          const hh = t.dias * r.carga_horaria_dia
+          itens.push({
+            boletim_id: bmData.id,
+            funcionario_id: f.id,
+            funcionario_nome: f.nome,
+            funcao_nome: r.funcao_nome,
+            tipo_hora: t.tipo,
+            efetivo: 1,
+            dias: t.dias,
+            carga_horaria_dia: r.carga_horaria_dia,
+            hh_total: hh,
+            valor_hh: t.valor_hh,
+            valor_total: hh * t.valor_hh,
+            ordem: ordem++,
+          })
         })
       })
     })
@@ -261,8 +293,9 @@ export default function NovoBMPage() {
     // 3. Update valor no BM
     await supabase.from('boletins_medicao').update({ valor_aprovado: null }).eq('id', bmData.id)
 
+    const totalFuncs = new Set(preview.flatMap(r => r.funcionarios.map(f => f.id))).size
     toast.success(
-      `BM criado com sucesso com ${new Set(preview.map(r => r.funcionario_id)).size} funcionários e ${totalHH}h registradas`
+      `BM criado com sucesso com ${totalFuncs} funcionários e ${totalHH}h registradas`
     )
     router.push(`/boletins/${bmData.id}`)
   }
@@ -360,9 +393,9 @@ export default function NovoBMPage() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-sm font-semibold">Pré-visualização — Horas do Ponto</h2>
+                <h2 className="text-sm font-semibold">Pré-visualização — Por Função</h2>
                 <p className="text-xs text-gray-400 mt-0.5">
-                  {new Set(preview.map(r => r.funcionario_id)).size} funcionários · {totalHH}h totais
+                  {preview.length} funções · {preview.reduce((s, r) => s + r.funcionarios_unicos, 0)} funcionários · {totalHH}h totais
                 </p>
               </div>
               <div className="flex items-center gap-3">
@@ -382,17 +415,17 @@ export default function NovoBMPage() {
               </div>
             )}
 
-            {/* Tabela consolidada por funcionário */}
+            {/* Tabela por função (formato Cesari) */}
             <div className="overflow-x-auto mb-6">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b-2 border-gray-200 bg-gray-50">
-                    <th className="text-left px-3 py-2.5 text-xs font-bold text-gray-600 uppercase tracking-wide">Funcionário</th>
                     <th className="text-left px-3 py-2.5 text-xs font-bold text-gray-600 uppercase tracking-wide">Função</th>
-                    <th className="text-center px-2 py-2.5 text-xs font-bold text-blue-700 uppercase tracking-wide w-16">Dias N.</th>
-                    <th className="text-center px-2 py-2.5 text-xs font-bold text-amber-700 uppercase tracking-wide w-16">Dias HE 70%</th>
-                    <th className="text-center px-2 py-2.5 text-xs font-bold text-red-700 uppercase tracking-wide w-16">Dias HE 100%</th>
-                    <th className="text-center px-2 py-2.5 text-xs font-bold text-gray-600 uppercase tracking-wide w-16">HH Total</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-gray-600 uppercase tracking-wide w-16">Efetivo</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-blue-700 uppercase tracking-wide w-16">Dias</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-amber-700 uppercase tracking-wide w-16" title="Dias-pessoa em HE 70%">HE 70%</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-red-700 uppercase tracking-wide w-16" title="Dias-pessoa em HE 100%">HE 100%</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-gray-600 uppercase tracking-wide w-20">Carga (HH)</th>
                     <th className="text-center px-2 py-2.5 text-xs font-bold text-blue-700 uppercase tracking-wide w-24">R$/HH N.</th>
                     <th className="text-center px-2 py-2.5 text-xs font-bold text-amber-700 uppercase tracking-wide w-24">R$/HH 70%</th>
                     <th className="text-center px-2 py-2.5 text-xs font-bold text-red-700 uppercase tracking-wide w-24">R$/HH 100%</th>
@@ -404,12 +437,28 @@ export default function NovoBMPage() {
                     const hhTot = rowHHNormal(row) + rowHHHe70(row) + rowHHHe100(row)
                     return (
                       <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="px-3 py-2 font-medium text-gray-800">{row.funcionario_nome}</td>
-                        <td className="px-3 py-2 text-xs text-gray-600">{row.funcao_nome}</td>
-                        <td className="px-2 py-2 text-center text-blue-700 font-medium">{row.dias_normais || '—'}</td>
+                        <td className="px-3 py-2 font-semibold text-gray-800">
+                          <details>
+                            <summary className="cursor-pointer hover:text-brand">{row.funcao_nome}</summary>
+                            <div className="mt-2 pl-3 space-y-1 text-[11px] font-normal text-gray-500">
+                              {row.funcionarios.map(f => (
+                                <div key={f.id}>
+                                  • {f.nome}
+                                  <span className="ml-2 text-gray-400">
+                                    {f.dias_normais > 0 && `${f.dias_normais}d`}
+                                    {f.dias_he70 > 0 && ` +${f.dias_he70}sáb`}
+                                    {f.dias_he100 > 0 && ` +${f.dias_he100}dom`}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        </td>
+                        <td className="px-2 py-2 text-center text-gray-700 font-medium">{row.efetivo}</td>
+                        <td className="px-2 py-2 text-center text-blue-700 font-bold">{row.dias_normais || '—'}</td>
                         <td className="px-2 py-2 text-center text-amber-700 font-medium">{row.dias_he70 || '—'}</td>
                         <td className="px-2 py-2 text-center text-red-700 font-medium">{row.dias_he100 || '—'}</td>
-                        <td className="px-2 py-2 text-center text-gray-700 font-semibold">{hhTot}h</td>
+                        <td className="px-2 py-2 text-center text-gray-700 font-bold">{hhTot}h</td>
                         <td className="px-2 py-2 text-center">
                           <input type="number" min="0" step="0.01" value={row.valor_hh_normal}
                             onChange={e => updateRow(i, 'valor_hh_normal', Number(e.target.value))}
@@ -436,7 +485,10 @@ export default function NovoBMPage() {
                     )
                   })}
                   <tr className="border-t-2 border-gray-300 bg-brand/5">
-                    <td colSpan={2} className="px-3 py-3 font-black text-xs uppercase tracking-wide text-brand">Total Geral</td>
+                    <td className="px-3 py-3 font-black text-xs uppercase tracking-wide text-brand">Total Geral</td>
+                    <td className="px-2 py-3 text-center font-bold text-gray-700">
+                      {preview.reduce((s, r) => s + r.funcionarios_unicos, 0)}
+                    </td>
                     <td className="px-2 py-3 text-center font-bold text-blue-700">{totalDiasNormais}</td>
                     <td className="px-2 py-3 text-center font-bold text-amber-700">{totalDiasHe70 || '—'}</td>
                     <td className="px-2 py-3 text-center font-bold text-red-700">{totalDiasHe100 || '—'}</td>
@@ -450,10 +502,10 @@ export default function NovoBMPage() {
               </table>
             </div>
 
-            {/* Calendário visual */}
+            {/* Calendário visual por funcionário */}
             <details className="bg-gray-50 rounded-lg border border-gray-200 p-4">
               <summary className="cursor-pointer text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                📅 Calendário detalhado (clique para expandir)
+                📅 Calendário detalhado por funcionário (clique para expandir)
               </summary>
               <div className="mt-4 overflow-x-auto">
                 {(() => {
@@ -463,6 +515,8 @@ export default function NovoBMPage() {
                   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
                     dates.push(new Date(d))
                   }
+                  // Flatten all funcionarios across all função groups
+                  const allFuncs = preview.flatMap(r => r.funcionarios.map(f => ({ ...f, funcao: r.funcao_nome })))
                   return (
                     <table className="text-[10px] border-collapse">
                       <thead>
@@ -481,12 +535,12 @@ export default function NovoBMPage() {
                         </tr>
                       </thead>
                       <tbody>
-                        {preview.map(r => {
-                          const presentSet = new Set(r.datas_presentes)
+                        {allFuncs.map(f => {
+                          const presentSet = new Set(f.datas)
                           return (
-                            <tr key={r.funcionario_id} className="border-t border-gray-100">
-                              <td className="px-2 py-0.5 font-medium text-gray-700 sticky left-0 bg-white z-10 truncate max-w-[140px]" title={r.funcionario_nome}>
-                                {r.funcionario_nome}
+                            <tr key={f.id} className="border-t border-gray-100">
+                              <td className="px-2 py-0.5 font-medium text-gray-700 sticky left-0 bg-white z-10 truncate max-w-[140px]" title={f.nome}>
+                                {f.nome}
                               </td>
                               {dates.map((d, idx) => {
                                 const iso = d.toISOString().split('T')[0]
@@ -510,7 +564,7 @@ export default function NovoBMPage() {
                   )
                 })()}
               </div>
-              <p className="text-[10px] text-gray-400 mt-2">P = Presente · · = Sem registro</p>
+              <p className="text-[10px] text-gray-400 mt-2">P = Presente · · = Sem registro · Cinza = Fim de semana</p>
             </details>
           </div>
         )

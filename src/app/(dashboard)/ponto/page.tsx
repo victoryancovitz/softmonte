@@ -32,7 +32,6 @@ export default function PontoPage() {
   const [grid, setGrid] = useState<Record<string, Record<number, CellData>>>({})
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<{ funcId: string; day: number } | null>(null)
-  const [incluirDesligados, setIncluirDesligados] = useState(false)
   const supabase = createClient()
 
   useEffect(() => {
@@ -50,6 +49,7 @@ export default function PontoPage() {
     const dateStart = `${ano}-${String(mes).padStart(2, '0')}-01`
     const dateEnd = `${ano}-${String(mes).padStart(2, '0')}-${String(totalDays).padStart(2, '0')}`
 
+    // 1. Funcionários alocados ativos
     const { data: alocacoes } = await supabase
       .from('alocacoes')
       .select('funcionarios(id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao)')
@@ -59,34 +59,29 @@ export default function PontoPage() {
     const funcs: any[] = (alocacoes ?? [])
       .map((a: any) => a.funcionarios)
       .filter(Boolean)
+    const ids = new Set(funcs.map(f => f.id))
 
-    // If toggle is on, also include soft-deleted funcionarios admitted before the visible period end
-    if (incluirDesligados) {
-      const { data: deleted } = await supabase
-        .from('funcionarios')
-        .select('id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao')
-        .not('deleted_at', 'is', null)
-        .lte('admissao', dateEnd)
+    // 2. Funcionários soft-deleted que poderiam ter trabalhado no período
+    //    (admissão antes ou durante o período visível)
+    const { data: deleted } = await supabase
+      .from('funcionarios')
+      .select('id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao')
+      .not('deleted_at', 'is', null)
+      .lte('admissao', dateEnd)
+    for (const d of deleted ?? []) {
+      // Only include if their employment overlapped with the visible period
+      if (d.deleted_at && d.deleted_at.split('T')[0] < dateStart) continue
+      if (!ids.has(d.id)) { funcs.push(d); ids.add(d.id) }
+    }
 
-      const ids = new Set(funcs.map(f => f.id))
-      for (const d of deleted ?? []) {
-        if (!ids.has(d.id)) {
-          // Only show if their admissão was before/within the period (i.e. they could have worked)
-          funcs.push(d)
-          ids.add(d.id)
-        }
-      }
-
-      // Also include any funcionario (deleted or not) that has efetivo_diario records in this obra
-      const { data: comPonto } = await supabase
-        .from('efetivo_diario')
-        .select('funcionario_id, funcionarios(id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao)')
-        .eq('obra_id', obraId)
-      for (const r of (comPonto ?? []) as any[]) {
-        if (r.funcionarios && !ids.has(r.funcionarios.id)) {
-          funcs.push(r.funcionarios)
-          ids.add(r.funcionarios.id)
-        }
+    // 3. Qualquer funcionário (ativo ou deletado) que já tem efetivo_diario nesta obra
+    const { data: comPonto } = await supabase
+      .from('efetivo_diario')
+      .select('funcionario_id, funcionarios(id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao)')
+      .eq('obra_id', obraId)
+    for (const r of (comPonto ?? []) as any[]) {
+      if (r.funcionarios && !ids.has(r.funcionarios.id)) {
+        funcs.push(r.funcionarios); ids.add(r.funcionarios.id)
       }
     }
 
@@ -132,7 +127,7 @@ export default function PontoPage() {
     })
     setGrid(g)
     setLoading(false)
-  }, [obraId, mes, ano, incluirDesligados])
+  }, [obraId, mes, ano])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -191,7 +186,7 @@ export default function PontoPage() {
   return (
     <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
       <h1 className="text-xl font-bold font-display text-brand mb-2">Controle de Ponto</h1>
-      <p className="text-xs text-gray-500 mb-5">Clique em qualquer dia para editar o status (presente, falta, atestado etc). Toda alteração é auditada.</p>
+      <p className="text-xs text-gray-500 mb-5">Clique em qualquer dia para editar o status. Funcionários desligados aparecem com badge vermelho e só permitem edição nos dias do vínculo. Toda alteração é auditada.</p>
 
       {/* Selectors */}
       <div className="flex flex-wrap items-end gap-4 mb-6">
@@ -217,11 +212,6 @@ export default function PontoPage() {
             {[ano - 1, ano, ano + 1].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         </div>
-        <label className="flex items-center gap-2 cursor-pointer pb-2.5">
-          <input type="checkbox" checked={incluirDesligados} onChange={e => setIncluirDesligados(e.target.checked)}
-            className="w-4 h-4 rounded text-brand focus:ring-brand" />
-          <span className="text-xs font-medium text-gray-700">Incluir desligados</span>
-        </label>
       </div>
 
       {!obraId && (
