@@ -42,6 +42,8 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   const [mailtoAberto, setMailtoAberto] = useState(false)
   const [bmItens, setBmItens] = useState<any[]>([])
   const [salvandoItens, setSalvandoItens] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [deletingBm, setDeletingBm] = useState(false)
   const supabase = createClient()
   const router = useRouter()
   const toast = useToast()
@@ -297,6 +299,34 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     router.refresh()
   }
 
+  async function handleDeleteBM(deleteFinanceiro: boolean) {
+    setDeletingBm(true)
+    const { data: { user } } = await supabase.auth.getUser()
+
+    // 1. Soft-delete o BM
+    await supabase.from('boletins_medicao')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+      .eq('id', params.id)
+
+    // 2. Soft-delete lançamentos financeiros associados se solicitado
+    if (deleteFinanceiro && bm.obras?.id) {
+      const bmNumero = String(bm.numero).padStart(2, '0')
+      const nome = `BM ${bmNumero} — ${bm.obras.nome}`
+      await supabase.from('financeiro_lancamentos')
+        .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+        .eq('obra_id', bm.obras.id)
+        .eq('origem', 'bm_aprovado')
+        .eq('nome', nome)
+        .is('deleted_at', null)
+    }
+
+    setDeletingBm(false)
+    setShowDeleteModal(false)
+    toast.success(deleteFinanceiro ? 'BM e lançamento financeiro excluídos' : 'BM excluído (lançamento financeiro mantido)')
+    router.push('/boletins')
+    router.refresh()
+  }
+
   async function handleAprovarSemReceita() {
     await supabase.from('boletins_medicao').update({
       status: 'aprovado',
@@ -388,19 +418,10 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
                 Fechar BM
               </button>
             )}
-            <ConfirmButton label="Excluir BM"
-              confirmLabel="Esta ação não pode ser desfeita. Confirmar?"
-              className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50"
-              confirmClassName="text-xs px-3 py-1.5 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700"
-              onConfirm={async () => {
-                const { data: { user } } = await supabase.auth.getUser()
-                await supabase.from('boletins_medicao')
-                  .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
-                  .eq('id', params.id)
-                toast.success('BM excluído com sucesso')
-                router.push('/boletins')
-                router.refresh()
-              }} />
+            <button onClick={() => setShowDeleteModal(true)}
+              className="px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50">
+              Excluir BM
+            </button>
           </div>
         </div>
       </div>
@@ -691,6 +712,59 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
           ))}
         </div>
       </div>
+
+      {/* Delete BM modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                  <path d="M10 7v4M10 14v.5" stroke="#dc2626" strokeWidth="2" strokeLinecap="round"/>
+                  <circle cx="10" cy="10" r="8.5" stroke="#dc2626" strokeWidth="1.5"/>
+                </svg>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-base font-bold text-gray-900">Excluir BM {String(bm.numero).padStart(2,'0')}?</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Esta ação não pode ser desfeita.
+                </p>
+              </div>
+            </div>
+
+            {bm.status === 'aprovado' && (
+              <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+                <p className="text-xs text-amber-800 font-semibold mb-1">⚠ Este BM foi aprovado e gerou um lançamento financeiro.</p>
+                <p className="text-xs text-amber-700">Escolha o que fazer com a receita associada:</p>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2">
+              {bm.status === 'aprovado' ? (
+                <>
+                  <button onClick={() => handleDeleteBM(true)} disabled={deletingBm}
+                    className="w-full px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 disabled:opacity-50 text-left">
+                    {deletingBm ? 'Excluindo...' : '🗑 Excluir BM e o lançamento financeiro'}
+                  </button>
+                  <button onClick={() => handleDeleteBM(false)} disabled={deletingBm}
+                    className="w-full px-4 py-2.5 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 disabled:opacity-50 text-left">
+                    Excluir somente o BM (manter lançamento financeiro)
+                  </button>
+                </>
+              ) : (
+                <button onClick={() => handleDeleteBM(false)} disabled={deletingBm}
+                  className="w-full px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 disabled:opacity-50">
+                  {deletingBm ? 'Excluindo...' : 'Excluir definitivamente'}
+                </button>
+              )}
+              <button onClick={() => setShowDeleteModal(false)} disabled={deletingBm}
+                className="w-full px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

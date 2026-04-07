@@ -43,7 +43,8 @@
       "Bash(grep -n \"documentos\" src/app/\\\\\\(dashboard\\\\\\)/obras/[id]/page.tsx)",
       "Bash(grep -n \"equipe\\\\|Equipe\\\\|alocados\" src/app/\\\\\\(dashboard\\\\\\)/obras/[id]/page.tsx)",
       "Bash(grep -n \"Excluir\\\\|delete\\\\|Delete\" src/app/\\\\\\(dashboard\\\\\\)/boletins/[id]/page.tsx)",
-      "Bash(grep -n \"showCriarReceita\\\\|setShowCriarReceita\" src/app/\\\\\\(dashboard\\\\\\)/boletins/[id]/page.tsx)"
+      "Bash(grep -n \"showCriarReceita\\\\|setShowCriarReceita\" src/app/\\\\\\(dashboard\\\\\\)/boletins/[id]/page.tsx)",
+      "Bash(grep -n \"Histórico\\\\|^      <\\\\/div>$\" src/app/\\\\\\(dashboard\\\\\\)/boletins/[id]/page.tsx)"
     ]
   }
 }

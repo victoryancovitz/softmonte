@@ -77,8 +77,9 @@ export default function CotacoesPage() {
       supabase
         .from('cotacoes')
         .select('*, obras(nome)')
+        .is('deleted_at', null)
         .order('created_at', { ascending: false }),
-      supabase.from('obras').select('id, nome').order('nome'),
+      supabase.from('obras').select('id, nome').is('deleted_at', null).order('nome'),
     ])
     setCotacoes(cotRes.data ?? [])
     setObras(obrasRes.data ?? [])
@@ -139,6 +140,17 @@ export default function CotacoesPage() {
     setApproving(null)
     setApproveForm({ fornecedor: '', valor: '', motivo: '' })
     setSaving(false)
+    loadData()
+  }
+
+  async function handleDelete(cotacao: Cotacao) {
+    if (!confirm(`Excluir cotação ${cotacao.numero}? Esta ação não pode ser desfeita.`)) return
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase.from('cotacoes')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+      .eq('id', cotacao.id)
+    if (error) { toast.error('Erro: ' + error.message); return }
+    toast.success('Cotação excluída')
     loadData()
   }
 
@@ -364,6 +376,13 @@ export default function CotacoesPage() {
                   {c.valor_aprovado != null && (
                     <span className="text-xs font-bold text-green-700">{fmt(c.valor_aprovado)}</span>
                   )}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleDelete(c) }}
+                    title="Excluir cotação"
+                    className="text-gray-300 hover:text-red-600 p-1 transition-colors"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                   {isExpanded ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
                 </div>
 
