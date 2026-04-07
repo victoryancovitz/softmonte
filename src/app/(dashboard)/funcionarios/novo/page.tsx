@@ -117,6 +117,31 @@ export default function NovoFuncionarioPage() {
         const fn = funcoes.find(fn => fn.id === value)
         if (fn) {
           next.cargo = fn.nome
+          // Auto-preenche salário e adicionais apenas se campos vazios (não sobrescreve edição manual)
+          if (fn.salario_base && (!f.salario_base || f.salario_base === '')) {
+            next.salario_base = String(fn.salario_base)
+          }
+          if (fn.jornada_horas_mes && (!f.horas_mes || f.horas_mes === '220')) {
+            next.horas_mes = String(fn.jornada_horas_mes)
+          }
+          if (fn.periculosidade_pct_padrao != null && (!f.periculosidade_pct || f.periculosidade_pct === '0')) {
+            next.periculosidade_pct = String(fn.periculosidade_pct_padrao)
+          }
+          if (fn.insalubridade_pct_padrao != null && (!f.insalubridade_pct || f.insalubridade_pct === '0')) {
+            next.insalubridade_pct = String(fn.insalubridade_pct_padrao)
+          }
+          if (fn.vt_mensal_padrao && (!f.vt_mensal || f.vt_mensal === '')) {
+            next.vt_mensal = String(fn.vt_mensal_padrao)
+          }
+          if (fn.vr_diario_padrao && (!f.vr_diario || f.vr_diario === '')) {
+            next.vr_diario = String(fn.vr_diario_padrao)
+          }
+          if (fn.va_mensal_padrao && (!f.va_mensal || f.va_mensal === '')) {
+            next.va_mensal = String(fn.va_mensal_padrao)
+          }
+          if (fn.plano_saude_padrao && (!f.plano_saude_mensal || f.plano_saude_mensal === '')) {
+            next.plano_saude_mensal = String(fn.plano_saude_padrao)
+          }
         }
       }
       return next

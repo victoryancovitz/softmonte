@@ -57,6 +57,7 @@ const NAV_GROUPS: NavGroupDef[] = [
       { href: '/rh/admissoes', label: 'Admissões', icon: ic.func },
       { href: '/rh/desligamentos', label: 'Desligamentos', icon: ic.faltas },
       { href: '/rh/folha', label: 'Folha de Pagamento', icon: ic.fin },
+      { href: '/rh/correcoes', label: 'Correções Salariais', icon: ic.fin },
       { href: '/rh/rescisoes', label: 'Rescisões', icon: ic.faltas },
       { href: '/documentos', label: 'Documentos', icon: ic.docs },
       { href: '/rastreio', label: 'Vencimentos', icon: ic.docs },
