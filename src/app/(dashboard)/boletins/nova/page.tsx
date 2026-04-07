@@ -418,9 +418,9 @@ export default function NovoBMPage() {
                   <tr className="border-b-2 border-gray-200 bg-gray-50">
                     <th className="text-left px-3 py-2.5 text-xs font-bold text-gray-600 uppercase tracking-wide">Função</th>
                     <th className="text-center px-2 py-2.5 text-xs font-bold text-gray-600 uppercase tracking-wide w-16">Efetivo</th>
-                    <th className="text-center px-2 py-2.5 text-xs font-bold text-blue-700 uppercase tracking-wide w-16">Dias</th>
-                    <th className="text-center px-2 py-2.5 text-xs font-bold text-amber-700 uppercase tracking-wide w-16" title="Dias-pessoa em HE 70%">HE 70%</th>
-                    <th className="text-center px-2 py-2.5 text-xs font-bold text-red-700 uppercase tracking-wide w-16" title="Dias-pessoa em HE 100%">HE 100%</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-blue-700 uppercase tracking-wide w-16" title="Dias-pessoa em Hora Normal">DIA HN</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-amber-700 uppercase tracking-wide w-16" title="Dias-pessoa em HE 70%">DIA HE 70%</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-red-700 uppercase tracking-wide w-16" title="Dias-pessoa em HE 100%">DIA HE 100%</th>
                     <th className="text-center px-2 py-2.5 text-xs font-bold text-blue-700 uppercase tracking-wide w-20" title="Horas normais">HH Normal</th>
                     <th className="text-center px-2 py-2.5 text-xs font-bold text-amber-700 uppercase tracking-wide w-20" title="Horas extras 70%">HH HE 70%</th>
                     <th className="text-center px-2 py-2.5 text-xs font-bold text-red-700 uppercase tracking-wide w-20" title="Horas extras 100%">HH HE 100%</th>
