@@ -10,11 +10,12 @@ const CATEGORIAS_DESPESA = ['Salário Base', 'FGTS', 'Vale-Transporte', 'Treinam
 
 export default function NovoLancamentoPage() {
   const [obras, setObras] = useState<any[]>([])
+  const [contas, setContas] = useState<any[]>([])
   const [form, setForm] = useState({
     obra_id: '', tipo: 'despesa', nome: '', categoria: '', valor: '',
     status: 'em_aberto', data_competencia: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })(),
     data_vencimento: '', data_pagamento: '', cliente: '', fornecedor: '',
-    conta_bancaria: '', is_provisao: false, observacao: ''
+    conta_id: '', is_provisao: false, observacao: ''
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -24,6 +25,8 @@ export default function NovoLancamentoPage() {
   useEffect(() => {
     supabase.from('obras').select('id,nome,cliente').eq('status','ativo').is('deleted_at', null).order('nome')
       .then(({ data }) => setObras(data ?? []))
+    supabase.from('contas_correntes').select('id,nome,banco').eq('ativo', true).is('deleted_at', null).order('nome')
+      .then(({ data }) => setContas(data ?? []))
   }, [])
 
   function set(field: string, value: any) { setForm(f => ({ ...f, [field]: value })) }
@@ -44,7 +47,7 @@ export default function NovoLancamentoPage() {
       data_pagamento: form.status === 'pago' && form.data_pagamento ? form.data_pagamento : null,
       cliente: form.cliente || null,
       fornecedor: form.fornecedor || null,
-      conta_bancaria: form.conta_bancaria || null,
+      conta_id: form.conta_id || null,
       is_provisao: form.is_provisao,
       observacao: form.observacao || null,
       origem: 'manual',
@@ -152,9 +155,17 @@ export default function NovoLancamentoPage() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Conta bancária</label>
-              <input type="text" value={form.conta_bancaria} onChange={e => set('conta_bancaria', e.target.value)}
-                placeholder="BTG / Santander..." className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+              <label className="block text-sm font-medium text-gray-700 mb-1">Conta corrente</label>
+              <select value={form.conta_id} onChange={e => set('conta_id', e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+                <option value="">— Selecione —</option>
+                {contas.map(c => <option key={c.id} value={c.id}>{c.nome}{c.banco ? ` · ${c.banco}` : ''}</option>)}
+              </select>
+              {contas.length === 0 && (
+                <p className="text-[10px] text-gray-400 mt-1">
+                  Nenhuma conta cadastrada. <Link href="/financeiro/contas" className="text-brand hover:underline">Cadastre aqui</Link>.
+                </p>
+              )}
             </div>
           </div>
 

@@ -283,6 +283,71 @@ export default async function FuncionarioPage({ params }: { params: { id: string
         </div>
       </div>
 
+      {/* Contrato (dados contratuais consolidados) */}
+      {(() => {
+        const TIPO_VINCULO_LABEL: Record<string, string> = {
+          experiencia_45_45: 'Experiência 45+45 dias',
+          experiencia_30_60: 'Experiência 30+60 dias',
+          experiencia_90: 'Experiência 90 dias',
+          determinado_6m: 'Determinado 6 meses',
+          determinado_12m: 'Determinado 12 meses',
+          indeterminado: 'Indeterminado (CLT)',
+          temporario: 'Temporário',
+        }
+        return (
+          <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-sm font-bold text-brand font-display">Contrato</h2>
+                <p className="text-[10px] text-gray-400">Situação contratual e prazos legais</p>
+              </div>
+              <Link href={`/funcionarios/${f.id}/editar`} className="text-xs text-brand hover:underline">Editar</Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+              <div className="flex justify-between py-1 border-b border-gray-50">
+                <span className="text-xs text-gray-500">Tipo de vínculo</span>
+                <span className="text-sm font-medium text-gray-800">{f.tipo_vinculo ? (TIPO_VINCULO_LABEL[f.tipo_vinculo] ?? f.tipo_vinculo) : '—'}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-gray-50">
+                <span className="text-xs text-gray-500">Data de admissão</span>
+                <span className="text-sm font-medium text-gray-800">{f.admissao ? new Date(f.admissao+'T12:00').toLocaleDateString('pt-BR') : '—'}</span>
+              </div>
+              {f.prazo1 && (
+                <div className="flex justify-between py-1 border-b border-gray-50">
+                  <span className="text-xs text-gray-500">1º período exp. (45d)</span>
+                  <span className="text-sm font-medium flex items-center gap-2">
+                    {new Date(f.prazo1+'T12:00').toLocaleDateString('pt-BR')}
+                    {prazo1Badge && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${prazo1Badge.cls}`}>{prazo1Badge.label}</span>}
+                  </span>
+                </div>
+              )}
+              {f.prazo2 && (
+                <div className="flex justify-between py-1 border-b border-gray-50">
+                  <span className="text-xs text-gray-500">2º período exp. (90d)</span>
+                  <span className="text-sm font-medium flex items-center gap-2">
+                    {new Date(f.prazo2+'T12:00').toLocaleDateString('pt-BR')}
+                    {prazo2Badge && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${prazo2Badge.cls}`}>{prazo2Badge.label}</span>}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between py-1 border-b border-gray-50">
+                <span className="text-xs text-gray-500">Status</span>
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>{f.status}</span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-gray-50">
+                <span className="text-xs text-gray-500">Renovação</span>
+                <span className={`text-sm font-medium ${f.nao_renovar ? 'text-red-700' : 'text-gray-800'}`}>
+                  {f.nao_renovar ? '⚠ NÃO RENOVAR' : 'Permitida'}
+                </span>
+              </div>
+            </div>
+            {f.nao_renovar && f.observacao_renovacao && (
+              <p className="text-xs text-red-600 mt-3 p-2 bg-red-50 rounded-lg">Motivo: {f.observacao_renovacao}</p>
+            )}
+          </div>
+        )
+      })()}
+
       {/* Remuneração */}
       {(() => {
         const salarioBase = Number(f.salario_base ?? 0)

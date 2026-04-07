@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { TrendingUp, DollarSign, Calendar, ArrowLeft, Check, X } from 'lucide-react'
@@ -129,8 +130,21 @@ export default function ForecastPage() {
         <span className="font-medium text-gray-700">Forecast</span>
       </div>
 
-      <h1 className="text-xl font-bold font-display text-brand mb-1">Forecast de Receita</h1>
-      <p className="text-sm text-gray-500 mb-6">Previsão e acompanhamento de receita por contrato</p>
+      <div className="flex items-start justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-bold font-display text-brand mb-1">Forecast de Receita</h1>
+          <p className="text-sm text-gray-500">Previsão e acompanhamento de receita por contrato. Clique em uma linha para ver o mês a mês.</p>
+        </div>
+        <div className="flex gap-2">
+          <Link href="/financeiro" className="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">Financeiro</Link>
+          <Link href="/relatorios/margem" className="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">Margem</Link>
+        </div>
+      </div>
+
+      {/* Instrução/Ajuda */}
+      <div className="mb-5 p-3 bg-blue-50 border border-blue-100 rounded-xl text-xs text-blue-700">
+        <strong>Como usar:</strong> cada linha é um contrato/obra. A receita <em>prevista</em> vem do contrato mensal; a <em>realizada</em> vem dos BMs aprovados. A diferença mostra se a obra está acima ou abaixo do previsto. Clique para marcar BMs emitidos/aprovados e pagamentos recebidos.
+      </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6">

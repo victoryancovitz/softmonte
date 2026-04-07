@@ -3,6 +3,8 @@ import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import SortableHeader, { applySort, type SortDir } from '@/components/SortableHeader'
+import { createClient } from '@/lib/supabase'
+import { useToast } from '@/components/Toast'
 
 const STATUS_COLOR: Record<string, string> = {
   disponivel: 'bg-green-100 text-green-700',
@@ -33,7 +35,13 @@ export default function FuncionariosView({
 }) {
   const router = useRouter()
   const sp = useSearchParams()
+  const toast = useToast()
+  const supabase = createClient()
   const hojeDate = new Date(hoje + 'T12:00:00')
+
+  // Multi-selection
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [bulkRunning, setBulkRunning] = useState(false)
 
   // Initial state from URL
   const [view, setView] = useState<'cards' | 'table'>('cards')
@@ -48,8 +56,10 @@ export default function FuncionariosView({
 
   // Restore from localStorage
   useEffect(() => {
-    if (sp.toString()) return
     if (typeof window === 'undefined') return
+    const savedView = localStorage.getItem('funcionarios_view') as 'cards' | 'table' | null
+    if (savedView === 'cards' || savedView === 'table') setView(savedView)
+    if (sp.toString()) return
     const saved = localStorage.getItem('funcionarios_filters')
     if (saved) {
       try {
@@ -64,6 +74,11 @@ export default function FuncionariosView({
       } catch {}
     }
   }, [])
+
+  // Persist view toggle
+  useEffect(() => {
+    if (typeof window !== 'undefined') localStorage.setItem('funcionarios_view', view)
+  }, [view])
 
   // Debounce search
   useEffect(() => {
@@ -127,6 +142,52 @@ export default function FuncionariosView({
     setQ(''); setStatus(''); setCargo(''); setAdmDe(''); setAdmAte('')
   }
 
+  // Selection helpers
+  function toggleSelect(id: string) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
+  function toggleSelectAll() {
+    const visiveis = filtered.filter(f => f.deleted_at == null).map(f => f.id)
+    if (visiveis.every(id => selectedIds.has(id))) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(visiveis))
+    }
+  }
+  function clearSelection() { setSelectedIds(new Set()) }
+
+  async function bulkDesligar() {
+    if (selectedIds.size === 0) return
+    if (!confirm(`Desligar ${selectedIds.size} funcionário(s) selecionado(s)? Os vínculos serão arquivados.`)) return
+    setBulkRunning(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    const ids = Array.from(selectedIds)
+    const { error } = await supabase.from('funcionarios')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null, status: 'inativo' })
+      .in('id', ids)
+    setBulkRunning(false)
+    if (error) { toast.error('Erro no desligamento em lote: ' + error.message); return }
+    toast.success(`${ids.length} funcionário(s) desligados`)
+    clearSelection()
+    router.refresh()
+  }
+
+  async function bulkAlterarStatus(novoStatus: string) {
+    if (selectedIds.size === 0) return
+    setBulkRunning(true)
+    const ids = Array.from(selectedIds)
+    const { error } = await supabase.from('funcionarios').update({ status: novoStatus }).in('id', ids)
+    setBulkRunning(false)
+    if (error) { toast.error('Erro: ' + error.message); return }
+    toast.success(`${ids.length} funcionário(s) atualizados`)
+    clearSelection()
+    router.refresh()
+  }
+
   return (
     <>
       {/* Filter bar */}
@@ -185,6 +246,28 @@ export default function FuncionariosView({
         </div>
       </div>
 
+      {/* Barra de ação em lote */}
+      {selectedIds.size > 0 && (
+        <div className="mb-4 p-3 bg-brand text-white rounded-xl flex items-center gap-3 sticky top-16 z-20 shadow-lg">
+          <span className="font-bold text-sm">{selectedIds.size} selecionado{selectedIds.size > 1 ? 's' : ''}</span>
+          <div className="flex-1 flex gap-2">
+            <button onClick={() => bulkAlterarStatus('disponivel')} disabled={bulkRunning}
+              className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold">Marcar disponível</button>
+            <button onClick={() => bulkAlterarStatus('alocado')} disabled={bulkRunning}
+              className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold">Marcar alocado</button>
+            <button onClick={() => bulkAlterarStatus('afastado')} disabled={bulkRunning}
+              className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-semibold">Marcar afastado</button>
+            <button onClick={bulkDesligar} disabled={bulkRunning}
+              className="px-3 py-1.5 bg-red-500 hover:bg-red-600 rounded-lg text-xs font-bold">
+              {bulkRunning ? '...' : '🗑 Desligar'}
+            </button>
+          </div>
+          <button onClick={clearSelection} className="px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs">
+            ✕ Cancelar
+          </button>
+        </div>
+      )}
+
       {/* Content */}
       {filtered.length > 0 ? (
         view === 'cards' ? (
@@ -195,12 +278,22 @@ export default function FuncionariosView({
               const vencido = dias !== null && dias < 0
               const alerta = dias !== null && dias <= 30 && dias >= 0
               const desligado = f.deleted_at != null
+              const checked = selectedIds.has(f.id)
               return (
-                <Link key={f.id} href={`/funcionarios/${f.id}`}
-                  className={`bg-white rounded-xl border p-4 hover:shadow-md transition-all duration-200 block group ${
-                    desligado ? 'border-gray-200 opacity-60 hover:opacity-100' : 'border-gray-200 hover:border-brand/30'
-                  }`}>
-                  <div className="flex items-start justify-between mb-3">
+                <div key={f.id} className={`bg-white rounded-xl border p-4 hover:shadow-md transition-all duration-200 relative group ${
+                  desligado ? 'border-gray-200 opacity-60 hover:opacity-100' : checked ? 'border-brand border-2' : 'border-gray-200 hover:border-brand/30'
+                }`}>
+                  {!desligado && (
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleSelect(f.id)}
+                      onClick={e => e.stopPropagation()}
+                      className="absolute top-3 left-3 w-4 h-4 rounded text-brand focus:ring-brand z-10"
+                    />
+                  )}
+                  <Link href={`/funcionarios/${f.id}`} className="block">
+                  <div className="flex items-start justify-between mb-3 pl-6">
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm font-display ${
                       desligado ? 'bg-gray-100 text-gray-400' : 'bg-brand/10 text-brand'
                     }`}>
@@ -240,7 +333,8 @@ export default function FuncionariosView({
                       </span>
                     </div>
                   )}
-                </Link>
+                  </Link>
+                </div>
               )
             })}
           </div>
@@ -249,6 +343,14 @@ export default function FuncionariosView({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
+                  <th className="px-3 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={filtered.filter(f => f.deleted_at == null).length > 0 && filtered.filter(f => f.deleted_at == null).every(f => selectedIds.has(f.id))}
+                      onChange={toggleSelectAll}
+                      className="w-4 h-4 rounded text-brand focus:ring-brand"
+                    />
+                  </th>
                   <SortableHeader label="ID Ponto" field="id_ponto" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Nome" field="nome" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Cargo" field="cargo" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
@@ -265,8 +367,19 @@ export default function FuncionariosView({
                   const vencido = dias !== null && dias < 0
                   const alerta = dias !== null && dias <= 30 && dias >= 0
                   const desligado = f.deleted_at != null
+                  const checked = selectedIds.has(f.id)
                   return (
-                    <tr key={f.id} className={`border-b border-gray-50 hover:bg-gray-50 group ${desligado ? 'opacity-60' : ''}`}>
+                    <tr key={f.id} className={`border-b border-gray-50 hover:bg-gray-50 group ${desligado ? 'opacity-60' : ''} ${checked ? 'bg-brand/5' : ''}`}>
+                      <td className="px-3 py-3">
+                        {!desligado && (
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleSelect(f.id)}
+                            className="w-4 h-4 rounded text-brand focus:ring-brand"
+                          />
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-gray-400 text-xs font-mono">{f.id_ponto ?? '—'}</td>
                       <td className="px-4 py-3 font-semibold">
                         <Link href={`/funcionarios/${f.id}`} className="hover:text-brand transition-colors">

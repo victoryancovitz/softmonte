@@ -123,12 +123,20 @@ export default function AdminUsuariosPage() {
           <h1 className="text-xl font-bold font-display text-brand">Usuários & Acessos</h1>
           <p className="text-sm text-gray-500 mt-0.5">{profiles.length} usuários cadastrados</p>
         </div>
-        <Link
-          href="/admin/usuarios/convidar"
-          className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors"
-        >
-          + Convidar
-        </Link>
+        <div className="flex gap-2">
+          <Link
+            href="/admin/usuarios/auditoria"
+            className="px-4 py-2 border border-brand text-brand rounded-lg text-sm font-medium hover:bg-brand/5 transition-colors"
+          >
+            🔍 Auditoria
+          </Link>
+          <Link
+            href="/admin/usuarios/convidar"
+            className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors"
+          >
+            + Convidar
+          </Link>
+        </div>
       </div>
 
       {/* KPI Cards */}

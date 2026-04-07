@@ -337,9 +337,9 @@ export default function AdmissaoWizardPage() {
   const lbl = "block text-xs font-semibold text-gray-600 mb-1"
 
   const STEPS = [
-    { n: 1, label: 'Contrato' },
-    { n: 2, label: 'Documentacao' },
-    { n: 3, label: 'Exame' },
+    { n: 1, label: 'Dados iniciais' },
+    { n: 2, label: 'Documentação' },
+    { n: 3, label: 'Exame admissional' },
     { n: 4, label: 'EPI & NR' },
     { n: 5, label: 'eSocial' },
   ]

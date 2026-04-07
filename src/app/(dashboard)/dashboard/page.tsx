@@ -11,6 +11,11 @@ export default async function DashboardPage() {
   const em30dias = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0]
 
   const { data: { user } } = await supabase.auth.getUser()
+  const role = await getRole()
+  const isAdmin = role === 'admin'
+  const isFinanceiro = role === 'financeiro' || isAdmin
+  const isRh = role === 'rh' || isAdmin
+  const isOp = role === 'encarregado' || role === 'engenheiro' || isAdmin
 
   const [
     funcs, obras, estoque, docs, alertas, efetivo_hoje,
@@ -45,6 +50,34 @@ export default async function DashboardPage() {
   const totalHH = (hh_mes.data ?? []).reduce((acc: number, r: any) => {
     return acc + (Number(r.horas_normais) || 0) + (Number(r.horas_extras) || 0) + (Number(r.horas_noturnas) || 0)
   }, 0)
+
+  // Dados financeiros (apenas para admin/financeiro)
+  let finReceita = 0, finDespesa = 0, finAberto = 0, saldoContas = 0
+  let admissoesAndamento = 0, desligamentosAndamento = 0, docsVencidos = 0, nrVencendo = 0
+  if (isFinanceiro) {
+    const [{ data: fin }, { data: contas }] = await Promise.all([
+      supabase.from('financeiro_lancamentos').select('tipo,status,valor').is('deleted_at', null).gte('data_competencia', mesInicio),
+      supabase.from('vw_contas_saldo').select('saldo_atual'),
+    ])
+    ;(fin ?? []).forEach((r: any) => {
+      const v = Number(r.valor) || 0
+      if (r.tipo === 'receita' && r.status === 'pago') finReceita += v
+      if (r.tipo === 'despesa' && r.status === 'pago') finDespesa += v
+      if (r.status === 'em_aberto') finAberto += v
+    })
+    saldoContas = (contas ?? []).reduce((s: number, c: any) => s + Number(c.saldo_atual ?? 0), 0)
+  }
+  if (isRh) {
+    const [{ count: adm }, { count: des }, { count: dv }] = await Promise.all([
+      supabase.from('admissoes_workflow').select('id', { count: 'exact', head: true }).eq('status', 'em_andamento'),
+      supabase.from('desligamentos_workflow').select('id', { count: 'exact', head: true }).eq('status', 'em_andamento'),
+      supabase.from('documentos').select('id', { count: 'exact', head: true }).lte('vencimento', hojeStr).is('deleted_at', null),
+    ])
+    admissoesAndamento = adm ?? 0
+    desligamentosAndamento = des ?? 0
+    docsVencidos = dv ?? 0
+  }
+  const fmtR = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
   const profileData = perfil?.data as any
   const fullName = profileData?.nome ?? 'Usuário'
@@ -115,6 +148,50 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </div>
+
+      {/* ── KPIs FINANCEIROS (admin/financeiro) ── */}
+      {isFinanceiro && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-4">
+          <Link href="/financeiro/contas" className="bg-white rounded-xl border border-gray-100 border-l-4 border-l-emerald-500 p-4 hover:shadow-md transition-all block">
+            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Saldo em contas</div>
+            <div className={`text-2xl font-bold font-display ${saldoContas < 0 ? 'text-red-600' : 'text-emerald-700'}`}>{fmtR(saldoContas)}</div>
+          </Link>
+          <Link href="/financeiro" className="bg-white rounded-xl border border-gray-100 border-l-4 border-l-green-500 p-4 hover:shadow-md transition-all block">
+            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Receita do mês</div>
+            <div className="text-2xl font-bold font-display text-green-700">{fmtR(finReceita)}</div>
+          </Link>
+          <Link href="/financeiro" className="bg-white rounded-xl border border-gray-100 border-l-4 border-l-red-500 p-4 hover:shadow-md transition-all block">
+            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Despesa do mês</div>
+            <div className="text-2xl font-bold font-display text-red-700">{fmtR(finDespesa)}</div>
+          </Link>
+          <Link href="/financeiro" className="bg-white rounded-xl border border-gray-100 border-l-4 border-l-amber-500 p-4 hover:shadow-md transition-all block">
+            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Em aberto</div>
+            <div className="text-2xl font-bold font-display text-amber-700">{fmtR(finAberto)}</div>
+          </Link>
+        </div>
+      )}
+
+      {/* ── KPIs RH ── */}
+      {isRh && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-4">
+          <Link href="/rh/admissoes" className="bg-white rounded-xl border border-gray-100 border-l-4 border-l-pink-500 p-4 hover:shadow-md transition-all block">
+            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Admissões em andamento</div>
+            <div className="text-2xl font-bold font-display text-pink-700">{admissoesAndamento}</div>
+          </Link>
+          <Link href="/rh/desligamentos" className="bg-white rounded-xl border border-gray-100 border-l-4 border-l-red-500 p-4 hover:shadow-md transition-all block">
+            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Desligamentos em andamento</div>
+            <div className="text-2xl font-bold font-display text-red-700">{desligamentosAndamento}</div>
+          </Link>
+          <Link href="/rastreio" className="bg-white rounded-xl border border-gray-100 border-l-4 border-l-orange-500 p-4 hover:shadow-md transition-all block">
+            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Documentos vencidos</div>
+            <div className="text-2xl font-bold font-display text-orange-700">{docsVencidos}</div>
+          </Link>
+          <Link href="/funcionarios" className="bg-white rounded-xl border border-gray-100 border-l-4 border-l-amber-500 p-4 hover:shadow-md transition-all block">
+            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-2">Contratos vencendo 30d</div>
+            <div className="text-2xl font-bold font-display text-amber-700">{nContratosVencendo}</div>
+          </Link>
+        </div>
+      )}
 
       {/* ── KPIs ALERTAS ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-8">
@@ -226,16 +303,35 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      {/* ── AÇÕES RÁPIDAS ── */}
+      {/* ── AÇÕES RÁPIDAS (por role) ── */}
       <div>
         <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Ações rápidas</h3>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-          {[
-            { href: '/efetivo', icon: icons.checkSquare, label: 'Efetivo de hoje', color: 'text-emerald-600 bg-emerald-50' },
-            { href: '/boletins/nova', icon: icons.filePlus, label: 'Novo BM', color: 'text-blue-600 bg-blue-50' },
-            { href: '/funcionarios/novo', icon: icons.userPlus, label: 'Novo funcionário', color: 'text-violet-600 bg-violet-50' },
-            { href: '/assistente', icon: icons.sparkles, label: 'Assistente IA', color: 'text-amber-600 bg-amber-50' },
-          ].map(a => (
+          {(() => {
+            type QA = { href: string; icon: string; label: string; color: string }
+            const all: QA[] = []
+            if (isOp) {
+              all.push({ href: '/efetivo', icon: icons.checkSquare, label: 'Efetivo de hoje', color: 'text-emerald-600 bg-emerald-50' })
+              all.push({ href: '/boletins/nova', icon: icons.filePlus, label: 'Novo BM', color: 'text-blue-600 bg-blue-50' })
+            }
+            if (isRh || isAdmin) {
+              all.push({ href: '/funcionarios/novo', icon: icons.userPlus, label: 'Novo funcionário', color: 'text-violet-600 bg-violet-50' })
+              all.push({ href: '/rh/admissoes', icon: icons.fileCheck, label: 'Admissões', color: 'text-pink-600 bg-pink-50' })
+            }
+            if (isFinanceiro) {
+              all.push({ href: '/financeiro/novo', icon: icons.filePlus, label: 'Novo lançamento', color: 'text-green-600 bg-green-50' })
+              all.push({ href: '/financeiro/contas', icon: icons.building, label: 'Contas correntes', color: 'text-emerald-600 bg-emerald-50' })
+              all.push({ href: '/forecast', icon: icons.clock, label: 'Forecast', color: 'text-cyan-600 bg-cyan-50' })
+            }
+            if (isAdmin) {
+              all.push({ href: '/assistente', icon: icons.sparkles, label: 'Assistente IA', color: 'text-amber-600 bg-amber-50' })
+            }
+            // Default fallback if none added
+            if (all.length === 0) {
+              all.push({ href: '/funcionarios', icon: icons.users, label: 'Funcionários', color: 'text-violet-600 bg-violet-50' })
+            }
+            return all.slice(0, 4)
+          })().map(a => (
             <Link key={a.href} href={a.href}
               className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md hover:border-brand/20 transition-all duration-200 flex items-center gap-3 group block">
               <div className={`w-10 h-10 rounded-lg ${a.color} flex items-center justify-center flex-shrink-0`}

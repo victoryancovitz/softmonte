@@ -120,6 +120,15 @@ export default function FinanceiroPage() {
             <option value="all">Todas as obras</option>
             {obras.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
           </select>
+          <Link href="/financeiro/contas" className="px-4 py-2 border border-brand text-brand rounded-lg text-sm font-medium hover:bg-brand/5">
+            Contas Correntes
+          </Link>
+          <Link href="/forecast" className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">
+            Forecast
+          </Link>
+          <Link href="/relatorios/margem" className="px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50">
+            Margem
+          </Link>
           <Link href="/financeiro/novo" className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark">
             + Lançamento
           </Link>
