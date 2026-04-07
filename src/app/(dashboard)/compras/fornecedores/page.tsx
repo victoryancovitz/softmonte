@@ -78,6 +78,15 @@ export default function FornecedoresPage() {
     loadFornecedores()
   }
 
+  async function softDelete(f: Fornecedor) {
+    if (!confirm(`Excluir fornecedor "${f.nome}"? Esta ação não pode ser desfeita.`)) return
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('fornecedores')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+      .eq('id', f.id)
+    loadFornecedores()
+  }
+
   const filtered = fornecedores.filter((f) => {
     if (filterCategoria && f.categoria !== filterCategoria) return false
     if (filterRating && (f.avaliacao ?? 0) < filterRating) return false

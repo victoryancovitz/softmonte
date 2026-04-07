@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import BackButton from '@/components/BackButton'
+import DeleteEntityButton from '@/components/DeleteEntityButton'
 
 export default async function ClientePage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -46,10 +47,13 @@ export default async function ClientePage({ params }: { params: { id: string } }
             </span>
           </div>
         </div>
-        <Link href={`/clientes/${cliente.id}/editar`}
-          className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
-          Editar
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href={`/clientes/${cliente.id}/editar`}
+            className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
+            Editar
+          </Link>
+          <DeleteEntityButton table="clientes" id={cliente.id} entityName={cliente.nome} redirectTo="/clientes" />
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
