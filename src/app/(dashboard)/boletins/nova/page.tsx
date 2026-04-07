@@ -296,6 +296,7 @@ export default function NovoBMPage() {
       `BM criado com sucesso com ${totalFuncs} funcionários e ${totalHH}h registradas`
     )
     router.push(`/boletins/${bmData.id}`)
+    router.refresh()
   }
 
   const dias = form.data_inicio && form.data_fim

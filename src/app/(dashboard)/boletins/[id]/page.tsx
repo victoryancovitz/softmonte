@@ -250,27 +250,31 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   }
 
   async function handleAprovar() {
-    const valor = parseFloat(valorBM)
+    // Default valor: usa o valor calculado dos itens se não foi preenchido
+    const valor = parseFloat(valorBM) || totalGeral
+    if (!valor || valor <= 0) {
+      toast.error('Informe o valor aprovado pelo cliente.')
+      return
+    }
     await supabase.from('boletins_medicao').update({
       status: 'aprovado',
       aprovado_em: new Date().toISOString(),
-      valor_aprovado: valor || null,
+      valor_aprovado: valor,
     }).eq('id', params.id)
-    if (valor > 0) {
-      await supabase.from('financeiro_lancamentos').insert({
-        obra_id: bm.obras.id,
-        tipo: 'receita',
-        nome: `BM ${String(bm.numero).padStart(2,'0')} — ${bm.obras.nome}`,
-        categoria: 'Receita HH Homem-Hora',
-        valor: valor,
-        status: 'em_aberto',
-        data_competencia: bm.data_fim,
-        origem: 'bm_aprovado',
-      })
-    }
+    await supabase.from('financeiro_lancamentos').insert({
+      obra_id: bm.obras.id,
+      tipo: 'receita',
+      nome: `BM ${String(bm.numero).padStart(2,'0')} — ${bm.obras.nome}`,
+      categoria: 'Receita HH Homem-Hora',
+      valor: valor,
+      status: 'em_aberto',
+      data_competencia: bm.data_fim,
+      origem: 'bm_aprovado',
+    })
     await loadBM()
     setShowCriarReceita(false)
-    toast.show('BM aprovado com sucesso!')
+    toast.success('BM aprovado e lançamento de receita criado!')
+    router.refresh()
   }
 
   async function handleAprovarSemReceita() {
@@ -280,7 +284,8 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     }).eq('id', params.id)
     await loadBM()
     setShowCriarReceita(false)
-    toast.show('BM aprovado com sucesso!')
+    toast.success('BM aprovado (sem lançamento financeiro)')
+    router.refresh()
   }
 
   function buildHistorico() {
@@ -596,7 +601,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
 
           {!showCriarReceita ? (
             <div className="flex gap-3">
-              <button onClick={() => setShowCriarReceita(true)}
+              <button onClick={() => { setValorBM(String(totalGeral.toFixed(2))); setShowCriarReceita(true) }}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700">
                 ✓ Aprovar BM
               </button>
