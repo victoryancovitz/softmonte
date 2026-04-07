@@ -47,6 +47,20 @@ export default function NovaFaltaPage() {
     setLoading(true)
     setError('')
 
+    // Revalida: funcionário ainda está ativo e a data está dentro do vínculo
+    const { data: fresh } = await supabase.from('funcionarios')
+      .select('admissao, deleted_at').eq('id', form.funcionario_id).maybeSingle()
+    if (!fresh || (fresh as any).deleted_at) {
+      setError('Funcionário arquivado — não é possível registrar falta.')
+      setLoading(false)
+      return
+    }
+    if ((fresh as any).admissao && form.data < (fresh as any).admissao) {
+      setError('Data anterior à admissão do funcionário.')
+      setLoading(false)
+      return
+    }
+
     const payload: any = {
       funcionario_id: form.funcionario_id,
       obra_id: form.obra_id || null,
@@ -145,8 +159,17 @@ export default function NovaFaltaPage() {
 
           {/* Arquivo */}
           <div>
-            <label className={lbl}>Arquivo</label>
-            <input type="file" onChange={e => set('arquivo_nome', e.target.files?.[0]?.name ?? '')}
+            <label className={lbl}>Arquivo (PDF ou imagem)</label>
+            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp"
+              onChange={e => {
+                const f = e.target.files?.[0]
+                if (!f) return
+                const ok = /\.(pdf|jpe?g|png|webp)$/i.test(f.name)
+                if (!ok) { setError('Formato não aceito. Envie PDF ou imagem.'); e.target.value = ''; return }
+                if (f.size > 10 * 1024 * 1024) { setError('Arquivo maior que 10MB.'); e.target.value = ''; return }
+                setError('')
+                set('arquivo_nome', f.name)
+              }}
               className={inp + ' py-2'} />
             {form.arquivo_nome && (
               <p className="text-xs text-gray-400 mt-1">{form.arquivo_nome}</p>

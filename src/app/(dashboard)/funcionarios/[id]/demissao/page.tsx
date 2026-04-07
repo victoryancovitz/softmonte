@@ -109,6 +109,11 @@ export default function DemissaoWizardPage() {
 
     const f = funcRes.data
     if (!f) { router.push('/funcionarios'); return }
+    if (f.deleted_at) {
+      alert('Este funcionário já foi desligado. Não é possível abrir nova demissão.')
+      router.push(`/funcionarios/${id}`)
+      return
+    }
     setFunc(f)
 
     const saldoBH = bhRes.data?.[0]?.saldo_acumulado_final ?? 0

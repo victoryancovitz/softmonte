@@ -42,8 +42,23 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setSaving(true)
     setError('')
+
+    // Validações de regras de negócio
+    if (form.prazo1 && form.admissao && form.prazo1 < form.admissao) {
+      setError('O 1º prazo de experiência não pode ser anterior à data de admissão.')
+      return
+    }
+    if (form.prazo2 && form.prazo1 && form.prazo2 < form.prazo1) {
+      setError('O 2º prazo de experiência deve ser posterior ao 1º.')
+      return
+    }
+    if (form.nao_renovar && !(form.observacao_renovacao ?? '').trim()) {
+      setError('Ao marcar NÃO RENOVAR, informe o motivo no campo de observação.')
+      return
+    }
+
+    setSaving(true)
     const { error } = await supabase.from('funcionarios').update({
       nome: form.nome, nome_guerra: form.nome_guerra || null,
       matricula: form.matricula || null, id_ponto: form.id_ponto || null,
@@ -150,9 +165,9 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
               <div><label className={lbl}>Data de admissão</label>
                 <input type="date" value={form.admissao ?? ''} onChange={e => set('admissao', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>1º Prazo experiência (45d)</label>
-                <input type="date" value={form.prazo1 ?? ''} onChange={e => set('prazo1', e.target.value)} className={inp}/></div>
+                <input type="date" value={form.prazo1 ?? ''} min={form.admissao ?? undefined} onChange={e => set('prazo1', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>2º Prazo experiência (90d)</label>
-                <input type="date" value={form.prazo2 ?? ''} onChange={e => set('prazo2', e.target.value)} className={inp}/></div>
+                <input type="date" value={form.prazo2 ?? ''} min={form.prazo1 ?? form.admissao ?? undefined} onChange={e => set('prazo2', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>Tipo de vínculo</label>
                 <select value={form.tipo_vinculo ?? 'indeterminado'} onChange={e => set('tipo_vinculo', e.target.value)} className={inp + ' bg-white'}>
                   <option value="experiencia_45_45">Experiência 45+45 dias</option>

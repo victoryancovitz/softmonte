@@ -33,7 +33,23 @@ export default function NovoLancamentoPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!form.valor || parseFloat(form.valor) <= 0) { setError('Informe um valor maior que zero.'); return }
+    const valorNum = parseFloat(form.valor)
+    if (!isFinite(valorNum) || valorNum <= 0) { setError('Informe um valor maior que zero.'); return }
+
+    // Categorias que exigem obra vinculada
+    const CATEGORIAS_EXIGEM_OBRA = ['Salário Base','FGTS','Vale-Transporte','Receita HH Homem-Hora','Receita Material','Receita Equipamento']
+    if (CATEGORIAS_EXIGEM_OBRA.includes(form.categoria) && !form.obra_id) {
+      setError(`A categoria "${form.categoria}" precisa estar vinculada a uma obra.`)
+      return
+    }
+
+    // Revalida status da obra
+    if (form.obra_id) {
+      const { data: obra } = await supabase.from('obras').select('status, deleted_at').eq('id', form.obra_id).maybeSingle()
+      if (!obra || (obra as any).deleted_at) { setError('Obra não encontrada.'); return }
+      if ((obra as any).status === 'cancelado') { setError('Obra cancelada não aceita novos lançamentos.'); return }
+    }
+
     setLoading(true)
     const { error } = await supabase.from('financeiro_lancamentos').insert({
       obra_id: form.obra_id || null,

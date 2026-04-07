@@ -124,6 +124,11 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   const totalFuncionarios = new Set(bmItens.filter(i => i.funcionario_id).map(i => i.funcionario_id)).size
 
   async function handleSalvarItens() {
+    // Bloqueio adicional: não salvar se BM aprovado (UI já esconde, mas protege contra bypass)
+    if (bm?.status === 'aprovado') {
+      toast.error('BM aprovado não pode ser editado. Contate o administrador para reabrir.')
+      return
+    }
     setSalvandoItens(true)
     const { error: delErr } = await supabase.from('bm_itens').delete().eq('boletim_id', params.id)
     if (delErr) { toast.error('Erro ao salvar BM: ' + delErr.message); setSalvandoItens(false); return }
@@ -308,9 +313,10 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
 
   async function handleAprovar() {
     // Default valor: usa o valor calculado dos itens se não foi preenchido
-    const valor = parseFloat(valorBM) || totalGeral
-    if (!valor || valor <= 0) {
-      toast.error('Informe o valor aprovado pelo cliente.')
+    const parsedVal = parseFloat(valorBM)
+    const valor = isFinite(parsedVal) && parsedVal > 0 ? parsedVal : totalGeral
+    if (!isFinite(valor) || valor <= 0) {
+      toast.error('Informe um valor aprovado maior que zero. Verifique se há itens com R$/HH preenchido.')
       return
     }
     const { error: updErr } = await supabase.from('boletins_medicao').update({
@@ -329,7 +335,15 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       data_competencia: bm.data_fim,
       origem: 'bm_aprovado',
     })
-    if (recErr) { toast.error('BM aprovado, mas falha ao criar receita: ' + recErr.message); await loadBM(); return }
+    if (recErr) {
+      // Reverte o BM para 'enviado' pra manter consistência
+      await supabase.from('boletins_medicao').update({
+        status: 'enviado', aprovado_em: null, valor_aprovado: null,
+      }).eq('id', params.id)
+      toast.error('Falha ao criar receita: ' + recErr.message + ' — BM não foi aprovado.')
+      await loadBM()
+      return
+    }
     await loadBM()
     setShowCriarReceita(false)
     toast.success('BM aprovado e lançamento de receita criado!')
@@ -354,6 +368,24 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     if (deleteFinanceiro && bm.obras?.id) {
       const bmNumero = String(bm.numero).padStart(2, '0')
       const nome = `BM ${bmNumero} — ${bm.obras.nome}`
+
+      // Verifica se a receita já foi paga — se sim, bloqueia
+      const { data: lanc } = await supabase.from('financeiro_lancamentos')
+        .select('id, status')
+        .eq('obra_id', bm.obras.id)
+        .eq('origem', 'bm_aprovado')
+        .eq('nome', nome)
+        .is('deleted_at', null)
+      const temPago = (lanc ?? []).some((l: any) => l.status === 'pago')
+      if (temPago) {
+        toast.error('BM excluído, mas o lançamento financeiro NÃO foi excluído porque já está marcado como pago. Solicite estorno no financeiro antes.')
+        setDeletingBm(false)
+        setShowDeleteModal(false)
+        router.push('/boletins')
+        router.refresh()
+        return
+      }
+
       const { error: finErr } = await supabase.from('financeiro_lancamentos')
         .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
         .eq('obra_id', bm.obras.id)

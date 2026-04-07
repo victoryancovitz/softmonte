@@ -13,6 +13,8 @@ interface Funcionario {
   nome: string
   cargo: string
   status: string
+  nao_renovar?: boolean
+  observacao_renovacao?: string | null
 }
 
 interface Obra {
@@ -53,7 +55,8 @@ export default function NovaAdmissaoPage() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from('funcionarios').select('id, nome, cargo, status').neq('status', 'inativo').is('deleted_at', null).order('nome'),
+      // Apenas funcionários elegíveis para admissão: status 'inativo' (cadastrado sem admissão concluída) OU nunca admitidos
+      supabase.from('funcionarios').select('id, nome, cargo, status, nao_renovar, observacao_renovacao').is('deleted_at', null).order('nome'),
       supabase.from('obras').select('id, nome').eq('status', 'ativo').is('deleted_at', null).order('nome'),
     ]).then(([funcRes, obrasRes]) => {
       setFuncionarios(funcRes.data ?? [])
@@ -67,6 +70,36 @@ export default function NovaAdmissaoPage() {
 
     setSaving(true)
     setError('')
+
+    // Recarrega estado atual do funcionário (não confiar só no cache do form)
+    const { data: freshFunc } = await supabase
+      .from('funcionarios')
+      .select('id, status, deleted_at, nao_renovar, observacao_renovacao')
+      .eq('id', funcId)
+      .maybeSingle()
+
+    if (!freshFunc) {
+      setError('Funcionário não encontrado.')
+      setSaving(false)
+      return
+    }
+    if ((freshFunc as any).deleted_at) {
+      setError('Este funcionário está arquivado. Para readmiti-lo, cadastre um novo vínculo ou contate o administrador.')
+      setSaving(false)
+      return
+    }
+    if (['disponivel', 'alocado', 'afastado'].includes((freshFunc as any).status)) {
+      setError(`Funcionário já está ativo (${(freshFunc as any).status}). Não é possível abrir nova admissão para quem já foi admitido.`)
+      setSaving(false)
+      return
+    }
+    if ((freshFunc as any).nao_renovar) {
+      const motivo = (freshFunc as any).observacao_renovacao ? ` Motivo: ${(freshFunc as any).observacao_renovacao}` : ''
+      if (!confirm(`⚠ Este funcionário está marcado como NÃO RENOVAR.${motivo}\n\nDeseja prosseguir com a admissão mesmo assim?`)) {
+        setSaving(false)
+        return
+      }
+    }
 
     // Check for existing active workflow
     const { data: existing } = await supabase

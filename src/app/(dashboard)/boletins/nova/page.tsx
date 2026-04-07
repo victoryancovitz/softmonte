@@ -38,7 +38,11 @@ export default function NovoBMPage() {
   const toast = useToast()
 
   useEffect(() => {
-    supabase.from('obras').select('id,nome,cliente,data_inicio,data_prev_fim,status,bm_dia_unico').is('deleted_at', null).neq('status','cancelado').order('nome')
+    // Bloqueia obras canceladas E encerradas
+    supabase.from('obras').select('id,nome,cliente,data_inicio,data_prev_fim,status,bm_dia_unico')
+      .is('deleted_at', null)
+      .not('status', 'in', '(cancelado,encerrado)')
+      .order('nome')
       .then(({ data }) => setObras(data ?? []))
   }, [])
 
@@ -77,9 +81,17 @@ export default function NovoBMPage() {
       if (obra.data_prev_fim && form.data_fim > obra.data_prev_fim) {
         return `A data final (${new Date(form.data_fim + 'T12:00').toLocaleDateString('pt-BR')}) é posterior à previsão de término da obra (${new Date(obra.data_prev_fim + 'T12:00').toLocaleDateString('pt-BR')}).`
       }
-      if (obra.status === 'cancelado') {
-        return 'Não é possível criar BM para uma obra cancelada.'
+      if (obra.status === 'cancelado' || obra.status === 'encerrado') {
+        return `Não é possível criar BM para uma obra ${obra.status}.`
       }
+    }
+
+    // Revalida status da obra no banco (caso tenha sido alterado entre load e submit)
+    const { data: freshObra } = await supabase.from('obras')
+      .select('status, deleted_at').eq('id', form.obra_id).maybeSingle()
+    if (!freshObra || (freshObra as any).deleted_at) return 'Obra não encontrada ou excluída.'
+    if (['cancelado','encerrado'].includes((freshObra as any).status)) {
+      return `A obra foi ${(freshObra as any).status} e não aceita mais BMs.`
     }
 
     // Validate that period doesn't overlap with existing BMs
@@ -235,7 +247,16 @@ export default function NovoBMPage() {
   const totalDiasHe100 = preview?.reduce((s, r) => s + r.dias_he100, 0) ?? 0
 
   async function handleSave() {
-    if (!preview || preview.length === 0) return
+    if (!preview || preview.length === 0) {
+      setError('O BM precisa ter pelo menos um registro de ponto no período selecionado.')
+      return
+    }
+    // Valida que ao menos uma função tem dias > 0
+    const temDias = preview.some(r => r.dias_normais + r.dias_he70 + r.dias_he100 > 0)
+    if (!temDias) {
+      setError('Nenhuma função tem dias-pessoa registrados. Verifique o ponto do período.')
+      return
+    }
     setError('')
     const validationError = await validateDates()
     if (validationError) { setError(validationError); return }

@@ -9,14 +9,17 @@ export default function NovaAlocacaoPage() {
   const [funcionarios, setFuncionarios] = useState<any[]>([])
   const [obras, setObras] = useState<any[]>([])
   const [conflito, setConflito] = useState<string | null>(null)
-  const [form, setForm] = useState({ funcionario_id: '', obra_id: '', cargo_na_obra: '', data_inicio: '' })
+  const [form, setForm] = useState({ funcionario_id: '', obra_id: '', cargo_na_obra: '', data_inicio: '', data_fim: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('funcionarios').select('id,nome,cargo,status').is('deleted_at', null).order('nome').then(({ data }) => setFuncionarios(data ?? []))
+    // Só funcionários ativos (não arquivados e não inativos)
+    supabase.from('funcionarios').select('id,nome,cargo,status')
+      .is('deleted_at', null).neq('status','inativo').order('nome')
+      .then(({ data }) => setFuncionarios(data ?? []))
     supabase.from('obras').select('id,nome,cliente').eq('status','ativo').is('deleted_at', null).order('nome').then(({ data }) => setObras(data ?? []))
   }, [])
 
@@ -42,13 +45,61 @@ export default function NovaAlocacaoPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    setError('')
+
+    // Validação de datas
+    if (form.data_fim && form.data_inicio && form.data_fim < form.data_inicio) {
+      setError('A data de fim não pode ser anterior à data de início.')
+      return
+    }
+
+    // Bloqueia se há conflito (já alocado em outra obra)
+    if (conflito) {
+      setError('Este funcionário já possui alocação ativa. Encerre a alocação anterior antes de criar uma nova.')
+      return
+    }
+
     setLoading(true)
-    const { error } = await supabase.from('alocacoes').insert({
+
+    // Revalida: funcionário ainda está ativo?
+    const { data: freshFunc } = await supabase.from('funcionarios')
+      .select('deleted_at, status')
+      .eq('id', form.funcionario_id).maybeSingle()
+    if (!freshFunc || (freshFunc as any).deleted_at || (freshFunc as any).status === 'inativo') {
+      setError('Funcionário não está mais disponível para alocação.')
+      setLoading(false)
+      return
+    }
+
+    // Revalida: obra ainda está ativa?
+    const { data: freshObra } = await supabase.from('obras')
+      .select('status, deleted_at')
+      .eq('id', form.obra_id).maybeSingle()
+    if (!freshObra || (freshObra as any).deleted_at || (freshObra as any).status !== 'ativo') {
+      setError('Obra não está mais ativa. Selecione outra.')
+      setLoading(false)
+      return
+    }
+
+    // Revalida: ainda não há outra alocação ativa?
+    const { data: outra } = await supabase.from('alocacoes')
+      .select('id').eq('funcionario_id', form.funcionario_id).eq('ativo', true).limit(1)
+    if ((outra ?? []).length > 0) {
+      setError('Funcionário acabou de ser alocado em outra obra. Atualize a página.')
+      setLoading(false)
+      return
+    }
+
+    const { error: insErr } = await supabase.from('alocacoes').insert({
       ...form, ativo: true,
+      data_fim: form.data_fim || null,
       data_inicio: form.data_inicio || (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` })()
     })
-    if (error) { setError(error.message); setLoading(false); return }
-    await supabase.from('funcionarios').update({ status: 'alocado' }).eq('id', form.funcionario_id)
+    if (insErr) { setError(insErr.message); setLoading(false); return }
+
+    const { error: updErr } = await supabase.from('funcionarios').update({ status: 'alocado' }).eq('id', form.funcionario_id)
+    if (updErr) { setError('Alocação criada, mas falha ao atualizar status: ' + updErr.message); setLoading(false); return }
+
     router.push('/alocacao')
   }
 
@@ -94,6 +145,12 @@ export default function NovaAlocacaoPage() {
               <input type="date" value={form.data_inicio} onChange={e => set('data_inicio', e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand"/>
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Data prevista de fim <span className="text-gray-400 font-normal">(opcional)</span></label>
+            <input type="date" value={form.data_fim} onChange={e => set('data_fim', e.target.value)}
+              min={form.data_inicio}
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand"/>
           </div>
           <div className="flex gap-3 pt-2">
             <button type="submit" disabled={loading}

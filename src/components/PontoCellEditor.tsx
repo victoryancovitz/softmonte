@@ -45,13 +45,19 @@ export default function PontoCellEditor({
   onClose,
   onSaved,
 }: {
-  funcionario: { id: string; nome: string; cargo?: string }
+  funcionario: { id: string; nome: string; cargo?: string; admissao?: string; deleted_at?: string | null }
   obraId: string
   data: string  // YYYY-MM-DD
   initial: CellState
   onClose: () => void
   onSaved: () => void
 }) {
+  // Validação de período do vínculo
+  const dataLimiteInicio = funcionario.admissao ?? null
+  const dataLimiteFim = funcionario.deleted_at ? funcionario.deleted_at.split('T')[0] : null
+  const foraDoVinculo =
+    (dataLimiteInicio && data < dataLimiteInicio) ||
+    (dataLimiteFim && data > dataLimiteFim)
   const [status, setStatus] = useState<StatusValue | null>(initial.status)
   const [observacao, setObservacao] = useState(initial.observacao ?? '')
   const [horasTrabalhadas, setHorasTrabalhadas] = useState<string>(
@@ -72,6 +78,10 @@ export default function PontoCellEditor({
   const precisaDoc = selectedOption?.precisa_doc
 
   async function handleSave() {
+    if (foraDoVinculo) {
+      toast.error('Data fora do período de vínculo do funcionário.')
+      return
+    }
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -151,6 +161,15 @@ export default function PontoCellEditor({
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl">✕</button>
         </div>
 
+        {foraDoVinculo && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+            <strong>⚠ Data fora do vínculo:</strong> Este funcionário
+            {dataLimiteInicio && data < dataLimiteInicio && <> foi admitido em {new Date(dataLimiteInicio + 'T12:00').toLocaleDateString('pt-BR')}</>}
+            {dataLimiteFim && data > dataLimiteFim && <> foi desligado em {new Date(dataLimiteFim + 'T12:00').toLocaleDateString('pt-BR')}</>}
+            . Não é possível lançar ponto para esta data.
+          </div>
+        )}
+
         <div className="space-y-2 mb-4">
           <p className="text-xs font-semibold text-gray-600">Status do dia</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -214,7 +233,7 @@ export default function PontoCellEditor({
         <div className="flex gap-2 justify-end pt-3 border-t border-gray-100">
           <button onClick={onClose} disabled={saving}
             className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</button>
-          <button onClick={handleSave} disabled={saving || !status}
+          <button onClick={handleSave} disabled={saving || !status || foraDoVinculo}
             className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50">
             {saving ? 'Salvando...' : 'Salvar'}
           </button>
