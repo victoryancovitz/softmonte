@@ -33,7 +33,7 @@ export default function FinanceiroPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('obras').select('id,nome').order('nome').then(({ data }) => setObras(data ?? []))
+    supabase.from('obras').select('id,nome').is('deleted_at', null).order('nome').then(({ data }) => setObras(data ?? []))
   }, [])
 
   useEffect(() => {
@@ -42,7 +42,7 @@ export default function FinanceiroPage() {
 
   async function loadData() {
     setLoading(true)
-    let q = supabase.from('financeiro_lancamentos').select('*').order('data_competencia').limit(5000)
+    let q = supabase.from('financeiro_lancamentos').select('*').is('deleted_at', null).order('data_competencia').limit(5000)
     if (obraId !== 'all') q = q.eq('obra_id', obraId)
     if (!showProvisoes) q = q.eq('is_provisao', false)
     const { data } = await q
@@ -309,7 +309,11 @@ export default function FinanceiroPage() {
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <ConfirmButton label="Excluir" onConfirm={async () => {
-                      await supabase.from('financeiro_lancamentos').update({ deleted_at: new Date().toISOString() }).eq('id', l.id)
+                      const { data: { user } } = await supabase.auth.getUser()
+                      await supabase.from('financeiro_lancamentos').update({
+                        deleted_at: new Date().toISOString(),
+                        deleted_by: user?.id ?? null,
+                      }).eq('id', l.id)
                       setLancamentos(prev => prev.filter(x => x.id !== l.id))
                     }} />
                   </td>

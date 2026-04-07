@@ -59,7 +59,7 @@ export default function PedidosPage() {
         // Try to find matching estoque_itens by name
         const descItem = itens[i].descricao ?? ''
         const { data: estoqueItem } = descItem
-          ? await supabase.from('estoque_itens').select('id').ilike('nome', `%${descItem}%`).limit(1).single()
+          ? await supabase.from('estoque_itens').select('id').ilike('nome', `%${descItem}%`).is('deleted_at', null).limit(1).single()
           : { data: null }
 
         await supabase.from('estoque_movimentacoes').insert({

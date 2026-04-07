@@ -23,8 +23,8 @@ export default function NovoHHPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('funcionarios').select('id,nome,cargo,custo_hora').order('nome').then(({ data }) => setFuncionarios(data ?? []))
-    supabase.from('obras').select('id,nome').eq('status','ativo').order('nome').then(({ data }) => setObras(data ?? []))
+    supabase.from('funcionarios').select('id,nome,cargo,custo_hora').is('deleted_at', null).order('nome').then(({ data }) => setFuncionarios(data ?? []))
+    supabase.from('obras').select('id,nome').eq('status','ativo').is('deleted_at', null).order('nome').then(({ data }) => setObras(data ?? []))
   }, [])
 
   function set(field: string, value: any) {

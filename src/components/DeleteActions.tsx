@@ -112,7 +112,7 @@ export function ExcluirHHBtn({ hhId, nome, role }: { hhId: string; nome: string;
   )
 }
 
-// 6. Excluir documento
+// 6. Excluir documento (soft delete)
 export function ExcluirDocBtn({ docId, role }: { docId: string; role: string }) {
   const router = useRouter()
   const supabase = createClient()
@@ -121,7 +121,10 @@ export function ExcluirDocBtn({ docId, role }: { docId: string; role: string }) 
   return (
     <InlineConfirm label="Excluir"
       onConfirm={async () => {
-        await supabase.from('documentos').delete().eq('id', docId)
+        const { data: { user } } = await supabase.auth.getUser()
+        await supabase.from('documentos')
+          .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+          .eq('id', docId)
         router.refresh()
       }} />
   )
@@ -136,24 +139,31 @@ export function ExcluirFinanceiroBtn({ lancId, role }: { lancId: string; role: s
   return (
     <InlineConfirm label="Excluir"
       onConfirm={async () => {
-        await supabase.from('financeiro_lancamentos').update({ deleted_at: new Date().toISOString() }).eq('id', lancId)
+        const { data: { user } } = await supabase.auth.getUser()
+        await supabase.from('financeiro_lancamentos')
+          .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+          .eq('id', lancId)
         router.refresh()
       }} />
   )
 }
 
-// 8. Excluir BM
+// 8. Excluir BM (soft delete)
 export function ExcluirBMBtn({ bmId, status, role }: { bmId: string; status: string; role: string }) {
   const router = useRouter()
   const supabase = createClient()
-  if (role !== 'admin' || status !== 'aberto') return null
+  if (role !== 'admin') return null
 
   return (
     <InlineConfirm label="Excluir BM"
       className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50"
       onConfirm={async () => {
-        await supabase.from('boletins_medicao').delete().eq('id', bmId)
+        const { data: { user } } = await supabase.auth.getUser()
+        await supabase.from('boletins_medicao')
+          .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+          .eq('id', bmId)
         router.push('/boletins')
+        router.refresh()
       }} />
   )
 }

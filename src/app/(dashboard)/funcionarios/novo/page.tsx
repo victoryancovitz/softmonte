@@ -106,7 +106,7 @@ export default function NovoFuncionarioPage() {
   useEffect(() => {
     supabase.from('funcoes').select('*').eq('ativo', true).order('nome')
       .then(({ data }) => setFuncoes(data ?? []))
-    supabase.from('obras').select('*').eq('status', 'ativo').order('nome')
+    supabase.from('obras').select('*').eq('status', 'ativo').is('deleted_at', null).order('nome')
       .then(({ data }) => setObras(data ?? []))
   }, [])
 

@@ -83,13 +83,13 @@ export default function RastreioPage() {
 
     const [docsRes, treinRes, funcRes, obrasRes, alocsRes, allAsosRes] = await Promise.all([
       supabase.from('documentos').select('id, tipo, vencimento, arquivo_url, funcionario_id, funcionarios(id, nome, cargo)')
-        .not('vencimento', 'is', null).lte('vencimento', em60).order('vencimento'),
+        .is('deleted_at', null).not('vencimento', 'is', null).lte('vencimento', em60).order('vencimento'),
       supabase.from('treinamentos_funcionarios').select('id, data_vencimento, funcionario_id, tipo_id, funcionarios(id, nome, cargo), treinamentos_tipos(id, codigo, nome)')
         .lte('data_vencimento', em60).order('data_vencimento'),
-      supabase.from('funcionarios').select('id, nome, cargo, status').neq('status', 'inativo').order('nome'),
-      supabase.from('obras').select('id, nome').eq('status', 'ativa').order('nome'),
+      supabase.from('funcionarios').select('id, nome, cargo, status').is('deleted_at', null).neq('status', 'inativo').order('nome'),
+      supabase.from('obras').select('id, nome').eq('status', 'ativo').is('deleted_at', null).order('nome'),
       supabase.from('alocacoes').select('funcionario_id, obra_id, obras(nome)').eq('ativo', true),
-      supabase.from('documentos').select('funcionario_id, vencimento').eq('tipo', 'ASO').order('vencimento', { ascending: false }),
+      supabase.from('documentos').select('funcionario_id, vencimento').eq('tipo', 'ASO').is('deleted_at', null).order('vencimento', { ascending: false }),
     ])
 
     setDocs(docsRes.data ?? [])

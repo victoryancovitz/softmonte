@@ -18,8 +18,8 @@ export default function MovimentarEstoquePage({ params }: { params: { id: string
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('estoque_itens').select('*').eq('id', params.id).single().then(({ data }) => setItem(data))
-    supabase.from('obras').select('id,nome').eq('status','ativo').order('nome').then(({ data }) => setObras(data ?? []))
+    supabase.from('estoque_itens').select('*').eq('id', params.id).is('deleted_at', null).single().then(({ data }) => setItem(data))
+    supabase.from('obras').select('id,nome').eq('status','ativo').is('deleted_at', null).order('nome').then(({ data }) => setObras(data ?? []))
   }, [params.id])
 
   function set(field: string, value: string) { setForm(f => ({ ...f, [field]: value })) }

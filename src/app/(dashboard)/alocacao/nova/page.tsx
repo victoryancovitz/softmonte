@@ -16,8 +16,8 @@ export default function NovaAlocacaoPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('funcionarios').select('id,nome,cargo,status').order('nome').then(({ data }) => setFuncionarios(data ?? []))
-    supabase.from('obras').select('id,nome,cliente').eq('status','ativo').order('nome').then(({ data }) => setObras(data ?? []))
+    supabase.from('funcionarios').select('id,nome,cargo,status').is('deleted_at', null).order('nome').then(({ data }) => setFuncionarios(data ?? []))
+    supabase.from('obras').select('id,nome,cliente').eq('status','ativo').is('deleted_at', null).order('nome').then(({ data }) => setObras(data ?? []))
   }, [])
 
   async function checkConflito(funcId: string) {

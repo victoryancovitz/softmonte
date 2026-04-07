@@ -10,7 +10,7 @@ export default async function ClientePage({ params }: { params: { id: string } }
   const { data: cliente } = await supabase.from('clientes').select('*').eq('id', params.id).single()
   if (!cliente) notFound()
 
-  const { data: obras } = await supabase.from('obras').select('*').eq('cliente', cliente.nome)
+  const { data: obras } = await supabase.from('obras').select('*').eq('cliente', cliente.nome).is('deleted_at', null)
   const { data: emailLogs } = await supabase.from('email_logs').select('*')
     .order('enviado_em', { ascending: false }).limit(20)
 

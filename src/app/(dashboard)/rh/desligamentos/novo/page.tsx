@@ -54,7 +54,7 @@ export default function NovoDesligamentoPage() {
   const selectedFunc = funcionarios.find(f => f.id === funcId)
 
   useEffect(() => {
-    supabase.from('funcionarios').select('id, nome, cargo, status')
+    supabase.from('funcionarios').select('id, nome, cargo, status').is('deleted_at', null)
       .neq('status', 'inativo').order('nome')
       .then(({ data }) => setFuncionarios(data ?? []))
   }, [])

@@ -44,7 +44,12 @@
       "Bash(grep -n \"equipe\\\\|Equipe\\\\|alocados\" src/app/\\\\\\(dashboard\\\\\\)/obras/[id]/page.tsx)",
       "Bash(grep -n \"Excluir\\\\|delete\\\\|Delete\" src/app/\\\\\\(dashboard\\\\\\)/boletins/[id]/page.tsx)",
       "Bash(grep -n \"showCriarReceita\\\\|setShowCriarReceita\" src/app/\\\\\\(dashboard\\\\\\)/boletins/[id]/page.tsx)",
-      "Bash(grep -n \"Histórico\\\\|^      <\\\\/div>$\" src/app/\\\\\\(dashboard\\\\\\)/boletins/[id]/page.tsx)"
+      "Bash(grep -n \"Histórico\\\\|^      <\\\\/div>$\" src/app/\\\\\\(dashboard\\\\\\)/boletins/[id]/page.tsx)",
+      "Bash(for t:*)",
+      "Bash(do)",
+      "Bash(echo \"=== $t ===\")",
+      "Bash(grep -rn \"from\\(''$t''\\)\" src --include=\"*.tsx\" --include=\"*.ts\")",
+      "Bash(done)"
     ]
   }
 }

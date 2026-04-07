@@ -42,7 +42,7 @@ export default function RelatoriosPage() {
     switch (id) {
       case 1: {
         const [obrasRes, alocRes, hhRes] = await Promise.all([
-          supabase.from('obras').select('id, nome, numero_contrato, pessoas_contratadas, hh_contratados, margem_alvo, status'),
+          supabase.from('obras').select('id, nome, numero_contrato, pessoas_contratadas, hh_contratados, margem_alvo, status').is('deleted_at', null),
           supabase.from('alocacoes').select('obra_id').eq('ativo', true),
           supabase.from('hh_lancamentos').select('obra_id, horas_normais, horas_extras, horas_noturnas'),
         ])
@@ -69,7 +69,7 @@ export default function RelatoriosPage() {
       }
       case 2: {
         const [obrasRes, finRes] = await Promise.all([
-          supabase.from('obras').select('id, nome'),
+          supabase.from('obras').select('id, nome').is('deleted_at', null),
           supabase.from('financeiro_lancamentos').select('obra_id, tipo, valor, categoria').is('deleted_at', null),
         ])
         const obras = obrasRes.data ?? []
@@ -131,7 +131,7 @@ export default function RelatoriosPage() {
       }
       case 5: {
         const [obrasRes, hhRes] = await Promise.all([
-          supabase.from('obras').select('id, nome, hh_contratados'),
+          supabase.from('obras').select('id, nome, hh_contratados').is('deleted_at', null),
           supabase.from('hh_lancamentos').select('obra_id, horas_normais, horas_extras, horas_noturnas, funcionarios(cargo, funcao)'),
         ])
         const obras = obrasRes.data ?? []

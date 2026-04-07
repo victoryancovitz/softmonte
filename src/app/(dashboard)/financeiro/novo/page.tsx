@@ -22,7 +22,7 @@ export default function NovoLancamentoPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('obras').select('id,nome,cliente').eq('status','ativo').order('nome')
+    supabase.from('obras').select('id,nome,cliente').eq('status','ativo').is('deleted_at', null).order('nome')
       .then(({ data }) => setObras(data ?? []))
   }, [])
 

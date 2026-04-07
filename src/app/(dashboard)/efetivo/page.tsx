@@ -32,7 +32,7 @@ export default function EfetivoDiarioPage() {
   const tipoDia = getTipoDia(new Date(data + 'T12:00:00'))
 
   useEffect(() => {
-    supabase.from('obras').select('id,nome,cliente').eq('status','ativo').order('nome')
+    supabase.from('obras').select('id,nome,cliente').eq('status','ativo').is('deleted_at', null).order('nome')
       .then(({ data }) => setObras(data ?? []))
   }, [])
 

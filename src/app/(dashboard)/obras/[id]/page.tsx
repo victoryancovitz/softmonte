@@ -92,7 +92,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
   // Fetch documentos for allocated funcionarios
   const funcIds = Array.from(ativosIds)
   const { data: documentos } = funcIds.length > 0
-    ? await supabase.from('documentos').select('*, funcionarios(nome)').in('funcionario_id', funcIds).order('vencimento', { ascending: true })
+    ? await supabase.from('documentos').select('*, funcionarios(nome)').in('funcionario_id', funcIds).is('deleted_at', null).order('vencimento', { ascending: true })
     : { data: [] as any[] }
 
   // Efetivo grouped by date

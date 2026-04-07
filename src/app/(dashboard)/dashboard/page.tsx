@@ -17,10 +17,10 @@ export default async function DashboardPage() {
     faltas_mes, hh_mes, bms_abertos, bms_enviados,
     perfil, contratos_vencidos, contratos_vencendo,
   ] = await Promise.all([
-    supabase.from('funcionarios').select('id,status,prazo1', { count: 'exact' }),
-    supabase.from('obras').select('id,nome,cliente,local,status,data_inicio,data_prev_fim').eq('status', 'ativo'),
-    supabase.from('estoque_itens').select('id,nome,quantidade,quantidade_minima').filter('quantidade', 'lte', 'quantidade_minima'),
-    supabase.from('documentos').select('id').lte('vencimento', em30dias),
+    supabase.from('funcionarios').select('id,status,prazo1', { count: 'exact' }).is('deleted_at', null),
+    supabase.from('obras').select('id,nome,cliente,local,status,data_inicio,data_prev_fim').eq('status', 'ativo').is('deleted_at', null),
+    supabase.from('estoque_itens').select('id,nome,quantidade,quantidade_minima').filter('quantidade', 'lte', 'quantidade_minima').is('deleted_at', null),
+    supabase.from('documentos').select('id').lte('vencimento', em30dias).is('deleted_at', null),
     supabase.from('vw_alertas').select('*').order('dias_restantes'),
     supabase.from('efetivo_diario').select('id', { count: 'exact' }).eq('data', hojeStr),
     supabase.from('faltas').select('id', { count: 'exact' }).eq('tipo', 'falta_injustificada').gte('data', mesInicio),
@@ -28,8 +28,8 @@ export default async function DashboardPage() {
     supabase.from('boletins_medicao').select('id', { count: 'exact' }).eq('status', 'aberto').is('deleted_at', null),
     supabase.from('boletins_medicao').select('id,enviado_em', { count: 'exact' }).eq('status', 'enviado').is('deleted_at', null),
     user ? supabase.from('profiles').select('*').eq('user_id', user.id).single() : Promise.resolve({ data: null }),
-    supabase.from('funcionarios').select('id', { count: 'exact' }).lt('prazo1', hojeStr),
-    supabase.from('funcionarios').select('id', { count: 'exact' }).gte('prazo1', hojeStr).lte('prazo1', em30dias),
+    supabase.from('funcionarios').select('id', { count: 'exact' }).lt('prazo1', hojeStr).is('deleted_at', null),
+    supabase.from('funcionarios').select('id', { count: 'exact' }).gte('prazo1', hojeStr).lte('prazo1', em30dias).is('deleted_at', null),
   ])
 
   const nObras = obras.data?.length ?? 0

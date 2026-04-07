@@ -7,8 +7,8 @@ export default async function CadastrosPage() {
   const [funcoes, cats, obras, funcs] = await Promise.all([
     supabase.from('funcoes').select('id', { count: 'exact' }).eq('ativo', true),
     supabase.from('categorias_financeiras').select('id', { count: 'exact' }).eq('ativo', true),
-    supabase.from('obras').select('id', { count: 'exact' }),
-    supabase.from('funcionarios').select('id', { count: 'exact' }),
+    supabase.from('obras').select('id', { count: 'exact' }).is('deleted_at', null),
+    supabase.from('funcionarios').select('id', { count: 'exact' }).is('deleted_at', null),
   ])
 
   const cards = [

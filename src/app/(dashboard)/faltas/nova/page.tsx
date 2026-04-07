@@ -29,9 +29,9 @@ export default function NovaFaltaPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('funcionarios').select('id,nome,cargo').order('nome')
+    supabase.from('funcionarios').select('id,nome,cargo').is('deleted_at', null).order('nome')
       .then(({ data }) => setFuncionarios(data ?? []))
-    supabase.from('obras').select('id,nome').eq('status', 'ativo').order('nome')
+    supabase.from('obras').select('id,nome').eq('status', 'ativo').is('deleted_at', null).order('nome')
       .then(({ data }) => setObras(data ?? []))
   }, [])
 

@@ -53,8 +53,8 @@ export default function NovaAdmissaoPage() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from('funcionarios').select('id, nome, cargo, status').neq('status', 'inativo').order('nome'),
-      supabase.from('obras').select('id, nome').eq('status', 'ativa').order('nome'),
+      supabase.from('funcionarios').select('id, nome, cargo, status').neq('status', 'inativo').is('deleted_at', null).order('nome'),
+      supabase.from('obras').select('id, nome').eq('status', 'ativo').is('deleted_at', null).order('nome'),
     ]).then(([funcRes, obrasRes]) => {
       setFuncionarios(funcRes.data ?? [])
       setObras(obrasRes.data ?? [])

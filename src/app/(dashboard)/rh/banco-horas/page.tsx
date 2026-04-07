@@ -55,7 +55,7 @@ export default function BancoHorasPage() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    supabase.from('obras').select('id, nome').order('nome').then(({ data }) => {
+    supabase.from('obras').select('id, nome').is('deleted_at', null).order('nome').then(({ data }) => {
       setObras(data ?? [])
       if (data && data.length > 0 && !obraId) {
         setObraId(data[0].id)

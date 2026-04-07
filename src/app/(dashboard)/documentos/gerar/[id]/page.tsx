@@ -102,7 +102,7 @@ export default function GerarDocumentoPage() {
     async function load() {
       const [{ data: modeloData }, { data: funcData }] = await Promise.all([
         supabase.from('modelos_documentos').select('*').eq('id', params.id).single(),
-        supabase.from('funcionarios').select('id, nome, cpf, admissao, funcao_id, cargo').order('nome')
+        supabase.from('funcionarios').select('id, nome, cpf, admissao, funcao_id, cargo').is('deleted_at', null).order('nome')
       ])
       // Map fields to expected shape
       const mapped = (funcData || []).map((f: any) => ({

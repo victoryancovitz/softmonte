@@ -90,7 +90,7 @@ export default function TreinamentosPage() {
         .select('*, funcionarios(id, nome, cargo), treinamentos_tipos(id, nome, nr, validade_meses)')
         .order('data_vencimento', { ascending: true }),
       supabase.from('treinamentos_tipos').select('*').order('nome'),
-      supabase.from('funcionarios').select('id, nome, cargo').in('status', ['alocado', 'disponivel', 'pendente']).order('nome'),
+      supabase.from('funcionarios').select('id, nome, cargo').in('status', ['alocado', 'disponivel', 'pendente']).is('deleted_at', null).order('nome'),
     ])
     setTreinamentos(treinRes.data ?? [])
     setTipos(tiposRes.data ?? [])

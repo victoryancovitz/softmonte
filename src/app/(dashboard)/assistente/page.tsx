@@ -43,10 +43,10 @@ export default function AssistentePage() {
 
   async function loadContext() {
     const [obras, funcs, bms, fin] = await Promise.all([
-      supabase.from('obras').select('nome, cliente, local, status').eq('status', 'ativo'),
-      supabase.from('funcionarios').select('nome, cargo, status, prazo1, prazo2').order('nome'),
-      supabase.from('boletins_medicao').select('numero, status, data_inicio, data_fim, obras(nome)').order('created_at', { ascending: false }).limit(5),
-      supabase.from('financeiro_lancamentos').select('tipo, categoria, valor, status, data_competencia').order('data_competencia', { ascending: false }).limit(20),
+      supabase.from('obras').select('nome, cliente, local, status').eq('status', 'ativo').is('deleted_at', null),
+      supabase.from('funcionarios').select('nome, cargo, status, prazo1, prazo2').is('deleted_at', null).order('nome'),
+      supabase.from('boletins_medicao').select('numero, status, data_inicio, data_fim, obras(nome)').is('deleted_at', null).order('created_at', { ascending: false }).limit(5),
+      supabase.from('financeiro_lancamentos').select('tipo, categoria, valor, status, data_competencia').is('deleted_at', null).order('data_competencia', { ascending: false }).limit(20),
     ])
 
     const ctx = `
