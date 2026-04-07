@@ -4,46 +4,72 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { DesativarFuncionarioBtn } from '@/components/DeleteActions'
 import BackButton from '@/components/BackButton'
+import FuncionarioDocumentos from '@/components/FuncionarioDocumentos'
 
 export default async function FuncionarioPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
-  const { data: f } = await supabase.from('funcionarios').select('*').eq('id', params.id).single()
+  const { data: f } = await supabase.from('funcionarios').select('*').eq('id', params.id).is('deleted_at', null).single()
   if (!f) notFound()
   const role = await getRole()
 
   const hoje = new Date()
   const trintaDiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
 
-  const [{ data: alocacoes }, { data: faltas }, { data: docsFunc }, { data: efetivo30 }, { data: docsGerados }, { data: prazosArr }, { data: admissaoArr }, { data: desligamentoArr }] = await Promise.all([
+  const [{ data: alocacoes }, { data: faltas }, { data: docsFunc }, { data: efetivo30 }, { data: docsGerados }, { data: prazosArr }, { data: admissaoArr }, { data: desligamentoArr }, { count: faltasCount }] = await Promise.all([
     supabase.from('alocacoes').select('*, obras(nome, status)').eq('funcionario_id', params.id).order('data_inicio', { ascending: false }),
     supabase.from('faltas').select('*').eq('funcionario_id', params.id).order('data', { ascending: false }).limit(20),
-    supabase.from('documentos').select('*').eq('funcionario_id', params.id).order('vencimento'),
+    supabase.from('documentos').select('*').eq('funcionario_id', params.id).is('deleted_at', null).order('vencimento'),
     supabase.from('efetivo_diario').select('data,tipo_dia,obras(nome)').eq('funcionario_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
     supabase.from('documentos_gerados').select('*').eq('funcionario_id', params.id).order('created_at', { ascending: false }),
     supabase.from('vw_prazos_legais').select('*').eq('funcionario_id', params.id).limit(1),
     supabase.from('admissoes_workflow').select('id, status, concluida_em, created_at').eq('funcionario_id', params.id).order('created_at', { ascending: false }).limit(1),
     supabase.from('desligamentos_workflow').select('id, status, concluido_em, created_at').eq('funcionario_id', params.id).eq('status', 'em_andamento').order('created_at', { ascending: false }).limit(1),
+    supabase.from('faltas').select('id', { count: 'exact', head: true }).eq('funcionario_id', params.id).in('tipo', ['falta_injustificada','falta_justificada']),
   ])
   const prazos = prazosArr?.[0] ?? null
   const admissao = admissaoArr?.[0] ?? null
   const desligamento = desligamentoArr?.[0] ?? null
 
+  // Calculate prazo badges
+  function prazoBadge(date: string | null) {
+    if (!date) return null
+    const dias = Math.ceil((new Date(date+'T12:00').getTime() - hoje.getTime()) / 86400000)
+    if (dias < 0) return { label: 'Vencido', cls: 'bg-red-100 text-red-700' }
+    if (dias < 15) return { label: `Vence em ${dias}d`, cls: 'bg-amber-100 text-amber-700' }
+    return { label: 'Vigente', cls: 'bg-green-100 text-green-700' }
+  }
+
+  // CLT vacation rule: 12 months acquisitive period + 12 months concession period
+  // Atrasado se admissão + 24 meses já passou
+  let feriasAtrasada = false
+  let podeFerias = false
+  let proximoPeriodoFerias: Date | null = null
+  if (f.admissao) {
+    const admissaoDate = new Date(f.admissao + 'T12:00')
+    const podeApartirDe = new Date(admissaoDate)
+    podeApartirDe.setMonth(podeApartirDe.getMonth() + 12)
+    const limite = new Date(admissaoDate)
+    limite.setMonth(limite.getMonth() + 24)
+    podeFerias = hoje >= podeApartirDe
+    feriasAtrasada = hoje >= limite
+    proximoPeriodoFerias = podeApartirDe
+  }
+
   const campos = [
-    { label: 'Matricula', value: f.matricula },
+    { label: 'Nº Identificação (Ponto)', value: f.matricula },
     { label: 'RE', value: f.re },
     { label: 'CPF', value: f.cpf },
     { label: 'PIS', value: f.pis },
     { label: 'Data de Nascimento', value: f.data_nascimento ? new Date(f.data_nascimento+'T12:00').toLocaleDateString('pt-BR') : null },
-    { label: 'Admissao', value: f.admissao ? new Date(f.admissao+'T12:00').toLocaleDateString('pt-BR') : null },
-    { label: 'Prazo 1', value: f.prazo1 ? new Date(f.prazo1+'T12:00').toLocaleDateString('pt-BR') : null },
-    { label: 'Prazo 2', value: f.prazo2 ? new Date(f.prazo2+'T12:00').toLocaleDateString('pt-BR') : null },
+    { label: 'Admissão', value: f.admissao ? new Date(f.admissao+'T12:00').toLocaleDateString('pt-BR') : null },
     { label: 'Banco', value: f.banco },
-    { label: 'Agencia / Conta', value: f.agencia_conta },
+    { label: 'Agência / Conta', value: f.agencia_conta },
     { label: 'PIX', value: f.pix },
     { label: 'VT Estrutura', value: f.vt_estrutura },
-    { label: 'Tamanho Bota', value: f.tamanho_bota },
-    { label: 'Uniforme', value: f.tamanho_uniforme },
   ]
+
+  const prazo1Badge = prazoBadge(f.prazo1)
+  const prazo2Badge = prazoBadge(f.prazo2)
 
   const STATUS_COLOR: Record<string, string> = {
     disponivel: 'bg-green-100 text-green-700',
@@ -155,6 +181,30 @@ export default async function FuncionarioPage({ params }: { params: { id: string
                 <span className="text-sm font-medium text-gray-800">{c.value}</span>
               </div>
             ))}
+            {f.prazo1 && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500" title="Vence 45 dias após a admissão. Deve ser prorrogado ou efetivado antes desta data.">
+                  1º Período de Experiência
+                  <span className="ml-1 text-gray-300 cursor-help">ⓘ</span>
+                </span>
+                <span className="text-sm font-medium text-gray-800 flex items-center gap-2">
+                  {new Date(f.prazo1+'T12:00').toLocaleDateString('pt-BR')}
+                  {prazo1Badge && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${prazo1Badge.cls}`}>{prazo1Badge.label}</span>}
+                </span>
+              </div>
+            )}
+            {f.prazo2 && (
+              <div className="flex justify-between items-center">
+                <span className="text-xs text-gray-500" title="Vence 90 dias após a admissão (máximo legal CLT). Após esta data, o contrato se torna por prazo indeterminado.">
+                  2º Período de Experiência
+                  <span className="ml-1 text-gray-300 cursor-help">ⓘ</span>
+                </span>
+                <span className="text-sm font-medium text-gray-800 flex items-center gap-2">
+                  {new Date(f.prazo2+'T12:00').toLocaleDateString('pt-BR')}
+                  {prazo2Badge && <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${prazo2Badge.cls}`}>{prazo2Badge.label}</span>}
+                </span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-xs text-gray-500">Custo/hora</span>
               <span className="text-sm font-medium text-gray-800">
@@ -206,26 +256,40 @@ export default async function FuncionarioPage({ params }: { params: { id: string
             <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
               <span className="text-xs text-gray-500">Converteu para CLT</span>
               <span className={`text-sm font-medium ${prazos.ja_converteu_clt ? 'text-green-700' : 'text-gray-400'}`}>
-                {prazos.ja_converteu_clt ? `Sim — ${prazos.converte_clt_em ? new Date(prazos.converte_clt_em+'T12:00').toLocaleDateString('pt-BR') : ''}` : 'Nao'}
+                {prazos.ja_converteu_clt ? `Sim — ${prazos.converte_clt_em ? new Date(prazos.converte_clt_em+'T12:00').toLocaleDateString('pt-BR') : ''}` : 'Não'}
               </span>
             </div>
-            {prazos.periodo_aquisitivo_atual_inicio && (
-              <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
-                <span className="text-xs text-gray-500">Periodo aquisitivo</span>
-                <span className="text-xs font-medium">{new Date(prazos.periodo_aquisitivo_atual_inicio+'T12:00').toLocaleDateString('pt-BR')} → {prazos.periodo_aquisitivo_atual_fim ? new Date(prazos.periodo_aquisitivo_atual_fim+'T12:00').toLocaleDateString('pt-BR') : '—'}</span>
-              </div>
-            )}
-            {prazos.concessivo_limite && (
-              <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
-                <span className="text-xs text-gray-500">Limite ferias</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{new Date(prazos.concessivo_limite+'T12:00').toLocaleDateString('pt-BR')}</span>
-                  {prazos.ferias_vencidas && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-bold">VENCIDO</span>}
+            <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
+              <span className="text-xs text-gray-500">Faltas no período</span>
+              <span className={`text-sm font-medium ${(faltasCount ?? 0) > 0 ? 'text-amber-700' : 'text-gray-400'}`}>
+                {faltasCount === 0 ? 'Nenhuma falta' : `${faltasCount} falta${(faltasCount ?? 0) > 1 ? 's' : ''}`}
+              </span>
+            </div>
+            {f.admissao && (
+              <>
+                <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
+                  <span className="text-xs text-gray-500" title="Funcionário pode tirar férias após 12 meses de admissão (CLT)">
+                    Pode tirar férias a partir de
+                    <span className="ml-1 text-gray-300 cursor-help">ⓘ</span>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">{proximoPeriodoFerias?.toLocaleDateString('pt-BR')}</span>
+                    {podeFerias && !feriasAtrasada && <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-bold">DISPONÍVEL</span>}
+                  </div>
                 </div>
-              </div>
+                {feriasAtrasada && (
+                  <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
+                    <span className="text-xs text-gray-500" title="Período concessivo de 12 meses já expirou (admissão + 24 meses)">
+                      Status férias
+                      <span className="ml-1 text-gray-300 cursor-help">ⓘ</span>
+                    </span>
+                    <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded-full font-bold">EM ATRASO</span>
+                  </div>
+                )}
+              </>
             )}
             <div className="flex justify-between items-center py-1.5 border-b border-gray-50">
-              <span className="text-xs text-gray-500">Saldo de ferias</span>
+              <span className="text-xs text-gray-500">Saldo de férias</span>
               <span className="text-sm font-bold text-brand">{prazos.saldo_ferias ?? 0} dias</span>
             </div>
             {prazos.proximas_ferias_inicio && (
@@ -301,32 +365,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
       </div>
 
       {/* Documentos */}
-      <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-sm font-bold text-brand font-display">Documentos</h2>
-          <Link href={`/documentos/novo?funcionario=${f.id}`} className="text-xs text-brand hover:underline">+ Novo</Link>
-        </div>
-        {docsFunc && docsFunc.length > 0 ? (
-          <div className="space-y-2">
-            {docsFunc.map((d: any) => {
-              const dias = d.vencimento ? Math.ceil((new Date(d.vencimento+'T12:00').getTime() - hoje.getTime()) / 86400000) : null
-              return (
-                <div key={d.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold bg-brand/10 text-brand px-2 py-0.5 rounded">{d.tipo}</span>
-                    <span className="text-xs text-gray-500">{d.vencimento ? new Date(d.vencimento+'T12:00').toLocaleDateString('pt-BR') : '—'}</span>
-                  </div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                    dias === null ? 'bg-gray-100 text-gray-500' : dias < 0 ? 'bg-red-100 text-red-700' : dias <= 30 ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700'
-                  }`}>
-                    {dias === null ? 'Sem venc.' : dias < 0 ? 'VENCIDO' : dias <= 30 ? `${dias}d` : 'OK'}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        ) : <p className="text-sm text-gray-400">Nenhum documento cadastrado.</p>}
-      </div>
+      <FuncionarioDocumentos funcionarioId={f.id} documentos={docsFunc ?? []} />
 
       {/* Advertencias e Termos */}
       <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
