@@ -421,6 +421,80 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   ws.pageSetup.fitToHeight = 0
   ws.pageSetup.margins = { left: 0.5, right: 0.5, top: 0.5, bottom: 0.5, header: 0.2, footer: 0.2 }
 
+  // Helper: adiciona cabeçalho de marca (logo + info) em qualquer aba.
+  // Retorna a linha a partir da qual o conteúdo deve começar.
+  function addBrandedHeader(sheet: ExcelJS.Worksheet, lastCol: number, titulo: string, descricao: string): number {
+    // Linhas 1-3: faixa navy com logo à esquerda e título à direita
+    sheet.getRow(1).height = 18
+    sheet.getRow(2).height = 18
+    sheet.getRow(3).height = 18
+    for (let r = 1; r <= 3; r++) {
+      for (let c = 1; c <= lastCol; c++) {
+        sheet.getCell(r, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
+      }
+    }
+    // Logo inline
+    try {
+      const logoBuf = Buffer.from(TECNOMONTE_LOGO_DARK_B64, 'base64')
+      const logoId = wb.addImage({ buffer: logoBuf as any, extension: 'png' })
+      sheet.addImage(logoId, {
+        tl: { col: 0.2, row: 0.3 } as any,
+        ext: { width: 220, height: 66 },
+        editAs: 'oneCell',
+      })
+    } catch (e) {
+      sheet.getCell(1, 1).value = 'TECNOMONTE'
+      sheet.getCell(1, 1).font = { bold: true, size: 16, color: { argb: WHITE } }
+    }
+
+    // Texto à direita (razão social + BM)
+    const rightStart = Math.max(5, Math.ceil(lastCol / 2))
+    sheet.mergeCells(1, rightStart, 2, lastCol)
+    const sub = sheet.getCell(1, rightStart)
+    sub.value = 'FABRICAÇÃO, MONTAGEM E MANUTENÇÃO INDUSTRIAL'
+    sub.font = { size: 9, bold: true, italic: true, color: { argb: GOLD_LIGHT } }
+    sub.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 }
+
+    sheet.mergeCells(3, rightStart, 3, lastCol)
+    const bmLabel = sheet.getCell(3, rightStart)
+    bmLabel.value = `BOLETIM DE MEDIÇÃO Nº ${String(bm.numero).padStart(2,'0')}`
+    bmLabel.font = { size: 10, bold: true, color: { argb: WHITE } }
+    bmLabel.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 }
+
+    // Linha 4: barra ouro fina
+    sheet.getRow(4).height = 4
+    for (let c = 1; c <= lastCol; c++) {
+      sheet.getCell(4, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GOLD } }
+    }
+
+    // Linha 5-6: título e descrição da aba
+    sheet.getRow(5).height = 22
+    sheet.getRow(6).height = 16
+
+    sheet.mergeCells(5, 1, 5, lastCol)
+    const tit = sheet.getCell(5, 1)
+    tit.value = titulo
+    tit.font = { bold: true, size: 13, color: { argb: NAVY } }
+    tit.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }
+    tit.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_LIGHT } }
+
+    sheet.mergeCells(6, 1, 6, lastCol)
+    const desc = sheet.getCell(6, 1)
+    desc.value = descricao
+    desc.font = { size: 9, italic: true, color: { argb: 'FF555555' } }
+    desc.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }
+    desc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_LIGHT } }
+
+    // Linha 7: barra ouro fina
+    sheet.getRow(7).height = 3
+    for (let c = 1; c <= lastCol; c++) {
+      sheet.getCell(7, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GOLD } }
+    }
+
+    sheet.getRow(8).height = 4  // respiro
+    return 9  // conteúdo começa na linha 9
+  }
+
   // === Aba Lançamentos: linha por dia × função ===
   const ws2 = wb.addWorksheet('Lançamentos')
 
@@ -464,45 +538,72 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     return null
   }
 
-  // Header
-  ws2.getCell(1, 1).value = 'Função'
-  ws2.getCell(1, 1).font = { bold: true }
-  datasArr.forEach((d, idx) => {
-    const cell = ws2.getCell(1, 2 + idx)
-    cell.value = new Date(d + 'T12:00')
-    cell.numFmt = 'dd/mm'
-    cell.font = { bold: true, size: 9 }
-    cell.alignment = { horizontal: 'center' }
-    const fill = fillForDate(d)
-    if (fill) cell.fill = fill as any
-  })
-  ws2.getCell(1, 2 + datasArr.length).value = 'Total'
-  ws2.getCell(1, 2 + datasArr.length).font = { bold: true }
-
-  funcoesAll.forEach((f, fIdx) => {
-    const r = 2 + fIdx
-    ws2.getCell(r, 1).value = f
-    ws2.getCell(r, 1).font = { bold: true }
-    let total = 0
-    datasArr.forEach((d, idx) => {
-      const v = grid[f][d] ?? 0
-      const cell = ws2.getCell(r, 2 + idx)
-      cell.value = v
-      cell.alignment = { horizontal: 'center' }
-      const fill = fillForDate(d)
-      if (fill) cell.fill = fill as any
-      total += v
-    })
-    ws2.getCell(r, 2 + datasArr.length).value = total
-    ws2.getCell(r, 2 + datasArr.length).font = { bold: true }
-    ws2.getCell(r, 2 + datasArr.length).alignment = { horizontal: 'center' }
-  })
-
-  ws2.columns[0] = { width: 22 }
+  // Larguras
+  ws2.getColumn(1).width = 22
   for (let i = 1; i <= datasArr.length; i++) {
     ws2.getColumn(i + 1).width = 5
   }
   ws2.getColumn(datasArr.length + 2).width = 8
+
+  // Cabeçalho de marca
+  const ws2LastCol = datasArr.length + 2
+  const ws2Start = addBrandedHeader(
+    ws2,
+    ws2LastCol,
+    'LANÇAMENTOS POR FUNÇÃO',
+    `Quantidade de pessoas por função em cada dia do período  ·  Sábados em amarelo  ·  Domingos/feriados em vermelho`
+  )
+
+  // Header da tabela
+  const headerRow = ws2Start
+  ws2.getCell(headerRow, 1).value = 'FUNÇÃO'
+  ws2.getCell(headerRow, 1).font = { bold: true, size: 10, color: { argb: WHITE } }
+  ws2.getCell(headerRow, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
+  ws2.getCell(headerRow, 1).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }
+  datasArr.forEach((d, idx) => {
+    const cell = ws2.getCell(headerRow, 2 + idx)
+    cell.value = new Date(d + 'T12:00')
+    cell.numFmt = 'dd/mm'
+    cell.font = { bold: true, size: 9, color: { argb: WHITE } }
+    cell.alignment = { horizontal: 'center', vertical: 'middle' }
+    const fill = fillForDate(d)
+    cell.fill = fill ?? { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } } as any
+  })
+  const totHeader = ws2.getCell(headerRow, 2 + datasArr.length)
+  totHeader.value = 'TOTAL'
+  totHeader.font = { bold: true, size: 10, color: { argb: GOLD } }
+  totHeader.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
+  totHeader.alignment = { horizontal: 'center', vertical: 'middle' }
+  ws2.getRow(headerRow).height = 24
+
+  funcoesAll.forEach((f, fIdx) => {
+    const r = headerRow + 1 + fIdx
+    ws2.getCell(r, 1).value = f
+    ws2.getCell(r, 1).font = { bold: true, size: 10, color: { argb: NAVY } }
+    ws2.getCell(r, 1).alignment = { vertical: 'middle', indent: 1 }
+    let total = 0
+    datasArr.forEach((d, idx) => {
+      const v = grid[f][d] ?? 0
+      const cell = ws2.getCell(r, 2 + idx)
+      cell.value = v || ''
+      cell.alignment = { horizontal: 'center', vertical: 'middle' }
+      const fill = fillForDate(d)
+      if (fill) cell.fill = fill as any
+      total += v
+    })
+    const tc = ws2.getCell(r, 2 + datasArr.length)
+    tc.value = total
+    tc.font = { bold: true, color: { argb: NAVY } }
+    tc.alignment = { horizontal: 'center', vertical: 'middle' }
+    tc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_LIGHT } }
+  })
+
+  // Congelar painéis e print
+  ws2.views = [{ state: 'frozen', ySplit: headerRow, xSplit: 1 }]
+  ws2.pageSetup.orientation = 'landscape'
+  ws2.pageSetup.fitToPage = true
+  ws2.pageSetup.fitToWidth = 1
+  ws2.pageSetup.fitToHeight = 0
 
   // === Aba Calendário por funcionário ===
   const ws3 = wb.addWorksheet('Calendário')
@@ -522,33 +623,65 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   })
   const funcList = Object.values(funcMap).sort((a, b) => (a.cargo + a.nome).localeCompare(b.cargo + b.nome))
 
-  // Header
-  ws3.getCell(1, 1).value = 'Funcionário'
-  ws3.getCell(1, 1).font = { bold: true }
-  ws3.getCell(1, 2).value = 'Função'
-  ws3.getCell(1, 2).font = { bold: true }
+  // Larguras
+  ws3.getColumn(1).width = 28
+  ws3.getColumn(2).width = 18
+  for (let i = 0; i < datasArr.length; i++) {
+    ws3.getColumn(3 + i).width = 5
+  }
+  ws3.getColumn(3 + datasArr.length).width = 8
+
+  // Cabeçalho de marca
+  const ws3LastCol = datasArr.length + 3
+  const ws3Start = addBrandedHeader(
+    ws3,
+    ws3LastCol,
+    'CALENDÁRIO DE PRESENÇA',
+    `Controle dia a dia de cada funcionário  ·  "P" = Presente  ·  Sábado amarelo  ·  Domingo/feriado vermelho`
+  )
+
+  // Header da tabela
+  const hRow = ws3Start
+  ws3.getCell(hRow, 1).value = 'FUNCIONÁRIO'
+  ws3.getCell(hRow, 1).font = { bold: true, size: 10, color: { argb: WHITE } }
+  ws3.getCell(hRow, 1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
+  ws3.getCell(hRow, 1).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }
+  ws3.getCell(hRow, 2).value = 'FUNÇÃO'
+  ws3.getCell(hRow, 2).font = { bold: true, size: 10, color: { argb: WHITE } }
+  ws3.getCell(hRow, 2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
+  ws3.getCell(hRow, 2).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }
   datasArr.forEach((d, idx) => {
-    const cell = ws3.getCell(1, 3 + idx)
+    const cell = ws3.getCell(hRow, 3 + idx)
     const dt = new Date(d + 'T12:00')
     const dow = dt.getDay()
     const diaSem = ['D','S','T','Q','Q','S','S'][dow]
     cell.value = `${diaSem}\n${dt.getDate()}/${dt.getMonth()+1}`
-    cell.font = { bold: true, size: 8 }
+    cell.font = { bold: true, size: 8, color: { argb: WHITE } }
     cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
     const fill = fillForDate(d)
-    if (fill) cell.fill = fill as any
-    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' }, bottom: { style: 'thin' } }
+    if (fill) {
+      cell.fill = fill as any
+      cell.font = { bold: true, size: 8, color: { argb: NAVY } }
+    } else {
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
+    }
+    cell.border = { top: { style: 'thin', color: { argb: GOLD } }, left: { style: 'hair' }, right: { style: 'hair' }, bottom: { style: 'thin', color: { argb: GOLD } } }
   })
-  ws3.getCell(1, 3 + datasArr.length).value = 'Total'
-  ws3.getCell(1, 3 + datasArr.length).font = { bold: true }
-  ws3.getRow(1).height = 28
+  const totCal = ws3.getCell(hRow, 3 + datasArr.length)
+  totCal.value = 'TOTAL'
+  totCal.font = { bold: true, size: 10, color: { argb: GOLD } }
+  totCal.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
+  totCal.alignment = { horizontal: 'center', vertical: 'middle' }
+  ws3.getRow(hRow).height = 28
 
   funcList.forEach((f, fIdx) => {
-    const r = 2 + fIdx
+    const r = hRow + 1 + fIdx
     ws3.getCell(r, 1).value = f.nome
-    ws3.getCell(r, 1).font = { bold: true, size: 9 }
+    ws3.getCell(r, 1).font = { bold: true, size: 9, color: { argb: NAVY } }
+    ws3.getCell(r, 1).alignment = { vertical: 'middle', indent: 1 }
     ws3.getCell(r, 2).value = f.cargo
-    ws3.getCell(r, 2).font = { size: 9 }
+    ws3.getCell(r, 2).font = { size: 9, color: { argb: 'FF555555' } }
+    ws3.getCell(r, 2).alignment = { vertical: 'middle', indent: 1 }
     let total = 0
     datasArr.forEach((d, idx) => {
       const cell = ws3.getCell(r, 3 + idx)
@@ -569,22 +702,24 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
       }
       cell.border = { top: { style: 'hair' }, left: { style: 'hair' }, right: { style: 'hair' }, bottom: { style: 'hair' } }
     })
-    ws3.getCell(r, 3 + datasArr.length).value = total
-    ws3.getCell(r, 3 + datasArr.length).font = { bold: true }
-    ws3.getCell(r, 3 + datasArr.length).alignment = { horizontal: 'center' }
+    const tcell = ws3.getCell(r, 3 + datasArr.length)
+    tcell.value = total
+    tcell.font = { bold: true, color: { argb: NAVY } }
+    tcell.alignment = { horizontal: 'center', vertical: 'middle' }
+    tcell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_LIGHT } }
   })
 
-  ws3.getColumn(1).width = 28
-  ws3.getColumn(2).width = 18
-  for (let i = 0; i < datasArr.length; i++) {
-    ws3.getColumn(3 + i).width = 5
-  }
-  ws3.getColumn(3 + datasArr.length).width = 8
+  // Congelar painéis e print
+  ws3.views = [{ state: 'frozen', ySplit: hRow, xSplit: 2 }]
+  ws3.pageSetup.orientation = 'landscape'
+  ws3.pageSetup.fitToPage = true
+  ws3.pageSetup.fitToWidth = 1
+  ws3.pageSetup.fitToHeight = 0
 
   // Legenda
-  const legRow = funcList.length + 4
+  const legRow = hRow + funcList.length + 3
   ws3.getCell(legRow, 1).value = 'Legenda:'
-  ws3.getCell(legRow, 1).font = { bold: true, size: 9 }
+  ws3.getCell(legRow, 1).font = { bold: true, size: 9, color: { argb: NAVY } }
   ws3.getCell(legRow, 2).value = 'P = Presente'
   ws3.getCell(legRow, 2).font = { size: 9 }
   ws3.getCell(legRow + 1, 2).value = 'Sábado'

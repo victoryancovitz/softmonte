@@ -463,6 +463,16 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
               </svg>
               {exporting ? 'Exportando...' : 'Exportar Excel'}
             </button>
+            <button
+              onClick={() => window.open(`/boletins/${params.id}/print`, '_blank')}
+              className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-red-600">
+                <rect x="2" y="2" width="12" height="12" rx="1.5" fill="currentColor" opacity=".15"/>
+                <path d="M5 2h6v4H5zM5 10h6v4H5z" stroke="currentColor" strokeWidth="1.3" fill="none"/>
+                <path d="M2 6h12v4H2z" stroke="currentColor" strokeWidth="1.3" fill="none"/>
+              </svg>
+              Exportar PDF
+            </button>
             {bm.status === 'aberto' && (
               <button onClick={() => updateStatus('fechado')}
                 className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark">
