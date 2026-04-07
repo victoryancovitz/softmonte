@@ -3,7 +3,7 @@ import Link from 'next/link'
 
 export default async function ClientesPage() {
   const supabase = createClient()
-  const { data: clientes } = await supabase.from('clientes').select('*').order('nome')
+  const { data: clientes } = await supabase.from('clientes').select('*').is('deleted_at', null).order('nome')
   const rows = clientes ?? []
 
   return (

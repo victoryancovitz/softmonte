@@ -10,7 +10,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default async function ObrasPage() {
   const supabase = createClient()
-  const { data: obras } = await supabase.from('obras').select('*').order('created_at', { ascending: false })
+  const { data: obras } = await supabase.from('obras').select('*').is('deleted_at', null).order('created_at', { ascending: false })
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">

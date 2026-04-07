@@ -45,6 +45,7 @@ export default function FornecedoresPage() {
     const { data } = await supabase
       .from('fornecedores')
       .select('*')
+      .is('deleted_at', null)
       .order('nome')
     setFornecedores(data ?? [])
     setLoading(false)

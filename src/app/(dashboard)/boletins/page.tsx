@@ -42,6 +42,7 @@ export default async function BoletinsPage() {
   const { data: bms } = await supabase
     .from('boletins_medicao')
     .select('*, obras(nome, cliente)')
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
   const emAndamento = (bms ?? []).filter((b: any) => b.status === 'aberto' || b.status === 'fechado')

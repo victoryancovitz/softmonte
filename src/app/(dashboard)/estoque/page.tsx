@@ -10,7 +10,7 @@ const CAT_COLOR: Record<string, string> = {
 
 export default async function EstoquePage() {
   const supabase = createClient()
-  const { data: itens } = await supabase.from('estoque_itens').select('*').order('categoria').order('nome')
+  const { data: itens } = await supabase.from('estoque_itens').select('*').is('deleted_at', null).order('categoria').order('nome')
 
   const criticos = itens?.filter((i: any) => Number(i.quantidade) <= Number(i.quantidade_minima ?? 0)) ?? []
   const totalItens = itens?.length ?? 0

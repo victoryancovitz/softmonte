@@ -20,6 +20,7 @@ export default async function DocumentosPage() {
   const { data: docs } = await supabase
     .from('documentos')
     .select('*, funcionarios(nome, cargo)')
+    .is('deleted_at', null)
     .order('vencimento', { ascending: true })
 
   const hoje = new Date()
