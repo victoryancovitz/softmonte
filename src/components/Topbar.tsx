@@ -307,6 +307,10 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
                           className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
                           <span className="text-gray-400">{ic.docs}</span> Importar dados
                         </Link>
+                        <Link href="/admin/importar-drive" onClick={() => setAvatarOpen(false)}
+                          className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
+                          <span className="text-gray-400">{ic.docs}</span> Importar docs do drive
+                        </Link>
                         <Link href="/assistente" onClick={() => setAvatarOpen(false)}
                           className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
                           <span className="text-gray-400">{ic.report}</span> Assistente IA
