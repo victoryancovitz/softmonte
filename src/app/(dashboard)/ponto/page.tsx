@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import PontoCellEditor from '@/components/PontoCellEditor'
+import PontoImportModal from '@/components/PontoImportModal'
 import { useToast } from '@/components/Toast'
 
 function getDaysInMonth(month: number, year: number): number {
@@ -39,6 +40,7 @@ export default function PontoPage() {
   const [showHistorico, setShowHistorico] = useState(false)
   const [historico, setHistorico] = useState<any[]>([])
   const [loadingHistorico, setLoadingHistorico] = useState(false)
+  const [showImport, setShowImport] = useState(false)
   const supabase = createClient()
   const toast = useToast()
 
@@ -263,10 +265,17 @@ export default function PontoPage() {
       <div className="flex items-start justify-between mb-2 gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold font-display text-brand">Controle de Ponto</h1>
-          <p className="text-xs text-gray-500 mt-1">Clique em qualquer dia para editar o status. Funcionários desligados aparecem com badge vermelho e só permitem edição nos dias do vínculo. Toda alteração é auditada.</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Registre, edite ou importe a folha de ponto de cada obra. Clique em qualquer dia do calendário para criar ou alterar o lançamento.
+            Após o fechamento do mês, apenas administradores podem corrigir. Toda alteração é auditada.
+          </p>
         </div>
         {obraId && isOp && (
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <button onClick={() => setShowImport(true)} disabled={pontoFechado && !isAdmin}
+              className="px-3 py-2 border border-brand text-brand rounded-xl text-xs font-semibold hover:bg-brand/5 disabled:opacity-50">
+              📥 Importar folha
+            </button>
             {isAdmin && (
               <button onClick={toggleHistorico}
                 className="px-3 py-2 border border-gray-200 rounded-xl text-xs font-semibold hover:bg-gray-50">
@@ -496,6 +505,17 @@ export default function PontoPage() {
           />
         )
       })()}
+
+      {showImport && obraId && (
+        <PontoImportModal
+          obraId={obraId}
+          obraNome={obras.find(o => o.id === obraId)?.nome ?? ''}
+          mes={mes}
+          ano={ano}
+          onClose={() => setShowImport(false)}
+          onImported={loadData}
+        />
+      )}
     </div>
   )
 }
