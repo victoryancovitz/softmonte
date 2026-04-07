@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import ExcelJS from 'exceljs'
-import { readFileSync } from 'fs'
-import { join } from 'path'
+import { TECNOMONTE_LOGO_DARK_B64 } from '@/lib/tecnomonte-logo'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -98,12 +97,12 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 
   const ws = wb.addWorksheet('Resumo de Horas')
 
-  // Paleta Tecnomonte
-  const NAVY = 'FF0F1E2E'
-  const NAVY_DARK = 'FF091623'
-  const GOLD = 'FFC8960C'
-  const GOLD_LIGHT = 'FFE4B341'
-  const BG_LIGHT = 'FFF7F3E8'
+  // Paleta Tecnomonte — cores extraídas dos logos oficiais
+  const NAVY        = 'FF0F3757'   // navy principal do logo
+  const NAVY_SOFT   = 'FF164B73'   // tom intermediário para subheaders
+  const GOLD        = 'FFC9A269'   // tan/bronze do ícone do logo
+  const GOLD_LIGHT  = 'FFDBBE8A'   // ouro claro para detalhes
+  const BG_LIGHT    = 'FFF4EDE0'   // bege muito claro (complementar ao ouro)
   const BORDER_LIGHT = 'FFE5E7EB'
   const WHITE = 'FFFFFFFF'
 
@@ -143,19 +142,17 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     }
   }
 
-  // Embute o logo Tecnomonte (versão dark — fundo navy, coerente com o header)
+  // Embute o logo Tecnomonte (PNG inline base64 — funciona em serverless sem depender do fs)
   try {
-    const logoPath = join(process.cwd(), 'public', 'logos', 'tecnomonte-dark.jpg')
-    const logoBuf = readFileSync(logoPath)
-    const logoId = wb.addImage({ buffer: logoBuf as any, extension: 'jpeg' })
-    // Posiciona o logo nas colunas B..F, rows 1..3 (cobre a faixa navy à esquerda)
+    const logoBuf = Buffer.from(TECNOMONTE_LOGO_DARK_B64, 'base64')
+    const logoId = wb.addImage({ buffer: logoBuf as any, extension: 'png' })
     ws.addImage(logoId, {
-      tl: { col: 1.2, row: 0.3 } as any,   // top-left (col índice zero-based)
-      ext: { width: 230, height: 72 },
+      tl: { col: 1.2, row: 0.3 } as any,
+      ext: { width: 235, height: 72 },
       editAs: 'oneCell',
     })
   } catch (e) {
-    // Fallback: texto se o logo não carregar
+    // Fallback: texto se o logo falhar
     ws.mergeCells('B1:F3')
     const fallback = ws.getCell('B1')
     fallback.value = 'TECNOMONTE'
@@ -298,7 +295,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     const cell = ws.getCell(`${col}${HEADER_BOT}`)
     cell.value = val
     cell.font = { bold: true, size: 9, color: { argb: WHITE } }
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY_DARK } }
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY_SOFT } }
     cell.alignment = { horizontal: 'center', vertical: 'middle' }
   })
 
