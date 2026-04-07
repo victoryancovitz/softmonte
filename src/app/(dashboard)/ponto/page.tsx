@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import PontoCellEditor from '@/components/PontoCellEditor'
 import PontoImportModal from '@/components/PontoImportModal'
+import PontoDiaRapidoModal from '@/components/PontoDiaRapidoModal'
 import { useToast } from '@/components/Toast'
 
 function getDaysInMonth(month: number, year: number): number {
@@ -21,6 +22,7 @@ interface CellData {
   arquivo_nome?: string | null
   arquivo_url?: string | null
   observacao?: string | null
+  horas_trabalhadas?: number | null
 }
 
 export default function PontoPage() {
@@ -41,6 +43,7 @@ export default function PontoPage() {
   const [historico, setHistorico] = useState<any[]>([])
   const [loadingHistorico, setLoadingHistorico] = useState(false)
   const [showImport, setShowImport] = useState(false)
+  const [showDiaRapido, setShowDiaRapido] = useState(false)
   const supabase = createClient()
   const toast = useToast()
 
@@ -124,7 +127,7 @@ export default function PontoPage() {
 
     const [{ data: efetivo }, { data: faltas }] = await Promise.all([
       supabase.from('efetivo_diario')
-        .select('id,funcionario_id,data,observacao')
+        .select('id,funcionario_id,data,observacao,horas_trabalhadas')
         .eq('obra_id', obraId)
         .gte('data', dateStart).lte('data', dateEnd),
       supabase.from('faltas')
@@ -141,6 +144,7 @@ export default function PontoPage() {
         ...(g[e.funcionario_id][day] ?? {}),
         efetivo_id: e.id,
         observacao: e.observacao,
+        horas_trabalhadas: e.horas_trabalhadas,
       }
     })
     ;(faltas ?? []).forEach((f: any) => {
@@ -245,6 +249,7 @@ export default function PontoPage() {
       arquivo_url: c.arquivo_url,
       arquivo_nome: c.arquivo_nome,
       observacao: c.observacao,
+      horas_trabalhadas: c.horas_trabalhadas,
     }
   }
 
@@ -266,13 +271,17 @@ export default function PontoPage() {
         <div>
           <h1 className="text-xl font-bold font-display text-brand">Controle de Ponto</h1>
           <p className="text-xs text-gray-500 mt-1">
-            Registre, edite ou importe a folha de ponto de cada obra. Clique em qualquer dia do calendário para criar ou alterar o lançamento.
-            Para o registro rápido do dia de hoje, use a tela de <a href="/efetivo" className="text-brand font-semibold hover:underline">Efetivo Diário</a>.
-            Após o fechamento do mês, apenas administradores podem corrigir. Toda alteração é auditada.
+            Criação diária, edição mensal, importação e fechamento da folha de ponto de cada obra — tudo nesta tela.
+            Clique em qualquer dia do calendário para lançar um funcionário por vez, ou use <strong>⚡ Lançar dia rápido</strong> para marcar vários de uma vez.
+            Suporta horas reais trabalhadas para contratos cobrados por hora. Após o fechamento do mês, apenas administradores podem corrigir — toda alteração é auditada.
           </p>
         </div>
         {obraId && isOp && (
           <div className="flex gap-2 flex-wrap">
+            <button onClick={() => setShowDiaRapido(true)} disabled={pontoFechado && !isAdmin}
+              className="px-3 py-2 bg-brand text-white rounded-xl text-xs font-bold hover:bg-brand-dark disabled:opacity-50">
+              ⚡ Lançar dia rápido
+            </button>
             <button onClick={() => setShowImport(true)} disabled={pontoFechado && !isAdmin}
               className="px-3 py-2 border border-brand text-brand rounded-xl text-xs font-semibold hover:bg-brand/5 disabled:opacity-50">
               📥 Importar folha
@@ -515,6 +524,17 @@ export default function PontoPage() {
           ano={ano}
           onClose={() => setShowImport(false)}
           onImported={loadData}
+        />
+      )}
+
+      {showDiaRapido && obraId && (
+        <PontoDiaRapidoModal
+          obraId={obraId}
+          obraNome={obras.find(o => o.id === obraId)?.nome ?? ''}
+          mes={mes}
+          ano={ano}
+          onClose={() => setShowDiaRapido(false)}
+          onSaved={loadData}
         />
       )}
     </div>

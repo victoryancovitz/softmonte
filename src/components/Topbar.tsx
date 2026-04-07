@@ -41,7 +41,6 @@ const NAV_GROUPS: NavGroupDef[] = [
     label: 'Engenharia',
     links: [
       { href: '/obras', label: 'Obras', icon: ic.obras },
-      { href: '/efetivo', label: 'Efetivo Diário', icon: ic.func },
       { href: '/boletins', label: 'Boletins de Medição', icon: ic.bm },
     ],
   },
@@ -52,7 +51,6 @@ const NAV_GROUPS: NavGroupDef[] = [
       { href: '/alocacao', label: 'Alocação de Equipes', icon: ic.func },
       { href: '/ponto', label: 'Ponto', icon: ic.faltas },
       { href: '/faltas', label: 'Faltas', icon: ic.faltas },
-      { href: '/hh', label: 'Lançamento de HH', icon: ic.report },
       { href: '/rh/banco-horas', label: 'Banco de Horas', icon: ic.docs },
       { href: '/rh/ferias', label: 'Férias', icon: ic.docs },
       { href: '/rh/treinamentos', label: 'Treinamentos NR', icon: ic.docs },
@@ -109,7 +107,6 @@ PATH_MAP['/manual'] = { group: '', label: 'Manual' }
 PATH_MAP['/importar'] = { group: '', label: 'Importar dados' }
 PATH_MAP['/assistente'] = { group: '', label: 'Assistente IA' }
 PATH_MAP['/audit'] = { group: '', label: 'Auditoria' }
-PATH_MAP['/hh'] = { group: 'Administrativo', label: 'Lançamento de HH' }
 
 function getActiveGroup(pathname: string): string | null {
   // Check PATH_MAP first for extra routes

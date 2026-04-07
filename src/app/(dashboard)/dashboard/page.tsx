@@ -109,8 +109,8 @@ export default async function DashboardPage() {
 
   const kpisOp = [
     { label: 'Obras Ativas', value: nObras, href: '/obras', icon: icons.building, accent: 'border-l-blue-600', iconBg: 'bg-blue-50 text-blue-600' },
-    { label: 'Efetivo Hoje', value: nEfetivoHoje, href: '/efetivo', icon: icons.users, accent: 'border-l-indigo-500', iconBg: 'bg-indigo-50 text-indigo-600' },
-    { label: 'HH Mês', value: `${totalHH}h`, href: '/hh', icon: icons.clock, accent: 'border-l-violet-500', iconBg: 'bg-violet-50 text-violet-600' },
+    { label: 'Efetivo Hoje', value: nEfetivoHoje, href: '/ponto', icon: icons.users, accent: 'border-l-indigo-500', iconBg: 'bg-indigo-50 text-indigo-600' },
+    { label: 'HH Mês', value: `${totalHH}h`, href: '/ponto', icon: icons.clock, accent: 'border-l-violet-500', iconBg: 'bg-violet-50 text-violet-600' },
     { label: 'BMs Abertos', value: nBMsAbertos, href: '/boletins', icon: icons.file, accent: 'border-l-cyan-500', iconBg: 'bg-cyan-50 text-cyan-600' },
   ]
 
@@ -311,7 +311,7 @@ export default async function DashboardPage() {
             type QA = { href: string; icon: string; label: string; color: string }
             const all: QA[] = []
             if (isOp) {
-              all.push({ href: '/efetivo', icon: icons.checkSquare, label: 'Efetivo de hoje', color: 'text-emerald-600 bg-emerald-50' })
+              all.push({ href: '/ponto', icon: icons.checkSquare, label: 'Lançar ponto', color: 'text-emerald-600 bg-emerald-50' })
               all.push({ href: '/boletins/nova', icon: icons.filePlus, label: 'Novo BM', color: 'text-blue-600 bg-blue-50' })
             }
             if (isRh || isAdmin) {

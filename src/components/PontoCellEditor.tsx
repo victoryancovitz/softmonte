@@ -34,6 +34,7 @@ interface CellState {
   arquivo_url?: string | null
   arquivo_nome?: string | null
   observacao?: string | null
+  horas_trabalhadas?: number | null
 }
 
 export default function PontoCellEditor({
@@ -53,6 +54,9 @@ export default function PontoCellEditor({
 }) {
   const [status, setStatus] = useState<StatusValue | null>(initial.status)
   const [observacao, setObservacao] = useState(initial.observacao ?? '')
+  const [horasTrabalhadas, setHorasTrabalhadas] = useState<string>(
+    initial.horas_trabalhadas != null ? String(initial.horas_trabalhadas) : ''
+  )
   const [file, setFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const supabase = createClient()
@@ -85,12 +89,14 @@ export default function PontoCellEditor({
       const dt = new Date(data + 'T12:00')
       const dow = dt.getDay()
       const tipo_dia = dow === 6 ? 'sabado' : (dow === 0 ? 'domingo_feriado' : 'util')
+      const horas = parseFloat(horasTrabalhadas)
       const { error } = await supabase.from('efetivo_diario').insert({
         funcionario_id: funcionario.id,
         obra_id: obraId,
         data,
         tipo_dia,
         observacao: observacao || null,
+        horas_trabalhadas: isFinite(horas) && horas > 0 ? horas : null,
         registrado_por: user?.id ?? null,
       })
       if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
@@ -165,6 +171,24 @@ export default function PontoCellEditor({
             })}
           </div>
         </div>
+
+        {status === 'presente' && (
+          <div className="mb-3">
+            <label className="block text-xs font-semibold text-gray-600 mb-1">
+              Horas trabalhadas <span className="text-gray-400 font-normal">(opcional — deixe em branco para usar a carga padrão do contrato)</span>
+            </label>
+            <input
+              type="number" step="0.5" min="0" max="24"
+              value={horasTrabalhadas}
+              onChange={e => setHorasTrabalhadas(e.target.value)}
+              placeholder="Ex: 9"
+              className="w-32 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+            />
+            <p className="text-[10px] text-gray-400 mt-1">
+              Para contratos cobrados por hora real. Contratos dia-pessoa usam a carga horária fixa do contrato.
+            </p>
+          </div>
+        )}
 
         {precisaDoc && (
           <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
