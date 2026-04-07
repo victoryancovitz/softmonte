@@ -45,7 +45,10 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
     }).eq('id', params.id)
     if (error) { setError(error.message); setSaving(false); return }
     setSuccess(true)
-    setTimeout(() => router.push(`/obras/${params.id}`), 1200)
+    setTimeout(() => {
+      router.push(`/obras/${params.id}`)
+      router.refresh()
+    }, 1200)
   }
 
   if (loading) return <div className="p-6 text-sm text-gray-400">Carregando...</div>

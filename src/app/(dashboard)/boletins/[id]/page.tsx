@@ -6,6 +6,14 @@ import Link from 'next/link'
 import ConfirmButton from '@/components/ConfirmButton'
 import { useToast } from '@/components/Toast'
 import BackButton from '@/components/BackButton'
+import EntityDocumentos from '@/components/EntityDocumentos'
+
+const TIPOS_DOC_BM = [
+  { value: 'nf', label: 'Nota Fiscal' },
+  { value: 'medicao_assinada', label: 'Medição Assinada' },
+  { value: 'comprovante', label: 'Comprovante' },
+  { value: 'outro', label: 'Outro' },
+]
 
 const STATUS_BADGE: Record<string, string> = {
   aberto: 'bg-blue-100 text-blue-700',
@@ -468,6 +476,18 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
             </Link>
           </div>
         )}
+      </div>
+
+      {/* Documentos do BM */}
+      <div className="mb-5">
+        <EntityDocumentos
+          table="bm_documentos"
+          fkColumn="boletim_id"
+          fkValue={params.id}
+          storagePath="bms"
+          tiposPermitidos={TIPOS_DOC_BM}
+          title="Documentos do Boletim (NF, comprovantes, medição assinada)"
+        />
       </div>
 
       {/* Timeline de Status */}

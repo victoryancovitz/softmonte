@@ -36,7 +36,11 @@
       "Bash(find /Users/victoryancovitz/softmonte-git -type f -name *funcao* -o -name *funcoes*)",
       "mcp__claude_ai_Vercel__list_projects",
       "mcp__claude_ai_Vercel__list_teams",
-      "mcp__claude_ai_Vercel__list_deployments"
+      "mcp__claude_ai_Vercel__list_deployments",
+      "Bash(python3:*)",
+      "Bash(pip3 install:*)",
+      "Bash(grep:*)",
+      "Bash(grep -n \"documentos\" src/app/\\\\\\(dashboard\\\\\\)/obras/[id]/page.tsx)"
     ]
   }
 }

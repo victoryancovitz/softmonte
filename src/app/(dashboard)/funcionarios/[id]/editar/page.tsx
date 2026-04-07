@@ -36,7 +36,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
   const vrMensal = (parseFloat(form.vr_diario) || 0) * 21
   const totalBeneficios = (parseFloat(form.vt_mensal) || 0) + vrMensal + (parseFloat(form.va_mensal) || 0) + (parseFloat(form.plano_saude_mensal) || 0) + (parseFloat(form.outros_beneficios) || 0)
   const custoTotal = salarioTotal + encargos + provisoes + totalBeneficios
-  const horasMes = parseFloat(form.horas_mes) || 189
+  const horasMes = parseFloat(form.horas_mes) || 220
   const custoHora = horasMes > 0 ? Math.round(custoTotal / horasMes * 100) / 100 : 0
   const fmtR = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -63,12 +63,15 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
       va_mensal: parseFloat(form.va_mensal) || 0,
       plano_saude_mensal: parseFloat(form.plano_saude_mensal) || 0,
       outros_beneficios: parseFloat(form.outros_beneficios) || 0,
-      horas_mes: parseFloat(form.horas_mes) || 189,
+      horas_mes: parseFloat(form.horas_mes) || 220,
       custo_hora: custoHora > 0 ? custoHora : null,
     }).eq('id', params.id)
     if (error) { setError(formatSupabaseError(error)); setSaving(false); return }
     setSuccess(true)
-    setTimeout(() => router.push(`/funcionarios/${params.id}`), 1200)
+    setTimeout(() => {
+      router.push(`/funcionarios/${params.id}`)
+      router.refresh()
+    }, 1200)
   }
 
   if (loading) return <div className="p-4 sm:p-6 text-sm text-gray-400">Carregando...</div>
@@ -149,7 +152,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
               <div><label className={lbl}>Salário base (R$/mês) *</label>
                 <input type="number" step="0.01" value={form.salario_base ?? ''} onChange={e => set('salario_base', e.target.value)} className={inp} placeholder="0,00"/></div>
               <div><label className={lbl}>Horas/mês</label>
-                <input type="number" step="0.5" value={form.horas_mes ?? 189} onChange={e => set('horas_mes', e.target.value)} className={inp}/></div>
+                <input type="number" step="0.5" value={form.horas_mes ?? 220} onChange={e => set('horas_mes', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>Insalubridade (%) <Tooltip text="Adicional pago para quem trabalha em condições prejudiciais à saúde. Pergunte ao engenheiro de segurança." /></label>
                 <select value={form.insalubridade_pct ?? 0} onChange={e => set('insalubridade_pct', e.target.value)} className={inp + ' bg-white'}>
                   <option value="0">Nenhuma (0%)</option><option value="20">Grau médio (20%)</option><option value="40">Grau máximo (40%)</option>

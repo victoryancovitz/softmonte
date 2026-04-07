@@ -40,7 +40,7 @@ export default function NovoBMPage() {
   const toast = useToast()
 
   useEffect(() => {
-    supabase.from('obras').select('id,nome,cliente').eq('status','ativo').order('nome')
+    supabase.from('obras').select('id,nome,cliente,data_inicio,data_prev_fim,status').is('deleted_at', null).neq('status','cancelado').order('nome')
       .then(({ data }) => setObras(data ?? []))
   }, [])
 
@@ -58,10 +58,55 @@ export default function NovoBMPage() {
     if (field !== 'observacao') setPreview(null)
   }
 
+  async function validateDates(): Promise<string | null> {
+    if (!form.obra_id) return 'Selecione uma obra.'
+    if (!form.data_inicio) return 'Informe a data inicial do período.'
+    if (!form.data_fim) return 'Informe a data final do período.'
+    if (form.data_inicio > form.data_fim) {
+      return 'A data inicial deve ser anterior ou igual à data final.'
+    }
+    const hojeStr = new Date().toISOString().split('T')[0]
+    if (form.data_inicio > hojeStr) {
+      return 'A data inicial não pode ser no futuro.'
+    }
+
+    // Validate against obra dates
+    const obra = obras.find(o => o.id === form.obra_id)
+    if (obra) {
+      if (obra.data_inicio && form.data_inicio < obra.data_inicio) {
+        return `A data inicial (${new Date(form.data_inicio + 'T12:00').toLocaleDateString('pt-BR')}) é anterior ao início da obra (${new Date(obra.data_inicio + 'T12:00').toLocaleDateString('pt-BR')}).`
+      }
+      if (obra.data_prev_fim && form.data_fim > obra.data_prev_fim) {
+        return `A data final (${new Date(form.data_fim + 'T12:00').toLocaleDateString('pt-BR')}) é posterior à previsão de término da obra (${new Date(obra.data_prev_fim + 'T12:00').toLocaleDateString('pt-BR')}).`
+      }
+      if (obra.status === 'cancelado') {
+        return 'Não é possível criar BM para uma obra cancelada.'
+      }
+    }
+
+    // Validate that period doesn't overlap with existing BMs
+    const { data: existing } = await supabase
+      .from('boletins_medicao')
+      .select('numero, data_inicio, data_fim')
+      .eq('obra_id', form.obra_id)
+      .is('deleted_at', null)
+
+    for (const bm of existing ?? []) {
+      // overlap if periods intersect
+      if (!(form.data_fim < bm.data_inicio || form.data_inicio > bm.data_fim)) {
+        return `O período sobrepõe o BM ${String(bm.numero).padStart(2,'0')} (${new Date(bm.data_inicio + 'T12:00').toLocaleDateString('pt-BR')} a ${new Date(bm.data_fim + 'T12:00').toLocaleDateString('pt-BR')}).`
+      }
+    }
+
+    return null
+  }
+
   async function handlePreview() {
-    if (!form.obra_id || !form.data_inicio || !form.data_fim) return
-    setPreviewing(true)
     setError('')
+    const validationError = await validateDates()
+    if (validationError) { setError(validationError); return }
+
+    setPreviewing(true)
 
     // Fetch efetivo_diario for the obra + period
     const { data: efetivo, error: efErr } = await supabase
@@ -145,8 +190,10 @@ export default function NovoBMPage() {
 
   async function handleSave() {
     if (!preview || preview.length === 0) return
-    setSaving(true)
     setError('')
+    const validationError = await validateDates()
+    if (validationError) { setError(validationError); return }
+    setSaving(true)
 
     // 1. Create the BM
     const { data: bmData, error: bmErr } = await supabase.from('boletins_medicao').insert({

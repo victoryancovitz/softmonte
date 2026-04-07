@@ -12,7 +12,7 @@ export default function NovoFuncionarioPage() {
     nome: '', nome_guerra: '', matricula: '', id_ponto: '', cpf: '', data_nascimento: '',
     funcao_id: '', cargo: '', turno: 'diurno', tipo_vinculo: 'experiencia_45_45',
     admissao: '', obra_id: '',
-    salario_base: '', horas_mes: '189', insalubridade_pct: '0', periculosidade_pct: '0',
+    salario_base: '', horas_mes: '220', insalubridade_pct: '0', periculosidade_pct: '0',
     vt_mensal: '', vr_diario: '', va_mensal: '', plano_saude_mensal: '', outros_beneficios: '',
     pis: '', banco: '', agencia_conta: '', pix: '', vt_estrutura: '',
     tamanho_bota: '', tamanho_uniforme: '', re: '',
@@ -133,7 +133,7 @@ export default function NovoFuncionarioPage() {
   const vrMensal = (parseFloat(form.vr_diario) || 0) * 21
   const totalBeneficios = (parseFloat(form.vt_mensal) || 0) + vrMensal + (parseFloat(form.va_mensal) || 0) + (parseFloat(form.plano_saude_mensal) || 0) + (parseFloat(form.outros_beneficios) || 0)
   const custoTotal = salarioTotal + encargos + provisoes + totalBeneficios
-  const horasMes = parseFloat(form.horas_mes) || 189
+  const horasMes = parseFloat(form.horas_mes) || 220
   const custoHora = horasMes > 0 ? Math.round(custoTotal / horasMes * 100) / 100 : 0
   const fmtR = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -180,7 +180,7 @@ export default function NovoFuncionarioPage() {
       tipo_vinculo: form.tipo_vinculo || 'experiencia_45_45',
       admissao: form.admissao || null,
       salario_base: parseFloat(form.salario_base) || null,
-      horas_mes: parseFloat(form.horas_mes) || 189,
+      horas_mes: parseFloat(form.horas_mes) || 220,
       insalubridade_pct: parseFloat(form.insalubridade_pct) || 0,
       periculosidade_pct: parseFloat(form.periculosidade_pct) || 0,
       vt_mensal: parseFloat(form.vt_mensal) || 0,

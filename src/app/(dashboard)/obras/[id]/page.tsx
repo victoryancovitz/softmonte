@@ -4,6 +4,15 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { ObraStatusBtns } from '@/components/DeleteActions'
 import BackButton from '@/components/BackButton'
+import EntityDocumentos from '@/components/EntityDocumentos'
+
+const TIPOS_DOC_OBRA = [
+  { value: 'contrato', label: 'Contrato' },
+  { value: 'aditivo', label: 'Aditivo' },
+  { value: 'proposta', label: 'Proposta' },
+  { value: 'projeto', label: 'Projeto' },
+  { value: 'outro', label: 'Outro' },
+]
 
 const STATUS_BADGE: Record<string, string> = {
   ativo: 'bg-green-100 text-green-700',
@@ -411,33 +420,44 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
 
       {/* ===== DOCUMENTOS ===== */}
       {activeTab === 'documentos' && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700">{docsComDias.length} documentos de funcionários alocados</h2>
-            <Link href="/documentos/novo" className="text-xs text-brand hover:underline font-medium">+ Novo documento</Link>
-          </div>
-          {docsComDias.length > 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
-              {docsComDias.map((d: any) => (
-                <div key={d.id} className="px-4 py-3 flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium">{d.tipo}</div>
-                    <div className="text-xs text-gray-500 mt-0.5">
-                      {d.funcionarios?.nome ?? '—'}
-                      {d.vencimento && ` · Venc. ${new Date(d.vencimento + 'T12:00').toLocaleDateString('pt-BR')}`}
+        <div className="space-y-4">
+          {/* Documentos da obra (contratos, aditivos, etc.) */}
+          <EntityDocumentos
+            table="obra_documentos"
+            fkColumn="obra_id"
+            fkValue={params.id}
+            storagePath="obras"
+            tiposPermitidos={TIPOS_DOC_OBRA}
+            showValor={true}
+            title="Contratos, Aditivos e Documentos da Obra"
+          />
+
+          {/* Documentos de funcionários alocados */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-brand font-display">Documentos dos funcionários alocados ({docsComDias.length})</h2>
+            </div>
+            {docsComDias.length > 0 ? (
+              <div className="divide-y divide-gray-100">
+                {docsComDias.map((d: any) => (
+                  <div key={d.id} className="py-2 flex items-center justify-between">
+                    <div>
+                      <div className="text-sm font-medium">{d.tipo}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {d.funcionarios?.nome ?? '—'}
+                        {d.vencimento && ` · Venc. ${new Date(d.vencimento + 'T12:00').toLocaleDateString('pt-BR')}`}
+                      </div>
                     </div>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${docStatusColor(d.dias)}`}>
+                      {docStatusLabel(d.dias)}
+                    </span>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${docStatusColor(d.dias)}`}>
-                    {docStatusLabel(d.dias)}
-                  </span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-12 text-center text-gray-400 text-sm">
-              Nenhum documento encontrado para os funcionários alocados.
-            </div>
-          )}
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-gray-400">Nenhum documento dos funcionários alocados.</p>
+            )}
+          </div>
         </div>
       )}
 
