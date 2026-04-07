@@ -9,7 +9,7 @@ import { formatSupabaseError } from '@/lib/errors'
 
 export default function NovoFuncionarioPage() {
   const [form, setForm] = useState<any>({
-    nome: '', matricula: '', cpf: '', data_nascimento: '',
+    nome: '', nome_guerra: '', matricula: '', id_ponto: '', cpf: '', data_nascimento: '',
     funcao_id: '', cargo: '', turno: 'diurno', tipo_vinculo: 'experiencia_45_45',
     admissao: '', obra_id: '',
     salario_base: '', horas_mes: '189', insalubridade_pct: '0', periculosidade_pct: '0',
@@ -17,6 +17,8 @@ export default function NovoFuncionarioPage() {
     pis: '', banco: '', agencia_conta: '', pix: '', vt_estrutura: '',
     tamanho_bota: '', tamanho_uniforme: '', re: '',
   })
+  const [cpfHistorico, setCpfHistorico] = useState<any | null>(null)
+  const [cpfChecking, setCpfChecking] = useState(false)
   const [etapa, setEtapa] = useState(1)
   const [funcoes, setFuncoes] = useState<any[]>([])
   const [obras, setObras] = useState<any[]>([])
@@ -33,6 +35,50 @@ export default function NovoFuncionarioPage() {
   const toast = useToast()
 
   const CATEGORIAS_FUNCAO = ['Montagem', 'Elétrica', 'Gestão', 'Qualidade', 'Suporte', 'Tubulação', 'Pintura', 'Mecânica', 'Equipamentos', 'Operacional', 'Administrativo', 'Engenharia']
+
+  async function checkCpfHistorico(cpf: string) {
+    if (!cpf || cpf.replace(/\D/g, '').length < 11) { setCpfHistorico(null); return }
+    setCpfChecking(true)
+    // Buscar funcionário soft-deleted com este CPF
+    const { data: oldFunc } = await supabase.from('funcionarios')
+      .select('id, nome, cpf, data_nascimento, pis, banco, pix, cargo, admissao, deleted_at')
+      .eq('cpf', cpf)
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    // Buscar vínculos anteriores
+    const { data: vinculos } = await supabase.from('vinculos_funcionario')
+      .select('*')
+      .eq('cpf', cpf)
+      .order('demissao', { ascending: false })
+      .limit(1)
+
+    const v = vinculos?.[0]
+    if (oldFunc || v) {
+      setCpfHistorico({
+        nome: oldFunc?.nome ?? v?.cargo ?? '',
+        admissao: oldFunc?.admissao ?? v?.admissao,
+        demissao: oldFunc?.deleted_at ? oldFunc.deleted_at.split('T')[0] : v?.demissao,
+        cargo: oldFunc?.cargo ?? v?.cargo,
+      })
+      // Pré-preencher dados se houver funcionário anterior
+      if (oldFunc) {
+        setForm((f: any) => ({
+          ...f,
+          nome: oldFunc.nome ?? f.nome,
+          data_nascimento: oldFunc.data_nascimento ?? f.data_nascimento,
+          pis: oldFunc.pis ?? f.pis,
+          banco: oldFunc.banco ?? f.banco,
+          pix: oldFunc.pix ?? f.pix,
+        }))
+      }
+    } else {
+      setCpfHistorico(null)
+    }
+    setCpfChecking(false)
+  }
 
   async function handleCriarFuncaoInline() {
     if (!novaFuncaoNome.trim()) return
@@ -94,8 +140,8 @@ export default function NovoFuncionarioPage() {
   function handleNext() {
     setError('')
     if (etapa === 1) {
-      if (!form.nome.trim() || !form.matricula.trim()) {
-        setError('Nome e matrícula são obrigatórios.')
+      if (!form.nome.trim()) {
+        setError('Nome é obrigatório.')
         return
       }
     }
@@ -123,7 +169,9 @@ export default function NovoFuncionarioPage() {
     setError('')
     const { data, error: insertError } = await supabase.from('funcionarios').insert({
       nome: form.nome.trim().toUpperCase(),
-      matricula: form.matricula.trim(),
+      nome_guerra: form.nome_guerra?.trim() || null,
+      matricula: form.matricula?.trim() || null,
+      id_ponto: form.id_ponto?.trim() || null,
       cpf: form.cpf || null,
       data_nascimento: form.data_nascimento || null,
       funcao_id: form.funcao_id || null,
@@ -202,24 +250,60 @@ export default function NovoFuncionarioPage() {
         {etapa === 1 && (
           <section>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Identificação</h3>
+
+            {cpfHistorico && (
+              <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <div className="flex items-start gap-2">
+                  <span className="text-amber-500 text-lg flex-shrink-0">⚠</span>
+                  <div className="text-sm">
+                    <p className="font-bold text-amber-800">Este CPF já possui cadastro anterior na empresa.</p>
+                    <p className="text-amber-700 mt-1">
+                      <strong>{cpfHistorico.nome}</strong> — Admitido em{' '}
+                      {cpfHistorico.admissao ? new Date(cpfHistorico.admissao + 'T12:00').toLocaleDateString('pt-BR') : '—'} | Demitido em{' '}
+                      {cpfHistorico.demissao ? new Date(cpfHistorico.demissao + 'T12:00').toLocaleDateString('pt-BR') : '—'} | Cargo: {cpfHistorico.cargo ?? '—'}
+                    </p>
+                    <p className="text-xs text-amber-600 mt-2">
+                      Este funcionário pode ser recontratado. O histórico anterior será preservado. Os dados pessoais foram pré-preenchidos.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="col-span-1 sm:col-span-2">
                 <label className={lbl}>Nome completo *</label>
                 <input type="text" value={form.nome} onChange={e => set('nome', e.target.value)} className={inp} placeholder="NOME SOBRENOME" style={{textTransform:'uppercase'}} />
               </div>
-              <div>
-                <label className={lbl}>Nº Identificação (Ponto) *</label>
-                <input type="text" inputMode="numeric" pattern="[0-9]*" value={form.matricula}
-                  onChange={e => set('matricula', e.target.value.replace(/\D/g, ''))}
-                  placeholder="Identificador do Secullum" className={inp} />
+              <div className="col-span-1 sm:col-span-2">
+                <label className={lbl}>Nome de Guerra / Apelido (opcional)</label>
+                <input type="text" value={form.nome_guerra} onChange={e => set('nome_guerra', e.target.value)} className={inp} placeholder="Como é chamado no dia a dia" />
               </div>
               <div>
                 <label className={lbl}>CPF</label>
-                <input type="text" value={form.cpf} onChange={e => set('cpf', e.target.value)} className={inp} placeholder="000.000.000-00" />
+                <input
+                  type="text"
+                  value={form.cpf}
+                  onChange={e => set('cpf', e.target.value)}
+                  onBlur={e => checkCpfHistorico(e.target.value)}
+                  className={inp}
+                  placeholder="000.000.000-00"
+                />
+                {cpfChecking && <p className="text-xs text-gray-400 mt-1">Verificando histórico...</p>}
               </div>
               <div>
                 <label className={lbl}>Data de nascimento</label>
                 <input type="date" value={form.data_nascimento} onChange={e => set('data_nascimento', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Matrícula (opcional)</label>
+                <input type="text" value={form.matricula} onChange={e => set('matricula', e.target.value)} className={inp} placeholder="Matrícula interna" />
+              </div>
+              <div>
+                <label className={lbl}>ID Ponto (Secullum)</label>
+                <input type="text" inputMode="numeric" pattern="[0-9]*" value={form.id_ponto}
+                  onChange={e => set('id_ponto', e.target.value.replace(/\D/g, ''))}
+                  placeholder="Identificador do Secullum" className={inp} />
               </div>
             </div>
           </section>

@@ -5,11 +5,13 @@ import { notFound } from 'next/navigation'
 import { DesativarFuncionarioBtn } from '@/components/DeleteActions'
 import BackButton from '@/components/BackButton'
 import FuncionarioDocumentos from '@/components/FuncionarioDocumentos'
+import FuncionarioHistorico from '@/components/FuncionarioHistorico'
 
 export default async function FuncionarioPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
-  const { data: f } = await supabase.from('funcionarios').select('*').eq('id', params.id).is('deleted_at', null).single()
+  const { data: f } = await supabase.from('funcionarios').select('*').eq('id', params.id).single()
   if (!f) notFound()
+  const isArquivado = f.deleted_at !== null
   const role = await getRole()
 
   const hoje = new Date()
@@ -56,9 +58,10 @@ export default async function FuncionarioPage({ params }: { params: { id: string
   }
 
   const campos = [
-    { label: 'Nº Identificação (Ponto)', value: f.matricula },
-    { label: 'RE', value: f.re },
+    { label: 'Matrícula', value: f.matricula },
+    { label: 'ID Ponto', value: f.id_ponto },
     { label: 'CPF', value: f.cpf },
+    { label: 'RE', value: f.re },
     { label: 'PIS', value: f.pis },
     { label: 'Data de Nascimento', value: f.data_nascimento ? new Date(f.data_nascimento+'T12:00').toLocaleDateString('pt-BR') : null },
     { label: 'Admissão', value: f.admissao ? new Date(f.admissao+'T12:00').toLocaleDateString('pt-BR') : null },
@@ -147,9 +150,17 @@ export default async function FuncionarioPage({ params }: { params: { id: string
         </div>
       )}
 
+      {isArquivado && (
+        <div className="mb-4 p-3 bg-gray-100 border border-gray-300 rounded-xl text-sm text-gray-700 flex items-center gap-2">
+          <span>📁</span>
+          <span><strong>Vínculo arquivado</strong> — Funcionário desligado em {f.deleted_at ? new Date(f.deleted_at).toLocaleDateString('pt-BR') : '—'}. Visualização somente leitura.</span>
+        </div>
+      )}
+
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold font-display text-brand">{f.nome}</h1>
+          <h1 className="text-2xl font-bold font-display text-brand">{f.nome_guerra ?? f.nome}</h1>
+          {f.nome_guerra && <p className="text-sm text-gray-500 mt-0.5">({f.nome})</p>}
           <div className="flex items-center gap-3 mt-2">
             <span className="text-gray-600">{f.cargo}</span>
             <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>{f.status}</span>
@@ -366,6 +377,9 @@ export default async function FuncionarioPage({ params }: { params: { id: string
 
       {/* Documentos */}
       <FuncionarioDocumentos funcionarioId={f.id} documentos={docsFunc ?? []} />
+
+      {/* Histórico na Empresa */}
+      <FuncionarioHistorico cpf={f.cpf} funcionarioAtualId={f.id} admissaoAtual={f.admissao} />
 
       {/* Advertencias e Termos */}
       <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">

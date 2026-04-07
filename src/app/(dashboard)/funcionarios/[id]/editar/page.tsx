@@ -45,7 +45,9 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
     setSaving(true)
     setError('')
     const { error } = await supabase.from('funcionarios').update({
-      nome: form.nome, matricula: form.matricula, cargo: form.cargo,
+      nome: form.nome, nome_guerra: form.nome_guerra || null,
+      matricula: form.matricula || null, id_ponto: form.id_ponto || null,
+      cargo: form.cargo,
       turno: form.turno, status: form.status,
       re: form.re || null, cpf: form.cpf || null, pis: form.pis || null,
       banco: form.banco || null, agencia_conta: form.agencia_conta || null, pix: form.pix || null,
@@ -94,9 +96,13 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="col-span-1 sm:col-span-2"><label className={lbl}>Nome completo *</label>
                 <input required type="text" value={form.nome ?? ''} onChange={e => set('nome', e.target.value)} className={inp} style={{textTransform:'uppercase'}}/></div>
-              <div><label className={lbl}>Nº Identificação (Ponto) *</label>
-                <input required type="text" inputMode="numeric" pattern="[0-9]*" value={form.matricula ?? ''}
-                  onChange={e => set('matricula', e.target.value.replace(/\D/g, ''))} className={inp}/></div>
+              <div><label className={lbl}>Nome de Guerra (opcional)</label>
+                <input type="text" value={form.nome_guerra ?? ''} onChange={e => set('nome_guerra', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>Matrícula (opcional)</label>
+                <input type="text" value={form.matricula ?? ''} onChange={e => set('matricula', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>ID Ponto (Secullum)</label>
+                <input type="text" inputMode="numeric" pattern="[0-9]*" value={form.id_ponto ?? ''}
+                  onChange={e => set('id_ponto', e.target.value.replace(/\D/g, ''))} className={inp}/></div>
               <div><label className={lbl}>RE</label>
                 <input type="text" value={form.re ?? ''} onChange={e => set('re', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>CPF</label>
