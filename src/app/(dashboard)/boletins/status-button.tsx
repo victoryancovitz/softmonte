@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/Toast'
 
 const STATUS_BADGE: Record<string, string> = {
   aberto: 'bg-blue-100 text-blue-700',
@@ -20,11 +21,18 @@ export default function BMStatusButton({ bmId, currentStatus }: { bmId: string; 
   const [updating, setUpdating] = useState(false)
   const supabase = createClient()
   const router = useRouter()
+  const toast = useToast()
 
   async function updateStatus(newStatus: string) {
     if (newStatus === status) { setOpen(false); return }
     setUpdating(true)
-    await supabase.from('boletins_medicao').update({ status: newStatus }).eq('id', bmId)
+    const { error } = await supabase.from('boletins_medicao').update({ status: newStatus }).eq('id', bmId)
+    if (error) {
+      toast.error('Erro ao atualizar status: ' + error.message)
+      setUpdating(false)
+      setOpen(false)
+      return
+    }
     setStatus(newStatus)
     setOpen(false)
     setUpdating(false)

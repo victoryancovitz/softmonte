@@ -22,10 +22,10 @@ const STATUS_BADGE: Record<string, string> = {
   aprovado: 'bg-green-100 text-green-700',
 }
 const TIPO_HORA_LABEL: Record<string, string> = {
-  normal: 'Hora Normal', he70: 'HE 70%', he100: 'HE 100%',
+  normal: 'Hora Normal', extra_70: 'HE 70%', extra_100: 'HE 100%',
 }
 const TIPO_HORA_COLOR: Record<string, string> = {
-  normal: 'text-blue-700 bg-blue-50', he70: 'text-amber-700 bg-amber-50', he100: 'text-red-700 bg-red-50',
+  normal: 'text-blue-700 bg-blue-50', extra_70: 'text-amber-700 bg-amber-50', extra_100: 'text-red-700 bg-red-50',
 }
 
 export default function BMDetailPage({ params }: { params: { id: string } }) {
@@ -44,6 +44,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   const [salvandoItens, setSalvandoItens] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deletingBm, setDeletingBm] = useState(false)
+  const [editandoItens, setEditandoItens] = useState(false)
   const supabase = createClient()
   const router = useRouter()
   const toast = useToast()
@@ -53,9 +54,13 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   useEffect(() => { loadBM() }, [params.id])
 
   async function loadBM() {
-    const { data: bmData } = await supabase.from('boletins_medicao')
+    const { data: bmData, error: bmErr } = await supabase.from('boletins_medicao')
       .select('*, obras(id,nome,cliente,local)')
-      .eq('id', params.id).single()
+      .eq('id', params.id)
+      .is('deleted_at', null)
+      .maybeSingle()
+    if (bmErr) { toast.error('Erro ao carregar BM: ' + bmErr.message); setLoading(false); return }
+    if (!bmData) { toast.error('Boletim não encontrado ou foi excluído'); setLoading(false); router.push('/boletins'); return }
     setBm(bmData)
 
     if (bmData) {
@@ -104,9 +109,11 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     setBmItens(prev => {
       const next = [...prev]
       const item = { ...next[index], [field]: value }
-      if (field === 'valor_hh' || field === 'hh_total') {
-        item.valor_total = Number(item.hh_total ?? 0) * Number(item.valor_hh ?? 0)
+      // When dias changes, recompute hh_total locally (hh_total = dias * carga_horaria_dia)
+      if (field === 'dias') {
+        item.hh_total = Number(value) * Number(item.carga_horaria_dia ?? 8)
       }
+      item.valor_total = Number(item.hh_total ?? 0) * Number(item.valor_hh ?? 0)
       next[index] = item
       return next
     })
@@ -118,54 +125,55 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
 
   async function handleSalvarItens() {
     setSalvandoItens(true)
-    try {
-      await supabase.from('bm_itens').delete().eq('boletim_id', params.id)
-      const rows = bmItens.map((i, idx) => ({
-        boletim_id: params.id,
-        funcionario_id: i.funcionario_id || null,
-        funcionario_nome: i.funcionario_nome || null,
-        funcao_nome: i.funcao_nome,
-        tipo_hora: i.tipo_hora,
-        efetivo: Number(i.efetivo ?? 1),
-        dias: Number(i.dias ?? 0),
-        carga_horaria_dia: Number(i.carga_horaria_dia ?? 8),
-        // hh_total e valor_total são GENERATED ALWAYS no banco
-        valor_hh: Number(i.valor_hh ?? 0),
-        ordem: idx,
-      }))
-      if (rows.length > 0) {
-        await supabase.from('bm_itens').insert(rows)
-      }
-      toast.success('BM salvo com sucesso!')
-    } catch (e) {
-      console.error(e)
-      toast.error('Erro ao salvar BM')
+    const { error: delErr } = await supabase.from('bm_itens').delete().eq('boletim_id', params.id)
+    if (delErr) { toast.error('Erro ao salvar BM: ' + delErr.message); setSalvandoItens(false); return }
+    const rows = bmItens.map((i, idx) => ({
+      boletim_id: params.id,
+      funcionario_id: i.funcionario_id || null,
+      funcionario_nome: i.funcionario_nome || null,
+      funcao_nome: i.funcao_nome,
+      tipo_hora: i.tipo_hora,
+      efetivo: Number(i.efetivo ?? 1),
+      dias: Number(i.dias ?? 0),
+      carga_horaria_dia: Number(i.carga_horaria_dia ?? 8),
+      // hh_total e valor_total são GENERATED ALWAYS no banco
+      valor_hh: Number(i.valor_hh ?? 0),
+      ordem: idx,
+    }))
+    if (rows.length > 0) {
+      const { error: insErr } = await supabase.from('bm_itens').insert(rows)
+      if (insErr) { toast.error('Erro ao salvar BM: ' + insErr.message); setSalvandoItens(false); return }
     }
+    toast.success('BM salvo com sucesso!')
     setSalvandoItens(false)
   }
 
   async function updateStatus(status: string) {
-    await supabase.from('boletins_medicao').update({ status }).eq('id', params.id)
+    const { error } = await supabase.from('boletins_medicao').update({ status }).eq('id', params.id)
+    if (error) { toast.error('Erro ao atualizar status: ' + error.message); return }
     setBm((prev: any) => ({ ...prev, status }))
   }
 
   async function exportExcel() {
     setExporting(true)
     try {
-      const response = await fetch('/api/boletins/export', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bm_id: params.id })
-      })
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `BM${String(bm.numero).padStart(2,'0')}_${bm.obras.nome.replace(/\s/g,'_')}.xlsx`
-        a.click()
+      const response = await fetch(`/api/boletins/${params.id}/excel`)
+      if (!response.ok) {
+        toast.error('Erro ao gerar Excel')
+        setExporting(false)
+        return
       }
-    } catch (e) { console.error(e) }
+      const blob = await response.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `BM${String(bm.numero).padStart(2,'0')}_${bm.obras.nome.replace(/\s/g,'_')}.xlsx`
+      a.click()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    } catch (e) {
+      console.error(e)
+      toast.error('Erro ao gerar Excel')
+    }
     setExporting(false)
   }
 
@@ -226,30 +234,33 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       `${allCc.length > 0 ? '&' : ''}subject=${subject}&body=${body}`
 
     window.open(mailtoLink, '_blank')
-    supabase.from('email_logs').insert({
+    const { error: logErr } = await supabase.from('email_logs').insert({
       tipo: 'envio_bm',
       destinatarios: emails,
       assunto: `BM ${String(bm.numero).padStart(2,'0')} - ${bm.obras.nome}`,
       status: 'mailto_aberto',
-    }).then(() => {})
+    })
+    if (logErr) console.error('Falha ao registrar email_log:', logErr)
     setMailtoAberto(true)
   }
 
   async function handleConfirmarEnvio() {
     setEnviando(true)
     const emails = envioEmails.split(',').map(e => e.trim()).filter(Boolean)
-    await supabase.from('boletins_medicao').update({
+    const { error: updErr } = await supabase.from('boletins_medicao').update({
       status: 'enviado',
       enviado_para: emails,
       enviado_em: new Date().toISOString(),
       observacao_envio: envioObs || null,
     }).eq('id', params.id)
-    await supabase.from('email_logs').insert({
+    if (updErr) { toast.error('Erro ao registrar envio: ' + updErr.message); setEnviando(false); return }
+    const { error: logErr } = await supabase.from('email_logs').insert({
       tipo: 'envio_bm',
       destinatarios: emails,
       assunto: `BM ${String(bm.numero).padStart(2,'0')} - ${bm.obras.nome}`,
       status: 'enviado',
-    }).then(() => {})
+    })
+    if (logErr) console.error('Falha ao registrar email_log:', logErr)
     await loadBM()
     setEnviando(false)
     setMailtoAberto(false)
@@ -262,13 +273,37 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     const revisoes = [...(bm.revisoes_solicitadas || []), {
       data: new Date().toISOString(),
       descricao: revisaoTexto,
+      resolvida: false,
     }]
-    await supabase.from('boletins_medicao').update({
+    // Volta o BM para "aberto" para permitir edição
+    const { error } = await supabase.from('boletins_medicao').update({
+      status: 'aberto',
+      revisoes_solicitadas: revisoes,
+    }).eq('id', params.id)
+    if (error) { toast.error('Erro ao solicitar revisão: ' + error.message); return }
+    await loadBM()
+    setRevisaoTexto('')
+    setEditandoItens(true)
+    toast.success('Revisão aberta — BM em modo edição. Corrija e reenvie ao cliente.')
+    // scroll para composição
+    setTimeout(() => {
+      document.querySelector('[data-bm-composicao]')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 300)
+  }
+
+  async function handleMarcarRevisaoResolvida() {
+    // Marca última revisão como resolvida e volta status para fechado
+    const revisoes = (bm.revisoes_solicitadas || []).map((r: any, i: number, arr: any[]) =>
+      i === arr.length - 1 ? { ...r, resolvida: true, resolvida_em: new Date().toISOString() } : r
+    )
+    const { error } = await supabase.from('boletins_medicao').update({
       status: 'fechado',
       revisoes_solicitadas: revisoes,
     }).eq('id', params.id)
+    if (error) { toast.error('Erro ao marcar revisão: ' + error.message); return }
     await loadBM()
-    setRevisaoTexto('')
+    setEditandoItens(false)
+    toast.success('Revisão concluída — pronto para reenviar ao cliente')
   }
 
   async function handleAprovar() {
@@ -278,12 +313,13 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       toast.error('Informe o valor aprovado pelo cliente.')
       return
     }
-    await supabase.from('boletins_medicao').update({
+    const { error: updErr } = await supabase.from('boletins_medicao').update({
       status: 'aprovado',
       aprovado_em: new Date().toISOString(),
       valor_aprovado: valor,
     }).eq('id', params.id)
-    await supabase.from('financeiro_lancamentos').insert({
+    if (updErr) { toast.error('Erro ao aprovar BM: ' + updErr.message); return }
+    const { error: recErr } = await supabase.from('financeiro_lancamentos').insert({
       obra_id: bm.obras.id,
       tipo: 'receita',
       nome: `BM ${String(bm.numero).padStart(2,'0')} — ${bm.obras.nome}`,
@@ -293,6 +329,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       data_competencia: bm.data_fim,
       origem: 'bm_aprovado',
     })
+    if (recErr) { toast.error('BM aprovado, mas falha ao criar receita: ' + recErr.message); await loadBM(); return }
     await loadBM()
     setShowCriarReceita(false)
     toast.success('BM aprovado e lançamento de receita criado!')
@@ -304,20 +341,33 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
     const { data: { user } } = await supabase.auth.getUser()
 
     // 1. Soft-delete o BM
-    await supabase.from('boletins_medicao')
+    const { error: bmErr } = await supabase.from('boletins_medicao')
       .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
       .eq('id', params.id)
+    if (bmErr) {
+      toast.error('Erro ao excluir BM: ' + bmErr.message)
+      setDeletingBm(false)
+      return
+    }
 
     // 2. Soft-delete lançamentos financeiros associados se solicitado
     if (deleteFinanceiro && bm.obras?.id) {
       const bmNumero = String(bm.numero).padStart(2, '0')
       const nome = `BM ${bmNumero} — ${bm.obras.nome}`
-      await supabase.from('financeiro_lancamentos')
+      const { error: finErr } = await supabase.from('financeiro_lancamentos')
         .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
         .eq('obra_id', bm.obras.id)
         .eq('origem', 'bm_aprovado')
         .eq('nome', nome)
         .is('deleted_at', null)
+      if (finErr) {
+        toast.error('BM excluído, mas falha ao excluir lançamento: ' + finErr.message)
+        setDeletingBm(false)
+        setShowDeleteModal(false)
+        router.push('/boletins')
+        router.refresh()
+        return
+      }
     }
 
     setDeletingBm(false)
@@ -328,10 +378,11 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   }
 
   async function handleAprovarSemReceita() {
-    await supabase.from('boletins_medicao').update({
+    const { error } = await supabase.from('boletins_medicao').update({
       status: 'aprovado',
       aprovado_em: new Date().toISOString(),
     }).eq('id', params.id)
+    if (error) { toast.error('Erro ao aprovar BM: ' + error.message); return }
     await loadBM()
     setShowCriarReceita(false)
     toast.success('BM aprovado (sem lançamento financeiro)')
@@ -410,7 +461,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
                 <rect x="1" y="1" width="14" height="14" rx="2" opacity=".2"/>
                 <path d="M8 10V4M5 7l3 3 3-3M4 12h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" fill="none"/>
               </svg>
-              {exporting ? 'Exportando...' : 'Exportar CSV'}
+              {exporting ? 'Exportando...' : 'Exportar Excel'}
             </button>
             {bm.status === 'aberto' && (
               <button onClick={() => updateStatus('fechado')}
@@ -460,19 +511,62 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
+      {/* Revisão pendente banner */}
+      {(() => {
+        const revs = bm.revisoes_solicitadas || []
+        const ultima = revs[revs.length - 1]
+        const temRevisaoAberta = ultima && !ultima.resolvida
+        if (!temRevisaoAberta) return null
+        return (
+          <div className="mb-5 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-600 font-bold">!</div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-red-800">Revisão solicitada pelo cliente</p>
+              <p className="text-xs text-red-700 mt-0.5">"{ultima.descricao}"</p>
+              <p className="text-[10px] text-red-500 mt-1">Em {new Date(ultima.data).toLocaleString('pt-BR')}</p>
+              <div className="flex gap-2 mt-3">
+                <button onClick={handleMarcarRevisaoResolvida}
+                  className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold hover:bg-green-700">
+                  ✓ Correção feita — pronto para reenviar
+                </button>
+                {!editandoItens && (
+                  <button onClick={() => { setEditandoItens(true); document.querySelector('[data-bm-composicao]')?.scrollIntoView({ behavior: 'smooth' }) }}
+                    className="px-3 py-1.5 border border-red-300 text-red-700 rounded-lg text-xs font-semibold hover:bg-red-100">
+                    ✏ Editar composição
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* Itens do BM */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
+      <div data-bm-composicao className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-semibold">Composição do BM</h2>
           <div className="flex items-center gap-3">
             <span className="text-xs text-gray-500">
               Total: <span className="font-bold text-brand text-sm">R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
             </span>
-            {bm.status === 'aberto' && (
-              <button onClick={handleSalvarItens} disabled={salvandoItens}
-                className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50">
-                {salvandoItens ? 'Salvando...' : 'Salvar BM'}
-              </button>
+            {(bm.status === 'aberto' || bm.status === 'fechado') && (
+              !editandoItens ? (
+                <button onClick={() => setEditandoItens(true)}
+                  className="px-4 py-2 border border-brand text-brand rounded-lg text-sm font-medium hover:bg-brand/5">
+                  ✏ Editar
+                </button>
+              ) : (
+                <>
+                  <button onClick={() => { setEditandoItens(false); loadBM() }}
+                    className="px-4 py-2 border border-gray-200 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-50">
+                    Cancelar
+                  </button>
+                  <button onClick={async () => { await handleSalvarItens(); setEditandoItens(false) }} disabled={salvandoItens}
+                    className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50">
+                    {salvandoItens ? 'Salvando...' : 'Salvar BM'}
+                  </button>
+                </>
+              )
             )}
           </div>
         </div>
@@ -486,10 +580,11 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
                     <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Funcionário</th>
                   )}
                   <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Função</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Tipo</th>
                   <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide w-20">Dias</th>
-                  <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide w-24">HH Total</th>
-                  <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide w-32">R$/HH</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-medium text-blue-700 uppercase tracking-wide w-20" title="Horas normais">HH Normal</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-medium text-amber-700 uppercase tracking-wide w-20" title="Hora Extra 70%">HH HE 70%</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-medium text-red-700 uppercase tracking-wide w-20" title="Hora Extra 100%">HH HE 100%</th>
+                  <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide w-28">R$/HH</th>
                   <th className="text-right px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide w-36">Total R$</th>
                 </tr>
               </thead>
@@ -499,19 +594,28 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
                     key={group.funcao}
                     group={group}
                     hasEmployeeData={hasEmployeeData}
-                    editable={bm.status === 'aberto'}
+                    editable={editandoItens}
                     allItems={bmItens}
                     onUpdate={updateItem}
                   />
                 ))}
-                <tr className="border-t-2 border-gray-200 bg-gray-50">
-                  <td colSpan={hasEmployeeData ? 4 : 3} className="px-3 py-3 font-bold text-xs uppercase tracking-wide text-gray-600">Total Geral</td>
-                  <td className="px-3 py-3 text-center font-bold">{totalHH}h</td>
-                  <td className="px-3 py-3" />
-                  <td className="px-3 py-3 text-right font-bold text-brand">
-                    R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </td>
-                </tr>
+                {(() => {
+                  const tN = bmItens.filter(i => i.tipo_hora === 'normal').reduce((s,i) => s + Number(i.hh_total ?? 0), 0)
+                  const t70 = bmItens.filter(i => i.tipo_hora === 'extra_70').reduce((s,i) => s + Number(i.hh_total ?? 0), 0)
+                  const t100 = bmItens.filter(i => i.tipo_hora === 'extra_100').reduce((s,i) => s + Number(i.hh_total ?? 0), 0)
+                  return (
+                    <tr className="border-t-2 border-gray-200 bg-gray-50">
+                      <td colSpan={hasEmployeeData ? 3 : 2} className="px-3 py-3 font-bold text-xs uppercase tracking-wide text-gray-600">Total Geral</td>
+                      <td className="px-3 py-3 text-center font-bold text-blue-700">{tN}h</td>
+                      <td className="px-3 py-3 text-center font-bold text-amber-700">{t70 || '—'}{t70 ? 'h' : ''}</td>
+                      <td className="px-3 py-3 text-center font-bold text-red-700">{t100 || '—'}{t100 ? 'h' : ''}</td>
+                      <td className="px-3 py-3" />
+                      <td className="px-3 py-3 text-right font-bold text-brand">
+                        R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  )
+                })()}
               </tbody>
             </table>
           </div>
@@ -777,40 +881,54 @@ function GroupRows({ group, hasEmployeeData, editable, allItems, onUpdate }: {
   allItems: any[]
   onUpdate: (index: number, field: string, value: number) => void
 }) {
+  const subN = group.items.filter(i => i.tipo_hora === 'normal').reduce((s, i) => s + Number(i.hh_total ?? 0), 0)
+  const sub70 = group.items.filter(i => i.tipo_hora === 'extra_70').reduce((s, i) => s + Number(i.hh_total ?? 0), 0)
+  const sub100 = group.items.filter(i => i.tipo_hora === 'extra_100').reduce((s, i) => s + Number(i.hh_total ?? 0), 0)
   return (
     <>
       {/* Function subtotal header */}
       <tr className="bg-gray-50 border-b border-gray-200">
-        <td colSpan={hasEmployeeData ? 5 : 4} className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-500">
+        <td colSpan={hasEmployeeData ? 3 : 2} className="px-3 py-2 text-xs font-bold uppercase tracking-wide text-gray-500">
           {group.funcao}
         </td>
-        <td className="px-3 py-2 text-center text-xs font-semibold text-gray-500">{group.subtotalHH}h</td>
+        <td className="px-3 py-2 text-center text-xs font-semibold text-blue-700">{subN || '—'}{subN ? 'h' : ''}</td>
+        <td className="px-3 py-2 text-center text-xs font-semibold text-amber-700">{sub70 || '—'}{sub70 ? 'h' : ''}</td>
+        <td className="px-3 py-2 text-center text-xs font-semibold text-red-700">{sub100 || '—'}{sub100 ? 'h' : ''}</td>
+        <td className="px-3 py-2" />
         <td className="px-3 py-2 text-right text-xs font-semibold text-gray-600">
           R$ {group.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
         </td>
       </tr>
       {group.items.map(item => {
         const globalIdx = allItems.indexOf(item)
-        const tipoLabel = TIPO_HORA_LABEL[item.tipo_hora] ?? item.tipo_hora
-        const tipoColor = TIPO_HORA_COLOR[item.tipo_hora] ?? 'text-gray-700 bg-gray-50'
+        const hhN = item.tipo_hora === 'normal' ? Number(item.hh_total ?? 0) : 0
+        const hh70 = item.tipo_hora === 'extra_70' ? Number(item.hh_total ?? 0) : 0
+        const hh100 = item.tipo_hora === 'extra_100' ? Number(item.hh_total ?? 0) : 0
         return (
           <tr key={item.id || globalIdx} className="border-b border-gray-50 hover:bg-gray-50">
             {hasEmployeeData && (
               <td className="px-3 py-2.5 font-medium text-gray-800">{item.funcionario_nome || '—'}</td>
             )}
             <td className="px-3 py-2.5 text-gray-600">{item.funcao_nome}</td>
-            <td className="px-3 py-2.5">
-              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded ${tipoColor}`}>{tipoLabel}</span>
+            <td className="px-3 py-2.5 text-center">
+              {editable ? (
+                <input type="number" min="0" step="1"
+                  value={Number(item.dias ?? 0)}
+                  onChange={e => onUpdate(globalIdx, 'dias', Number(e.target.value))}
+                  className="w-16 px-2 py-1 border border-gray-200 rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                />
+              ) : Number(item.dias ?? 0)}
             </td>
-            <td className="px-3 py-2.5 text-center">{Number(item.dias)}</td>
-            <td className="px-3 py-2.5 text-center">{Number(item.hh_total ?? 0)}h</td>
+            <td className="px-3 py-2.5 text-center text-blue-700">{hhN ? `${hhN}h` : '—'}</td>
+            <td className="px-3 py-2.5 text-center text-amber-700">{hh70 ? `${hh70}h` : '—'}</td>
+            <td className="px-3 py-2.5 text-center text-red-700">{hh100 ? `${hh100}h` : '—'}</td>
             <td className="px-3 py-2.5 text-center">
               {editable ? (
                 <input
                   type="number" min="0" step="0.01"
                   value={Number(item.valor_hh ?? 0)}
                   onChange={e => onUpdate(globalIdx, 'valor_hh', Number(e.target.value))}
-                  className={`w-28 px-2 py-1 border rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand ${
+                  className={`w-24 px-2 py-1 border rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand ${
                     Number(item.valor_hh ?? 0) === 0 ? 'border-red-300 bg-red-50' : 'border-gray-200'
                   }`}
                 />

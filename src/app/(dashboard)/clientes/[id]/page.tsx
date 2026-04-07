@@ -7,7 +7,7 @@ import DeleteEntityButton from '@/components/DeleteEntityButton'
 export default async function ClientePage({ params }: { params: { id: string } }) {
   const supabase = createClient()
 
-  const { data: cliente } = await supabase.from('clientes').select('*').eq('id', params.id).single()
+  const { data: cliente } = await supabase.from('clientes').select('*').eq('id', params.id).is('deleted_at', null).maybeSingle()
   if (!cliente) notFound()
 
   const { data: obras } = await supabase.from('obras').select('*').eq('cliente', cliente.nome).is('deleted_at', null)

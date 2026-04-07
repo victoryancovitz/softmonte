@@ -259,10 +259,10 @@ export default function NovoBMPage() {
     let ordem = 0
     preview.forEach(r => {
       r.funcionarios.forEach(f => {
-        const tipos: Array<{ tipo: 'normal'|'he70'|'he100'; dias: number; valor_hh: number }> = [
-          { tipo: 'normal', dias: f.dias_normais, valor_hh: r.valor_hh_normal },
-          { tipo: 'he70',   dias: f.dias_he70,    valor_hh: r.valor_hh_he70 },
-          { tipo: 'he100',  dias: f.dias_he100,   valor_hh: r.valor_hh_he100 },
+        const tipos: Array<{ tipo: 'normal'|'extra_70'|'extra_100'; dias: number; valor_hh: number }> = [
+          { tipo: 'normal',    dias: f.dias_normais, valor_hh: r.valor_hh_normal },
+          { tipo: 'extra_70',  dias: f.dias_he70,    valor_hh: r.valor_hh_he70 },
+          { tipo: 'extra_100', dias: f.dias_he100,   valor_hh: r.valor_hh_he100 },
         ]
         tipos.forEach(t => {
           if (t.dias <= 0) return
@@ -287,9 +287,6 @@ export default function NovoBMPage() {
       const { error: itErr } = await supabase.from('bm_itens').insert(itens)
       if (itErr) { setError(itErr.message); setSaving(false); return }
     }
-
-    // 3. Update valor no BM
-    await supabase.from('boletins_medicao').update({ valor_aprovado: null }).eq('id', bmData.id)
 
     const totalFuncs = new Set(preview.flatMap(r => r.funcionarios.map(f => f.id))).size
     toast.success(
@@ -424,7 +421,9 @@ export default function NovoBMPage() {
                     <th className="text-center px-2 py-2.5 text-xs font-bold text-blue-700 uppercase tracking-wide w-16">Dias</th>
                     <th className="text-center px-2 py-2.5 text-xs font-bold text-amber-700 uppercase tracking-wide w-16" title="Dias-pessoa em HE 70%">HE 70%</th>
                     <th className="text-center px-2 py-2.5 text-xs font-bold text-red-700 uppercase tracking-wide w-16" title="Dias-pessoa em HE 100%">HE 100%</th>
-                    <th className="text-center px-2 py-2.5 text-xs font-bold text-gray-600 uppercase tracking-wide w-20">Carga (HH)</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-blue-700 uppercase tracking-wide w-20" title="Horas normais">HH Normal</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-amber-700 uppercase tracking-wide w-20" title="Horas extras 70%">HH HE 70%</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-red-700 uppercase tracking-wide w-20" title="Horas extras 100%">HH HE 100%</th>
                     <th className="text-center px-2 py-2.5 text-xs font-bold text-blue-700 uppercase tracking-wide w-24">R$/HH N.</th>
                     <th className="text-center px-2 py-2.5 text-xs font-bold text-amber-700 uppercase tracking-wide w-24">R$/HH 70%</th>
                     <th className="text-center px-2 py-2.5 text-xs font-bold text-red-700 uppercase tracking-wide w-24">R$/HH 100%</th>
@@ -433,7 +432,9 @@ export default function NovoBMPage() {
                 </thead>
                 <tbody>
                   {preview.map((row, i) => {
-                    const hhTot = rowHHNormal(row) + rowHHHe70(row) + rowHHHe100(row)
+                    const hhN = rowHHNormal(row)
+                    const hh70 = rowHHHe70(row)
+                    const hh100 = rowHHHe100(row)
                     return (
                       <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
                         <td className="px-3 py-2 font-semibold text-gray-800">
@@ -457,7 +458,9 @@ export default function NovoBMPage() {
                         <td className="px-2 py-2 text-center text-blue-700 font-bold">{row.dias_normais || '—'}</td>
                         <td className="px-2 py-2 text-center text-amber-700 font-medium">{row.dias_he70 || '—'}</td>
                         <td className="px-2 py-2 text-center text-red-700 font-medium">{row.dias_he100 || '—'}</td>
-                        <td className="px-2 py-2 text-center text-gray-700 font-bold">{hhTot}h</td>
+                        <td className="px-2 py-2 text-center text-blue-700 font-bold">{hhN ? hhN+'h' : '—'}</td>
+                        <td className="px-2 py-2 text-center text-amber-700 font-bold">{hh70 ? hh70+'h' : '—'}</td>
+                        <td className="px-2 py-2 text-center text-red-700 font-bold">{hh100 ? hh100+'h' : '—'}</td>
                         <td className="px-2 py-2 text-center">
                           <input type="number" min="0" step="0.01" value={row.valor_hh_normal}
                             onChange={e => updateRow(i, 'valor_hh_normal', Number(e.target.value))}
@@ -483,20 +486,29 @@ export default function NovoBMPage() {
                       </tr>
                     )
                   })}
-                  <tr className="border-t-2 border-gray-300 bg-brand/5">
-                    <td className="px-3 py-3 font-black text-xs uppercase tracking-wide text-brand">Total Geral</td>
-                    <td className="px-2 py-3 text-center font-bold text-gray-700">
-                      {preview.reduce((s, r) => s + r.funcionarios_unicos, 0)}
-                    </td>
-                    <td className="px-2 py-3 text-center font-bold text-blue-700">{totalDiasNormais}</td>
-                    <td className="px-2 py-3 text-center font-bold text-amber-700">{totalDiasHe70 || '—'}</td>
-                    <td className="px-2 py-3 text-center font-bold text-red-700">{totalDiasHe100 || '—'}</td>
-                    <td className="px-2 py-3 text-center font-bold text-gray-700">{totalHH}h</td>
-                    <td colSpan={3}></td>
-                    <td className="px-3 py-3 text-right font-black text-brand text-base">
-                      R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </td>
-                  </tr>
+                  {(() => {
+                    const totalHHN = preview.reduce((s, r) => s + rowHHNormal(r), 0)
+                    const totalHH70 = preview.reduce((s, r) => s + rowHHHe70(r), 0)
+                    const totalHH100 = preview.reduce((s, r) => s + rowHHHe100(r), 0)
+                    return (
+                      <tr className="border-t-2 border-gray-300 bg-brand/5">
+                        <td className="px-3 py-3 font-black text-xs uppercase tracking-wide text-brand">Total Geral</td>
+                        <td className="px-2 py-3 text-center font-bold text-gray-700">
+                          {preview.reduce((s, r) => s + r.funcionarios_unicos, 0)}
+                        </td>
+                        <td className="px-2 py-3 text-center font-bold text-blue-700">{totalDiasNormais}</td>
+                        <td className="px-2 py-3 text-center font-bold text-amber-700">{totalDiasHe70 || '—'}</td>
+                        <td className="px-2 py-3 text-center font-bold text-red-700">{totalDiasHe100 || '—'}</td>
+                        <td className="px-2 py-3 text-center font-bold text-blue-700">{totalHHN}h</td>
+                        <td className="px-2 py-3 text-center font-bold text-amber-700">{totalHH70 || '—'}{totalHH70 ? 'h' : ''}</td>
+                        <td className="px-2 py-3 text-center font-bold text-red-700">{totalHH100 || '—'}{totalHH100 ? 'h' : ''}</td>
+                        <td colSpan={3}></td>
+                        <td className="px-3 py-3 text-right font-black text-brand text-base">
+                          R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </td>
+                      </tr>
+                    )
+                  })()}
                 </tbody>
               </table>
             </div>

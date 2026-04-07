@@ -283,6 +283,115 @@ export default async function FuncionarioPage({ params }: { params: { id: string
         </div>
       </div>
 
+      {/* Remuneração */}
+      {(() => {
+        const salarioBase = Number(f.salario_base ?? 0)
+        const insalPct = Number(f.insalubridade_pct ?? 0)
+        const pericPct = Number(f.periculosidade_pct ?? 0)
+        const insalVal = salarioBase * insalPct / 100
+        const pericVal = salarioBase * pericPct / 100
+        const salarioBruto = salarioBase + insalVal + pericVal
+        const vtMensal = Number(f.vt_mensal ?? 0)
+        const vrDiario = Number(f.vr_diario ?? 0)
+        const vrMensal = vrDiario * 21
+        const vaMensal = Number(f.va_mensal ?? 0)
+        const planoSaude = Number(f.plano_saude_mensal ?? 0)
+        const outros = Number(f.outros_beneficios ?? 0)
+        const totalBeneficios = vtMensal + vrMensal + vaMensal + planoSaude + outros
+        const fmtR = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+
+        if (!salarioBase && !totalBeneficios) {
+          return (
+            <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm font-bold text-brand font-display">Remuneração</h2>
+                <Link href={`/funcionarios/${f.id}/editar`} className="text-xs text-brand hover:underline">+ Preencher</Link>
+              </div>
+              <p className="text-sm text-gray-400">Salário e benefícios não cadastrados.</p>
+            </div>
+          )
+        }
+
+        return (
+          <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-bold text-brand font-display">Remuneração</h2>
+              <Link href={`/funcionarios/${f.id}/editar`} className="text-xs text-brand hover:underline">Editar</Link>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+              <div className="flex justify-between py-1 border-b border-gray-50">
+                <span className="text-xs text-gray-500">Salário base</span>
+                <span className="text-sm font-bold text-gray-900">{fmtR(salarioBase)}</span>
+              </div>
+              {insalPct > 0 && (
+                <div className="flex justify-between py-1 border-b border-gray-50">
+                  <span className="text-xs text-gray-500">Insalubridade ({insalPct}%)</span>
+                  <span className="text-sm font-medium text-gray-800">{fmtR(insalVal)}</span>
+                </div>
+              )}
+              {pericPct > 0 && (
+                <div className="flex justify-between py-1 border-b border-gray-50">
+                  <span className="text-xs text-gray-500">Periculosidade ({pericPct}%)</span>
+                  <span className="text-sm font-medium text-gray-800">{fmtR(pericVal)}</span>
+                </div>
+              )}
+              <div className="flex justify-between py-1 border-b border-gray-50 sm:col-span-2 bg-blue-50 -mx-2 px-2 rounded">
+                <span className="text-xs font-semibold text-blue-700">Salário bruto</span>
+                <span className="text-sm font-bold text-blue-700">{fmtR(salarioBruto)}</span>
+              </div>
+            </div>
+
+            {totalBeneficios > 0 && (
+              <>
+                <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mt-4 mb-2">Benefícios</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                  {vtMensal > 0 && (
+                    <div className="flex justify-between py-1 border-b border-gray-50">
+                      <span className="text-xs text-gray-500">Vale Transporte</span>
+                      <span className="text-sm font-medium text-gray-800">{fmtR(vtMensal)}</span>
+                    </div>
+                  )}
+                  {vrDiario > 0 && (
+                    <div className="flex justify-between py-1 border-b border-gray-50">
+                      <span className="text-xs text-gray-500">Vale Refeição ({fmtR(vrDiario)}/dia × 21)</span>
+                      <span className="text-sm font-medium text-gray-800">{fmtR(vrMensal)}</span>
+                    </div>
+                  )}
+                  {vaMensal > 0 && (
+                    <div className="flex justify-between py-1 border-b border-gray-50">
+                      <span className="text-xs text-gray-500">Vale Alimentação</span>
+                      <span className="text-sm font-medium text-gray-800">{fmtR(vaMensal)}</span>
+                    </div>
+                  )}
+                  {planoSaude > 0 && (
+                    <div className="flex justify-between py-1 border-b border-gray-50">
+                      <span className="text-xs text-gray-500">Plano de Saúde</span>
+                      <span className="text-sm font-medium text-gray-800">{fmtR(planoSaude)}</span>
+                    </div>
+                  )}
+                  {outros > 0 && (
+                    <div className="flex justify-between py-1 border-b border-gray-50">
+                      <span className="text-xs text-gray-500">Outros</span>
+                      <span className="text-sm font-medium text-gray-800">{fmtR(outros)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-1 border-b border-gray-50 sm:col-span-2 bg-purple-50 -mx-2 px-2 rounded">
+                    <span className="text-xs font-semibold text-purple-700">Total benefícios</span>
+                    <span className="text-sm font-bold text-purple-700">{fmtR(totalBeneficios)}</span>
+                  </div>
+                </div>
+              </>
+            )}
+
+            <div className="flex justify-between mt-4 pt-3 border-t-2 border-gray-100">
+              <span className="text-xs font-bold uppercase tracking-wide text-gray-600">Salário + benefícios</span>
+              <span className="text-base font-black text-brand">{fmtR(salarioBruto + totalBeneficios)}</span>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-1">Não inclui encargos patronais (INSS, FGTS, provisões). Veja o custo completo em Editar.</p>
+          </div>
+        )
+      })()}
+
       {/* Prazos Legais */}
       {prazos && (
         <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">

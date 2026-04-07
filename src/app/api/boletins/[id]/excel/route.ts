@@ -50,8 +50,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   })
 
   const linhasNormal = Object.values(grupos).filter(g => g.tipo === 'normal').sort((a, b) => a.funcao.localeCompare(b.funcao))
-  const linhasHe70   = Object.values(grupos).filter(g => g.tipo === 'he70').sort((a, b) => a.funcao.localeCompare(b.funcao))
-  const linhasHe100  = Object.values(grupos).filter(g => g.tipo === 'he100').sort((a, b) => a.funcao.localeCompare(b.funcao))
+  const linhasHe70   = Object.values(grupos).filter(g => g.tipo === 'extra_70').sort((a, b) => a.funcao.localeCompare(b.funcao))
+  const linhasHe100  = Object.values(grupos).filter(g => g.tipo === 'extra_100').sort((a, b) => a.funcao.localeCompare(b.funcao))
 
   // Calcular total geral
   const totalGeral = (itens ?? []).reduce((s: number, i: any) => s + Number(i.valor_total ?? 0), 0)
@@ -230,10 +230,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   // === Aba Lançamentos: linha por dia × função ===
   const ws2 = wb.addWorksheet('Lançamentos')
 
-  // Carrega efetivo_diario do período
+  // Carrega efetivo_diario do período (com nome do funcionário para a aba de calendário)
   const { data: efetivo } = await supabase
     .from('efetivo_diario')
-    .select('data, funcionario_id, funcionarios(cargo)')
+    .select('data, tipo_dia, funcionario_id, funcionarios(nome, nome_guerra, cargo)')
     .eq('obra_id', bm.obras.id)
     .gte('data', bm.data_inicio)
     .lte('data', bm.data_fim)
@@ -252,6 +252,24 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     grid[c][e.data] = (grid[c][e.data] ?? 0) + 1
   })
 
+  // Detectar feriados a partir de tipo_dia=domingo_feriado (qualquer dia marcado assim no período)
+  const feriadosSet = new Set<string>()
+  ;(efetivo ?? []).forEach((e: any) => {
+    if (e.tipo_dia === 'domingo_feriado') feriadosSet.add(e.data)
+  })
+
+  // Cores
+  const FILL_SAB   = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFF3B0' } } as const // amarelo claro
+  const FILL_DOMF  = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC7C7' } } as const // vermelho claro
+
+  function fillForDate(iso: string) {
+    const d = new Date(iso + 'T12:00')
+    const dow = d.getDay() // 0=Dom 6=Sáb
+    if (dow === 0 || feriadosSet.has(iso)) return FILL_DOMF
+    if (dow === 6) return FILL_SAB
+    return null
+  }
+
   // Header
   ws2.getCell(1, 1).value = 'Função'
   ws2.getCell(1, 1).font = { bold: true }
@@ -261,6 +279,8 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     cell.numFmt = 'dd/mm'
     cell.font = { bold: true, size: 9 }
     cell.alignment = { horizontal: 'center' }
+    const fill = fillForDate(d)
+    if (fill) cell.fill = fill as any
   })
   ws2.getCell(1, 2 + datasArr.length).value = 'Total'
   ws2.getCell(1, 2 + datasArr.length).font = { bold: true }
@@ -272,8 +292,11 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     let total = 0
     datasArr.forEach((d, idx) => {
       const v = grid[f][d] ?? 0
-      ws2.getCell(r, 2 + idx).value = v
-      ws2.getCell(r, 2 + idx).alignment = { horizontal: 'center' }
+      const cell = ws2.getCell(r, 2 + idx)
+      cell.value = v
+      cell.alignment = { horizontal: 'center' }
+      const fill = fillForDate(d)
+      if (fill) cell.fill = fill as any
       total += v
     })
     ws2.getCell(r, 2 + datasArr.length).value = total
@@ -286,6 +309,94 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     ws2.getColumn(i + 1).width = 5
   }
   ws2.getColumn(datasArr.length + 2).width = 8
+
+  // === Aba Calendário por funcionário ===
+  const ws3 = wb.addWorksheet('Calendário')
+  // Lista única de funcionários que aparecem no período, ordenados por cargo + nome
+  const funcMap: Record<string, { nome: string; cargo: string; datas: Set<string> }> = {}
+  ;(efetivo ?? []).forEach((e: any) => {
+    const fid = e.funcionario_id
+    if (!fid || !e.funcionarios) return
+    if (!funcMap[fid]) {
+      funcMap[fid] = {
+        nome: e.funcionarios.nome_guerra || e.funcionarios.nome || '—',
+        cargo: e.funcionarios.cargo || '',
+        datas: new Set<string>(),
+      }
+    }
+    funcMap[fid].datas.add(e.data)
+  })
+  const funcList = Object.values(funcMap).sort((a, b) => (a.cargo + a.nome).localeCompare(b.cargo + b.nome))
+
+  // Header
+  ws3.getCell(1, 1).value = 'Funcionário'
+  ws3.getCell(1, 1).font = { bold: true }
+  ws3.getCell(1, 2).value = 'Função'
+  ws3.getCell(1, 2).font = { bold: true }
+  datasArr.forEach((d, idx) => {
+    const cell = ws3.getCell(1, 3 + idx)
+    const dt = new Date(d + 'T12:00')
+    const dow = dt.getDay()
+    const diaSem = ['D','S','T','Q','Q','S','S'][dow]
+    cell.value = `${diaSem}\n${dt.getDate()}/${dt.getMonth()+1}`
+    cell.font = { bold: true, size: 8 }
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+    const fill = fillForDate(d)
+    if (fill) cell.fill = fill as any
+    cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, right: { style: 'thin' }, bottom: { style: 'thin' } }
+  })
+  ws3.getCell(1, 3 + datasArr.length).value = 'Total'
+  ws3.getCell(1, 3 + datasArr.length).font = { bold: true }
+  ws3.getRow(1).height = 28
+
+  funcList.forEach((f, fIdx) => {
+    const r = 2 + fIdx
+    ws3.getCell(r, 1).value = f.nome
+    ws3.getCell(r, 1).font = { bold: true, size: 9 }
+    ws3.getCell(r, 2).value = f.cargo
+    ws3.getCell(r, 2).font = { size: 9 }
+    let total = 0
+    datasArr.forEach((d, idx) => {
+      const cell = ws3.getCell(r, 3 + idx)
+      const present = f.datas.has(d)
+      const fill = fillForDate(d)
+      if (present) {
+        cell.value = 'P'
+        cell.font = { bold: true, size: 9, color: { argb: 'FF155E2B' } }
+        cell.alignment = { horizontal: 'center', vertical: 'middle' }
+        if (!fill) {
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD1FAE5' } } as any
+        } else {
+          cell.fill = fill as any
+        }
+        total++
+      } else {
+        if (fill) cell.fill = fill as any
+      }
+      cell.border = { top: { style: 'hair' }, left: { style: 'hair' }, right: { style: 'hair' }, bottom: { style: 'hair' } }
+    })
+    ws3.getCell(r, 3 + datasArr.length).value = total
+    ws3.getCell(r, 3 + datasArr.length).font = { bold: true }
+    ws3.getCell(r, 3 + datasArr.length).alignment = { horizontal: 'center' }
+  })
+
+  ws3.getColumn(1).width = 28
+  ws3.getColumn(2).width = 18
+  for (let i = 0; i < datasArr.length; i++) {
+    ws3.getColumn(3 + i).width = 5
+  }
+  ws3.getColumn(3 + datasArr.length).width = 8
+
+  // Legenda
+  const legRow = funcList.length + 4
+  ws3.getCell(legRow, 1).value = 'Legenda:'
+  ws3.getCell(legRow, 1).font = { bold: true, size: 9 }
+  ws3.getCell(legRow, 2).value = 'P = Presente'
+  ws3.getCell(legRow, 2).font = { size: 9 }
+  ws3.getCell(legRow + 1, 2).value = 'Sábado'
+  ws3.getCell(legRow + 1, 2).fill = FILL_SAB as any
+  ws3.getCell(legRow + 2, 2).value = 'Domingo / Feriado'
+  ws3.getCell(legRow + 2, 2).fill = FILL_DOMF as any
 
   // === Output ===
   const buffer = await wb.xlsx.writeBuffer()

@@ -63,7 +63,10 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
       banco: form.banco || null, agencia_conta: form.agencia_conta || null, pix: form.pix || null,
       vt_estrutura: form.vt_estrutura || null,
       tamanho_bota: form.tamanho_bota || null, tamanho_uniforme: form.tamanho_uniforme || null,
+      data_nascimento: form.data_nascimento || null,
       admissao: form.admissao || null,
+      prazo1: form.prazo1 || null,
+      prazo2: form.prazo2 || null,
       tipo_vinculo: form.tipo_vinculo || 'indeterminado',
       salario_base: parseFloat(form.salario_base) || null,
       insalubridade_pct: parseFloat(form.insalubridade_pct) || 0,
@@ -142,8 +145,14 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
                 <select value={form.turno ?? 'diurno'} onChange={e => set('turno', e.target.value)} className={inp + ' bg-white'}>
                   <option value="diurno">Diurno</option><option value="noturno">Noturno</option><option value="misto">Misto</option>
                 </select></div>
+              <div><label className={lbl}>Data de nascimento</label>
+                <input type="date" value={form.data_nascimento ?? ''} onChange={e => set('data_nascimento', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>Data de admissão</label>
                 <input type="date" value={form.admissao ?? ''} onChange={e => set('admissao', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>1º Prazo experiência (45d)</label>
+                <input type="date" value={form.prazo1 ?? ''} onChange={e => set('prazo1', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>2º Prazo experiência (90d)</label>
+                <input type="date" value={form.prazo2 ?? ''} onChange={e => set('prazo2', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>Tipo de vínculo</label>
                 <select value={form.tipo_vinculo ?? 'indeterminado'} onChange={e => set('tipo_vinculo', e.target.value)} className={inp + ' bg-white'}>
                   <option value="experiencia_45_45">Experiência 45+45 dias</option>
@@ -167,7 +176,11 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
                 <input type="number" step="0.5" value={form.horas_mes ?? 220} onChange={e => set('horas_mes', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>Insalubridade (%) <Tooltip text="Adicional pago para quem trabalha em condições prejudiciais à saúde. Pergunte ao engenheiro de segurança." /></label>
                 <select value={form.insalubridade_pct ?? 0} onChange={e => set('insalubridade_pct', e.target.value)} className={inp + ' bg-white'}>
-                  <option value="0">Nenhuma (0%)</option><option value="20">Grau médio (20%)</option><option value="40">Grau máximo (40%)</option>
+                  <option value="0">Nenhuma (0%)</option>
+                  <option value="10">Grau mínimo (10%)</option>
+                  <option value="20">Grau médio (20%)</option>
+                  <option value="30">Grau médio/máximo (30%)</option>
+                  <option value="40">Grau máximo (40%)</option>
                 </select></div>
               <div><label className={lbl}>Periculosidade (%) <Tooltip text="Adicional de 30% para atividades de risco de vida como trabalho com energia elétrica ou substâncias inflamáveis." /></label>
                 <select value={form.periculosidade_pct ?? 0} onChange={e => set('periculosidade_pct', e.target.value)} className={inp + ' bg-white'}>

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import ConfirmButton from '@/components/ConfirmButton'
 import SearchInput from '@/components/SearchInput'
+import { useToast } from '@/components/Toast'
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const fmtK = (v: number) => {
@@ -31,6 +32,7 @@ export default function FinanceiroPage() {
   const [tab, setTab] = useState<'fluxo' | 'lancamentos'>('fluxo')
   const [busca, setBusca] = useState('')
   const supabase = createClient()
+  const toast = useToast()
 
   useEffect(() => {
     supabase.from('obras').select('id,nome').is('deleted_at', null).order('nome').then(({ data }) => setObras(data ?? []))
@@ -310,11 +312,13 @@ export default function FinanceiroPage() {
                   <td className="px-4 py-2.5 text-right">
                     <ConfirmButton label="Excluir" onConfirm={async () => {
                       const { data: { user } } = await supabase.auth.getUser()
-                      await supabase.from('financeiro_lancamentos').update({
+                      const { error } = await supabase.from('financeiro_lancamentos').update({
                         deleted_at: new Date().toISOString(),
                         deleted_by: user?.id ?? null,
                       }).eq('id', l.id)
+                      if (error) { toast.error('Erro ao excluir: ' + error.message); return }
                       setLancamentos(prev => prev.filter(x => x.id !== l.id))
+                      toast.success('Lançamento excluído')
                     }} />
                   </td>
                 </tr>

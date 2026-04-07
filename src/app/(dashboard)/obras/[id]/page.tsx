@@ -59,7 +59,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
     { data: rncData },
     { data: transferencias },
   ] = await Promise.all([
-    supabase.from('obras').select('*').eq('id', params.id).single(),
+    supabase.from('obras').select('*').eq('id', params.id).is('deleted_at', null).maybeSingle(),
     supabase.from('alocacoes').select('*, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao)').eq('obra_id', params.id).eq('ativo', true),
     supabase.from('boletins_medicao').select('*').eq('obra_id', params.id).is('deleted_at', null).order('numero'),
     getRole(),
