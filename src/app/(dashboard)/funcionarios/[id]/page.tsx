@@ -6,6 +6,7 @@ import { DesativarFuncionarioBtn } from '@/components/DeleteActions'
 import BackButton from '@/components/BackButton'
 import FuncionarioDocumentos from '@/components/FuncionarioDocumentos'
 import FuncionarioHistorico from '@/components/FuncionarioHistorico'
+import FuncionarioHistoricoSalarial from '@/components/FuncionarioHistoricoSalarial'
 
 export default async function FuncionarioPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -594,6 +595,15 @@ export default async function FuncionarioPage({ params }: { params: { id: string
 
       {/* Histórico na Empresa */}
       <FuncionarioHistorico cpf={f.cpf} funcionarioAtualId={f.id} admissaoAtual={f.admissao} />
+
+      {/* Histórico Salarial */}
+      <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold text-brand font-display">Histórico salarial</h2>
+          <Link href="/rh/correcoes" className="text-xs text-brand hover:underline">Correções salariais →</Link>
+        </div>
+        <FuncionarioHistoricoSalarial funcionarioId={f.id} />
+      </div>
 
       {/* Advertencias e Termos */}
       <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">

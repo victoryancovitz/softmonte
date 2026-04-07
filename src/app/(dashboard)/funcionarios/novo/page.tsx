@@ -29,6 +29,11 @@ export default function NovoFuncionarioPage() {
   const [showNovaFuncao, setShowNovaFuncao] = useState(false)
   const [novaFuncaoNome, setNovaFuncaoNome] = useState('')
   const [novaFuncaoCat, setNovaFuncaoCat] = useState('Montagem')
+  const [novaFuncaoSalario, setNovaFuncaoSalario] = useState('')
+  const [novaFuncaoCbo, setNovaFuncaoCbo] = useState('')
+  const [novaFuncaoJornada, setNovaFuncaoJornada] = useState('220')
+  const [novaFuncaoPeric, setNovaFuncaoPeric] = useState('30')
+  const [novaFuncaoInsal, setNovaFuncaoInsal] = useState('0')
   const [criandoFuncao, setCriandoFuncao] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -83,9 +88,21 @@ export default function NovoFuncionarioPage() {
   async function handleCriarFuncaoInline() {
     if (!novaFuncaoNome.trim()) return
     setCriandoFuncao(true)
+    const sb = parseFloat(novaFuncaoSalario) || 0
+    const jm = parseInt(novaFuncaoJornada) || 220
+    const pPct = parseFloat(novaFuncaoPeric) || 0
+    const iPct = parseFloat(novaFuncaoInsal) || 0
+    const salTotal = sb * (1 + pPct/100 + iPct/100)
+    const ch = jm > 0 && salTotal > 0 ? salTotal / jm : null
     const { data, error: fErr } = await supabase.from('funcoes').insert({
       nome: novaFuncaoNome.trim().toUpperCase(),
       categoria: novaFuncaoCat,
+      salario_base: sb || null,
+      cbo: novaFuncaoCbo.trim() || null,
+      jornada_horas_mes: jm,
+      periculosidade_pct_padrao: pPct,
+      insalubridade_pct_padrao: iPct,
+      custo_hora: ch,
       multiplicador_extra: 1.7,
       multiplicador_noturno: 1.4,
       ativo: true,
@@ -98,7 +115,8 @@ export default function NovoFuncionarioPage() {
       setFuncoes(updated ?? [])
       set('funcao_id', data.id)
       setShowNovaFuncao(false)
-      setNovaFuncaoNome('')
+      setNovaFuncaoNome(''); setNovaFuncaoSalario(''); setNovaFuncaoCbo('')
+      setNovaFuncaoJornada('220'); setNovaFuncaoPeric('30'); setNovaFuncaoInsal('0')
     }
     setCriandoFuncao(false)
   }
@@ -354,21 +372,37 @@ export default function NovoFuncionarioPage() {
                   </button>
                 </div>
                 {showNovaFuncao && (
-                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-xl">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-blue-800">Criar nova função</span>
+                  <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-blue-800">Criar nova função (dados salariais entram como padrão)</span>
                       <button type="button" onClick={() => setShowNovaFuncao(false)} className="text-blue-400 hover:text-blue-600 text-xs">Cancelar</button>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <input type="text" value={novaFuncaoNome} onChange={e => setNovaFuncaoNome(e.target.value)}
-                        placeholder="Ex: ENGENHEIRO CIVIL" className="flex-1 px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand" />
+                        placeholder="Nome (ex: ENGENHEIRO CIVIL)" className="sm:col-span-2 px-3 py-2 border border-blue-200 rounded-lg text-sm uppercase bg-white focus:outline-none focus:ring-2 focus:ring-brand" />
                       <select value={novaFuncaoCat} onChange={e => setNovaFuncaoCat(e.target.value)}
                         className="px-2 py-2 border border-blue-200 rounded-lg text-sm bg-white">
                         {CATEGORIAS_FUNCAO.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                      <input type="number" step="0.01" value={novaFuncaoSalario} onChange={e => setNovaFuncaoSalario(e.target.value)}
+                        placeholder="Salário base" className="px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white" />
+                      <input type="text" value={novaFuncaoCbo} onChange={e => setNovaFuncaoCbo(e.target.value)}
+                        placeholder="CBO" className="px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white" />
+                      <input type="number" value={novaFuncaoJornada} onChange={e => setNovaFuncaoJornada(e.target.value)}
+                        placeholder="Jornada h/mês" className="px-3 py-2 border border-blue-200 rounded-lg text-sm bg-white" />
+                      <div className="flex gap-1">
+                        <input type="number" step="0.01" value={novaFuncaoPeric} onChange={e => setNovaFuncaoPeric(e.target.value)}
+                          placeholder="Peric %" className="flex-1 px-2 py-2 border border-red-200 rounded-lg text-sm bg-white" title="Periculosidade %" />
+                        <input type="number" step="0.01" value={novaFuncaoInsal} onChange={e => setNovaFuncaoInsal(e.target.value)}
+                          placeholder="Insal %" className="flex-1 px-2 py-2 border border-amber-200 rounded-lg text-sm bg-white" title="Insalubridade %" />
+                      </div>
+                    </div>
+                    <div className="flex justify-end">
                       <button type="button" onClick={handleCriarFuncaoInline} disabled={!novaFuncaoNome.trim() || criandoFuncao}
-                        className="px-3 py-2 bg-brand text-white rounded-lg text-xs font-medium hover:bg-brand-dark disabled:opacity-50">
-                        {criandoFuncao ? '...' : 'Criar'}
+                        className="px-3 py-2 bg-brand text-white rounded-lg text-xs font-bold hover:bg-brand-dark disabled:opacity-50">
+                        {criandoFuncao ? 'Criando...' : 'Criar e selecionar'}
                       </button>
                     </div>
                   </div>

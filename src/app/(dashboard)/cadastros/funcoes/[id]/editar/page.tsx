@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
+import ImpactConfirmDialog from '@/components/ImpactConfirmDialog'
+import { Trash2 } from 'lucide-react'
 
 const CATEGORIAS = ['Montagem','Elétrica','Tubulação','Mecânica','Pintura','Qualidade','Gestão','Suporte','Equipamentos','Operacional']
 
@@ -13,19 +15,43 @@ export default function EditarFuncaoPage({ params }: { params: { id: string } })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [confirmEdit, setConfirmEdit] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
   useEffect(() => {
     supabase.from('funcoes').select('*').eq('id', params.id).single()
-      .then(({ data }) => { setForm(data); setLoading(false) })
+      .then(({ data }) => {
+        if (data) {
+          // Guarda valor inicial pra detectar mudança de salário
+          setForm({ ...data, _initial_salario: data.salario_base })
+        }
+        setLoading(false)
+      })
   }, [params.id])
+
+  async function handleDelete() {
+    const { error } = await supabase.from('funcoes').delete().eq('id', params.id)
+    if (error) { setError(error.message); return }
+    router.push('/cadastros/funcoes')
+  }
 
   function set(field: string, value: any) { setForm((f: any) => ({ ...f, [field]: value })) }
 
-  async function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    // Se salario_base mudou e há funcionários usando a função, abre confirmação
+    if (form._initial_salario !== form.salario_base) {
+      setConfirmEdit(true)
+      return
+    }
+    doSave()
+  }
+
+  async function doSave() {
     setSaving(true)
+    setConfirmEdit(false)
     const sb = parseFloat(form.salario_base) || 0
     const jm = parseInt(form.jornada_horas_mes) || 220
     const pPct = parseFloat(form.periculosidade_pct_padrao) || 0
@@ -190,9 +216,36 @@ export default function EditarFuncaoPage({ params }: { params: { id: string } })
               {saving ? 'Salvando...' : 'Salvar alterações'}
             </button>
             <Link href="/cadastros/funcoes" className="px-6 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</Link>
+            <button type="button" onClick={() => setConfirmDelete(true)}
+              className="ml-auto px-4 py-2.5 border border-red-200 text-red-600 rounded-xl text-sm font-semibold hover:bg-red-50 flex items-center gap-2">
+              <Trash2 className="w-4 h-4" /> Excluir função
+            </button>
           </div>
         </form>
       </div>
+
+      <ImpactConfirmDialog
+        open={confirmEdit}
+        onClose={() => setConfirmEdit(false)}
+        onConfirm={doSave}
+        entity="funcao"
+        entityId={params.id}
+        title="Confirmar alteração salarial"
+        action="Alterar o salário base desta função não atualiza automaticamente os funcionários já cadastrados — use Correções Salariais para aplicar em massa. A alteração afetará apenas novas admissões."
+        actionType="edit"
+        confirmLabel="Salvar mesmo assim"
+      />
+
+      <ImpactConfirmDialog
+        open={confirmDelete}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={handleDelete}
+        entity="funcao"
+        entityId={params.id}
+        title="Excluir função"
+        action="A exclusão remove a função do catálogo. Funcionários que referenciam esta função perdem o vínculo, mas seus dados são mantidos."
+        actionType="delete"
+      />
     </div>
   )
 }
