@@ -20,6 +20,23 @@ const TIPO_LABELS: Record<string, string> = {
   justa_causa: 'Justa Causa',
 }
 
+// CLT Art. 482 — motivos legais de justa causa
+const MOTIVOS_JUSTA_CAUSA = [
+  { value: 'ato_improbidade', label: 'Ato de improbidade' },
+  { value: 'incontinencia_conduta', label: 'Incontinência de conduta ou mau procedimento' },
+  { value: 'negociacao_habitual', label: 'Negociação habitual sem permissão / concorrência' },
+  { value: 'condenacao_criminal', label: 'Condenação criminal transitada em julgado' },
+  { value: 'desidia', label: 'Desídia no desempenho das funções' },
+  { value: 'embriaguez', label: 'Embriaguez habitual ou em serviço' },
+  { value: 'violacao_segredo', label: 'Violação de segredo da empresa' },
+  { value: 'indisciplina', label: 'Ato de indisciplina ou de insubordinação' },
+  { value: 'abandono_emprego', label: 'Abandono de emprego (>30 dias sem justificativa)' },
+  { value: 'ofensas_fisicas', label: 'Ato lesivo da honra/boa fama, ou ofensas físicas' },
+  { value: 'jogos_azar', label: 'Prática constante de jogos de azar' },
+  { value: 'ato_seguranca_nacional', label: 'Atos atentatórios à segurança nacional' },
+  { value: 'outro', label: 'Outro motivo (descrever)' },
+]
+
 function formatDate(d: string | null): string {
   if (!d) return ''
   return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR')
@@ -49,6 +66,8 @@ export default function DemissaoWizardPage() {
   const [tipoMotivo, setTipoMotivo] = useState({
     tipo_desligamento: 'sem_justa_causa',
     motivo: '',
+    motivo_justa_causa_codigo: '',
+    motivo_justa_causa_detalhe: '',
     data_aviso: '',
     data_prevista_saida: '',
   })
@@ -111,6 +130,8 @@ export default function DemissaoWizardPage() {
       setTipoMotivo({
         tipo_desligamento: wf.tipo_desligamento ?? 'sem_justa_causa',
         motivo: wf.motivo ?? '',
+        motivo_justa_causa_codigo: '',
+        motivo_justa_causa_detalhe: '',
         data_aviso: wf.data_aviso ?? '',
         data_prevista_saida: wf.data_prevista_saida ?? '',
       })
@@ -249,12 +270,43 @@ export default function DemissaoWizardPage() {
 
   async function handleNext() {
     setError('')
-    if (etapa === 1 && !tipoMotivo.data_prevista_saida) {
-      setError('Data prevista de saida e obrigatoria.')
-      return
+    if (etapa === 1) {
+      if (!tipoMotivo.data_prevista_saida) {
+        setError('Data prevista de saida e obrigatoria.')
+        return
+      }
+      if (tipoMotivo.tipo_desligamento === 'justa_causa') {
+        if (!tipoMotivo.motivo_justa_causa_codigo) {
+          setError('Selecione o enquadramento legal da justa causa (CLT Art. 482).')
+          return
+        }
+        if (tipoMotivo.motivo_justa_causa_codigo === 'outro' && !tipoMotivo.motivo_justa_causa_detalhe.trim()) {
+          setError('Detalhamento é obrigatório quando motivo é "Outro".')
+          return
+        }
+      }
     }
     const ok = await saveStep(etapa)
     if (ok !== false) setEtapa(etapa + 1)
+  }
+
+  // Map tipo_desligamento → motivo_saida (texto livre que vai para funcionarios.motivo_saida)
+  function getMotivoSaida(): string {
+    const TIPO_TO_MOTIVO: Record<string, string> = {
+      sem_justa_causa: 'Sem justa causa (iniciativa empresa)',
+      pedido: 'Pedido de demissão',
+      consensual: 'Acordo consensual',
+      justa_causa: 'JUSTA CAUSA',
+    }
+    return TIPO_TO_MOTIVO[tipoMotivo.tipo_desligamento] ?? tipoMotivo.tipo_desligamento
+  }
+
+  function getMotivoJustaCausaText(): string | null {
+    if (tipoMotivo.tipo_desligamento !== 'justa_causa') return null
+    const m = MOTIVOS_JUSTA_CAUSA.find(x => x.value === tipoMotivo.motivo_justa_causa_codigo)
+    const label = m?.label ?? tipoMotivo.motivo_justa_causa_codigo
+    const det = tipoMotivo.motivo_justa_causa_detalhe.trim()
+    return det ? `${label} — ${det}` : label
   }
 
   async function handleFinalizar() {
@@ -270,8 +322,12 @@ export default function DemissaoWizardPage() {
       data_real_saida: tipoMotivo.data_prevista_saida || new Date().toISOString().split('T')[0],
     }).eq('id', workflowId)
 
-    // Inactivate employee
-    await supabase.from('funcionarios').update({ status: 'inativo' }).eq('id', id)
+    // Inactivate employee + save motivo_saida and motivo_justa_causa for traceability
+    await supabase.from('funcionarios').update({
+      status: 'inativo',
+      motivo_saida: getMotivoSaida(),
+      motivo_justa_causa: getMotivoJustaCausaText(),
+    }).eq('id', id)
 
     // End active allocations
     await supabase.from('alocacoes').update({
@@ -341,8 +397,38 @@ export default function DemissaoWizardPage() {
                   <option value="justa_causa">Justa Causa</option>
                 </select>
               </div>
+              {tipoMotivo.tipo_desligamento === 'justa_causa' && (
+                <div className="col-span-1 sm:col-span-2 p-3 bg-red-50 border border-red-200 rounded-xl space-y-3">
+                  <p className="text-xs font-bold text-red-700">⚠ Justa Causa — CLT Art. 482</p>
+                  <div>
+                    <label className={lbl}>Motivo legal *</label>
+                    <select
+                      value={tipoMotivo.motivo_justa_causa_codigo}
+                      onChange={e => setTipoMotivo(t => ({ ...t, motivo_justa_causa_codigo: e.target.value }))}
+                      className={inp + ' bg-white'}
+                    >
+                      <option value="">Selecione o enquadramento legal...</option>
+                      {MOTIVOS_JUSTA_CAUSA.map(m => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={lbl}>
+                      Detalhamento {tipoMotivo.motivo_justa_causa_codigo === 'outro' && '*'}
+                    </label>
+                    <textarea
+                      value={tipoMotivo.motivo_justa_causa_detalhe}
+                      onChange={e => setTipoMotivo(t => ({ ...t, motivo_justa_causa_detalhe: e.target.value }))}
+                      rows={3}
+                      placeholder="Descreva detalhadamente os fatos que justificam a justa causa, com datas, testemunhas e documentos quando aplicável..."
+                      className={inp + ' resize-none bg-white'}
+                    />
+                  </div>
+                </div>
+              )}
               <div className="col-span-1 sm:col-span-2">
-                <label className={lbl}>Motivo</label>
+                <label className={lbl}>{tipoMotivo.tipo_desligamento === 'justa_causa' ? 'Observações adicionais' : 'Motivo'}</label>
                 <textarea value={tipoMotivo.motivo} onChange={e => setTipoMotivo(t => ({ ...t, motivo: e.target.value }))}
                   rows={3} className={inp + ' resize-none'} placeholder="Descreva o motivo do desligamento..." />
               </div>

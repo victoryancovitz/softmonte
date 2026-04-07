@@ -50,6 +50,16 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
       cargo: form.cargo,
       turno: form.turno, status: form.status,
       re: form.re || null, cpf: form.cpf || null, pis: form.pis || null,
+      telefone: form.telefone || null,
+      naturalidade: form.naturalidade || null,
+      estado_civil: form.estado_civil || null,
+      titulo_eleitor: form.titulo_eleitor || null,
+      raca_cor: form.raca_cor || null,
+      nome_pai: form.nome_pai || null,
+      nome_mae: form.nome_mae || null,
+      endereco: form.endereco || null,
+      cidade_endereco: form.cidade_endereco || null,
+      cep: form.cep || null,
       banco: form.banco || null, agencia_conta: form.agencia_conta || null, pix: form.pix || null,
       vt_estrutura: form.vt_estrutura || null,
       tamanho_bota: form.tamanho_bota || null, tamanho_uniforme: form.tamanho_uniforme || null,
@@ -65,6 +75,8 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
       outros_beneficios: parseFloat(form.outros_beneficios) || 0,
       horas_mes: parseFloat(form.horas_mes) || 220,
       custo_hora: custoHora > 0 ? custoHora : null,
+      nao_renovar: !!form.nao_renovar,
+      observacao_renovacao: form.observacao_renovacao || null,
     }).eq('id', params.id)
     if (error) { setError(formatSupabaseError(error)); setSaving(false); return }
     setSuccess(true)
@@ -193,6 +205,40 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
             )}
           </section>
 
+          {/* Dados pessoais complementares */}
+          <section>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Dados Pessoais</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div><label className={lbl}>Telefone</label>
+                <input type="text" value={form.telefone ?? ''} onChange={e => set('telefone', e.target.value)} className={inp} /></div>
+              <div><label className={lbl}>Naturalidade</label>
+                <input type="text" value={form.naturalidade ?? ''} onChange={e => set('naturalidade', e.target.value)} className={inp} placeholder="Cidade-UF"/></div>
+              <div><label className={lbl}>Estado civil</label>
+                <select value={form.estado_civil ?? ''} onChange={e => set('estado_civil', e.target.value)} className={inp + ' bg-white'}>
+                  <option value="">—</option>
+                  <option>SOLTEIRO</option><option>CASADO</option><option>DIVORCIADO</option><option>VIUVO</option><option>UNIAO ESTAVEL</option>
+                </select></div>
+              <div><label className={lbl}>Raça/Cor</label>
+                <select value={form.raca_cor ?? ''} onChange={e => set('raca_cor', e.target.value)} className={inp + ' bg-white'}>
+                  <option value="">—</option>
+                  <option>BRANCA</option><option>PRETA</option><option>PARDA</option><option>AMARELA</option><option>INDIGENA</option>
+                </select></div>
+              <div><label className={lbl}>Título de Eleitor</label>
+                <input type="text" value={form.titulo_eleitor ?? ''} onChange={e => set('titulo_eleitor', e.target.value)} className={inp}/></div>
+              <div /> {/* spacer */}
+              <div><label className={lbl}>Nome do Pai</label>
+                <input type="text" value={form.nome_pai ?? ''} onChange={e => set('nome_pai', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>Nome da Mãe</label>
+                <input type="text" value={form.nome_mae ?? ''} onChange={e => set('nome_mae', e.target.value)} className={inp}/></div>
+              <div className="sm:col-span-2"><label className={lbl}>Endereço</label>
+                <input type="text" value={form.endereco ?? ''} onChange={e => set('endereco', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>Cidade</label>
+                <input type="text" value={form.cidade_endereco ?? ''} onChange={e => set('cidade_endereco', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>CEP</label>
+                <input type="text" value={form.cep ?? ''} onChange={e => set('cep', e.target.value)} className={inp}/></div>
+            </div>
+          </section>
+
           {/* Banco e EPIs */}
           <section>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Dados bancários e EPI</h3>
@@ -207,6 +253,23 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
                 <input type="text" value={form.tamanho_bota ?? ''} onChange={e => set('tamanho_bota', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>Tamanho Uniforme <span className="text-gray-400 font-normal">(Compras)</span></label>
                 <input type="text" value={form.tamanho_uniforme ?? ''} onChange={e => set('tamanho_uniforme', e.target.value)} className={inp}/></div>
+            </div>
+          </section>
+
+          {/* Renovação de contrato */}
+          <section>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Renovação de Contrato</h3>
+            <div className="space-y-3">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={!!form.nao_renovar} onChange={e => set('nao_renovar', e.target.checked)}
+                  className="w-4 h-4 rounded text-red-600 focus:ring-red-500" />
+                <span className="text-sm font-semibold text-red-700">⚠ NÃO RENOVAR contrato</span>
+              </label>
+              {form.nao_renovar && (
+                <input type="text" value={form.observacao_renovacao ?? ''} onChange={e => set('observacao_renovacao', e.target.value)}
+                  placeholder="Motivo / data limite (ex: Não renovar até 20.04)"
+                  className={inp} />
+              )}
             </div>
           </section>
 

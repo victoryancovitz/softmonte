@@ -61,9 +61,19 @@ export default async function FuncionarioPage({ params }: { params: { id: string
     { label: 'Matrícula', value: f.matricula },
     { label: 'ID Ponto', value: f.id_ponto },
     { label: 'CPF', value: f.cpf },
-    { label: 'RE', value: f.re },
+    { label: 'RG', value: f.re },
     { label: 'PIS', value: f.pis },
+    { label: 'Título de Eleitor', value: f.titulo_eleitor },
     { label: 'Data de Nascimento', value: f.data_nascimento ? new Date(f.data_nascimento+'T12:00').toLocaleDateString('pt-BR') : null },
+    { label: 'Naturalidade', value: f.naturalidade },
+    { label: 'Estado Civil', value: f.estado_civil },
+    { label: 'Raça/Cor', value: f.raca_cor },
+    { label: 'Nome do Pai', value: f.nome_pai },
+    { label: 'Nome da Mãe', value: f.nome_mae },
+    { label: 'Telefone', value: f.telefone },
+    { label: 'Endereço', value: f.endereco },
+    { label: 'Cidade', value: f.cidade_endereco },
+    { label: 'CEP', value: f.cep },
     { label: 'Admissão', value: f.admissao ? new Date(f.admissao+'T12:00').toLocaleDateString('pt-BR') : null },
     { label: 'Banco', value: f.banco },
     { label: 'Agência / Conta', value: f.agencia_conta },
@@ -150,10 +160,36 @@ export default async function FuncionarioPage({ params }: { params: { id: string
         </div>
       )}
 
+      {f.nao_renovar && !isArquivado && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-300 rounded-xl text-sm text-amber-900">
+          <div className="flex items-center gap-2">
+            <span>⚠</span>
+            <strong>NÃO RENOVAR</strong>
+            {f.observacao_renovacao && <span className="text-amber-700">— {f.observacao_renovacao}</span>}
+          </div>
+        </div>
+      )}
+
       {isArquivado && (
-        <div className="mb-4 p-3 bg-gray-100 border border-gray-300 rounded-xl text-sm text-gray-700 flex items-center gap-2">
-          <span>📁</span>
-          <span><strong>Vínculo arquivado</strong> — Funcionário desligado em {f.deleted_at ? new Date(f.deleted_at).toLocaleDateString('pt-BR') : '—'}. Visualização somente leitura.</span>
+        <div className="mb-4 p-3 bg-gray-100 border border-gray-300 rounded-xl text-sm text-gray-700">
+          <div className="flex items-center gap-2">
+            <span>📁</span>
+            <strong>Vínculo arquivado</strong>
+            <span>— Funcionário desligado em {f.deleted_at ? new Date(f.deleted_at).toLocaleDateString('pt-BR') : '—'}.</span>
+          </div>
+          {f.motivo_saida && (
+            <div className="mt-1 text-xs text-gray-600">
+              Motivo: <strong>{f.motivo_saida}</strong>
+              {f.motivo_justa_causa && <span className="block mt-0.5 text-red-700">Justa causa: {f.motivo_justa_causa}</span>}
+            </div>
+          )}
+        </div>
+      )}
+
+      {!isArquivado && f.status === 'inativo' && f.motivo_saida && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800">
+          <strong>Motivo do desligamento:</strong> {f.motivo_saida}
+          {f.motivo_justa_causa && <div className="mt-1 text-xs">Detalhamento: {f.motivo_justa_causa}</div>}
         </div>
       )}
 
