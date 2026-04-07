@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import PontoCellEditor from '@/components/PontoCellEditor'
+import { useToast } from '@/components/Toast'
 
 function getDaysInMonth(month: number, year: number): number {
   return new Date(year, month, 0).getDate()
@@ -32,22 +33,49 @@ export default function PontoPage() {
   const [grid, setGrid] = useState<Record<string, Record<number, CellData>>>({})
   const [loading, setLoading] = useState(false)
   const [editing, setEditing] = useState<{ funcId: string; day: number } | null>(null)
+  const [fechamento, setFechamento] = useState<any>(null)
+  const [fechando, setFechando] = useState(false)
+  const [role, setRole] = useState<string>('')
+  const [showHistorico, setShowHistorico] = useState(false)
+  const [historico, setHistorico] = useState<any[]>([])
+  const [loadingHistorico, setLoadingHistorico] = useState(false)
   const supabase = createClient()
+  const toast = useToast()
+
+  const isAdmin = role === 'admin'
+  const isOp = isAdmin || role === 'encarregado' || role === 'engenheiro'
+  const pontoFechado = !!fechamento
+  const podeEditar = !pontoFechado || isAdmin
 
   useEffect(() => {
     supabase.from('obras').select('id,nome').eq('status', 'ativo').is('deleted_at', null).order('nome')
       .then(({ data }) => setObras(data ?? []))
+    // Buscar role do usuário
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('profiles').select('role').eq('id', user.id).single()
+          .then(({ data }) => setRole((data as any)?.role ?? ''))
+      }
+    })
   }, [])
 
   const loadData = useCallback(async () => {
     if (!obraId) {
-      setFuncionarios([]); setGrid({}); return
+      setFuncionarios([]); setGrid({}); setFechamento(null); return
     }
     setLoading(true)
 
     const totalDays = getDaysInMonth(mes, ano)
     const dateStart = `${ano}-${String(mes).padStart(2, '0')}-01`
     const dateEnd = `${ano}-${String(mes).padStart(2, '0')}-${String(totalDays).padStart(2, '0')}`
+
+    // Verifica se o período está fechado
+    const { data: fech } = await supabase
+      .from('ponto_fechamentos')
+      .select('*')
+      .eq('obra_id', obraId).eq('mes', mes).eq('ano', ano)
+      .maybeSingle()
+    setFechamento(fech)
 
     // 1. Funcionários alocados ativos
     const { data: alocacoes } = await supabase
@@ -131,6 +159,53 @@ export default function PontoPage() {
 
   useEffect(() => { loadData() }, [loadData])
 
+  async function handleFechar() {
+    if (!obraId) return
+    if (!confirm(`Fechar o ponto de ${meses[mes - 1]}/${ano}? Após fechado, apenas administradores poderão editar.`)) return
+    setFechando(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: prof } = await supabase.from('profiles').select('nome').eq('id', user?.id ?? '').single()
+    const { error } = await supabase.from('ponto_fechamentos').insert({
+      obra_id: obraId, mes, ano,
+      fechado_por: user?.id ?? null,
+      fechado_por_nome: (prof as any)?.nome ?? null,
+    })
+    setFechando(false)
+    if (error) { toast.error('Erro ao fechar: ' + error.message); return }
+    toast.success('Ponto fechado com sucesso')
+    loadData()
+  }
+
+  async function handleReabrir() {
+    if (!fechamento) return
+    if (!confirm(`Reabrir o ponto de ${meses[mes - 1]}/${ano}? Os usuários voltarão a poder editar.`)) return
+    setFechando(true)
+    const { error } = await supabase.from('ponto_fechamentos').delete().eq('id', fechamento.id)
+    setFechando(false)
+    if (error) { toast.error('Erro ao reabrir: ' + error.message); return }
+    toast.success('Ponto reaberto')
+    loadData()
+  }
+
+  async function loadHistorico() {
+    if (!obraId) return
+    setLoadingHistorico(true)
+    // Pega últimas alterações no efetivo_diario feitas para esta obra
+    const { data } = await supabase.from('audit_log')
+      .select('*')
+      .eq('tabela', 'efetivo_diario')
+      .order('created_at', { ascending: false })
+      .limit(100)
+    setHistorico(data ?? [])
+    setLoadingHistorico(false)
+  }
+
+  function toggleHistorico() {
+    const next = !showHistorico
+    setShowHistorico(next)
+    if (next && historico.length === 0) loadHistorico()
+  }
+
   const totalDays = getDaysInMonth(mes, ano)
   const days = Array.from({ length: totalDays }, (_, i) => i + 1)
   const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
@@ -185,8 +260,91 @@ export default function PontoPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-[1400px] mx-auto">
-      <h1 className="text-xl font-bold font-display text-brand mb-2">Controle de Ponto</h1>
-      <p className="text-xs text-gray-500 mb-5">Clique em qualquer dia para editar o status. Funcionários desligados aparecem com badge vermelho e só permitem edição nos dias do vínculo. Toda alteração é auditada.</p>
+      <div className="flex items-start justify-between mb-2 gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold font-display text-brand">Controle de Ponto</h1>
+          <p className="text-xs text-gray-500 mt-1">Clique em qualquer dia para editar o status. Funcionários desligados aparecem com badge vermelho e só permitem edição nos dias do vínculo. Toda alteração é auditada.</p>
+        </div>
+        {obraId && isOp && (
+          <div className="flex gap-2">
+            {isAdmin && (
+              <button onClick={toggleHistorico}
+                className="px-3 py-2 border border-gray-200 rounded-xl text-xs font-semibold hover:bg-gray-50">
+                🔍 Histórico de alterações
+              </button>
+            )}
+            {!pontoFechado ? (
+              <button onClick={handleFechar} disabled={fechando}
+                className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50">
+                {fechando ? 'Fechando...' : '🔒 Fechar ponto do mês'}
+              </button>
+            ) : isAdmin && (
+              <button onClick={handleReabrir} disabled={fechando}
+                className="px-4 py-2 border border-amber-300 text-amber-700 rounded-xl text-sm font-bold hover:bg-amber-50 disabled:opacity-50">
+                {fechando ? 'Reabrindo...' : '🔓 Reabrir ponto'}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Banner de fechamento */}
+      {obraId && pontoFechado && (
+        <div className={`mb-4 p-3 rounded-xl border flex items-center gap-3 ${isAdmin ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200'}`}>
+          <div className="text-2xl">🔒</div>
+          <div className="flex-1">
+            <p className={`text-sm font-bold ${isAdmin ? 'text-amber-800' : 'text-gray-700'}`}>Ponto fechado</p>
+            <p className="text-xs text-gray-600 mt-0.5">
+              {meses[mes - 1]}/{ano} foi encerrado
+              {fechamento.fechado_por_nome && <span> por <strong>{fechamento.fechado_por_nome}</strong></span>}
+              {fechamento.fechado_em && <span> em {new Date(fechamento.fechado_em).toLocaleString('pt-BR')}</span>}.
+              {isAdmin ? ' Como admin você ainda pode corrigir, mas toda alteração é auditada.' : ' Apenas administradores podem editar — solicite a reabertura se necessário.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Painel de histórico de alterações */}
+      {showHistorico && isAdmin && (
+        <div className="mb-4 bg-white border border-gray-200 rounded-xl p-4 max-h-80 overflow-y-auto">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-brand">Últimas alterações no ponto</h3>
+            <button onClick={() => setShowHistorico(false)} className="text-xs text-gray-400 hover:text-gray-600">✕ Fechar</button>
+          </div>
+          {loadingHistorico ? (
+            <p className="text-xs text-gray-400">Carregando...</p>
+          ) : historico.length === 0 ? (
+            <p className="text-xs text-gray-400">Nenhuma alteração registrada.</p>
+          ) : (
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-100">
+                  <th className="text-left px-2 py-1.5 text-gray-500 font-semibold">Quando</th>
+                  <th className="text-left px-2 py-1.5 text-gray-500 font-semibold">Usuário</th>
+                  <th className="text-left px-2 py-1.5 text-gray-500 font-semibold">Ação</th>
+                  <th className="text-left px-2 py-1.5 text-gray-500 font-semibold">Campos</th>
+                </tr>
+              </thead>
+              <tbody>
+                {historico.map(h => {
+                  const cor = h.acao === 'INSERT' ? 'bg-green-100 text-green-700' : h.acao === 'DELETE' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
+                  const label = h.acao === 'INSERT' ? 'criou' : h.acao === 'DELETE' ? 'excluiu' : 'alterou'
+                  return (
+                    <tr key={h.id} className="border-b border-gray-50">
+                      <td className="px-2 py-1.5 text-gray-500 whitespace-nowrap">
+                        {new Date(h.created_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                      </td>
+                      <td className="px-2 py-1.5 font-medium text-gray-800">{h.usuario_nome ?? '—'}</td>
+                      <td className="px-2 py-1.5"><span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold ${cor}`}>{label}</span></td>
+                      <td className="px-2 py-1.5 text-gray-500">{h.campos_alterados?.join(', ') ?? '—'}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
 
       {/* Selectors */}
       <div className="flex flex-wrap items-end gap-4 mb-6">
@@ -274,13 +432,14 @@ export default function PontoPage() {
                             </td>
                           )
                         }
+                        const bloqueado = !podeEditar
                         return (
                           <td key={d} className="p-0">
                             <button
-                              disabled={isWk}
+                              disabled={isWk || bloqueado}
                               onClick={() => setEditing({ funcId: func.id, day: d })}
-                              title={cell.title}
-                              className={`w-full px-1 py-1.5 text-center font-semibold transition-colors ${cell.cls} ${isWk ? 'cursor-default' : 'cursor-pointer'}`}>
+                              title={bloqueado ? 'Ponto fechado — contate o administrador' : cell.title}
+                              className={`w-full px-1 py-1.5 text-center font-semibold transition-colors ${cell.cls} ${(isWk || bloqueado) ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}>
                               {cell.label}
                             </button>
                           </td>

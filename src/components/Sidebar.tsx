@@ -176,8 +176,9 @@ export default function Sidebar({ profile }: { profile: Profile | null }) {
       )}
 
       {isAdmin && (
-        <NavGroup label="Configurações" forceOpen={hasActiveChild(['/admin/usuarios','/configuracoes','/cadastros','/clientes','/importar','/audit','/manual'])}>
+        <NavGroup label="Configurações" forceOpen={hasActiveChild(['/admin/usuarios','/configuracoes','/cadastros','/clientes','/importar','/audit','/manual','/ponto'])}>
           <NavItem href="/admin/usuarios" label="Usuários" icon={ic.users} />
+          <NavItem href="/ponto" label="Fechar Ponto" icon={ic.ponto} />
           <NavItem href="/configuracoes" label="Empresa" icon={ic.config} />
           <NavItem href="/cadastros" label="Cadastros" icon={ic.cad} />
           <NavItem href="/clientes" label="Clientes" icon={ic.client} />
