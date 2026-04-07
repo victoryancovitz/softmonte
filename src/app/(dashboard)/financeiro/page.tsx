@@ -319,16 +319,61 @@ export default function FinanceiroPage() {
                     </span>
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <ConfirmButton label="Excluir" onConfirm={async () => {
-                      const { data: { user } } = await supabase.auth.getUser()
-                      const { error } = await supabase.from('financeiro_lancamentos').update({
-                        deleted_at: new Date().toISOString(),
-                        deleted_by: user?.id ?? null,
-                      }).eq('id', l.id)
-                      if (error) { toast.error('Erro ao excluir: ' + error.message); return }
-                      setLancamentos(prev => prev.filter(x => x.id !== l.id))
-                      toast.success('Lançamento excluído')
-                    }} />
+                    <div className="flex gap-2 justify-end items-center">
+                      {l.status === 'em_aberto' && !l.is_provisao && (
+                        <button
+                          onClick={async () => {
+                            const hoje = new Date().toISOString().slice(0, 10)
+                            const { data: { user } } = await supabase.auth.getUser()
+                            const { error } = await supabase.from('financeiro_lancamentos').update({
+                              status: 'pago',
+                              data_pagamento: hoje,
+                              updated_by: user?.id ?? null,
+                            }).eq('id', l.id)
+                            if (error) { toast.error('Erro: ' + error.message); return }
+                            setLancamentos(prev => prev.map(x => x.id === l.id ? { ...x, status: 'pago', data_pagamento: hoje } : x))
+                            toast.success(l.tipo === 'receita' ? 'Receita marcada como recebida' : 'Despesa marcada como paga')
+                          }}
+                          className={`text-[11px] font-semibold px-2.5 py-1 rounded-md border transition-colors ${
+                            l.tipo === 'receita'
+                              ? 'border-green-200 text-green-700 hover:bg-green-50'
+                              : 'border-red-200 text-red-700 hover:bg-red-50'
+                          }`}
+                          title={l.tipo === 'receita' ? 'Marcar como recebida' : 'Marcar como paga'}
+                        >
+                          {l.tipo === 'receita' ? '✓ Receber' : '✓ Pagar'}
+                        </button>
+                      )}
+                      {l.status === 'pago' && (
+                        <button
+                          onClick={async () => {
+                            const { data: { user } } = await supabase.auth.getUser()
+                            const { error } = await supabase.from('financeiro_lancamentos').update({
+                              status: 'em_aberto',
+                              data_pagamento: null,
+                              updated_by: user?.id ?? null,
+                            }).eq('id', l.id)
+                            if (error) { toast.error('Erro: ' + error.message); return }
+                            setLancamentos(prev => prev.map(x => x.id === l.id ? { ...x, status: 'em_aberto', data_pagamento: null } : x))
+                            toast.success('Reaberto')
+                          }}
+                          className="text-[11px] font-medium px-2.5 py-1 rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50"
+                          title="Reabrir"
+                        >
+                          ↺ Reabrir
+                        </button>
+                      )}
+                      <ConfirmButton label="Excluir" onConfirm={async () => {
+                        const { data: { user } } = await supabase.auth.getUser()
+                        const { error } = await supabase.from('financeiro_lancamentos').update({
+                          deleted_at: new Date().toISOString(),
+                          deleted_by: user?.id ?? null,
+                        }).eq('id', l.id)
+                        if (error) { toast.error('Erro ao excluir: ' + error.message); return }
+                        setLancamentos(prev => prev.filter(x => x.id !== l.id))
+                        toast.success('Lançamento excluído')
+                      }} />
+                    </div>
                   </td>
                 </tr>
               ))}
