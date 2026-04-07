@@ -60,7 +60,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
     { data: transferencias },
   ] = await Promise.all([
     supabase.from('obras').select('*').eq('id', params.id).single(),
-    supabase.from('alocacoes').select('*, funcionarios(id, nome, cargo, matricula, status)').eq('obra_id', params.id).eq('ativo', true),
+    supabase.from('alocacoes').select('*, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao)').eq('obra_id', params.id).eq('ativo', true),
     supabase.from('boletins_medicao').select('*').eq('obra_id', params.id).order('numero'),
     getRole(),
     supabase.from('efetivo_diario').select('id, data, tipo_dia, funcionario_id, observacao, funcionarios(nome)').eq('obra_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
@@ -75,8 +75,22 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
 
   if (!obra) notFound()
 
+  // Buscar todos os funcionários que já tiveram efetivo_diario nesta obra (incluindo desligados)
+  const { data: comPontoData } = await supabase
+    .from('efetivo_diario')
+    .select('funcionario_id, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao)')
+    .eq('obra_id', params.id)
+  const funcsComPontoMap: Record<string, any> = {}
+  ;((comPontoData ?? []) as any[]).forEach((r: any) => {
+    if (r.funcionarios) funcsComPontoMap[r.funcionarios.id] = r.funcionarios
+  })
+
+  // Separar em ativos (com alocação ativa) e desligados (sem alocação ativa, mas com ponto registrado ou soft-deleted)
+  const ativosIds = new Set((alocados ?? []).map((a: any) => a.funcionarios?.id).filter(Boolean))
+  const desligados = Object.values(funcsComPontoMap).filter((f: any) => !ativosIds.has(f.id))
+
   // Fetch documentos for allocated funcionarios
-  const funcIds = (alocados ?? []).map((a: any) => a.funcionarios?.id).filter(Boolean)
+  const funcIds = Array.from(ativosIds)
   const { data: documentos } = funcIds.length > 0
     ? await supabase.from('documentos').select('*, funcionarios(nome)').in('funcionario_id', funcIds).order('vencimento', { ascending: true })
     : { data: [] as any[] }
@@ -253,51 +267,93 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
 
       {/* ===== EQUIPE ===== */}
       {activeTab === 'equipe' && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700">{alocados?.length ?? 0} funcionários alocados</h2>
-            <Link href="/alocacao/nova" className="text-xs text-brand hover:underline font-medium">+ Alocar funcionário</Link>
-          </div>
-          {alocados && alocados.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-              {alocados.map((a: any) => {
-                const nome = a.funcionarios?.nome ?? 'Sem nome'
-                const initials = nome.split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
-                return (
-                  <div key={a.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-brand/10 text-brand flex items-center justify-center text-sm font-bold shrink-0">
-                      {initials}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-semibold truncate">{nome}</div>
-                      <div className="text-xs text-gray-500">{a.cargo_na_obra ?? a.funcionarios?.cargo ?? '—'}</div>
-                      <div className="text-xs text-gray-400">Mat. {a.funcionarios?.matricula ?? '—'}</div>
-                    </div>
-                    <div className="flex items-center gap-1.5 flex-wrap justify-end shrink-0">
-                      {(() => {
-                        const funcDocs = docsComDias.filter((d: any) => d.funcionario_id === a.funcionarios?.id)
-                        const aso = funcDocs.find((d: any) => d.tipo === 'ASO')
-                        const badges: { label: string; cls: string; title: string }[] = []
-                        if (!aso) {
-                          badges.push({ label: 'Sem ASO', cls: 'bg-red-100 text-red-700', title: 'Nenhum ASO cadastrado' })
-                        } else if (aso.dias !== null && aso.dias < 0) {
-                          badges.push({ label: 'ASO vencido', cls: 'bg-red-100 text-red-700', title: `ASO vencido ha ${Math.abs(aso.dias)} dia(s)` })
-                        } else if (aso.dias !== null && aso.dias <= 30) {
-                          badges.push({ label: `ASO ${aso.dias}d`, cls: 'bg-amber-100 text-amber-700', title: `ASO vence em ${aso.dias} dia(s)` })
-                        }
-                        return badges.map((b, i) => (
-                          <span key={i} className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${b.cls}`} title={b.title}>{b.label}</span>
-                        ))
-                      })()}
-                      <span className="text-xs text-green-600 bg-green-50 px-2 py-0.5 rounded">Ativo</span>
-                    </div>
-                  </div>
-                )
-              })}
+        <div className="space-y-6">
+          {/* ATIVOS */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                Ativos no momento ({alocados?.length ?? 0})
+              </h2>
+              <Link href="/alocacao/nova" className="text-xs text-brand hover:underline font-medium">+ Alocar funcionário</Link>
             </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-12 text-center text-gray-400 text-sm">
-              Nenhum funcionário alocado nesta obra.
+            {alocados && alocados.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {alocados.map((a: any) => {
+                  const f = a.funcionarios
+                  const nome = f?.nome_guerra ?? f?.nome ?? 'Sem nome'
+                  const initials = (f?.nome ?? '').split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
+                  return (
+                    <Link key={a.id} href={`/funcionarios/${f?.id}`}
+                      className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 hover:border-brand/30 hover:shadow-md transition-all">
+                      <div className="w-10 h-10 rounded-full bg-brand/10 text-brand flex items-center justify-center text-sm font-bold shrink-0">
+                        {initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold truncate">{nome}</div>
+                        <div className="text-xs text-gray-500">{a.cargo_na_obra ?? f?.cargo ?? '—'}</div>
+                        <div className="text-xs text-gray-400">{f?.id_ponto ? `ID Ponto ${f.id_ponto}` : f?.matricula ? `Mat. ${f.matricula}` : '—'}</div>
+                      </div>
+                      <div className="flex items-center gap-1.5 flex-wrap justify-end shrink-0">
+                        {(() => {
+                          const funcDocs = docsComDias.filter((d: any) => d.funcionario_id === f?.id)
+                          const aso = funcDocs.find((d: any) => d.tipo === 'ASO')
+                          const badges: { label: string; cls: string; title: string }[] = []
+                          if (!aso) {
+                            badges.push({ label: 'Sem ASO', cls: 'bg-red-100 text-red-700', title: 'Nenhum ASO cadastrado' })
+                          } else if (aso.dias !== null && aso.dias < 0) {
+                            badges.push({ label: 'ASO vencido', cls: 'bg-red-100 text-red-700', title: `ASO vencido ha ${Math.abs(aso.dias)} dia(s)` })
+                          } else if (aso.dias !== null && aso.dias <= 30) {
+                            badges.push({ label: `ASO ${aso.dias}d`, cls: 'bg-amber-100 text-amber-700', title: `ASO vence em ${aso.dias} dia(s)` })
+                          }
+                          return badges.map((b, i) => (
+                            <span key={i} className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${b.cls}`} title={b.title}>{b.label}</span>
+                          ))
+                        })()}
+                        <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded font-semibold">Ativo</span>
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-8 text-center text-gray-400 text-sm">
+                Nenhum funcionário ativo nesta obra.
+              </div>
+            )}
+          </div>
+
+          {/* DESLIGADOS */}
+          {desligados.length > 0 && (
+            <div>
+              <h2 className="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                Desligados / Histórico ({desligados.length})
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                {desligados.map((f: any) => {
+                  const nome = f.nome_guerra ?? f.nome ?? 'Sem nome'
+                  const initials = (f.nome ?? '').split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
+                  const demissao = f.deleted_at ? new Date(f.deleted_at).toLocaleDateString('pt-BR') : null
+                  return (
+                    <Link key={f.id} href={`/funcionarios/${f.id}`}
+                      className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex items-center gap-3 opacity-75 hover:opacity-100 hover:shadow-md transition-all">
+                      <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-400 flex items-center justify-center text-sm font-bold shrink-0">
+                        {initials}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-semibold truncate text-gray-700">{nome}</div>
+                        <div className="text-xs text-gray-500">{f.cargo ?? '—'}</div>
+                        <div className="text-xs text-gray-400">
+                          {f.id_ponto ? `ID Ponto ${f.id_ponto}` : f.matricula ? `Mat. ${f.matricula}` : '—'}
+                          {demissao && <span className="ml-2 text-red-500">· Desligado em {demissao}</span>}
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-red-700 bg-red-100 px-2 py-0.5 rounded font-bold shrink-0">Desligado</span>
+                    </Link>
+                  )
+                })}
+              </div>
             </div>
           )}
         </div>

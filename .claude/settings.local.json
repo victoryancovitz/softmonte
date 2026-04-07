@@ -40,7 +40,8 @@
       "Bash(python3:*)",
       "Bash(pip3 install:*)",
       "Bash(grep:*)",
-      "Bash(grep -n \"documentos\" src/app/\\\\\\(dashboard\\\\\\)/obras/[id]/page.tsx)"
+      "Bash(grep -n \"documentos\" src/app/\\\\\\(dashboard\\\\\\)/obras/[id]/page.tsx)",
+      "Bash(grep -n \"equipe\\\\|Equipe\\\\|alocados\" src/app/\\\\\\(dashboard\\\\\\)/obras/[id]/page.tsx)"
     ]
   }
 }
