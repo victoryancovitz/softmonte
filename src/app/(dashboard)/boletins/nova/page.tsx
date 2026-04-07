@@ -47,7 +47,7 @@ export default function NovoBMPage() {
     setPreview(null)
     if (!obraId) return
     const { data } = await supabase.from('boletins_medicao')
-      .select('numero').eq('obra_id', obraId).order('numero', { ascending: false }).limit(1)
+      .select('numero').eq('obra_id', obraId).is('deleted_at', null).order('numero', { ascending: false }).limit(1)
     setProximoBM(data?.[0] ? Number(data[0].numero) + 1 : 1)
   }
 
@@ -266,7 +266,6 @@ export default function NovoBMPage() {
         ]
         tipos.forEach(t => {
           if (t.dias <= 0) return
-          const hh = t.dias * r.carga_horaria_dia
           itens.push({
             boletim_id: bmData.id,
             funcionario_id: f.id,
@@ -276,9 +275,8 @@ export default function NovoBMPage() {
             efetivo: 1,
             dias: t.dias,
             carga_horaria_dia: r.carga_horaria_dia,
-            hh_total: hh,
+            // hh_total e valor_total são GENERATED ALWAYS no banco
             valor_hh: t.valor_hh,
-            valor_total: hh * t.valor_hh,
             ordem: ordem++,
           })
         })

@@ -127,9 +127,8 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
         efetivo: Number(i.efetivo ?? 1),
         dias: Number(i.dias ?? 0),
         carga_horaria_dia: Number(i.carga_horaria_dia ?? 8),
-        hh_total: Number(i.hh_total ?? 0),
+        // hh_total e valor_total são GENERATED ALWAYS no banco
         valor_hh: Number(i.valor_hh ?? 0),
-        valor_total: Number(i.valor_total ?? 0),
         ordem: idx,
       }))
       if (rows.length > 0) {
