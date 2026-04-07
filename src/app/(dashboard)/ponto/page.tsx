@@ -276,18 +276,22 @@ export default function PontoPage() {
                         const beforeAdm = admissaoDate && dateStr < admissaoDate
                         const afterDem = demissaoDate && dateStr > demissaoDate
                         const naoElegivel = beforeAdm || afterDem
-                        const cellCls = naoElegivel ? 'bg-gray-50 text-gray-200 cursor-not-allowed' : cell.cls
-                        const tooltip = naoElegivel
-                          ? (beforeAdm ? `Antes da admissão (${new Date(admissaoDate+'T12:00').toLocaleDateString('pt-BR')})` : `Após o desligamento (${new Date(demissaoDate!+'T12:00').toLocaleDateString('pt-BR')})`)
-                          : cell.title
+                        if (naoElegivel) {
+                          // Cell hidden — funcionário não pertencia à empresa nesse dia
+                          return (
+                            <td key={d} className="p-0 bg-gray-200/50">
+                              <div className="w-full h-full px-1 py-1.5"></div>
+                            </td>
+                          )
+                        }
                         return (
                           <td key={d} className="p-0">
                             <button
-                              disabled={isWk || naoElegivel}
+                              disabled={isWk}
                               onClick={() => setEditing({ funcId: func.id, day: d })}
-                              title={tooltip}
-                              className={`w-full px-1 py-1.5 text-center font-semibold transition-colors ${cellCls} ${(isWk || naoElegivel) ? 'cursor-default' : 'cursor-pointer'}`}>
-                              {naoElegivel ? '·' : cell.label}
+                              title={cell.title}
+                              className={`w-full px-1 py-1.5 text-center font-semibold transition-colors ${cell.cls} ${isWk ? 'cursor-default' : 'cursor-pointer'}`}>
+                              {cell.label}
                             </button>
                           </td>
                         )

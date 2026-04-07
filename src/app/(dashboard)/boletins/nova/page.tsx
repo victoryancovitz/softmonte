@@ -10,20 +10,18 @@ interface PreviewRow {
   funcionario_id: string
   funcionario_nome: string
   funcao_nome: string
-  tipo_hora: 'normal' | 'he70' | 'he100'
-  tipo_hora_label: string
-  dias: number
   carga_horaria_dia: number
-  hh_total: number
-  valor_hh: number
-  valor_total: number
+  // Dias por tipo de hora
+  dias_normais: number
+  dias_he70: number
+  dias_he100: number
+  // Datas presentes (para o calendário)
+  datas_presentes: string[]
+  // Valores R$/HH (editáveis)
+  valor_hh_normal: number
+  valor_hh_he70: number
+  valor_hh_he100: number
   sem_contrato: boolean
-}
-
-const TIPO_DIA_TO_HORA: Record<string, { tipo: 'normal' | 'he70' | 'he100'; label: string }> = {
-  util: { tipo: 'normal', label: 'Hora Normal' },
-  sabado: { tipo: 'he70', label: 'HE 70%' },
-  domingo_feriado: { tipo: 'he100', label: 'HE 100%' },
 }
 
 export default function NovoBMPage() {
@@ -40,7 +38,7 @@ export default function NovoBMPage() {
   const toast = useToast()
 
   useEffect(() => {
-    supabase.from('obras').select('id,nome,cliente,data_inicio,data_prev_fim,status').is('deleted_at', null).neq('status','cancelado').order('nome')
+    supabase.from('obras').select('id,nome,cliente,data_inicio,data_prev_fim,status,bm_dia_unico').is('deleted_at', null).neq('status','cancelado').order('nome')
       .then(({ data }) => setObras(data ?? []))
   }, [])
 
@@ -131,62 +129,81 @@ export default function NovoBMPage() {
       compMap[c.funcao_nome?.toUpperCase()] = c
     })
 
-    // Group by funcionario + tipo_dia
-    const groups: Record<string, { func: any; tipo_dia: string; dias: Set<string> }> = {}
+    const obra = obras.find(o => o.id === form.obra_id)
+    const diaUnico = obra?.bm_dia_unico === true
+
+    // Group by funcionario only - consolidate all tipo_dia into a single row
+    const groups: Record<string, { func: any; datas: Set<string>; tipos: Record<string, Set<string>> }> = {}
     efetivo.forEach((e: any) => {
       const f = e.funcionarios
       if (!f) return
-      const key = `${f.id}_${e.tipo_dia}`
-      if (!groups[key]) groups[key] = { func: f, tipo_dia: e.tipo_dia, dias: new Set() }
-      groups[key].dias.add(e.data)
+      if (!groups[f.id]) {
+        groups[f.id] = { func: f, datas: new Set(), tipos: { util: new Set(), sabado: new Set(), domingo_feriado: new Set() } }
+      }
+      groups[f.id].datas.add(e.data)
+      ;(groups[f.id].tipos[e.tipo_dia] ?? groups[f.id].tipos.util).add(e.data)
     })
 
-    // Build preview rows
     const rows: PreviewRow[] = Object.values(groups).map(g => {
-      const { tipo, label } = TIPO_DIA_TO_HORA[g.tipo_dia] || TIPO_DIA_TO_HORA.util
       const cargo = g.func.cargo?.toUpperCase() ?? ''
       const comp = compMap[cargo]
       const cargaHoraDia = Number(comp?.carga_horaria_dia ?? 8)
-      const dias = g.dias.size
-      const hh = dias * cargaHoraDia
 
-      let valorHH = 0
-      if (comp) {
-        if (tipo === 'normal') valorHH = Number(comp.custo_hora_contratado ?? 0)
-        else if (tipo === 'he70') valorHH = Number(comp.custo_hora_extra_70 ?? 0)
-        else valorHH = Number(comp.custo_hora_extra_100 ?? 0)
+      let dias_normais: number, dias_he70: number, dias_he100: number
+      if (diaUnico) {
+        dias_normais = g.datas.size
+        dias_he70 = 0
+        dias_he100 = 0
+      } else {
+        dias_normais = g.tipos.util.size
+        dias_he70 = g.tipos.sabado.size
+        dias_he100 = g.tipos.domingo_feriado.size
       }
 
       return {
         funcionario_id: g.func.id,
-        funcionario_nome: g.func.nome,
+        funcionario_nome: g.func.nome_guerra ?? g.func.nome,
         funcao_nome: g.func.cargo ?? 'OUTROS',
-        tipo_hora: tipo,
-        tipo_hora_label: label,
-        dias,
         carga_horaria_dia: cargaHoraDia,
-        hh_total: hh,
-        valor_hh: valorHH,
-        valor_total: hh * valorHH,
+        dias_normais,
+        dias_he70,
+        dias_he100,
+        datas_presentes: Array.from(g.datas).sort(),
+        valor_hh_normal: Number(comp?.custo_hora_contratado ?? 0),
+        valor_hh_he70: Number(comp?.custo_hora_extra_70 ?? 0),
+        valor_hh_he100: Number(comp?.custo_hora_extra_100 ?? 0),
         sem_contrato: !comp,
       }
-    }).sort((a, b) => a.funcionario_nome.localeCompare(b.funcionario_nome) || a.tipo_hora.localeCompare(b.tipo_hora))
+    }).sort((a, b) => a.funcao_nome.localeCompare(b.funcao_nome) || a.funcionario_nome.localeCompare(b.funcionario_nome))
 
     setPreview(rows)
     setPreviewing(false)
   }
 
-  function updateRow(index: number, field: 'valor_hh', value: number) {
+  function updateRow(index: number, field: 'valor_hh_normal' | 'valor_hh_he70' | 'valor_hh_he100', value: number) {
     setPreview(prev => {
       if (!prev) return prev
       const next = [...prev]
-      next[index] = { ...next[index], [field]: value, valor_total: next[index].hh_total * value }
+      next[index] = { ...next[index], [field]: value }
       return next
     })
   }
 
-  const totalGeral = preview?.reduce((s, r) => s + r.valor_total, 0) ?? 0
-  const totalHH = preview?.reduce((s, r) => s + r.hh_total, 0) ?? 0
+  function rowHHNormal(r: PreviewRow) { return r.dias_normais * r.carga_horaria_dia }
+  function rowHHHe70(r: PreviewRow) { return r.dias_he70 * r.carga_horaria_dia }
+  function rowHHHe100(r: PreviewRow) { return r.dias_he100 * r.carga_horaria_dia }
+  function rowTotal(r: PreviewRow) {
+    return rowHHNormal(r) * r.valor_hh_normal
+         + rowHHHe70(r)   * r.valor_hh_he70
+         + rowHHHe100(r)  * r.valor_hh_he100
+  }
+  function rowDias(r: PreviewRow) { return r.dias_normais + r.dias_he70 + r.dias_he100 }
+
+  const totalGeral = preview?.reduce((s, r) => s + rowTotal(r), 0) ?? 0
+  const totalHH = preview?.reduce((s, r) => s + rowHHNormal(r) + rowHHHe70(r) + rowHHHe100(r), 0) ?? 0
+  const totalDiasNormais = preview?.reduce((s, r) => s + r.dias_normais, 0) ?? 0
+  const totalDiasHe70 = preview?.reduce((s, r) => s + r.dias_he70, 0) ?? 0
+  const totalDiasHe100 = preview?.reduce((s, r) => s + r.dias_he100, 0) ?? 0
 
   async function handleSave() {
     if (!preview || preview.length === 0) return
@@ -207,24 +224,39 @@ export default function NovoBMPage() {
 
     if (bmErr || !bmData) { setError(bmErr?.message ?? 'Erro ao criar BM'); setSaving(false); return }
 
-    // 2. Insert bm_itens
-    const itens = preview.map((r, i) => ({
-      boletim_id: bmData.id,
-      funcionario_id: r.funcionario_id,
-      funcionario_nome: r.funcionario_nome,
-      funcao_nome: r.funcao_nome,
-      tipo_hora: r.tipo_hora,
-      efetivo: 1,
-      dias: r.dias,
-      carga_horaria_dia: r.carga_horaria_dia,
-      hh_total: r.hh_total,
-      valor_hh: r.valor_hh,
-      valor_total: r.valor_total,
-      ordem: i,
-    }))
+    // 2. Insert bm_itens — one row per (funcionario × tipo_hora) where dias > 0
+    const itens: any[] = []
+    let ordem = 0
+    preview.forEach(r => {
+      const tipos: Array<{ tipo: 'normal'|'he70'|'he100'; dias: number; valor_hh: number }> = [
+        { tipo: 'normal', dias: r.dias_normais, valor_hh: r.valor_hh_normal },
+        { tipo: 'he70',   dias: r.dias_he70,    valor_hh: r.valor_hh_he70 },
+        { tipo: 'he100',  dias: r.dias_he100,   valor_hh: r.valor_hh_he100 },
+      ]
+      tipos.forEach(t => {
+        if (t.dias <= 0) return
+        const hh = t.dias * r.carga_horaria_dia
+        itens.push({
+          boletim_id: bmData.id,
+          funcionario_id: r.funcionario_id,
+          funcionario_nome: r.funcionario_nome,
+          funcao_nome: r.funcao_nome,
+          tipo_hora: t.tipo,
+          efetivo: 1,
+          dias: t.dias,
+          carga_horaria_dia: r.carga_horaria_dia,
+          hh_total: hh,
+          valor_hh: t.valor_hh,
+          valor_total: hh * t.valor_hh,
+          ordem: ordem++,
+        })
+      })
+    })
 
-    const { error: itErr } = await supabase.from('bm_itens').insert(itens)
-    if (itErr) { setError(itErr.message); setSaving(false); return }
+    if (itens.length > 0) {
+      const { error: itErr } = await supabase.from('bm_itens').insert(itens)
+      if (itErr) { setError(itErr.message); setSaving(false); return }
+    }
 
     // 3. Update valor no BM
     await supabase.from('boletins_medicao').update({ valor_aprovado: null }).eq('id', bmData.id)
@@ -240,7 +272,7 @@ export default function NovoBMPage() {
     : null
 
   return (
-    <div className="p-4 sm:p-6 max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <BackButton fallback="/boletins" />
         <Link href="/boletins" className="text-gray-400 hover:text-gray-600 text-sm">Boletins</Link>
@@ -350,58 +382,136 @@ export default function NovoBMPage() {
               </div>
             )}
 
-            <div className="overflow-x-auto">
+            {/* Tabela consolidada por funcionário */}
+            <div className="overflow-x-auto mb-6">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b border-gray-200">
-                    <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Funcionário</th>
-                    <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Função</th>
-                    <th className="text-left px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">Tipo</th>
-                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide w-20">Dias</th>
-                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide w-24">HH Total</th>
-                    <th className="text-center px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide w-32">R$/HH</th>
-                    <th className="text-right px-3 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide w-36">Total R$</th>
+                  <tr className="border-b-2 border-gray-200 bg-gray-50">
+                    <th className="text-left px-3 py-2.5 text-xs font-bold text-gray-600 uppercase tracking-wide">Funcionário</th>
+                    <th className="text-left px-3 py-2.5 text-xs font-bold text-gray-600 uppercase tracking-wide">Função</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-blue-700 uppercase tracking-wide w-16">Dias N.</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-amber-700 uppercase tracking-wide w-16">Dias HE 70%</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-red-700 uppercase tracking-wide w-16">Dias HE 100%</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-gray-600 uppercase tracking-wide w-16">HH Total</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-blue-700 uppercase tracking-wide w-24">R$/HH N.</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-amber-700 uppercase tracking-wide w-24">R$/HH 70%</th>
+                    <th className="text-center px-2 py-2.5 text-xs font-bold text-red-700 uppercase tracking-wide w-24">R$/HH 100%</th>
+                    <th className="text-right px-3 py-2.5 text-xs font-bold text-brand uppercase tracking-wide w-32">Valor Total</th>
                   </tr>
                 </thead>
                 <tbody>
                   {preview.map((row, i) => {
-                    const typeColor = row.tipo_hora === 'normal' ? 'text-blue-700 bg-blue-50' : row.tipo_hora === 'he70' ? 'text-amber-700 bg-amber-50' : 'text-red-700 bg-red-50'
+                    const hhTot = rowHHNormal(row) + rowHHHe70(row) + rowHHHe100(row)
                     return (
                       <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
-                        <td className="px-3 py-2.5 font-medium text-gray-800">{row.funcionario_nome}</td>
-                        <td className="px-3 py-2.5 text-gray-600">{row.funcao_nome}</td>
-                        <td className="px-3 py-2.5">
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded ${typeColor}`}>{row.tipo_hora_label}</span>
+                        <td className="px-3 py-2 font-medium text-gray-800">{row.funcionario_nome}</td>
+                        <td className="px-3 py-2 text-xs text-gray-600">{row.funcao_nome}</td>
+                        <td className="px-2 py-2 text-center text-blue-700 font-medium">{row.dias_normais || '—'}</td>
+                        <td className="px-2 py-2 text-center text-amber-700 font-medium">{row.dias_he70 || '—'}</td>
+                        <td className="px-2 py-2 text-center text-red-700 font-medium">{row.dias_he100 || '—'}</td>
+                        <td className="px-2 py-2 text-center text-gray-700 font-semibold">{hhTot}h</td>
+                        <td className="px-2 py-2 text-center">
+                          <input type="number" min="0" step="0.01" value={row.valor_hh_normal}
+                            onChange={e => updateRow(i, 'valor_hh_normal', Number(e.target.value))}
+                            className={`w-20 px-1.5 py-1 border rounded text-center text-xs focus:outline-none focus:ring-2 focus:ring-brand ${
+                              row.sem_contrato && row.valor_hh_normal === 0 ? 'border-red-300 bg-red-50' : 'border-gray-200'
+                            }`} />
                         </td>
-                        <td className="px-3 py-2.5 text-center">{row.dias}</td>
-                        <td className="px-3 py-2.5 text-center">{row.hh_total}h</td>
-                        <td className="px-3 py-2.5 text-center">
-                          <input
-                            type="number" min="0" step="0.01"
-                            value={row.valor_hh}
-                            onChange={e => updateRow(i, 'valor_hh', Number(e.target.value))}
-                            className={`w-28 px-2 py-1 border rounded text-center text-sm focus:outline-none focus:ring-2 focus:ring-brand ${
-                              row.sem_contrato && row.valor_hh === 0 ? 'border-red-300 bg-red-50' : 'border-gray-200'
-                            }`}
-                          />
+                        <td className="px-2 py-2 text-center">
+                          <input type="number" min="0" step="0.01" value={row.valor_hh_he70}
+                            onChange={e => updateRow(i, 'valor_hh_he70', Number(e.target.value))}
+                            disabled={row.dias_he70 === 0}
+                            className="w-20 px-1.5 py-1 border border-gray-200 rounded text-center text-xs focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-50 disabled:text-gray-300" />
                         </td>
-                        <td className="px-3 py-2.5 text-right font-semibold text-gray-700">
-                          {row.valor_total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        <td className="px-2 py-2 text-center">
+                          <input type="number" min="0" step="0.01" value={row.valor_hh_he100}
+                            onChange={e => updateRow(i, 'valor_hh_he100', Number(e.target.value))}
+                            disabled={row.dias_he100 === 0}
+                            className="w-20 px-1.5 py-1 border border-gray-200 rounded text-center text-xs focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-50 disabled:text-gray-300" />
+                        </td>
+                        <td className="px-3 py-2 text-right font-bold text-gray-800">
+                          R$ {rowTotal(row).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                         </td>
                       </tr>
                     )
                   })}
-                  <tr className="border-t-2 border-gray-200 bg-gray-50">
-                    <td colSpan={4} className="px-3 py-3 font-bold text-xs uppercase tracking-wide text-gray-600">Total Geral</td>
-                    <td className="px-3 py-3 text-center font-bold">{totalHH}h</td>
-                    <td className="px-3 py-3" />
-                    <td className="px-3 py-3 text-right font-bold text-brand">
+                  <tr className="border-t-2 border-gray-300 bg-brand/5">
+                    <td colSpan={2} className="px-3 py-3 font-black text-xs uppercase tracking-wide text-brand">Total Geral</td>
+                    <td className="px-2 py-3 text-center font-bold text-blue-700">{totalDiasNormais}</td>
+                    <td className="px-2 py-3 text-center font-bold text-amber-700">{totalDiasHe70 || '—'}</td>
+                    <td className="px-2 py-3 text-center font-bold text-red-700">{totalDiasHe100 || '—'}</td>
+                    <td className="px-2 py-3 text-center font-bold text-gray-700">{totalHH}h</td>
+                    <td colSpan={3}></td>
+                    <td className="px-3 py-3 text-right font-black text-brand text-base">
                       R$ {totalGeral.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
                 </tbody>
               </table>
             </div>
+
+            {/* Calendário visual */}
+            <details className="bg-gray-50 rounded-lg border border-gray-200 p-4">
+              <summary className="cursor-pointer text-xs font-semibold text-gray-600 uppercase tracking-wide">
+                📅 Calendário detalhado (clique para expandir)
+              </summary>
+              <div className="mt-4 overflow-x-auto">
+                {(() => {
+                  const start = new Date(form.data_inicio + 'T12:00')
+                  const end = new Date(form.data_fim + 'T12:00')
+                  const dates: Date[] = []
+                  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+                    dates.push(new Date(d))
+                  }
+                  return (
+                    <table className="text-[10px] border-collapse">
+                      <thead>
+                        <tr>
+                          <th className="text-left px-2 py-1 sticky left-0 bg-gray-50 z-10 min-w-[140px]">Funcionário</th>
+                          {dates.map((d, idx) => {
+                            const dow = d.getDay()
+                            const isWk = dow === 0 || dow === 6
+                            return (
+                              <th key={idx} className={`px-1 py-1 text-center min-w-[24px] ${isWk ? 'bg-gray-100 text-gray-400' : 'text-gray-500'}`}>
+                                <div className="text-[8px]">{['D','S','T','Q','Q','S','S'][dow]}</div>
+                                <div>{d.getDate()}</div>
+                              </th>
+                            )
+                          })}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {preview.map(r => {
+                          const presentSet = new Set(r.datas_presentes)
+                          return (
+                            <tr key={r.funcionario_id} className="border-t border-gray-100">
+                              <td className="px-2 py-0.5 font-medium text-gray-700 sticky left-0 bg-white z-10 truncate max-w-[140px]" title={r.funcionario_nome}>
+                                {r.funcionario_nome}
+                              </td>
+                              {dates.map((d, idx) => {
+                                const iso = d.toISOString().split('T')[0]
+                                const dow = d.getDay()
+                                const isWk = dow === 0 || dow === 6
+                                const present = presentSet.has(iso)
+                                let cls = 'bg-white text-gray-200'
+                                let label = '·'
+                                if (isWk) { cls = 'bg-gray-100 text-gray-300' }
+                                if (present) {
+                                  cls = 'bg-green-100 text-green-700 font-bold'
+                                  label = 'P'
+                                }
+                                return <td key={idx} className={`px-1 py-0.5 text-center ${cls}`}>{label}</td>
+                              })}
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  )
+                })()}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-2">P = Presente · · = Sem registro</p>
+            </details>
           </div>
         )
       )}
