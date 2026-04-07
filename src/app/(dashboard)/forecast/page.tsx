@@ -58,6 +58,29 @@ export default function ForecastPage() {
 
   // DETALHE MENSAL
   if (obraAtiva && detalhe) {
+    const totPrev = detalhe.reduce((s, d) => s + Number(d.receita_prevista || 0), 0)
+    const totReal = detalhe.reduce((s, d) => s + Number(d.receita_realizada || 0), 0)
+    const mesesMedidos = detalhe.filter(d => Number(d.receita_realizada || 0) > 0).length
+    const aReceberObra = detalhe.filter(d => d.bm_aprovado && !d.pagamento_recebido)
+      .reduce((s, d) => s + Number(d.receita_realizada || 0), 0)
+    const futuro = detalhe.filter(d => !Number(d.receita_realizada))
+      .reduce((s, d) => s + Number(d.receita_prevista || 0), 0)
+    const pctRealizado = totPrev > 0 ? (totReal / totPrev) * 100 : 0
+
+    // Chart geometry
+    const chartW = 720
+    const chartH = 240
+    const padL = 50, padR = 16, padT = 16, padB = 40
+    const innerW = chartW - padL - padR
+    const innerH = chartH - padT - padB
+    const maxVal = Math.max(
+      ...detalhe.map(d => Math.max(Number(d.receita_prevista || 0), Number(d.receita_realizada || 0))),
+      1
+    )
+    const niceMax = Math.ceil(maxVal / 50000) * 50000
+    const barGroupW = innerW / Math.max(detalhe.length, 1)
+    const barW = Math.min(22, (barGroupW - 8) / 2)
+
     return (
       <div className="p-4 sm:p-6 max-w-6xl mx-auto">
         <div className="flex items-center gap-2 mb-6 text-sm">
@@ -71,6 +94,97 @@ export default function ForecastPage() {
 
         <h1 className="text-xl font-bold font-display text-brand mb-1">{obraAtiva.obra}</h1>
         <p className="text-sm text-gray-500 mb-6">{obraAtiva.cliente} — Forecast mensal detalhado</p>
+
+        {/* KPIs do contrato */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-blue-500 p-4">
+            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Total Previsto</div>
+            <div className="text-lg font-bold text-gray-900 font-display">{fmt(totPrev)}</div>
+            <div className="text-[10px] text-gray-400 mt-0.5">{detalhe.length} meses</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-green-500 p-4">
+            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Realizado</div>
+            <div className="text-lg font-bold text-green-700 font-display">{fmt(totReal)}</div>
+            <div className="text-[10px] text-gray-400 mt-0.5">{mesesMedidos} {mesesMedidos === 1 ? 'mês medido' : 'meses medidos'}</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-violet-500 p-4">
+            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">% Realizado</div>
+            <div className="text-lg font-bold text-violet-700 font-display">{pctRealizado.toFixed(1)}%</div>
+            <div className="w-full h-1.5 bg-gray-100 rounded-full mt-1.5 overflow-hidden">
+              <div className="h-full bg-violet-500 rounded-full" style={{ width: `${Math.min(pctRealizado, 100)}%` }} />
+            </div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-amber-500 p-4">
+            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">A Receber</div>
+            <div className="text-lg font-bold text-amber-700 font-display">{fmt(aReceberObra)}</div>
+            <div className="text-[10px] text-gray-400 mt-0.5">BM aprovado, sem pgto</div>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 border-l-4 border-l-gray-400 p-4">
+            <div className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Saldo Futuro</div>
+            <div className="text-lg font-bold text-gray-700 font-display">{fmt(futuro)}</div>
+            <div className="text-[10px] text-gray-400 mt-0.5">Meses não medidos</div>
+          </div>
+        </div>
+
+        {/* Gráfico Previsto x Realizado */}
+        {detalhe.length > 0 && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-brand">Previsto × Realizado por mês</h3>
+              <div className="flex items-center gap-3 text-[11px]">
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#C9A269]" />Previsto</span>
+                <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-[#0F3757]" />Realizado</span>
+              </div>
+            </div>
+            <div className="overflow-x-auto">
+              <svg viewBox={`0 0 ${chartW} ${chartH}`} className="w-full" style={{ minWidth: 480 }}>
+                {/* Grid lines */}
+                {[0, 0.25, 0.5, 0.75, 1].map((t, i) => {
+                  const y = padT + innerH * (1 - t)
+                  const val = niceMax * t
+                  return (
+                    <g key={i}>
+                      <line x1={padL} y1={y} x2={chartW - padR} y2={y} stroke="#f1f5f9" strokeWidth="1" />
+                      <text x={padL - 6} y={y + 3} textAnchor="end" fontSize="9" fill="#94a3b8">
+                        {val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val.toFixed(0)}
+                      </text>
+                    </g>
+                  )
+                })}
+                {/* Bars */}
+                {detalhe.map((d, i) => {
+                  const cx = padL + barGroupW * i + barGroupW / 2
+                  const prev = Number(d.receita_prevista || 0)
+                  const real = Number(d.receita_realizada || 0)
+                  const hPrev = (prev / niceMax) * innerH
+                  const hReal = (real / niceMax) * innerH
+                  const isFuturo = real === 0
+                  return (
+                    <g key={d.id}>
+                      <rect x={cx - barW - 1} y={padT + innerH - hPrev} width={barW} height={hPrev}
+                        fill="#C9A269" opacity={isFuturo ? 0.55 : 0.9} rx="2" />
+                      {real > 0 && (
+                        <rect x={cx + 1} y={padT + innerH - hReal} width={barW} height={hReal}
+                          fill="#0F3757" rx="2" />
+                      )}
+                      <text x={cx} y={chartH - padB + 14} textAnchor="middle" fontSize="10" fill="#475569" fontWeight="600">
+                        {MESES[d.mes]}
+                      </text>
+                      <text x={cx} y={chartH - padB + 25} textAnchor="middle" fontSize="8" fill="#94a3b8">
+                        {d.ano}
+                      </text>
+                    </g>
+                  )
+                })}
+                {/* Eixo X */}
+                <line x1={padL} y1={padT + innerH} x2={chartW - padR} y2={padT + innerH} stroke="#cbd5e1" strokeWidth="1" />
+              </svg>
+            </div>
+            <p className="text-[10px] text-gray-400 mt-2 text-center">
+              Barras douradas claras = meses ainda não medidos (previsão).
+            </p>
+          </div>
+        )}
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
           <table className="w-full text-sm">
@@ -109,6 +223,21 @@ export default function ForecastPage() {
                 )
               })}
             </tbody>
+            {detalhe.length > 0 && (
+              <tfoot>
+                <tr className="bg-brand/5 border-t-2 border-brand/20 font-bold">
+                  <td className="px-4 py-3 text-brand">TOTAL</td>
+                  <td className="px-4 py-3 text-brand">{fmt(totPrev)}</td>
+                  <td className="px-4 py-3 text-green-700">{fmt(totReal)}</td>
+                  <td className={`px-4 py-3 ${(totReal - totPrev) >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                    {(totReal - totPrev) !== 0 ? `${(totReal - totPrev) > 0 ? '+' : ''}${fmt(totReal - totPrev)}` : '—'}
+                  </td>
+                  <td colSpan={5} className="px-4 py-3 text-[11px] text-gray-500 font-normal">
+                    {mesesMedidos} de {detalhe.length} meses medidos · {pctRealizado.toFixed(1)}% do contrato realizado
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
 
