@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
+import DeleteEntityButton from '@/components/DeleteEntityButton'
 
 export default function EditarObraPage({ params }: { params: { id: string } }) {
   const [form, setForm] = useState({ nome: '', cliente: '', local: '', data_inicio: '', data_prev_fim: '', status: 'ativo' })
@@ -116,7 +117,7 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
             </select>
           </div>
 
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-3 pt-2 items-center">
             <button type="submit" disabled={saving || success}
               className="px-6 py-2.5 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-dark disabled:opacity-50 transition-colors">
               {saving ? 'Salvando...' : 'Salvar alterações'}
@@ -124,6 +125,9 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
             <Link href={`/obras/${params.id}`} className="px-6 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">
               Cancelar
             </Link>
+            <div className="ml-auto">
+              <DeleteEntityButton table="obras" id={params.id} entityName={form.nome ?? 'obra'} redirectTo="/obras" />
+            </div>
           </div>
         </form>
       </div>

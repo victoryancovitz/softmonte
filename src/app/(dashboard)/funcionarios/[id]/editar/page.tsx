@@ -6,6 +6,7 @@ import Link from 'next/link'
 import Breadcrumb from '@/components/ui/Breadcrumb'
 import Tooltip from '@/components/ui/Tooltip'
 import { formatSupabaseError } from '@/lib/errors'
+import DeleteEntityButton from '@/components/DeleteEntityButton'
 
 export default function EditarFuncionarioPage({ params }: { params: { id: string } }) {
   const [form, setForm] = useState<any>({})
@@ -199,12 +200,15 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
             </div>
           </section>
 
-          <div className="flex gap-3 pt-2 border-t border-gray-100">
+          <div className="flex gap-3 pt-2 border-t border-gray-100 items-center">
             <button type="submit" disabled={saving || success}
               className="px-6 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50 transition-colors">
               {saving ? 'Salvando...' : 'Salvar alterações'}
             </button>
             <Link href={`/funcionarios/${params.id}`} className="px-6 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</Link>
+            <div className="ml-auto">
+              <DeleteEntityButton table="funcionarios" id={params.id} entityName={form.nome ?? 'funcionário'} redirectTo="/funcionarios" />
+            </div>
           </div>
         </form>
       </div>
