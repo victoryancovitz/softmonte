@@ -9,6 +9,7 @@ const STATUS_COLOR: Record<string, string> = {
   alocado:    'bg-blue-100 text-blue-700',
   afastado:   'bg-yellow-100 text-yellow-700',
   inativo:    'bg-gray-100 text-gray-500',
+  desligado:  'bg-red-100 text-red-700',
 }
 
 const ALERTA_BADGE: Record<string, { label: string; cls: string }> = {
@@ -111,7 +112,9 @@ export default function FuncionariosView({
         f.cargo?.toLowerCase().includes(ql)
       )
     }
-    if (status) result = result.filter(f => f.status === status)
+    if (status === 'desligado') result = result.filter(f => f.deleted_at != null)
+    else if (status === 'ativos') result = result.filter(f => f.deleted_at == null)
+    else if (status) result = result.filter(f => f.status === status && f.deleted_at == null)
     if (cargo) result = result.filter(f => f.cargo === cargo)
     if (admDe) result = result.filter(f => f.admissao && f.admissao >= admDe)
     if (admAte) result = result.filter(f => f.admissao && f.admissao <= admAte)
@@ -142,11 +145,12 @@ export default function FuncionariosView({
           </div>
           <select value={status} onChange={e => setStatus(e.target.value)}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
-            <option value="">Todos os status</option>
+            <option value="">Todos (incluindo desligados)</option>
+            <option value="ativos">Apenas ativos</option>
             <option value="disponivel">Disponível</option>
             <option value="alocado">Alocado</option>
             <option value="afastado">Afastado</option>
-            <option value="inativo">Inativo</option>
+            <option value="desligado">Desligado</option>
           </select>
           <select value={cargo} onChange={e => setCargo(e.target.value)}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
@@ -190,20 +194,36 @@ export default function FuncionariosView({
               const dias = p1 ? Math.ceil((p1.getTime() - hojeDate.getTime()) / 86400000) : null
               const vencido = dias !== null && dias < 0
               const alerta = dias !== null && dias <= 30 && dias >= 0
+              const desligado = f.deleted_at != null
               return (
                 <Link key={f.id} href={`/funcionarios/${f.id}`}
-                  className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-brand/30 transition-all duration-200 block group">
+                  className={`bg-white rounded-xl border p-4 hover:shadow-md transition-all duration-200 block group ${
+                    desligado ? 'border-gray-200 opacity-60 hover:opacity-100' : 'border-gray-200 hover:border-brand/30'
+                  }`}>
                   <div className="flex items-start justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-brand/10 flex items-center justify-center text-brand font-bold text-sm font-display">
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-sm font-display ${
+                      desligado ? 'bg-gray-100 text-gray-400' : 'bg-brand/10 text-brand'
+                    }`}>
                       {f.nome?.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
                     </div>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>
-                      {f.status === 'disponivel' ? 'Disponível' : f.status}
-                    </span>
+                    {desligado ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-red-100 text-red-700">
+                        Desligado
+                      </span>
+                    ) : (
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>
+                        {f.status === 'disponivel' ? 'Disponível' : f.status}
+                      </span>
+                    )}
                   </div>
                   <div className="font-semibold text-sm text-gray-900 group-hover:text-brand transition-colors">{f.nome_guerra ?? f.nome}</div>
                   {f.nome_guerra && <div className="text-[10px] text-gray-400 truncate">{f.nome}</div>}
                   <div className="text-xs text-gray-500 mt-0.5">{f.cargo}{f.id_ponto ? ` · ID ${f.id_ponto}` : f.matricula ? ` · Mat ${f.matricula}` : ''}</div>
+                  {desligado && (
+                    <div className="mt-2 pt-2 border-t border-gray-100 text-[10px] text-red-600 font-medium">
+                      Desligado em {new Date(f.deleted_at).toLocaleDateString('pt-BR')}
+                    </div>
+                  )}
                   {p1 && (
                     <div className="mt-3 pt-3 border-t border-gray-100">
                       <div className={`text-xs font-medium flex items-center gap-1 ${vencido ? 'text-red-600' : alerta ? 'text-amber-600' : 'text-gray-400'}`}>
@@ -244,8 +264,9 @@ export default function FuncionariosView({
                   const dias = p1 ? Math.ceil((p1.getTime() - hojeDate.getTime()) / 86400000) : null
                   const vencido = dias !== null && dias < 0
                   const alerta = dias !== null && dias <= 30 && dias >= 0
+                  const desligado = f.deleted_at != null
                   return (
-                    <tr key={f.id} className="border-b border-gray-50 hover:bg-gray-50 group">
+                    <tr key={f.id} className={`border-b border-gray-50 hover:bg-gray-50 group ${desligado ? 'opacity-60' : ''}`}>
                       <td className="px-4 py-3 text-gray-400 text-xs font-mono">{f.id_ponto ?? '—'}</td>
                       <td className="px-4 py-3 font-semibold">
                         <Link href={`/funcionarios/${f.id}`} className="hover:text-brand transition-colors">
@@ -261,9 +282,15 @@ export default function FuncionariosView({
                         {alerta && <span className="ml-1 bg-amber-100 text-amber-700 px-1.5 rounded text-[10px]">{dias}d</span>}
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-semibold capitalize ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>
-                          {f.status === 'disponivel' ? 'Disponível' : f.status}
-                        </span>
+                        {desligado ? (
+                          <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-red-100 text-red-700" title={`Desligado em ${new Date(f.deleted_at).toLocaleDateString('pt-BR')}`}>
+                            Desligado
+                          </span>
+                        ) : (
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold capitalize ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>
+                            {f.status === 'disponivel' ? 'Disponível' : f.status}
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">

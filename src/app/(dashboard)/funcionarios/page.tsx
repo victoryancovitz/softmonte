@@ -8,7 +8,6 @@ export default async function FuncionariosPage() {
   const { data: all } = await supabase
     .from('funcionarios')
     .select('*')
-    .is('deleted_at', null)
     .order('nome')
 
   const funcs = all ?? []
