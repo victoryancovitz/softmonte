@@ -6,6 +6,7 @@ import { TrendingUp, Users, ChevronDown, ChevronUp } from 'lucide-react'
 
 export default function MargemPage() {
   const [dre, setDre] = useState<any[]>([])
+  const [dreMes, setDreMes] = useState<any[]>([])
   const [custos, setCustos] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [expandido, setExpandido] = useState<string | null>(null)
@@ -13,16 +14,20 @@ export default function MargemPage() {
 
   useEffect(() => {
     async function load() {
-      const [{ data: d }, { data: c }] = await Promise.all([
+      const [{ data: d }, { data: dm }, { data: c }] = await Promise.all([
         supabase.from('vw_dre_obra').select('*'),
+        supabase.from('vw_dre_obra_mes').select('*'),
         supabase.from('vw_custo_funcionario').select('*'),
       ])
       setDre(d || [])
+      setDreMes(dm || [])
       setCustos(c || [])
       setLoading(false)
     }
     load()
   }, [])
+
+  const MESES = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
   const fmt = (v: number | null) => v != null ? Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'
 
@@ -81,8 +86,75 @@ export default function MargemPage() {
                 {/* Detalhe por funcionário */}
                 {isOpen && (
                   <div className="border-t border-gray-100 bg-gray-50/50">
+                    {/* DRE real mês a mês */}
+                    {(() => {
+                      const mesesObra = dreMes.filter((m: any) => m.obra_id === obra.obra_id)
+                      if (mesesObra.length === 0) return null
+                      const totCusto = mesesObra.reduce((s: number, m: any) => s + Number(m.custo_mo_real || 0), 0)
+                      const totReceita = mesesObra.reduce((s: number, m: any) => s + Number(m.receita_realizada || m.receita_prevista || 0), 0)
+                      const totMargem = totReceita - totCusto
+                      const totMargemPct = totReceita > 0 ? (totMargem / totReceita) * 100 : 0
+                      return (
+                        <div className="px-5 py-3 border-b border-gray-100">
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider">DRE Real Mês a Mês (CLT + faltas)</h3>
+                            <div className="text-[10px] text-gray-400">custo considera encargos, provisões, benefícios e desconto de faltas injustificadas/suspensões</div>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="border-b border-gray-200">
+                                  {['Mês', 'Funcs', 'Dias Trab.', 'Desc.', 'Receita', 'Custo MO Real', 'Margem Bruta', 'Margem %'].map(h => (
+                                    <th key={h} className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {mesesObra.map((m: any) => {
+                                  const receita = Number(m.receita_realizada || m.receita_prevista || 0)
+                                  const custo = Number(m.custo_mo_real || 0)
+                                  const margem = receita - custo
+                                  const margemPct = receita > 0 ? (margem / receita) * 100 : 0
+                                  return (
+                                    <tr key={`${m.ano}-${m.mes}`} className="border-b border-gray-100">
+                                      <td className="px-3 py-2 font-medium">{MESES[m.mes]}/{m.ano}</td>
+                                      <td className="px-3 py-2 text-gray-600">{m.funcionarios}</td>
+                                      <td className="px-3 py-2 text-gray-600">{m.dias_trabalhados}</td>
+                                      <td className="px-3 py-2 text-gray-500">
+                                        {Number(m.dias_descontados) > 0 ? (
+                                          <span className="text-red-600 font-medium">{Number(m.dias_descontados).toFixed(1)}d</span>
+                                        ) : '—'}
+                                      </td>
+                                      <td className="px-3 py-2 text-green-700 font-semibold">{fmt(receita)}</td>
+                                      <td className="px-3 py-2 text-red-700 font-semibold">{fmt(custo)}</td>
+                                      <td className={`px-3 py-2 font-bold ${margem >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                        {fmt(margem)}
+                                      </td>
+                                      <td className={`px-3 py-2 font-bold ${margemPct >= 30 ? 'text-green-700' : margemPct >= 15 ? 'text-amber-700' : 'text-red-700'}`}>
+                                        {margemPct.toFixed(1)}%
+                                      </td>
+                                    </tr>
+                                  )
+                                })}
+                              </tbody>
+                              <tfoot>
+                                <tr className="bg-brand/5 border-t-2 border-brand/20 font-bold">
+                                  <td className="px-3 py-2 text-brand" colSpan={4}>TOTAL acumulado</td>
+                                  <td className="px-3 py-2 text-green-700">{fmt(totReceita)}</td>
+                                  <td className="px-3 py-2 text-red-700">{fmt(totCusto)}</td>
+                                  <td className={`px-3 py-2 ${totMargem >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(totMargem)}</td>
+                                  <td className={`px-3 py-2 ${totMargemPct >= 30 ? 'text-green-700' : totMargemPct >= 15 ? 'text-amber-700' : 'text-red-700'}`}>
+                                    {totMargemPct.toFixed(1)}%
+                                  </td>
+                                </tr>
+                              </tfoot>
+                            </table>
+                          </div>
+                        </div>
+                      )
+                    })()}
                     <div className="px-5 py-3">
-                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Custo por Funcionário Alocado</h3>
+                      <h3 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Custo por Funcionário Alocado (referência mensal sem faltas)</h3>
                       {funcsObra.length > 0 ? (
                         <div className="overflow-x-auto">
                           <table className="w-full text-sm">
