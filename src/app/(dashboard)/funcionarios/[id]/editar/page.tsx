@@ -94,8 +94,9 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="col-span-1 sm:col-span-2"><label className={lbl}>Nome completo *</label>
                 <input required type="text" value={form.nome ?? ''} onChange={e => set('nome', e.target.value)} className={inp} style={{textTransform:'uppercase'}}/></div>
-              <div><label className={lbl}>Matrícula *</label>
-                <input required type="text" value={form.matricula ?? ''} onChange={e => set('matricula', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>Nº Identificação (Ponto) *</label>
+                <input required type="text" inputMode="numeric" pattern="[0-9]*" value={form.matricula ?? ''}
+                  onChange={e => set('matricula', e.target.value.replace(/\D/g, ''))} className={inp}/></div>
               <div><label className={lbl}>RE</label>
                 <input type="text" value={form.re ?? ''} onChange={e => set('re', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>CPF</label>

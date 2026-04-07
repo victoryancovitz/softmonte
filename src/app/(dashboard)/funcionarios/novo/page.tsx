@@ -208,8 +208,10 @@ export default function NovoFuncionarioPage() {
                 <input type="text" value={form.nome} onChange={e => set('nome', e.target.value)} className={inp} placeholder="NOME SOBRENOME" style={{textTransform:'uppercase'}} />
               </div>
               <div>
-                <label className={lbl}>Matrícula *</label>
-                <input type="text" value={form.matricula} onChange={e => set('matricula', e.target.value)} className={inp} />
+                <label className={lbl}>Nº Identificação (Ponto) *</label>
+                <input type="text" inputMode="numeric" pattern="[0-9]*" value={form.matricula}
+                  onChange={e => set('matricula', e.target.value.replace(/\D/g, ''))}
+                  placeholder="Identificador do Secullum" className={inp} />
               </div>
               <div>
                 <label className={lbl}>CPF</label>
