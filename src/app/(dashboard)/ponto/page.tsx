@@ -267,6 +267,7 @@ export default function PontoPage() {
           <h1 className="text-xl font-bold font-display text-brand">Controle de Ponto</h1>
           <p className="text-xs text-gray-500 mt-1">
             Registre, edite ou importe a folha de ponto de cada obra. Clique em qualquer dia do calendário para criar ou alterar o lançamento.
+            Para o registro rápido do dia de hoje, use a tela de <a href="/efetivo" className="text-brand font-semibold hover:underline">Efetivo Diário</a>.
             Após o fechamento do mês, apenas administradores podem corrigir. Toda alteração é auditada.
           </p>
         </div>

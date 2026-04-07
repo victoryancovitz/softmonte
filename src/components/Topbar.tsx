@@ -41,6 +41,7 @@ const NAV_GROUPS: NavGroupDef[] = [
     label: 'Engenharia',
     links: [
       { href: '/obras', label: 'Obras', icon: ic.obras },
+      { href: '/efetivo', label: 'Efetivo Diário', icon: ic.func },
       { href: '/boletins', label: 'Boletins de Medição', icon: ic.bm },
     ],
   },
@@ -48,8 +49,10 @@ const NAV_GROUPS: NavGroupDef[] = [
     label: 'Administrativo',
     links: [
       { href: '/funcionarios', label: 'Funcionários', icon: ic.func },
+      { href: '/ponto', label: 'Ponto', icon: ic.faltas },
       { href: '/faltas', label: 'Faltas', icon: ic.faltas },
-      { href: '/contratos', label: 'Contratos', icon: ic.docs },
+      { href: '/rh/banco-horas', label: 'Banco de Horas', icon: ic.docs },
+      { href: '/rh/ferias', label: 'Férias', icon: ic.docs },
       { href: '/rh/treinamentos', label: 'Treinamentos NR', icon: ic.docs },
       { href: '/rh/admissoes', label: 'Admissões', icon: ic.func },
       { href: '/rh/desligamentos', label: 'Desligamentos', icon: ic.faltas },
