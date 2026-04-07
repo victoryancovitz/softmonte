@@ -17,7 +17,7 @@ export default function FuncionarioDocumentos({
   const [showAdd, setShowAdd] = useState(false)
   const [editing, setEditing] = useState<any | null>(null)
   const [viewer, setViewer] = useState<{ url: string; name: string } | null>(null)
-  const [form, setForm] = useState<any>({ tipo: 'ASO', emissao: '', vencimento: '', observacao: '' })
+  const [form, setForm] = useState<any>({ tipo: 'ASO', emissao: '', vencimento: '', sem_vencimento: false, observacao: '' })
   const [file, setFile] = useState<File | null>(null)
   const [saving, setSaving] = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
@@ -40,7 +40,7 @@ export default function FuncionarioDocumentos({
   }, [searchInput])
 
   function statusOf(d: any) {
-    if (!d.vencimento) return { label: 'Sem venc.', cls: 'bg-gray-100 text-gray-500', code: 'sem' }
+    if (!d.vencimento) return { label: '∞ Não vence', cls: 'bg-blue-50 text-blue-700', code: 'sem' }
     const dias = Math.ceil((new Date(d.vencimento + 'T12:00').getTime() - Date.now()) / 86400000)
     if (dias < 0) return { label: 'Vencido', cls: 'bg-red-100 text-red-700', code: 'vencido' }
     if (dias <= 30) return { label: `Vence em ${dias}d`, cls: 'bg-amber-100 text-amber-700', code: 'vencendo' }
@@ -76,6 +76,7 @@ export default function FuncionarioDocumentos({
       tipo: doc.tipo,
       emissao: doc.emissao ?? '',
       vencimento: doc.vencimento ?? '',
+      sem_vencimento: !doc.vencimento,
       observacao: doc.observacao ?? '',
     })
     setFile(null)
@@ -93,7 +94,7 @@ export default function FuncionarioDocumentos({
   }
 
   async function handleSaveAdd() {
-    if (!form.vencimento) { toast.error('Data de vencimento é obrigatória'); return }
+    if (!form.sem_vencimento && !form.vencimento) { toast.error('Informe a data de vencimento ou marque "Não vence"'); return }
     setSaving(true)
 
     let arquivo_url: string | null = null
@@ -109,7 +110,7 @@ export default function FuncionarioDocumentos({
       funcionario_id: funcionarioId,
       tipo: form.tipo,
       emissao: form.emissao || null,
-      vencimento: form.vencimento,
+      vencimento: form.sem_vencimento ? null : form.vencimento,
       observacao: form.observacao || null,
       arquivo_url,
       arquivo_nome,
@@ -118,20 +119,21 @@ export default function FuncionarioDocumentos({
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
     toast.success('Documento adicionado!')
     setShowAdd(false)
-    setForm({ tipo: 'ASO', emissao: '', vencimento: '', observacao: '' })
+    setForm({ tipo: 'ASO', emissao: '', vencimento: '', sem_vencimento: false, observacao: '' })
     setFile(null)
     setSaving(false)
     router.refresh()
   }
 
   async function handleSaveEdit() {
-    if (!editing || !form.vencimento) { toast.error('Data de vencimento é obrigatória'); return }
+    if (!editing) return
+    if (!form.sem_vencimento && !form.vencimento) { toast.error('Informe a data de vencimento ou marque "Não vence"'); return }
     setSaving(true)
 
     const updates: any = {
       tipo: form.tipo,
       emissao: form.emissao || null,
-      vencimento: form.vencimento,
+      vencimento: form.sem_vencimento ? null : form.vencimento,
       observacao: form.observacao || null,
     }
 
@@ -167,7 +169,7 @@ export default function FuncionarioDocumentos({
     <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-sm font-bold text-brand font-display">Documentos</h2>
-        <button onClick={() => { setShowAdd(true); setForm({ tipo: 'ASO', emissao: '', vencimento: '', observacao: '' }); setFile(null) }}
+        <button onClick={() => { setShowAdd(true); setForm({ tipo: 'ASO', emissao: '', vencimento: '', sem_vencimento: false, observacao: '' }); setFile(null) }}
           className="text-xs text-brand hover:underline font-medium">+ Adicionar documento</button>
       </div>
 
@@ -315,8 +317,15 @@ function DocModal({
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Data de vencimento *</label>
-            <input type="date" value={form.vencimento} onChange={e => setForm((f: any) => ({ ...f, vencimento: e.target.value }))}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+            <input type="date" value={form.vencimento} disabled={form.sem_vencimento}
+              onChange={e => setForm((f: any) => ({ ...f, vencimento: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand disabled:bg-gray-100 disabled:text-gray-400" />
+            <label className="flex items-center gap-2 mt-2 cursor-pointer select-none">
+              <input type="checkbox" checked={!!form.sem_vencimento}
+                onChange={e => setForm((f: any) => ({ ...f, sem_vencimento: e.target.checked, vencimento: e.target.checked ? '' : f.vencimento }))}
+                className="w-4 h-4 rounded text-brand focus:ring-brand" />
+              <span className="text-xs text-gray-700">Documento não vence <span className="text-gray-400">(RG, CPF, diploma, etc)</span></span>
+            </label>
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Observação</label>
