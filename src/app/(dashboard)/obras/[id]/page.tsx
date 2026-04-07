@@ -61,7 +61,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
   ] = await Promise.all([
     supabase.from('obras').select('*').eq('id', params.id).single(),
     supabase.from('alocacoes').select('*, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao)').eq('obra_id', params.id).eq('ativo', true),
-    supabase.from('boletins_medicao').select('*').eq('obra_id', params.id).order('numero'),
+    supabase.from('boletins_medicao').select('*').eq('obra_id', params.id).is('deleted_at', null).order('numero'),
     getRole(),
     supabase.from('efetivo_diario').select('id, data, tipo_dia, funcionario_id, observacao, funcionarios(nome)').eq('obra_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
     supabase.from('financeiro_lancamentos').select('*').eq('obra_id', params.id).is('deleted_at', null).order('data_competencia', { ascending: false }),
