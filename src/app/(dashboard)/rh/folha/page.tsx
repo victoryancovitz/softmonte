@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
+import ImpactConfirmDialog from '@/components/ImpactConfirmDialog'
 import { FileText, Plus, ChevronRight, Calendar, Users, DollarSign } from 'lucide-react'
 
 const MESES = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
@@ -13,6 +14,7 @@ export default function FolhaPage() {
   const [obras, setObras] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [fechando, setFechando] = useState(false)
+  const [reverterAlvo, setReverterAlvo] = useState<any>(null)
   const [form, setForm] = useState({ obra_id: '', ano: new Date().getFullYear(), mes: new Date().getMonth() + 1 })
   const supabase = createClient()
   const toast = useToast()
@@ -131,16 +133,16 @@ export default function FolhaPage() {
     }
   }
 
-  async function reverter(f: any) {
-    if (!confirm(`Reverter fechamento de ${MESES[f.mes]}/${f.ano}? Isso apaga os itens e o lançamento gerado.`)) return
+  async function doReverter() {
+    if (!reverterAlvo) return
+    const f = reverterAlvo
     try {
-      // Deleta lançamento vinculado (se encontrar pelo origem)
       await supabase.from('financeiro_lancamentos').update({ deleted_at: new Date().toISOString() })
         .eq('obra_id', f.obra_id).eq('origem', 'folha_fechamento').ilike('observacao', `%${f.id}%`)
-      // Soft delete folha
       const { data: { user } } = await supabase.auth.getUser()
       await supabase.from('folha_fechamentos').update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null, status: 'revertida' }).eq('id', f.id)
       setFechamentos(prev => prev.filter(x => x.id !== f.id))
+      setReverterAlvo(null)
       toast.success('Fechamento revertido.')
     } catch (e: any) {
       toast.error('Erro: ' + e.message)
@@ -234,7 +236,7 @@ export default function FolhaPage() {
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">
-                  <button onClick={() => reverter(f)} className="text-[11px] text-red-600 hover:underline">Reverter</button>
+                  <button onClick={() => setReverterAlvo(f)} className="text-[11px] text-red-600 hover:underline">Reverter</button>
                 </td>
               </tr>
             )) : (
@@ -262,6 +264,20 @@ export default function FolhaPage() {
             <div className="text-xl font-bold text-gray-900">{Math.round(fechamentos.reduce((s, f) => s + (f.funcionarios_incluidos || 0), 0) / fechamentos.length)}</div>
           </div>
         </div>
+      )}
+
+      {reverterAlvo && (
+        <ImpactConfirmDialog
+          open={!!reverterAlvo}
+          onClose={() => setReverterAlvo(null)}
+          onConfirm={doReverter}
+          entity="folha"
+          entityId={reverterAlvo.id}
+          title={`Reverter folha ${MESES[reverterAlvo.mes]}/${reverterAlvo.ano}`}
+          action="A reversão desfaz o fechamento: descarta itens por funcionário e soft-deleta o lançamento agregado no financeiro. A folha pode ser refeita em seguida com os mesmos dados de ponto/faltas."
+          actionType="delete"
+          confirmLabel="Reverter fechamento"
+        />
       )}
     </div>
   )

@@ -399,7 +399,12 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
               Cancelar
             </Link>
             <div className="ml-auto">
-              <DeleteEntityButton table="obras" id={params.id} entityName={form.nome ?? 'obra'} redirectTo="/obras" />
+              <DeleteEntityButton
+                table="obras" id={params.id} entityName={form.nome ?? 'obra'} redirectTo="/obras"
+                impactEntity="obra"
+                impactTitle="Excluir obra"
+                impactAction="Exclusão soft-delete. Dados históricos (ponto, BMs, folhas, forecast) são preservados mas a obra some da listagem e de novos lançamentos."
+              />
             </div>
           </div>
         </form>

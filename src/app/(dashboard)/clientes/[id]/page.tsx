@@ -52,7 +52,12 @@ export default async function ClientePage({ params }: { params: { id: string } }
             className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors">
             Editar
           </Link>
-          <DeleteEntityButton table="clientes" id={cliente.id} entityName={cliente.nome} redirectTo="/clientes" />
+          <DeleteEntityButton
+            table="clientes" id={cliente.id} entityName={cliente.nome} redirectTo="/clientes"
+            impactEntity="cliente"
+            impactTitle="Excluir cliente"
+            impactAction="As obras do cliente não são deletadas, mas o vínculo com ele é perdido."
+          />
         </div>
       </div>
 

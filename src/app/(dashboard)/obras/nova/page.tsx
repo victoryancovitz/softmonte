@@ -4,15 +4,16 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
+import QuickCreateSelect from '@/components/QuickCreateSelect'
 
 export default function NovaObraPage() {
-  const [form, setForm] = useState({ nome: '', cliente: '', local: '', data_inicio: '', data_prev_fim: '' })
+  const [form, setForm] = useState<any>({ nome: '', cliente_id: '', cliente: '', local: '', data_inicio: '', data_prev_fim: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
-  function set(field: string, value: string) { setForm(f => ({ ...f, [field]: value })) }
+  function set(field: string, value: string) { setForm((f: any) => ({ ...f, [field]: value })) }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -36,12 +37,30 @@ export default function NovaObraPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div><label className="block text-sm font-medium text-gray-700 mb-1">Nome da obra *</label>
             <input type="text" required value={form.nome} onChange={e => set('nome', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
-              <input type="text" value={form.cliente} onChange={e => set('cliente', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Local</label>
-              <input type="text" value={form.local} onChange={e => set('local', e.target.value)} placeholder="Cidade/UF" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
+            <QuickCreateSelect
+              table="clientes"
+              value={form.cliente_id}
+              onChange={(id, record) => {
+                set('cliente_id', id)
+                if (record?.nome) set('cliente', record.nome)
+              }}
+              placeholder="Selecione o cliente..."
+              buttonLabel="Novo cliente"
+              createTitle="Criar novo cliente"
+              createFields={[
+                { name: 'nome', label: 'Nome / Razão social', required: true, placeholder: 'Cesari Engenharia' },
+                { name: 'cnpj', label: 'CNPJ', placeholder: '00.000.000/0000-00' },
+                { name: 'email', label: 'E-mail' },
+                { name: 'telefone', label: 'Telefone' },
+                { name: 'cidade', label: 'Cidade' },
+                { name: 'estado', label: 'UF' },
+              ]}
+            />
           </div>
+          <div><label className="block text-sm font-medium text-gray-700 mb-1">Local da obra</label>
+            <input type="text" value={form.local} onChange={e => set('local', e.target.value)} placeholder="Cidade/UF" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Data de inicio</label>
               <input type="date" value={form.data_inicio} onChange={e => set('data_inicio', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>

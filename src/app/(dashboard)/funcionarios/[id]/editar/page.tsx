@@ -308,7 +308,12 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
             </button>
             <Link href={`/funcionarios/${params.id}`} className="px-6 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</Link>
             <div className="ml-auto">
-              <DeleteEntityButton table="funcionarios" id={params.id} entityName={form.nome ?? 'funcionário'} redirectTo="/funcionarios" />
+              <DeleteEntityButton
+                table="funcionarios" id={params.id} entityName={form.nome ?? 'funcionário'} redirectTo="/funcionarios"
+                impactEntity="funcionario"
+                impactTitle="Excluir funcionário"
+                impactAction="Soft-delete. Histórico de ponto, folhas, BMs e documentos são preservados mas o funcionário some das listagens."
+              />
             </div>
           </div>
         </form>

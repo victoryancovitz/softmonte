@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import ImpactConfirmDialog from '@/components/ImpactConfirmDialog'
 
 // Reusable inline confirm pattern
 function useConfirm() {
@@ -35,19 +36,41 @@ function InlineConfirm({ label, onConfirm, className }: { label: string; onConfi
   </button>
 }
 
-// 1. Desativar funcionário (soft delete)
+// 1. Desativar funcionário (soft delete) — com ImpactConfirmDialog
 export function DesativarFuncionarioBtn({ funcId, role }: { funcId: string; role: string }) {
   const router = useRouter()
   const supabase = createClient()
+  const [open, setOpen] = useState(false)
   if (role !== 'admin') return null
 
+  async function handleConfirm() {
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('funcionarios').update({
+      status: 'inativo',
+      deleted_at: new Date().toISOString(),
+      deleted_by: user?.id ?? null,
+    }).eq('id', funcId)
+    router.refresh()
+  }
+
   return (
-    <InlineConfirm label="Desativar funcionário"
-      className="px-4 py-2 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors"
-      onConfirm={async () => {
-        await supabase.from('funcionarios').update({ status: 'inativo', deleted_at: new Date().toISOString() }).eq('id', funcId)
-        router.refresh()
-      }} />
+    <>
+      <button onClick={() => setOpen(true)}
+        className="px-4 py-2 border border-red-200 text-red-600 rounded-xl text-sm font-medium hover:bg-red-50 transition-colors">
+        Desativar funcionário
+      </button>
+      <ImpactConfirmDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        onConfirm={handleConfirm}
+        entity="funcionario"
+        entityId={funcId}
+        title="Desativar funcionário"
+        action="O funcionário será marcado como inativo (soft-delete). Todos os dados históricos são preservados — ponto, folhas, BMs e documentos continuam acessíveis. Para reativar depois, remova o deleted_at via admin."
+        actionType="deactivate"
+        confirmLabel="Desativar mesmo assim"
+      />
+    </>
   )
 }
 
@@ -148,23 +171,39 @@ export function ExcluirFinanceiroBtn({ lancId, role }: { lancId: string; role: s
   )
 }
 
-// 8. Excluir BM (soft delete)
+// 8. Excluir BM (soft delete) — com ImpactConfirmDialog
 export function ExcluirBMBtn({ bmId, status, role }: { bmId: string; status: string; role: string }) {
   const router = useRouter()
   const supabase = createClient()
+  const [open, setOpen] = useState(false)
   if (role !== 'admin') return null
 
+  async function handleConfirm() {
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('boletins_medicao')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+      .eq('id', bmId)
+    router.push('/boletins')
+    router.refresh()
+  }
+
   return (
-    <InlineConfirm label="Excluir BM"
-      className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50"
-      onConfirm={async () => {
-        const { data: { user } } = await supabase.auth.getUser()
-        await supabase.from('boletins_medicao')
-          .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
-          .eq('id', bmId)
-        router.push('/boletins')
-        router.refresh()
-      }} />
+    <>
+      <button onClick={() => setOpen(true)}
+        className="flex items-center gap-2 px-4 py-2 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50">
+        Excluir BM
+      </button>
+      <ImpactConfirmDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        onConfirm={handleConfirm}
+        entity="bm"
+        entityId={bmId}
+        title="Excluir boletim de medição"
+        action={`Status atual: ${status}. A exclusão afeta relatórios de margem, DRE real × BM e forecast. Operação soft-delete — reversível pelo admin.`}
+        actionType="delete"
+      />
+    </>
   )
 }
 

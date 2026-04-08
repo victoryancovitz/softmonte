@@ -199,7 +199,12 @@ export default function EditarClientePage({ params }: { params: { id: string } }
             </button>
             <Link href={`/clientes/${params.id}`} className="px-6 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</Link>
             <div className="ml-auto">
-              <DeleteEntityButton table="clientes" id={params.id} entityName={form.nome ?? 'cliente'} redirectTo="/clientes" />
+              <DeleteEntityButton
+                table="clientes" id={params.id} entityName={form.nome ?? 'cliente'} redirectTo="/clientes"
+                impactEntity="cliente"
+                impactTitle="Excluir cliente"
+                impactAction="As obras do cliente não são deletadas, mas o vínculo com ele é perdido. Se houver obras ativas, prefira marcar como inativo."
+              />
             </div>
           </div>
         </form>

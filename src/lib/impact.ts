@@ -105,6 +105,32 @@ const RULES: Record<string, ImpactFn> = {
     if ((lanc.count || 0) > 0) out.push({ label: 'Lançamentos financeiros', count: lanc.count || 0, tabela: 'financeiro_lancamentos', pagina: '/financeiro', severidade: 'warn' })
     return out
   },
+
+  bm: async (supabase, id) => {
+    const [itens, docs, bm] = await Promise.all([
+      supabase.from('bm_itens').select('id', { count: 'exact', head: true }).eq('boletim_id', id),
+      supabase.from('bm_documentos').select('id', { count: 'exact', head: true }).eq('bm_id', id),
+      supabase.from('boletins_medicao').select('status, obra_id, valor_aprovado').eq('id', id).maybeSingle(),
+    ])
+    const out: ImpactEntry[] = []
+    if ((itens.count || 0) > 0) out.push({ label: 'Linhas de medição', count: itens.count || 0, tabela: 'bm_itens', severidade: 'warn' })
+    if ((docs.count || 0) > 0)  out.push({ label: 'Documentos anexados', count: docs.count || 0, tabela: 'bm_documentos', severidade: 'info' })
+    if (bm.data?.status === 'aprovado' || bm.data?.status === 'enviado') {
+      out.push({ label: `BM ${bm.data.status}`, count: 1, tabela: 'boletins_medicao', severidade: 'critico', detalhes: `Afeta DRE mês a mês, forecast e comparativo orçado × real. Valor: R$ ${Number(bm.data.valor_aprovado || 0).toLocaleString('pt-BR')}` })
+    }
+    return out
+  },
+
+  folha: async (supabase, id) => {
+    const [itens, lanc] = await Promise.all([
+      supabase.from('folha_itens').select('id', { count: 'exact', head: true }).eq('folha_id', id),
+      supabase.from('financeiro_lancamentos').select('id', { count: 'exact', head: true }).ilike('observacao', `%${id}%`).eq('origem', 'folha_fechamento').is('deleted_at', null),
+    ])
+    const out: ImpactEntry[] = []
+    if ((itens.count || 0) > 0) out.push({ label: 'Itens de folha (funcionários)', count: itens.count || 0, tabela: 'folha_itens', severidade: 'critico', detalhes: 'Serão descartados ao reverter o fechamento.' })
+    if ((lanc.count || 0) > 0)  out.push({ label: 'Lançamentos no financeiro gerados', count: lanc.count || 0, tabela: 'financeiro_lancamentos', pagina: '/financeiro', severidade: 'critico', detalhes: 'Serão soft-deletados junto com o fechamento.' })
+    return out
+  },
 }
 
 function correcoes_count(n: any): number { return Number(n || 0) }
