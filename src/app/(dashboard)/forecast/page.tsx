@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { TrendingUp, DollarSign, Calendar, ArrowLeft, Check, X } from 'lucide-react'
 import SearchInput from '@/components/SearchInput'
+import { useToast } from '@/components/Toast'
 
 export default function ForecastPage() {
   const [forecast, setForecast] = useState<any[]>([])
@@ -13,19 +14,22 @@ export default function ForecastPage() {
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const supabase = createClient()
+  const toast = useToast()
 
   useEffect(() => { loadForecast() }, [])
 
   async function loadForecast() {
-    const { data } = await supabase.from('vw_forecast_geral').select('*').limit(500)
+    const { data, error } = await supabase.from('vw_forecast_geral').select('*').limit(500)
+    if (error) toast.error('Erro ao carregar forecast: ' + error.message)
     setForecast(data || [])
     setLoading(false)
   }
 
   async function abrirDetalhe(obra: any) {
     setObraAtiva(obra)
-    const { data } = await supabase.from('forecast_contrato')
+    const { data, error } = await supabase.from('forecast_contrato')
       .select('*').eq('obra_id', obra.obra_id).order('ano').order('mes')
+    if (error) { toast.error('Erro: ' + error.message); return }
     setDetalhe(data || [])
   }
 
@@ -35,7 +39,8 @@ export default function ForecastPage() {
   }
 
   async function toggleCheck(id: string, field: string, current: boolean) {
-    await supabase.from('forecast_contrato').update({ [field]: !current }).eq('id', id)
+    const { error } = await supabase.from('forecast_contrato').update({ [field]: !current }).eq('id', id)
+    if (error) { toast.error('Erro: ' + error.message); return }
     if (detalhe) {
       setDetalhe(detalhe.map(d => d.id === id ? { ...d, [field]: !current } : d))
     }
