@@ -596,7 +596,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
                 </Link>
               ))}
               {alocacoesAtivas.length > 1 && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700" title="Funcionário em múltiplas obras — presença controlada pelo ponto">
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700" title="Funcionário alocado em múltiplas obras">
                   ⚡ MULTI ({alocacoesAtivas.length})
                 </span>
               )}
