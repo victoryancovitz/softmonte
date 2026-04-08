@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     supabase.from('obras').select('id,nome,cliente,local,status,data_inicio,data_prev_fim').eq('status', 'ativo').is('deleted_at', null),
     supabase.from('estoque_itens').select('id,nome,quantidade,quantidade_minima').filter('quantidade', 'lte', 'quantidade_minima').is('deleted_at', null),
     supabase.from('documentos').select('id').lte('vencimento', em30dias).is('deleted_at', null),
-    supabase.from('vw_alertas').select('*').order('dias_restantes'),
+    supabase.from('vw_alertas').select('*').order('dias_restantes').limit(100),
     supabase.from('efetivo_diario').select('id', { count: 'exact' }).eq('data', hojeStr),
     supabase.from('faltas').select('id', { count: 'exact' }).eq('tipo', 'falta_injustificada').gte('data', mesInicio),
     supabase.from('hh_lancamentos').select('horas_normais,horas_extras,horas_noturnas').gte('data', mesInicio),

@@ -22,7 +22,7 @@ export default async function FuncionariosPage() {
 
   const cargosUnicos = Array.from(new Set(funcs.map(f => f.cargo).filter(Boolean))).sort()
 
-  const { data: prazosLegais } = await supabase.from('vw_prazos_legais').select('funcionario_id,alerta_tipo')
+  const { data: prazosLegais } = await supabase.from('vw_prazos_legais').select('funcionario_id,alerta_tipo').limit(1000)
   const alertaMap: Record<string, string> = {}
   ;(prazosLegais ?? []).forEach((p: any) => { if (p.alerta_tipo && p.alerta_tipo !== 'ok') alertaMap[p.funcionario_id] = p.alerta_tipo })
 

@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import ExcelJS from 'exceljs'
 import { TECNOMONTE_LOGO_DARK_B64 } from '@/lib/tecnomonte-logo'
+import { requireRoleApi } from '@/lib/require-role'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  const authErr = await requireRoleApi(['admin', 'financeiro', 'encarregado', 'engenheiro', 'rh'])
+  if (authErr) return authErr
+
   const supabase = createClient()
 
   // Carrega BM + obra

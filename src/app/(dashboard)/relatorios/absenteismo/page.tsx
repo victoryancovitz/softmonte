@@ -19,7 +19,7 @@ export default function AbsenteismoPage() {
   useEffect(() => {
     (async () => {
       const [{ data }, { data: o }] = await Promise.all([
-        supabase.from('vw_absenteismo').select('*').order('taxa_falta_pct', { ascending: false, nullsFirst: false }),
+        supabase.from('vw_absenteismo').select('*').order('taxa_falta_pct', { ascending: false, nullsFirst: false }).limit(2000),
         supabase.from('obras').select('id,nome').is('deleted_at', null).order('nome'),
       ])
       setDados(data || []); setObras(o || []); setLoading(false)

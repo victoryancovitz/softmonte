@@ -14,7 +14,7 @@ export default function CashflowPage() {
   useEffect(() => {
     (async () => {
       const [{ data: cf }, { data: contas }] = await Promise.all([
-        supabase.from('vw_cashflow_projetado').select('*').order('data'),
+        supabase.from('vw_cashflow_projetado').select('*').order('data').limit(500),
         supabase.from('vw_contas_saldo').select('*'),
       ])
       setEventos(cf || [])

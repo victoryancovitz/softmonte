@@ -15,8 +15,8 @@ export default function MargemPage() {
   useEffect(() => {
     async function load() {
       const [{ data: d }, { data: dm }, { data: c }] = await Promise.all([
-        supabase.from('vw_dre_obra').select('*'),
-        supabase.from('vw_dre_obra_mes').select('*'),
+        supabase.from('vw_dre_obra').select('*').limit(500),
+        supabase.from('vw_dre_obra_mes').select('*').limit(500),
         supabase.from('vw_custo_funcionario').select('*'),
       ])
       setDre(d || [])

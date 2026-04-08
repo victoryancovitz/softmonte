@@ -1,7 +1,10 @@
 import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
+import { requireRoleApi } from '@/lib/require-role'
 
 export async function POST() {
+  const authErr = await requireRoleApi(['admin', 'rh', 'financeiro'])
+  if (authErr) return authErr
   try {
     const supabase = createClient()
     const hoje = new Date().toISOString().split('T')[0]

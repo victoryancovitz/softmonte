@@ -17,7 +17,7 @@ export default function ForecastPage() {
   useEffect(() => { loadForecast() }, [])
 
   async function loadForecast() {
-    const { data } = await supabase.from('vw_forecast_geral').select('*')
+    const { data } = await supabase.from('vw_forecast_geral').select('*').limit(500)
     setForecast(data || [])
     setLoading(false)
   }

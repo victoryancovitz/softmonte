@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
+import { requireRoleApi } from '@/lib/require-role'
 
 export async function POST(req: NextRequest) {
+  const authErr = await requireRoleApi(['admin', 'financeiro', 'encarregado', 'engenheiro', 'rh'])
+  if (authErr) return authErr
+
   const { bm_id } = await req.json()
+  if (!bm_id) return NextResponse.json({ error: 'bm_id obrigatório' }, { status: 400 })
   const supabase = createClient()
 
   const { data: bm } = await supabase.from('boletins_medicao')

@@ -57,11 +57,24 @@ function formatarData(date: Date): string {
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })
 }
 
+// Escape de HTML — CRÍTICO para evitar XSS stored quando dados do funcionário
+// (nome, CPF, etc.) são injetados no template via dangerouslySetInnerHTML
+function escapeHtml(s: string): string {
+  if (s == null) return ''
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
+
 function aplicarVariaveis(template: string, vars: Record<string, string>): string {
   let resultado = template
   Object.entries(vars).forEach(([key, value]) => {
     const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g')
-    resultado = resultado.replace(regex, value || `<span style="background:#ffe4e4;padding:0 4px;border-radius:3px;">{{${key}}}</span>`)
+    // SEMPRE escapar o value antes de injetar — é dado de usuário (nome, CPF, observação)
+    resultado = resultado.replace(regex, value ? escapeHtml(value) : `<span style="background:#ffe4e4;padding:0 4px;border-radius:3px;">{{${key}}}</span>`)
   })
   resultado = resultado.replace(/\{\{([^}]+)\}\}/g, '<span style="background:#ffe4e4;padding:0 4px;border-radius:3px;">{{$1}}</span>')
   return resultado

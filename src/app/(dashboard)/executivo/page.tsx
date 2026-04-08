@@ -21,13 +21,13 @@ export default function ExecutivoPage() {
   useEffect(() => {
     (async () => {
       const [d, dm, cf, al, rp, rm, rprev, o, cs] = await Promise.all([
-        supabase.from('vw_dre_obra').select('*'),
-        supabase.from('vw_dre_obra_mes').select('*'),
-        supabase.from('vw_cashflow_projetado').select('*'),
+        supabase.from('vw_dre_obra').select('*').limit(500),
+        supabase.from('vw_dre_obra_mes').select('*').limit(500),
+        supabase.from('vw_cashflow_projetado').select('*').limit(500),
         supabase.from('vw_alertas').select('*').order('dias_restantes').limit(10),
         supabase.from('rescisoes').select('*, funcionarios(nome)').in('status', ['rascunho','homologada']).is('deleted_at', null),
         supabase.from('vw_rescisoes_mes').select('*').limit(12),
-        supabase.from('vw_rescisoes_previstas').select('*'),
+        supabase.from('vw_rescisoes_previstas').select('*').limit(100),
         supabase.from('obras').select('*').eq('status', 'ativo').is('deleted_at', null),
         supabase.from('vw_contas_saldo').select('*'),
       ])

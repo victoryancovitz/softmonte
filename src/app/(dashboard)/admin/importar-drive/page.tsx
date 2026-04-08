@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import JSZip from 'jszip'
+// JSZip importado dinamicamente no handler (lazy) para não inchar o bundle inicial
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import BackButton from '@/components/BackButton'
@@ -94,7 +94,7 @@ export default function ImportarDrivePage() {
   const [naoClassificados, setNaoClassificados] = useState(0)
   const [importando, setImportando] = useState(false)
   const [progress, setProgress] = useState({ done: 0, total: 0 })
-  const [zipRef, setZipRef] = useState<JSZip | null>(null)
+  const [zipRef, setZipRef] = useState<any>(null)
   const [filtroFunc, setFiltroFunc] = useState('')
 
   useEffect(() => {
@@ -108,6 +108,7 @@ export default function ImportarDrivePage() {
     setClassificados([])
 
     try {
+      const JSZip = (await import('jszip')).default
       const zip = await JSZip.loadAsync(f)
       setZipRef(zip)
       const items: ArquivoClassificado[] = []
