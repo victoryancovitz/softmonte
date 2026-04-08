@@ -18,7 +18,14 @@ export default function NovaObraPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
-    const { error } = await supabase.from('obras').insert({ ...form, status: 'ativo' })
+    // Normalizar campos opcionais: strings vazias viram null (Postgres rejeita "" em UUID/date)
+    const payload: any = { ...form, status: 'ativo' }
+    if (!payload.cliente_id) payload.cliente_id = null
+    if (!payload.data_inicio) payload.data_inicio = null
+    if (!payload.data_prev_fim) payload.data_prev_fim = null
+    if (!payload.cliente) payload.cliente = null
+    if (!payload.local) payload.local = null
+    const { error } = await supabase.from('obras').insert(payload)
     if (error) { setError(error.message); setLoading(false); return }
     router.push('/obras')
   }
