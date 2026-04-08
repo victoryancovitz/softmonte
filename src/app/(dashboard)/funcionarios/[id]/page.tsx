@@ -124,6 +124,9 @@ export default async function FuncionarioPage({ params }: { params: { id: string
   const diasTrabalhados30 = efetivo30?.length ?? 0
   const iniciais = (f.nome_guerra || f.nome).split(' ').slice(0, 2).map((p: string) => p[0]).join('').toUpperCase()
 
+  // Renderiza async component ANTES de montar as tabs (não pode passar Promise como content pra client component)
+  const historicoElement = await FuncionarioHistorico({ cpf: f.cpf, funcionarioAtualId: f.id, admissaoAtual: f.admissao })
+
   // ========= TABS =========
   const tabVisaoGeral: Tab = {
     id: 'visao', label: 'Visão geral', icon: TAB_ICONS.visao,
@@ -460,10 +463,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
   const tabHistorico: Tab = {
     id: 'historico', label: 'Histórico', icon: TAB_ICONS.historico,
     content: (
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-        <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Histórico na empresa</h2>
-        <FuncionarioHistorico cpf={f.cpf} funcionarioAtualId={f.id} admissaoAtual={f.admissao} />
-      </div>
+      <div>{historicoElement}</div>
     ),
   }
 
