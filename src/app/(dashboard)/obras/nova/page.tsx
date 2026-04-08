@@ -57,12 +57,13 @@ export default function NovaObraPage() {
               buttonLabel="Novo cliente"
               createTitle="Criar novo cliente"
               createFields={[
-                { name: 'nome', label: 'Nome / Razão social', required: true, placeholder: 'Cesari Engenharia' },
+                { name: 'nome', label: 'Nome', required: true, placeholder: 'Ex: Cesari Engenharia' },
+                { name: 'razao_social', label: 'Razão social', placeholder: 'Opcional' },
                 { name: 'cnpj', label: 'CNPJ', placeholder: '00.000.000/0000-00' },
-                { name: 'email', label: 'E-mail' },
+                { name: 'email_principal', label: 'E-mail principal' },
                 { name: 'telefone', label: 'Telefone' },
                 { name: 'cidade', label: 'Cidade' },
-                { name: 'estado', label: 'UF' },
+                { name: 'estado', label: 'UF', placeholder: 'SP' },
               ]}
             />
           </div>

@@ -111,13 +111,18 @@ export default function QuickCreateSelect({
         payload[f.name] = v
       })
       const { data: created, error } = await supabase.from(table).insert(payload).select().single()
-      if (error) throw error
+      if (error) {
+        console.error('[QuickCreateSelect]', table, 'insert failed:', error, 'payload:', payload)
+        throw error
+      }
       toast.success('Criado com sucesso')
       await load()
       onChange(created.id, created)
       setCreating(false)
     } catch (err: any) {
-      toast.error('Erro: ' + (err.message || err))
+      const msg = err?.message || err?.details || err?.hint || String(err) || 'erro desconhecido'
+      toast.error('Erro ao criar: ' + msg)
+      console.error('[QuickCreateSelect] handleCreate error:', err)
     } finally {
       setSaving(false)
     }
@@ -155,8 +160,8 @@ export default function QuickCreateSelect({
       </div>
 
       {creating && (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4" onClick={() => setCreating(false)}>
-          <div ref={modalRef} className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50 p-4">
+          <div ref={modalRef} className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-5 max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between mb-4">
               <h3 className="text-sm font-bold text-brand">{createTitle}</h3>
               <button onClick={() => setCreating(false)} className="text-gray-400 hover:text-gray-600">
