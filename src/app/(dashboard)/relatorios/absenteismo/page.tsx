@@ -12,6 +12,7 @@ export default function AbsenteismoPage() {
   const [obras, setObras] = useState<any[]>([])
   const [obraId, setObraId] = useState<string>('all')
   const [periodo, setPeriodo] = useState<string>('all')
+  const [incluirDesligados, setIncluirDesligados] = useState<boolean>(false)
   const [loading, setLoading] = useState(true)
   const supabase = createClient()
 
@@ -31,6 +32,7 @@ export default function AbsenteismoPage() {
       const [ano, mes] = periodo.split('-').map(Number)
       if (d.ano !== ano || d.mes !== mes) return false
     }
+    if (!incluirDesligados && d.funcionario_ativo === false) return false
     return true
   })
 
@@ -41,6 +43,8 @@ export default function AbsenteismoPage() {
     if (!rollup.has(key)) {
       rollup.set(key, {
         funcionario_id: d.funcionario_id, nome: d.nome, cargo: d.cargo, obra: d.obra,
+        ativo: d.funcionario_ativo !== false,
+        arquivado: d.funcionario_arquivado === true,
         dias: 0, faltas: 0, injust: 0, atestados: 0, acidentes: 0, just: 0, suspensoes: 0,
       })
     }
@@ -82,7 +86,7 @@ export default function AbsenteismoPage() {
       <p className="text-sm text-gray-500 mb-6">Ranking por taxa de faltas — identifica padrões e funcionários críticos.</p>
 
       {/* Filtros */}
-      <div className="flex flex-wrap gap-3 mb-5">
+      <div className="flex flex-wrap gap-3 mb-5 items-center">
         <select value={obraId} onChange={e => setObraId(e.target.value)}
           className="px-3 py-2 border border-gray-200 rounded-lg text-sm">
           <option value="all">Todas as obras</option>
@@ -96,6 +100,12 @@ export default function AbsenteismoPage() {
             return <option key={p} value={p}>{MESES[Number(m)]}/{a}</option>
           })}
         </select>
+        <label className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg text-xs cursor-pointer select-none bg-white">
+          <input type="checkbox" checked={incluirDesligados}
+            onChange={e => setIncluirDesligados(e.target.checked)}
+            className="rounded border-gray-300 text-brand w-4 h-4" />
+          <span className="text-gray-700 font-medium">Incluir desligados</span>
+        </label>
       </div>
 
       {/* KPIs */}
@@ -135,7 +145,11 @@ export default function AbsenteismoPage() {
               <tr key={r.funcionario_id} className="border-b border-gray-50 hover:bg-gray-50/80">
                 <td className="px-3 py-3 text-gray-400 font-mono text-xs">{i + 1}</td>
                 <td className="px-3 py-3">
-                  <Link href={`/funcionarios/${r.funcionario_id}`} className="font-semibold text-gray-900 hover:text-brand">{r.nome}</Link>
+                  <Link href={`/funcionarios/${r.funcionario_id}`} className="font-semibold text-gray-900 hover:text-brand inline-flex items-center gap-2">
+                    {r.nome}
+                    {r.arquivado && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-600 font-bold">ARQUIVADO</span>}
+                    {!r.ativo && !r.arquivado && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-gray-200 text-gray-600 font-bold">INATIVO</span>}
+                  </Link>
                   <div className="text-xs text-gray-400">{r.cargo} · {r.obra}</div>
                 </td>
                 <td className="px-3 py-3 text-gray-600">{r.dias}</td>

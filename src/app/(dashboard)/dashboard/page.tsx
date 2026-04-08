@@ -74,8 +74,9 @@ export default async function DashboardPage() {
       supabase.from('admissoes_workflow').select('id', { count: 'exact', head: true }).eq('status', 'em_andamento'),
       supabase.from('desligamentos_workflow').select('id', { count: 'exact', head: true }).eq('status', 'em_andamento'),
       supabase.from('documentos').select('id', { count: 'exact', head: true }).lte('vencimento', hojeStr).is('deleted_at', null),
-      supabase.from('vw_absenteismo').select('funcionario_id,nome,cargo,obra,taxa_falta_pct,taxa_injustificada_pct,total_faltas,faltas_injustificadas,ano,mes')
-        .eq('ano', hoje.getFullYear()).eq('mes', hoje.getMonth() + 1),
+      supabase.from('vw_absenteismo').select('funcionario_id,nome,cargo,obra,taxa_falta_pct,taxa_injustificada_pct,total_faltas,faltas_injustificadas,ano,mes,funcionario_ativo')
+        .eq('ano', hoje.getFullYear()).eq('mes', hoje.getMonth() + 1)
+        .eq('funcionario_ativo', true),
     ])
     admissoesAndamento = adm ?? 0
     desligamentosAndamento = des ?? 0
