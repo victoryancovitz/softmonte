@@ -5,7 +5,6 @@ import { notFound } from 'next/navigation'
 import { DesativarFuncionarioBtn } from '@/components/DeleteActions'
 import BackButton from '@/components/BackButton'
 import FuncionarioDocumentos from '@/components/FuncionarioDocumentos'
-import FuncionarioHistorico from '@/components/FuncionarioHistorico'
 import FuncionarioHistoricoSalarial from '@/components/FuncionarioHistoricoSalarial'
 import FuncionarioTabs, { Tab, TAB_ICONS } from '@/components/FuncionarioTabs'
 
@@ -60,6 +59,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
     { data: alocacoes }, { data: faltas }, { data: docsFunc }, { data: efetivo30 },
     { data: docsGerados }, { data: prazosArr }, { data: admissaoArr }, { data: desligamentoArr },
     { count: faltasCount }, { count: docsCount }, { data: rescisao },
+    { data: vinculosHistorico }, { data: arquivadosHistorico },
   ] = await Promise.all([
     supabase.from('alocacoes').select('*, obras(nome, status)').eq('funcionario_id', params.id).order('data_inicio', { ascending: false }),
     supabase.from('faltas').select('*').eq('funcionario_id', params.id).order('data', { ascending: false }).limit(20),
@@ -72,6 +72,13 @@ export default async function FuncionarioPage({ params }: { params: { id: string
     supabase.from('faltas').select('id', { count: 'exact', head: true }).eq('funcionario_id', params.id).in('tipo', ['falta_injustificada','falta_justificada']),
     supabase.from('documentos').select('id', { count: 'exact', head: true }).eq('funcionario_id', params.id).is('deleted_at', null),
     supabase.from('rescisoes').select('id, status, valor_liquido').eq('funcionario_id', params.id).is('deleted_at', null).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+    // Histórico de vínculos pelo CPF (antes vinha do FuncionarioHistorico async component)
+    f.cpf
+      ? supabase.from('vinculos_funcionario').select('*').eq('cpf', f.cpf).order('admissao', { ascending: false })
+      : Promise.resolve({ data: [] }),
+    f.cpf
+      ? supabase.from('funcionarios').select('id, nome, cargo, admissao, deleted_at, matricula, id_ponto').eq('cpf', f.cpf).not('deleted_at', 'is', null).order('admissao', { ascending: false })
+      : Promise.resolve({ data: [] }),
   ])
   const prazos = prazosArr?.[0] ?? null
   const admissao = admissaoArr?.[0] ?? null
@@ -124,8 +131,10 @@ export default async function FuncionarioPage({ params }: { params: { id: string
   const diasTrabalhados30 = efetivo30?.length ?? 0
   const iniciais = (f.nome_guerra || f.nome).split(' ').slice(0, 2).map((p: string) => p[0]).join('').toUpperCase()
 
-  // Renderiza async component ANTES de montar as tabs (não pode passar Promise como content pra client component)
-  const historicoElement = await FuncionarioHistorico({ cpf: f.cpf, funcionarioAtualId: f.id, admissaoAtual: f.admissao })
+  // Histórico de vínculos (inline, sem async component separado)
+  const vinculosAnteriores = (vinculosHistorico ?? []) as any[]
+  const arquivadosAnteriores = (arquivadosHistorico ?? []) as any[]
+  const totalVinculos = vinculosAnteriores.length + arquivadosAnteriores.length
 
   // ========= TABS =========
   const tabVisaoGeral: Tab = {
@@ -463,7 +472,69 @@ export default async function FuncionarioPage({ params }: { params: { id: string
   const tabHistorico: Tab = {
     id: 'historico', label: 'Histórico', icon: TAB_ICONS.historico,
     content: (
-      <div>{historicoElement}</div>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Histórico na empresa</h2>
+          {totalVinculos > 0 && <span className="text-[11px] text-gray-400">{totalVinculos + 1} vínculos</span>}
+        </div>
+        {totalVinculos === 0 ? (
+          <p className="text-xs text-gray-400 italic">Primeiro vínculo com a empresa.</p>
+        ) : (
+          <div className="space-y-2">
+            {/* Vínculo atual */}
+            <div className="p-3 rounded-lg border border-green-200 bg-green-50">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-gray-600">
+                  Vínculo atual <span className="ml-1 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">ATUAL</span>
+                </span>
+                <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                  {f.id_ponto && <span>ID: {f.id_ponto}</span>}
+                  {f.matricula && <span>Mat: {f.matricula}</span>}
+                </div>
+              </div>
+              <div className="text-xs text-gray-500">
+                {f.admissao ? new Date(f.admissao + 'T12:00').toLocaleDateString('pt-BR') : '—'} → Em andamento
+                {f.cargo && <span className="ml-2 text-gray-400">· {f.cargo}</span>}
+              </div>
+            </div>
+            {/* Arquivados (mesma empresa, soft-deleted) */}
+            {arquivadosAnteriores.map((a: any) => (
+              <Link key={a.id} href={`/funcionarios/${a.id}?arquivado=1`} className="block hover:opacity-80">
+                <div className="p-3 rounded-lg border border-gray-200 bg-gray-50">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-xs font-bold text-gray-600">Vínculo arquivado</span>
+                    <div className="flex items-center gap-2 text-[10px] text-gray-500">
+                      {a.id_ponto && <span>ID: {a.id_ponto}</span>}
+                      {a.matricula && <span>Mat: {a.matricula}</span>}
+                    </div>
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {a.admissao ? new Date(a.admissao + 'T12:00').toLocaleDateString('pt-BR') : '—'}
+                    {' → '}
+                    {a.deleted_at ? new Date(a.deleted_at).toLocaleDateString('pt-BR') : '—'}
+                    {a.cargo && <span className="ml-2 text-gray-400">· {a.cargo}</span>}
+                  </div>
+                </div>
+              </Link>
+            ))}
+            {/* Vínculos externos (vinculos_funcionario) */}
+            {vinculosAnteriores.map((v: any) => (
+              <div key={v.id} className="p-3 rounded-lg border border-gray-200 bg-gray-50">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold text-gray-600">Vínculo anterior</span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  {v.admissao ? new Date(v.admissao + 'T12:00').toLocaleDateString('pt-BR') : '—'}
+                  {' → '}
+                  {v.demissao ? new Date(v.demissao + 'T12:00').toLocaleDateString('pt-BR') : '—'}
+                  {v.cargo && <span className="ml-2 text-gray-400">· {v.cargo}</span>}
+                </div>
+                {v.motivo_saida && <div className="text-[10px] text-gray-400 mt-1">Motivo: {v.motivo_saida}</div>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     ),
   }
 
