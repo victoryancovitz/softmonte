@@ -1,22 +1,28 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
-import { AlertTriangle, Users } from 'lucide-react'
+import { AlertTriangle, Search, Check, Users } from 'lucide-react'
+
+type Func = { id: string; nome: string; cargo: string | null; status: string | null; deleted_at: string | null }
+type AtivaMap = Record<string, { id: string; obra_nome: string; cargo_na_obra: string | null; data_inicio: string | null }[]>
 
 export default function NovaAlocacaoPage() {
-  const [funcionarios, setFuncionarios] = useState<any[]>([])
+  const [funcionarios, setFuncionarios] = useState<Func[]>([])
   const [obras, setObras] = useState<any[]>([])
-  const [outrasAlocacoes, setOutrasAlocacoes] = useState<any[]>([])
+  const [ativasMap, setAtivasMap] = useState<AtivaMap>({})
   const [incluirArquivados, setIncluirArquivados] = useState(false)
+  const [busca, setBusca] = useState('')
+  const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [form, setForm] = useState({
-    funcionario_id: '', obra_id: '', cargo_na_obra: '',
+    obra_id: '', cargo_na_obra: '',
     data_inicio: '', data_fim: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [resultados, setResultados] = useState<{ nome: string; ok: boolean; msg?: string }[] | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
@@ -24,7 +30,7 @@ export default function NovaAlocacaoPage() {
     let q = supabase.from('funcionarios').select('id,nome,cargo,status,deleted_at').order('nome')
     if (!incluirArquivados) q = q.is('deleted_at', null)
     const { data } = await q
-    setFuncionarios(data ?? [])
+    setFuncionarios((data as Func[]) ?? [])
   }
 
   useEffect(() => { loadFuncionarios() }, [incluirArquivados])
@@ -33,54 +39,105 @@ export default function NovaAlocacaoPage() {
       .then(({ data }) => setObras(data ?? []))
   }, [])
 
-  async function checkOutras(funcId: string) {
-    if (!funcId) { setOutrasAlocacoes([]); return }
-    const { data } = await supabase.from('alocacoes')
-      .select('id, obra_id, cargo_na_obra, data_inicio, obras(nome)')
-      .eq('funcionario_id', funcId)
+  // Carrega mapa de alocações ativas de todos funcionários visíveis (para badge "já alocado")
+  useEffect(() => {
+    if (funcionarios.length === 0) return
+    const ids = funcionarios.map(f => f.id)
+    supabase.from('alocacoes')
+      .select('id, funcionario_id, obra_id, cargo_na_obra, data_inicio, obras(nome)')
+      .in('funcionario_id', ids)
       .eq('ativo', true)
-    setOutrasAlocacoes(data ?? [])
+      .then(({ data }) => {
+        const map: AtivaMap = {}
+        ;(data ?? []).forEach((a: any) => {
+          const fid = a.funcionario_id
+          if (!map[fid]) map[fid] = []
+          map[fid].push({
+            id: a.id,
+            obra_nome: a.obras?.nome || '(obra)',
+            cargo_na_obra: a.cargo_na_obra,
+            data_inicio: a.data_inicio,
+          })
+        })
+        setAtivasMap(map)
+      })
+  }, [funcionarios])
+
+  const funcionariosFiltrados = useMemo(() => {
+    const s = busca.trim().toLowerCase()
+    if (!s) return funcionarios
+    return funcionarios.filter(f =>
+      f.nome.toLowerCase().includes(s) || (f.cargo || '').toLowerCase().includes(s)
+    )
+  }, [funcionarios, busca])
+
+  function toggle(id: string) {
+    setSelecionados(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
   }
 
-  function set(field: string, value: string) {
-    setForm(f => ({ ...f, [field]: value }))
-    if (field === 'funcionario_id') {
-      checkOutras(value)
-      if (value) {
-        const func = funcionarios.find((x: any) => x.id === value)
-        if (func) setForm(f => ({ ...f, funcionario_id: value, cargo_na_obra: func.cargo || '' }))
-      }
-    }
+  function selecionarTodosFiltrados() {
+    setSelecionados(prev => {
+      const next = new Set(prev)
+      funcionariosFiltrados.forEach(f => next.add(f.id))
+      return next
+    })
+  }
+
+  function limparSelecao() {
+    setSelecionados(new Set())
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setResultados(null)
 
+    if (selecionados.size === 0) {
+      setError('Selecione ao menos um funcionário.')
+      return
+    }
+    if (!form.obra_id) {
+      setError('Selecione uma obra.')
+      return
+    }
     if (form.data_fim && form.data_inicio && form.data_fim < form.data_inicio) {
       setError('A data de fim não pode ser anterior à data de início.')
       return
     }
 
-    // Se há outras alocações ativas, confirma antes de prosseguir
-    if (outrasAlocacoes.length > 0) {
-      const nomes = outrasAlocacoes.map((a: any) => a.obras?.nome || '(obra)').join(', ')
+    const selList = funcionarios.filter(f => selecionados.has(f.id))
+
+    // Conflitos: multi-alocação
+    const comOutras = selList.filter(f => (ativasMap[f.id]?.length ?? 0) > 0)
+    if (comOutras.length > 0) {
+      const detalhe = comOutras.map(f => {
+        const nomes = (ativasMap[f.id] || []).map(a => a.obra_nome).join(', ')
+        return `• ${f.nome} — em: ${nomes}`
+      }).join('\n')
       const ok = window.confirm(
-        `Este funcionário já tem ${outrasAlocacoes.length} alocação(ões) ativa(s) em: ${nomes}.\n\n` +
-        `A presença dele é controlada pelo ponto — ele não pode estar em dois lugares ao mesmo tempo, ` +
+        `${comOutras.length} funcionário(s) já têm alocação(ões) ativa(s):\n\n${detalhe}\n\n` +
+        `A presença é controlada pelo ponto — não podem estar em dois lugares ao mesmo tempo, ` +
         `então registre o ponto em apenas uma das obras por dia.\n\n` +
-        `Deseja criar esta alocação mesmo assim?`
+        `Deseja criar as alocações mesmo assim?`
       )
       if (!ok) return
     }
 
-    // Se o funcionário está arquivado, avisa (pode ser readmissão ou ajuste retroativo)
-    const func = funcionarios.find((f: any) => f.id === form.funcionario_id)
-    if (func?.deleted_at) {
+    // Conflitos: arquivados
+    const arquivados = selList.filter(f => f.deleted_at)
+    if (arquivados.length > 0) {
+      const detalhe = arquivados.map(f =>
+        `• ${f.nome} (desligado em ${new Date(f.deleted_at!).toLocaleDateString('pt-BR')})`
+      ).join('\n')
       const ok = window.confirm(
-        `ATENÇÃO: ${func.nome} está arquivado (desligado em ${new Date(func.deleted_at).toLocaleDateString('pt-BR')}).\n\n` +
-        `Use esta opção somente para:\n` +
-        `• Readmissão (reativar o funcionário no sistema)\n` +
+        `ATENÇÃO: ${arquivados.length} funcionário(s) arquivado(s):\n\n${detalhe}\n\n` +
+        `Use somente para:\n` +
+        `• Readmissão (reativar no sistema)\n` +
         `• Fechamento retroativo de ponto/folha\n\n` +
         `Deseja prosseguir?`
       )
@@ -89,6 +146,7 @@ export default function NovaAlocacaoPage() {
 
     setLoading(true)
 
+    // Valida obra ainda ativa
     const { data: freshObra } = await supabase.from('obras')
       .select('status, deleted_at').eq('id', form.obra_id).maybeSingle()
     if (!freshObra || (freshObra as any).deleted_at || (freshObra as any).status !== 'ativo') {
@@ -97,26 +155,42 @@ export default function NovaAlocacaoPage() {
       return
     }
 
-    const { error: insErr } = await supabase.from('alocacoes').insert({
-      funcionario_id: form.funcionario_id,
-      obra_id: form.obra_id,
-      cargo_na_obra: form.cargo_na_obra || null,
-      data_inicio: form.data_inicio || new Date().toISOString().slice(0, 10),
-      data_fim: form.data_fim || null,
-      ativo: true,
-    })
-    if (insErr) { setError(insErr.message); setLoading(false); return }
-
-    // Atualiza status para alocado APENAS se o funcionário não está arquivado
-    if (!func?.deleted_at) {
-      await supabase.from('funcionarios').update({ status: 'alocado' }).eq('id', form.funcionario_id)
+    // Cria uma alocação por funcionário selecionado
+    const res: { nome: string; ok: boolean; msg?: string }[] = []
+    for (const f of selList) {
+      const cargoFinal = form.cargo_na_obra || f.cargo || null
+      const { error: insErr } = await supabase.from('alocacoes').insert({
+        funcionario_id: f.id,
+        obra_id: form.obra_id,
+        cargo_na_obra: cargoFinal,
+        data_inicio: form.data_inicio || new Date().toISOString().slice(0, 10),
+        data_fim: form.data_fim || null,
+        ativo: true,
+      })
+      if (insErr) {
+        res.push({ nome: f.nome, ok: false, msg: insErr.message })
+        continue
+      }
+      // Atualiza status apenas se não arquivado
+      if (!f.deleted_at) {
+        await supabase.from('funcionarios').update({ status: 'alocado' }).eq('id', f.id)
+      }
+      res.push({ nome: f.nome, ok: true })
     }
 
-    router.push('/alocacao')
+    setLoading(false)
+    setResultados(res)
+
+    const todosOk = res.every(r => r.ok)
+    if (todosOk) {
+      setTimeout(() => router.push('/alocacao'), 800)
+    }
   }
 
+  const totalSel = selecionados.size
+
   return (
-    <div className="p-4 sm:p-6 max-w-2xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/alocacao" />
         <Link href="/alocacao" className="text-gray-400 hover:text-gray-600">Alocação</Link>
@@ -126,78 +200,129 @@ export default function NovaAlocacaoPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h1 className="text-lg font-bold font-display text-brand mb-1">Nova alocação</h1>
         <p className="text-xs text-gray-500 mb-5">
-          Um funcionário pode estar alocado em mais de uma obra — a presença é controlada pelo ponto diário.
+          Selecione um ou mais funcionários para alocar na mesma obra. A presença é controlada pelo ponto diário.
         </p>
 
         {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200">{error}</div>}
 
-        {outrasAlocacoes.length > 0 && (
-          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-            <div className="flex items-start gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <strong className="text-sm text-amber-800">
-                  Já tem {outrasAlocacoes.length} alocação{outrasAlocacoes.length > 1 ? 'ões' : ''} ativa{outrasAlocacoes.length > 1 ? 's' : ''}:
-                </strong>
-                <ul className="text-xs text-amber-700 mt-1 space-y-0.5">
-                  {outrasAlocacoes.map((a: any) => (
-                    <li key={a.id}>
-                      • {a.obras?.nome} {a.cargo_na_obra && `— ${a.cargo_na_obra}`}
-                      {a.data_inicio && ` (desde ${new Date(a.data_inicio + 'T12:00').toLocaleDateString('pt-BR')})`}
-                    </li>
-                  ))}
-                </ul>
-                <p className="text-[11px] text-amber-600 mt-2 italic">
-                  A multi-alocação é permitida mas a presença será rateada via ponto.
-                </p>
-              </div>
+        {resultados && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl">
+            <div className="text-sm font-semibold text-blue-800 mb-1">
+              Resultado: {resultados.filter(r => r.ok).length}/{resultados.length} criada(s)
             </div>
+            <ul className="text-xs text-blue-700 space-y-0.5">
+              {resultados.map((r, i) => (
+                <li key={i} className={r.ok ? '' : 'text-red-700'}>
+                  {r.ok ? '✓' : '✗'} {r.nome}{r.msg ? ` — ${r.msg}` : ''}
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="block text-sm font-semibold text-gray-700">Funcionário *</label>
-              <label className="flex items-center gap-1.5 text-[11px] text-gray-500 cursor-pointer">
-                <input type="checkbox" checked={incluirArquivados} onChange={e => setIncluirArquivados(e.target.checked)}
-                  className="rounded border-gray-300 text-brand w-3.5 h-3.5" />
-                Incluir arquivados
-              </label>
-            </div>
-            <select required value={form.funcionario_id} onChange={e => set('funcionario_id', e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
-              <option value="">Selecione o funcionário...</option>
-              {funcionarios.map((f: any) => (
-                <option key={f.id} value={f.id}>
-                  {f.nome} — {f.cargo || 's/ cargo'}
-                  {f.deleted_at ? ' [ARQUIVADO]' : f.status === 'alocado' ? ' (alocado)' : ''}
-                </option>
-              ))}
-            </select>
-            {incluirArquivados && (
-              <p className="text-[11px] text-amber-600 mt-1">⚠ Arquivados só para readmissão ou fechamento retroativo.</p>
-            )}
-          </div>
-
+          {/* Obra */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Obra *</label>
-            <select required value={form.obra_id} onChange={e => set('obra_id', e.target.value)}
+            <select required value={form.obra_id} onChange={e => setForm(f => ({ ...f, obra_id: e.target.value }))}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
               <option value="">Selecione a obra...</option>
               {obras.map((o: any) => <option key={o.id} value={o.id}>{o.nome} — {o.cliente}</option>)}
             </select>
           </div>
 
+          {/* Funcionários — multi-select */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                <Users className="w-4 h-4" />
+                Funcionários * {totalSel > 0 && <span className="text-brand">({totalSel} selecionado{totalSel > 1 ? 's' : ''})</span>}
+              </label>
+              <label className="flex items-center gap-1.5 text-[11px] text-gray-500 cursor-pointer">
+                <input type="checkbox" checked={incluirArquivados} onChange={e => setIncluirArquivados(e.target.checked)}
+                  className="rounded border-gray-300 text-brand w-3.5 h-3.5" />
+                Incluir arquivados
+              </label>
+            </div>
+
+            <div className="relative mb-2">
+              <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input type="text" value={busca} onChange={e => setBusca(e.target.value)}
+                placeholder="Buscar por nome ou cargo..."
+                className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+            </div>
+
+            <div className="flex items-center justify-between mb-2 text-[11px]">
+              <div className="text-gray-500">
+                {funcionariosFiltrados.length} funcionário(s) {busca && 'encontrado(s)'}
+              </div>
+              <div className="flex gap-2">
+                <button type="button" onClick={selecionarTodosFiltrados}
+                  className="text-brand font-semibold hover:underline">Selecionar todos</button>
+                {totalSel > 0 && (
+                  <button type="button" onClick={limparSelecao}
+                    className="text-gray-500 hover:underline">Limpar ({totalSel})</button>
+                )}
+              </div>
+            </div>
+
+            <div className="border border-gray-200 rounded-xl max-h-80 overflow-y-auto divide-y divide-gray-100">
+              {funcionariosFiltrados.length === 0 && (
+                <div className="p-4 text-center text-sm text-gray-400">Nenhum funcionário encontrado</div>
+              )}
+              {funcionariosFiltrados.map(f => {
+                const sel = selecionados.has(f.id)
+                const ativas = ativasMap[f.id] || []
+                return (
+                  <label key={f.id}
+                    className={`flex items-start gap-3 p-3 cursor-pointer hover:bg-gray-50 ${sel ? 'bg-brand/5' : ''}`}>
+                    <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center ${
+                      sel ? 'bg-brand border-brand' : 'border-gray-300 bg-white'
+                    }`}>
+                      {sel && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <input type="checkbox" checked={sel} onChange={() => toggle(f.id)} className="sr-only" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-gray-900">{f.nome}</span>
+                        <span className="text-xs text-gray-500">{f.cargo || 's/ cargo'}</span>
+                        {f.deleted_at && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-semibold">ARQUIVADO</span>
+                        )}
+                        {ativas.length > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-semibold inline-flex items-center gap-1">
+                            <AlertTriangle className="w-2.5 h-2.5" />
+                            {ativas.length} alocação{ativas.length > 1 ? 'ões' : ''}
+                          </span>
+                        )}
+                      </div>
+                      {ativas.length > 0 && (
+                        <div className="text-[11px] text-amber-700 mt-0.5 truncate">
+                          em: {ativas.map(a => a.obra_nome).join(', ')}
+                        </div>
+                      )}
+                    </div>
+                  </label>
+                )
+              })}
+            </div>
+            {incluirArquivados && (
+              <p className="text-[11px] text-amber-600 mt-1">⚠ Arquivados só para readmissão ou fechamento retroativo.</p>
+            )}
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">Cargo na obra</label>
-              <input type="text" value={form.cargo_na_obra} onChange={e => set('cargo_na_obra', e.target.value)}
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Cargo na obra <span className="text-gray-400 font-normal">(opcional)</span>
+              </label>
+              <input type="text" value={form.cargo_na_obra} onChange={e => setForm(f => ({ ...f, cargo_na_obra: e.target.value }))}
+                placeholder="Usa o cargo do funcionário se vazio"
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Data de início</label>
-              <input type="date" value={form.data_inicio} onChange={e => set('data_inicio', e.target.value)}
+              <input type="date" value={form.data_inicio} onChange={e => setForm(f => ({ ...f, data_inicio: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
             </div>
           </div>
@@ -206,15 +331,15 @@ export default function NovaAlocacaoPage() {
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">
               Data prevista de fim <span className="text-gray-400 font-normal">(opcional)</span>
             </label>
-            <input type="date" value={form.data_fim} onChange={e => set('data_fim', e.target.value)}
+            <input type="date" value={form.data_fim} onChange={e => setForm(f => ({ ...f, data_fim: e.target.value }))}
               min={form.data_inicio}
               className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
           </div>
 
           <div className="flex gap-3 pt-2">
-            <button type="submit" disabled={loading}
+            <button type="submit" disabled={loading || totalSel === 0}
               className="px-6 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50">
-              {loading ? 'Salvando...' : 'Salvar alocação'}
+              {loading ? 'Salvando...' : totalSel > 1 ? `Criar ${totalSel} alocações` : 'Salvar alocação'}
             </button>
             <Link href="/alocacao" className="px-6 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</Link>
           </div>
