@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
-import { AlertTriangle, Search, Check, Users } from 'lucide-react'
+import { Search, Check, Users } from 'lucide-react'
 
 type Func = { id: string; nome: string; cargo: string | null; status: string | null; deleted_at: string | null }
 type AtivaMap = Record<string, { id: string; obra_nome: string; cargo_na_obra: string | null; data_inicio: string | null }[]>
@@ -17,8 +17,7 @@ export default function NovaAlocacaoPage() {
   const [busca, setBusca] = useState('')
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [form, setForm] = useState({
-    obra_id: '', cargo_na_obra: '',
-    data_inicio: '', data_fim: '',
+    obra_id: '', data_inicio: '', data_fim: '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -112,22 +111,6 @@ export default function NovaAlocacaoPage() {
 
     const selList = funcionarios.filter(f => selecionados.has(f.id))
 
-    // Conflitos: multi-alocação
-    const comOutras = selList.filter(f => (ativasMap[f.id]?.length ?? 0) > 0)
-    if (comOutras.length > 0) {
-      const detalhe = comOutras.map(f => {
-        const nomes = (ativasMap[f.id] || []).map(a => a.obra_nome).join(', ')
-        return `• ${f.nome} — em: ${nomes}`
-      }).join('\n')
-      const ok = window.confirm(
-        `${comOutras.length} funcionário(s) já têm alocação(ões) ativa(s):\n\n${detalhe}\n\n` +
-        `A presença é controlada pelo ponto — não podem estar em dois lugares ao mesmo tempo, ` +
-        `então registre o ponto em apenas uma das obras por dia.\n\n` +
-        `Deseja criar as alocações mesmo assim?`
-      )
-      if (!ok) return
-    }
-
     // Conflitos: arquivados
     const arquivados = selList.filter(f => f.deleted_at)
     if (arquivados.length > 0) {
@@ -158,11 +141,10 @@ export default function NovaAlocacaoPage() {
     // Cria uma alocação por funcionário selecionado
     const res: { nome: string; ok: boolean; msg?: string }[] = []
     for (const f of selList) {
-      const cargoFinal = form.cargo_na_obra || f.cargo || null
       const { error: insErr } = await supabase.from('alocacoes').insert({
         funcionario_id: f.id,
         obra_id: form.obra_id,
-        cargo_na_obra: cargoFinal,
+        cargo_na_obra: f.cargo || null,
         data_inicio: form.data_inicio || new Date().toISOString().slice(0, 10),
         data_fim: form.data_fim || null,
         ativo: true,
@@ -200,7 +182,7 @@ export default function NovaAlocacaoPage() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h1 className="text-lg font-bold font-display text-brand mb-1">Nova alocação</h1>
         <p className="text-xs text-gray-500 mb-5">
-          Selecione um ou mais funcionários para alocar na mesma obra. A presença é controlada pelo ponto diário.
+          Selecione um ou mais funcionários para alocar na mesma obra. A presença efetiva do dia é definida pelo ponto do colaborador.
         </p>
 
         {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200">{error}</div>}
@@ -290,14 +272,13 @@ export default function NovaAlocacaoPage() {
                           <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-semibold">ARQUIVADO</span>
                         )}
                         {ativas.length > 0 && (
-                          <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-semibold inline-flex items-center gap-1">
-                            <AlertTriangle className="w-2.5 h-2.5" />
+                          <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-semibold">
                             {ativas.length} alocação{ativas.length > 1 ? 'ões' : ''}
                           </span>
                         )}
                       </div>
                       {ativas.length > 0 && (
-                        <div className="text-[11px] text-amber-700 mt-0.5 truncate">
+                        <div className="text-[11px] text-gray-500 mt-0.5 truncate">
                           em: {ativas.map(a => a.obra_nome).join(', ')}
                         </div>
                       )}
@@ -313,27 +294,18 @@ export default function NovaAlocacaoPage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                Cargo na obra <span className="text-gray-400 font-normal">(opcional)</span>
-              </label>
-              <input type="text" value={form.cargo_na_obra} onChange={e => setForm(f => ({ ...f, cargo_na_obra: e.target.value }))}
-                placeholder="Usa o cargo do funcionário se vazio"
-                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
-            </div>
-            <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1.5">Data de início</label>
               <input type="date" value={form.data_inicio} onChange={e => setForm(f => ({ ...f, data_inicio: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-              Data prevista de fim <span className="text-gray-400 font-normal">(opcional)</span>
-            </label>
-            <input type="date" value={form.data_fim} onChange={e => setForm(f => ({ ...f, data_fim: e.target.value }))}
-              min={form.data_inicio}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Data prevista de fim <span className="text-gray-400 font-normal">(opcional)</span>
+              </label>
+              <input type="date" value={form.data_fim} onChange={e => setForm(f => ({ ...f, data_fim: e.target.value }))}
+                min={form.data_inicio}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+            </div>
           </div>
 
           <div className="flex gap-3 pt-2">
