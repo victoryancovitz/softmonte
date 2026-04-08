@@ -138,7 +138,8 @@ export default async function FuncionarioPage({ params }: { params: { id: string
 
   const prazo1Badge = prazoBadge(f.prazo1)
   const prazo2Badge = prazoBadge(f.prazo2)
-  const alocacaoAtiva = alocacoes?.find((a: any) => a.ativo)
+  const alocacoesAtivas = (alocacoes ?? []).filter((a: any) => a.ativo)
+  const alocacaoAtiva = alocacoesAtivas[0]
   const diasTrabalhados30 = efetivo30?.length ?? 0
   const iniciais = (f.nome_guerra || f.nome).split(' ').slice(0, 2).map((p: string) => p[0]).join('').toUpperCase()
 
@@ -588,10 +589,16 @@ export default async function FuncionarioPage({ params }: { params: { id: string
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>
                 {(f.status || '').toUpperCase()}
               </span>
-              {alocacaoAtiva && (
-                <Link href={`/obras/${alocacaoAtiva.obra_id}`} className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700 hover:bg-blue-200">
-                  {alocacaoAtiva.obras?.nome}
+              {alocacoesAtivas.map((a: any) => (
+                <Link key={a.id} href={`/obras/${a.obra_id}`}
+                  className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700 hover:bg-blue-200">
+                  {a.obras?.nome}
                 </Link>
+              ))}
+              {alocacoesAtivas.length > 1 && (
+                <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700" title="Funcionário em múltiplas obras — presença controlada pelo ponto">
+                  ⚡ MULTI ({alocacoesAtivas.length})
+                </span>
               )}
               {f.nao_renovar && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">⚠ NÃO RENOVAR</span>}
               {isArquivado && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-gray-100 text-gray-500">📁 ARQUIVADO</span>}

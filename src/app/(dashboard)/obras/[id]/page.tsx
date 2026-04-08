@@ -89,6 +89,22 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
   const ativosIds = new Set((alocados ?? []).map((a: any) => a.funcionarios?.id).filter(Boolean))
   const desligados = Object.values(funcsComPontoMap).filter((f: any) => !ativosIds.has(f.id))
 
+  // Detecta funcionários com multi-alocação (alocados também em OUTRAS obras ativas)
+  const funcIdsAlocados = Array.from(ativosIds)
+  let multiMap: Record<string, { obra_id: string; obra_nome: string }[]> = {}
+  if (funcIdsAlocados.length > 0) {
+    const { data: outras } = await supabase
+      .from('alocacoes')
+      .select('funcionario_id, obra_id, obras(nome)')
+      .in('funcionario_id', funcIdsAlocados)
+      .eq('ativo', true)
+      .neq('obra_id', params.id)
+    ;(outras ?? []).forEach((r: any) => {
+      if (!multiMap[r.funcionario_id]) multiMap[r.funcionario_id] = []
+      multiMap[r.funcionario_id].push({ obra_id: r.obra_id, obra_nome: r.obras?.nome || '' })
+    })
+  }
+
   // Fetch documentos for allocated funcionarios
   const funcIds = Array.from(ativosIds)
   const { data: documentos } = funcIds.length > 0
@@ -310,6 +326,12 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
                             <span key={i} className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${b.cls}`} title={b.title}>{b.label}</span>
                           ))
                         })()}
+                        {multiMap[f?.id]?.length > 0 && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700"
+                                title={`Também alocado em: ${multiMap[f?.id].map(m => m.obra_nome).join(', ')}`}>
+                            ⚡ Multi ({multiMap[f?.id].length + 1})
+                          </span>
+                        )}
                         <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded font-semibold">Ativo</span>
                       </div>
                     </Link>
