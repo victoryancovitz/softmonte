@@ -58,15 +58,17 @@ export default async function DashboardPage() {
   let absenteismoAlto: any[] = []
   let habitualidade: any[] = []
   if (isFinanceiro) {
-    const [{ data: fin }, { data: contas }] = await Promise.all([
-      supabase.from('financeiro_lancamentos').select('tipo,status,valor').is('deleted_at', null).gte('data_competencia', mesInicio),
+    const anoAtual = hoje.getFullYear()
+    const mesAtual = hoje.getMonth() + 1
+    // Usa view pré-agregada em vez de carregar 5k lançamentos no client
+    const [{ data: resumo }, { data: contas }] = await Promise.all([
+      supabase.from('vw_financeiro_resumo_mensal').select('*').eq('ano', anoAtual).eq('mes', mesAtual),
       supabase.from('vw_contas_saldo').select('saldo_atual'),
     ])
-    ;(fin ?? []).forEach((r: any) => {
-      const v = Number(r.valor) || 0
-      if (r.tipo === 'receita' && r.status === 'pago') finReceita += v
-      if (r.tipo === 'despesa' && r.status === 'pago') finDespesa += v
-      if (r.status === 'em_aberto') finAberto += v
+    ;(resumo ?? []).forEach((r: any) => {
+      finReceita += Number(r.receita_paga || 0)
+      finDespesa += Number(r.despesa_paga || 0)
+      finAberto  += Number(r.receita_aberta || 0) + Number(r.despesa_aberta || 0)
     })
     saldoContas = (contas ?? []).reduce((s: number, c: any) => s + Number(c.saldo_atual ?? 0), 0)
   }

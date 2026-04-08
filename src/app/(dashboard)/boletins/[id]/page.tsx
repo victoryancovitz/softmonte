@@ -7,26 +7,13 @@ import ConfirmButton from '@/components/ConfirmButton'
 import { useToast } from '@/components/Toast'
 import BackButton from '@/components/BackButton'
 import EntityDocumentos from '@/components/EntityDocumentos'
-
-const TIPOS_DOC_BM = [
-  { value: 'nf', label: 'Nota Fiscal' },
-  { value: 'medicao_assinada', label: 'Medição Assinada' },
-  { value: 'comprovante', label: 'Comprovante' },
-  { value: 'outro', label: 'Outro' },
-]
-
-const STATUS_BADGE: Record<string, string> = {
-  aberto: 'bg-blue-100 text-blue-700',
-  fechado: 'bg-gray-100 text-gray-600',
-  enviado: 'bg-amber-100 text-amber-700',
-  aprovado: 'bg-green-100 text-green-700',
-}
-const TIPO_HORA_LABEL: Record<string, string> = {
-  normal: 'Hora Normal', extra_70: 'HE 70%', extra_100: 'HE 100%',
-}
-const TIPO_HORA_COLOR: Record<string, string> = {
-  normal: 'text-blue-700 bg-blue-50', extra_70: 'text-amber-700 bg-amber-50', extra_100: 'text-red-700 bg-red-50',
-}
+import {
+  TIPOS_DOC_BM,
+  BM_STATUS_BADGE as STATUS_BADGE,
+  BM_STATUS_ORDER,
+  BM_TIPO_HORA_LABEL as TIPO_HORA_LABEL,
+  BM_TIPO_HORA_COLOR as TIPO_HORA_COLOR,
+} from '@/lib/bm-constants'
 
 export default function BMDetailPage({ params }: { params: { id: string } }) {
   const [bm, setBm] = useState<any>(null)
@@ -49,7 +36,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
   const toast = useToast()
 
-  const STATUS_ORDER = ['aberto','fechado','enviado','aprovado']
+  const STATUS_ORDER = BM_STATUS_ORDER
 
   useEffect(() => { loadBM() }, [params.id])
 

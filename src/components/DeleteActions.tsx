@@ -1,4 +1,21 @@
 'use client'
+/**
+ * Padrão unificado de confirmação de delete (ver task #88).
+ *
+ * 1. **Crítico com dependências** → use `DeleteEntityButton` com `impactEntity`
+ *    (ou diretamente `ImpactConfirmDialog`). Lista impactos em outras tabelas
+ *    e exige digitação de "EXCLUIR" quando há dado crítico. Usado em:
+ *    - Excluir obra, cliente, funcionário (editar)
+ *    - Desativar funcionário (DesativarFuncionarioBtn abaixo)
+ *    - Excluir BM (ExcluirBMBtn abaixo)
+ *    - Editar/excluir função (cadastros/funcoes)
+ *
+ * 2. **Trivial inline** → use `InlineConfirm` interno. Click em "X", aparece
+ *    "Confirmar? / Não". Rápido, sem modal. Usado em linhas de tabela:
+ *    - ExcluirHHBtn, ExcluirDocBtn, ExcluirFinanceiroBtn, EncerrarAlocacaoBtn
+ *
+ * Não criar novas variantes. Se precisar de um terceiro padrão, reabra #88.
+ */
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
