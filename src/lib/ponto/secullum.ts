@@ -210,7 +210,6 @@ export async function listarBatidas(
 
 /**
  * GET /Funcionarios — por PIS ou CPF (um dos dois obrigatório).
- * Sem filtro retorna vazio, então o caller deve iterar por lista conhecida.
  */
 export async function listarFuncionarios(
   session: SecullumSession,
@@ -225,6 +224,17 @@ export async function listarFuncionarios(
     throw new SecullumError('listarFuncionarios requer pis ou cpf')
   }
   const data = await apiPontoWeb<SecullumFuncionario[]>(session, path)
+  return Array.isArray(data) ? data : []
+}
+
+/**
+ * GET /Funcionarios (sem filtros) — retorna a lista completa de funcionários
+ * do banco selecionado. Confirmado na doc oficial (pg 26).
+ */
+export async function listarTodosFuncionarios(
+  session: SecullumSession,
+): Promise<SecullumFuncionario[]> {
+  const data = await apiPontoWeb<SecullumFuncionario[]>(session, '/Funcionarios')
   return Array.isArray(data) ? data : []
 }
 

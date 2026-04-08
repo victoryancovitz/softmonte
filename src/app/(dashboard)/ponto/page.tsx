@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import PontoCellEditor from '@/components/PontoCellEditor'
 import PontoImportModal from '@/components/PontoImportModal'
 import PontoDiaRapidoModal from '@/components/PontoDiaRapidoModal'
+import SecullumSyncPanel from '@/components/SecullumSyncPanel'
 import { useToast } from '@/components/Toast'
 
 function getDaysInMonth(month: number, year: number): number {
@@ -307,6 +308,9 @@ export default function PontoPage() {
           </div>
         )}
       </div>
+
+      {/* Painel Secullum (admin/rh) */}
+      {(isAdmin || role === 'rh') && <SecullumSyncPanel obraId={obraId || undefined} />}
 
       {/* Banner de fechamento */}
       {obraId && pontoFechado && (

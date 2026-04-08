@@ -4,9 +4,14 @@
  * Sincroniza batidas brutas do cartão de ponto da API Secullum Ponto Web
  * para a tabela public.ponto_marcacoes.
  *
- * Body JSON: { dataInicio: "YYYY-MM-DD", dataFim: "YYYY-MM-DD" }
+ * Body JSON: {
+ *   dataInicio: "YYYY-MM-DD",
+ *   dataFim: "YYYY-MM-DD",
+ *   empresaDocumento?: string,  // CNPJ/CPF pra filtrar por empresa específica
+ *   trigger?: 'manual' | 'cron' | 'debug'
+ * }
  *
- * Requer role: admin | rh
+ * Auth: admin | rh | CRON_SECRET header
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase-server'
@@ -25,8 +30,7 @@ function onlyDigits(s: string | null | undefined): string {
   return (s || '').replace(/\D/g, '')
 }
 
-/** Extrai data (yyyy-MM-dd) e hora (HH:mm) de uma batida, lidando com os múltiplos
- *  formatos que a API pode retornar (dataHora combinada ou data+hora separados). */
+/** Extrai data e hora lidando com os múltiplos formatos possíveis da API */
 function parseBatida(b: SecullumBatida): { data: string; hora: string } | null {
   if (b.data && b.hora) {
     return {
@@ -47,18 +51,44 @@ function parseBatida(b: SecullumBatida): { data: string; hora: string } | null {
   return null
 }
 
-export async function POST(req: NextRequest) {
-  const roleErr = await requireRoleApi(['admin', 'rh'])
-  if (roleErr) return roleErr
+/** Extrai FonteDados.Tipo e FonteDados.Origem, lidando com variações de casing */
+function parseFonteDados(b: SecullumBatida): { tipo: number | null; origem: number | null } {
+  const fd = (b as any).FonteDados ?? (b as any).fonteDados ?? null
+  if (!fd) return { tipo: null, origem: null }
+  const tipo = fd.Tipo ?? fd.tipo ?? null
+  const origem = fd.Origem ?? fd.origem ?? null
+  return {
+    tipo: typeof tipo === 'number' ? tipo : null,
+    origem: typeof origem === 'number' ? origem : null,
+  }
+}
 
-  let body: { dataInicio?: string; dataFim?: string }
+export async function POST(req: NextRequest) {
+  // Permite chamada via cron usando CRON_SECRET header OU via role admin/rh
+  const cronSecret = req.headers.get('x-cron-secret')
+  const expectedCron = process.env.CRON_SECRET
+  const isCron = !!(expectedCron && cronSecret === expectedCron)
+
+  if (!isCron) {
+    const roleErr = await requireRoleApi(['admin', 'rh'])
+    if (roleErr) return roleErr
+  }
+
+  let body: {
+    dataInicio?: string
+    dataFim?: string
+    empresaDocumento?: string
+    trigger?: string
+  }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Body JSON inválido' }, { status: 400 })
   }
 
-  const { dataInicio, dataFim } = body
+  const { dataInicio, dataFim, empresaDocumento } = body
+  const trigger = body.trigger || (isCron ? 'cron' : 'manual')
+
   if (!dataInicio || !dataFim || !/^\d{4}-\d{2}-\d{2}$/.test(dataInicio) || !/^\d{4}-\d{2}-\d{2}$/.test(dataFim)) {
     return NextResponse.json(
       { error: 'dataInicio e dataFim são obrigatórios no formato YYYY-MM-DD' },
@@ -71,6 +101,27 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServerClient()
 
+  // Captura user atual (pode ser null em cron)
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // Cria registro de sync_log inicial
+  const { data: logRow } = await supabase.from('ponto_sync_log').insert({
+    periodo_inicio: dataInicio,
+    periodo_fim: dataFim,
+    trigger,
+    status: 'running',
+    triggered_by: user?.id ?? null,
+  }).select().single()
+  const logId = logRow?.id as string | undefined
+
+  async function finishLog(patch: Record<string, any>) {
+    if (!logId) return
+    await supabase.from('ponto_sync_log').update({
+      ...patch,
+      finished_at: new Date().toISOString(),
+    }).eq('id', logId)
+  }
+
   // 1. Autentica no Secullum
   let session
   try {
@@ -78,21 +129,24 @@ export async function POST(req: NextRequest) {
   } catch (e: any) {
     const msg = e?.message || 'Erro autenticando no Secullum'
     console.error('[sync-secullum] auth error:', msg)
+    await finishLog({ status: 'error', erro: msg })
     return NextResponse.json({ error: msg }, { status: 502 })
   }
 
   // 2. Busca batidas do período
   let batidas: SecullumBatida[]
   try {
-    batidas = await listarBatidas(session, { dataInicio, dataFim })
+    batidas = await listarBatidas(session, { dataInicio, dataFim, empresaDocumento })
   } catch (e: any) {
     const status = e instanceof SecullumError ? e.status || 502 : 502
     const msg = e?.message || 'Erro buscando batidas na Secullum'
     console.error('[sync-secullum] listarBatidas error:', msg)
+    await finishLog({ status: 'error', erro: msg })
     return NextResponse.json({ error: msg }, { status })
   }
 
   if (batidas.length === 0) {
+    await finishLog({ status: 'ok', total_batidas: 0, novas: 0, ignoradas: 0, sem_match: 0 })
     return NextResponse.json({
       ok: true,
       periodo: { dataInicio, dataFim },
@@ -101,22 +155,19 @@ export async function POST(req: NextRequest) {
       ignoradas: 0,
       sem_match: 0,
       mensagem: 'Nenhuma batida retornada pela Secullum no período',
+      banco_secullum: session.bancoNome,
     })
   }
 
   // 3. Mapeia CPFs/PIS da Secullum → funcionario_id do Softmonte
   const cpfs = Array.from(
     new Set(
-      batidas
-        .map(b => onlyDigits(b.funcionarioCpf || (b as any).cpf))
-        .filter(Boolean),
+      batidas.map(b => onlyDigits(b.funcionarioCpf || (b as any).cpf)).filter(Boolean),
     ),
   )
   const pisList = Array.from(
     new Set(
-      batidas
-        .map(b => onlyDigits(b.funcionarioPis || (b as any).pis))
-        .filter(Boolean),
+      batidas.map(b => onlyDigits(b.funcionarioPis || (b as any).pis)).filter(Boolean),
     ),
   )
 
@@ -145,12 +196,13 @@ export async function POST(req: NextRequest) {
     origem: string
     origem_id: string | null
     payload_cru: any
+    fonte_tipo: number | null
+    fonte_origem: number | null
   }
   const rows: Row[] = []
-  const semMatch: string[] = []
+  const semMatchSet = new Set<string>()
   let ignoradas = 0
 
-  // Contador por (funcionario_id, data, hora) pra calcular sequencia
   const seqMap = new Map<string, number>()
 
   for (const b of batidas) {
@@ -164,7 +216,7 @@ export async function POST(req: NextRequest) {
     const funcId = (cpf && cpfToFuncId.get(cpf)) || (pis && pisToFuncId.get(pis)) || null
 
     if (!funcId) {
-      semMatch.push(b.funcionarioNome || cpf || pis || '(sem id)')
+      semMatchSet.add(b.funcionarioNome || cpf || pis || '(sem id)')
       continue
     }
 
@@ -172,6 +224,7 @@ export async function POST(req: NextRequest) {
     const seq = (seqMap.get(key) || 0) + 1
     seqMap.set(key, seq)
 
+    const { tipo, origem: fonteOrigem } = parseFonteDados(b)
     rows.push({
       funcionario_id: funcId,
       data: parsed.data,
@@ -180,10 +233,12 @@ export async function POST(req: NextRequest) {
       origem: 'secullum_api',
       origem_id: b.id != null ? String(b.id) : null,
       payload_cru: b,
+      fonte_tipo: tipo,
+      fonte_origem: fonteOrigem,
     })
   }
 
-  // 5. Upsert em lotes (pra evitar payloads muito grandes)
+  // 5. Upsert em lotes
   const BATCH = 500
   let inseridas = 0
   const erros: string[] = []
@@ -204,6 +259,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  const semMatch = Array.from(semMatchSet)
+  const finalStatus = erros.length === 0 ? 'ok' : 'error'
+  await finishLog({
+    status: finalStatus,
+    total_batidas: batidas.length,
+    novas: inseridas,
+    ignoradas,
+    sem_match: semMatch.length,
+    erro: erros.length > 0 ? erros.join('; ') : null,
+  })
+
   return NextResponse.json({
     ok: erros.length === 0,
     periodo: { dataInicio, dataFim },
@@ -211,8 +277,9 @@ export async function POST(req: NextRequest) {
     novas: inseridas,
     ignoradas,
     sem_match: semMatch.length,
-    funcionarios_sem_match: semMatch.slice(0, 20), // amostra pra debug
+    funcionarios_sem_match: semMatch.slice(0, 20),
     erros,
     banco_secullum: session.bancoNome,
+    log_id: logId,
   })
 }
