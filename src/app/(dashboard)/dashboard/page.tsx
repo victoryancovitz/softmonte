@@ -54,6 +54,8 @@ export default async function DashboardPage() {
   // Dados financeiros (apenas para admin/financeiro)
   let finReceita = 0, finDespesa = 0, finAberto = 0, saldoContas = 0
   let admissoesAndamento = 0, desligamentosAndamento = 0, docsVencidos = 0, nrVencendo = 0
+  let absenteismoCriticos: any[] = []
+  let absenteismoAlto: any[] = []
   if (isFinanceiro) {
     const [{ data: fin }, { data: contas }] = await Promise.all([
       supabase.from('financeiro_lancamentos').select('tipo,status,valor').is('deleted_at', null).gte('data_competencia', mesInicio),
@@ -68,14 +70,18 @@ export default async function DashboardPage() {
     saldoContas = (contas ?? []).reduce((s: number, c: any) => s + Number(c.saldo_atual ?? 0), 0)
   }
   if (isRh) {
-    const [{ count: adm }, { count: des }, { count: dv }] = await Promise.all([
+    const [{ count: adm }, { count: des }, { count: dv }, { data: absData }] = await Promise.all([
       supabase.from('admissoes_workflow').select('id', { count: 'exact', head: true }).eq('status', 'em_andamento'),
       supabase.from('desligamentos_workflow').select('id', { count: 'exact', head: true }).eq('status', 'em_andamento'),
       supabase.from('documentos').select('id', { count: 'exact', head: true }).lte('vencimento', hojeStr).is('deleted_at', null),
+      supabase.from('vw_absenteismo').select('funcionario_id,nome,cargo,obra,taxa_falta_pct,taxa_injustificada_pct,total_faltas,faltas_injustificadas,ano,mes')
+        .eq('ano', hoje.getFullYear()).eq('mes', hoje.getMonth() + 1),
     ])
     admissoesAndamento = adm ?? 0
     desligamentosAndamento = des ?? 0
     docsVencidos = dv ?? 0
+    absenteismoCriticos = (absData || []).filter((r: any) => Number(r.taxa_falta_pct) >= 15)
+    absenteismoAlto = (absData || []).filter((r: any) => Number(r.taxa_falta_pct) >= 8 && Number(r.taxa_falta_pct) < 15)
   }
   const fmtR = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -125,7 +131,7 @@ export default async function DashboardPage() {
     <div className="p-4 sm:p-6 lg:p-8 max-w-[1200px] mx-auto">
 
       {/* ── HEADER ── */}
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold font-display text-brand tracking-tight">
           {greeting}, {firstName}
         </h1>
@@ -133,6 +139,74 @@ export default async function DashboardPage() {
           {hojeFormatted} &middot; {nObras} obra{nObras !== 1 ? 's' : ''} ativa{nObras !== 1 ? 's' : ''} &middot; {nAlertas} alerta{nAlertas !== 1 ? 's' : ''}
         </p>
       </div>
+
+      {/* ── ALERTA RH: Absenteísmo crítico ── */}
+      {isRh && (absenteismoCriticos.length > 0 || absenteismoAlto.length > 0) && (
+        <div className={`mb-6 rounded-xl border p-4 ${
+          absenteismoCriticos.length > 0 ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'
+        }`}>
+          <div className="flex items-start gap-3">
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
+              absenteismoCriticos.length > 0 ? 'bg-red-100' : 'bg-amber-100'
+            }`}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={absenteismoCriticos.length > 0 ? '#dc2626' : '#d97706'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className={`text-sm font-bold ${absenteismoCriticos.length > 0 ? 'text-red-800' : 'text-amber-800'}`}>
+                {absenteismoCriticos.length > 0
+                  ? `Atenção RH: ${absenteismoCriticos.length} funcionário${absenteismoCriticos.length > 1 ? 's' : ''} com absenteísmo crítico este mês (≥15%)`
+                  : `${absenteismoAlto.length} funcionário${absenteismoAlto.length > 1 ? 's' : ''} com absenteísmo alto este mês (≥8%)`
+                }
+              </h3>
+              <div className="mt-2 space-y-1">
+                {absenteismoCriticos.slice(0, 3).map((r: any) => (
+                  <div key={r.funcionario_id} className="flex items-center justify-between text-xs">
+                    <Link href={`/funcionarios/${r.funcionario_id}`} className="text-red-700 font-semibold hover:underline truncate max-w-xs">
+                      {r.nome}
+                    </Link>
+                    <span className="text-red-600">
+                      {r.cargo} · {Number(r.taxa_falta_pct).toFixed(1)}% ({r.total_faltas} faltas)
+                    </span>
+                  </div>
+                ))}
+                {absenteismoCriticos.length === 0 && absenteismoAlto.slice(0, 3).map((r: any) => (
+                  <div key={r.funcionario_id} className="flex items-center justify-between text-xs">
+                    <Link href={`/funcionarios/${r.funcionario_id}`} className="text-amber-700 font-semibold hover:underline truncate max-w-xs">
+                      {r.nome}
+                    </Link>
+                    <span className="text-amber-600">
+                      {r.cargo} · {Number(r.taxa_falta_pct).toFixed(1)}% ({r.total_faltas} faltas)
+                    </span>
+                  </div>
+                ))}
+                {absenteismoCriticos.length > 3 && (
+                  <div className="text-xs text-red-600 italic">
+                    + {absenteismoCriticos.length - 3} outros...
+                  </div>
+                )}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Link href="/relatorios/absenteismo"
+                  className={`text-xs font-bold px-3 py-1.5 rounded-lg ${
+                    absenteismoCriticos.length > 0
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-amber-600 text-white hover:bg-amber-700'
+                  }`}>
+                  Ver ranking completo →
+                </Link>
+                <Link href="/faltas"
+                  className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50">
+                  Ver faltas
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── KPIs OPERACIONAIS ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-4">

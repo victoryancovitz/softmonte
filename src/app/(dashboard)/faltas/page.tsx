@@ -44,9 +44,14 @@ export default async function FaltasPage() {
           <h1 className="text-xl font-bold font-display text-brand">Faltas &amp; Atestados</h1>
           <p className="text-sm text-gray-500 mt-0.5">{rows.length} registro(s) total</p>
         </div>
-        <Link href="/faltas/nova" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark">
-          + Registrar
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/relatorios/absenteismo" className="px-4 py-2 border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50">
+            Ver índice de absenteísmo →
+          </Link>
+          <Link href="/faltas/nova" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark">
+            + Registrar
+          </Link>
+        </div>
       </div>
 
       {/* KPIs */}

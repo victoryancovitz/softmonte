@@ -38,14 +38,14 @@ interface NavGroupDef {
 
 const NAV_GROUPS: NavGroupDef[] = [
   {
-    label: 'Obras',
+    label: 'Engenharia',
     links: [
       { href: '/obras', label: 'Obras', icon: ic.obras },
       { href: '/boletins', label: 'Boletins de Medição', icon: ic.bm },
     ],
   },
   {
-    label: 'Pessoas',
+    label: 'Administrativo',
     links: [
       { href: '/funcionarios', label: 'Funcionários', icon: ic.func },
       { href: '/alocacao', label: 'Alocação de Equipes', icon: ic.func },
@@ -85,8 +85,8 @@ const NAV_GROUPS: NavGroupDef[] = [
 export interface ModuleTab { href: string; label: string; match?: string[] }
 export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
   {
-    // Módulo Pessoas — ativa quando em /funcionarios, /rh/*, /alocacao, /ponto, /faltas, /documentos, /rastreio
-    groupPaths: ['/funcionarios', '/rh/', '/alocacao', '/ponto', '/faltas', '/documentos', '/rastreio'],
+    // Módulo Administrativo — ativa quando em /funcionarios, /rh/*, /alocacao, /ponto, /faltas, /documentos, /rastreio, /relatorios/absenteismo
+    groupPaths: ['/funcionarios', '/rh/', '/alocacao', '/ponto', '/faltas', '/documentos', '/rastreio', '/relatorios/absenteismo'],
     tabs: [
       { href: '/funcionarios', label: 'Funcionários', match: ['/funcionarios'] },
       { href: '/rh/admissoes', label: 'Admissões' },
@@ -98,14 +98,15 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/rh/desligamentos', label: 'Desligamentos', match: ['/rh/desligamentos', '/rh/rescisoes'] },
       { href: '/alocacao', label: 'Alocação' },
       { href: '/ponto', label: 'Ponto' },
-      { href: '/faltas', label: 'Faltas' },
+      { href: '/faltas', label: 'Faltas', match: ['/faltas', '/relatorios/absenteismo'] },
+      { href: '/relatorios/absenteismo', label: 'Absenteísmo' },
       { href: '/documentos', label: 'Documentos' },
       { href: '/rastreio', label: 'Vencimentos' },
     ],
   },
   {
     // Módulo Financeiro
-    groupPaths: ['/financeiro', '/relatorios', '/forecast', '/executivo'],
+    groupPaths: ['/financeiro', '/relatorios/margem', '/relatorios/bm-comparativo', '/forecast', '/executivo'],
     tabs: [
       { href: '/financeiro', label: 'Lançamentos', match: ['/financeiro'] },
       { href: '/financeiro/contas', label: 'Contas Correntes' },
@@ -113,7 +114,6 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/financeiro/ofx', label: 'Conciliação OFX' },
       { href: '/relatorios/margem', label: 'Margem DRE' },
       { href: '/relatorios/bm-comparativo', label: 'BM: Orçado × Real' },
-      { href: '/relatorios/absenteismo', label: 'Absenteísmo' },
       { href: '/forecast', label: 'Forecast' },
       { href: '/executivo', label: 'Painel Executivo' },
     ],
@@ -147,9 +147,9 @@ NAV_GROUPS.forEach(g => {
 })
 // Adiciona os links das sub-tabs que não estão mais nos NAV_GROUPS principais
 MODULE_TABS.forEach(mod => {
-  const groupLabel = mod.groupPaths.includes('/funcionarios') ? 'Pessoas'
+  const groupLabel = mod.groupPaths.includes('/funcionarios') ? 'Administrativo'
     : mod.groupPaths.includes('/financeiro') ? 'Financeiro'
-    : mod.groupPaths.includes('/obras') ? 'Obras'
+    : mod.groupPaths.includes('/obras') ? 'Engenharia'
     : mod.groupPaths.includes('/estoque') ? 'Compras' : ''
   mod.tabs.forEach(t => {
     if (!PATH_MAP[t.href]) PATH_MAP[t.href] = { group: groupLabel, label: t.label }
