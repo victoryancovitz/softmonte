@@ -71,9 +71,14 @@ export default function QuickCreateSelect({
   async function load() {
     let q = supabase.from(table).select('*').order(orderBy)
     for (const [k, v] of Object.entries(filter)) {
-      q = q.eq(k, v)
+      // null precisa usar .is() — .eq(k, null) gera SQL "k = null" que é sempre falso
+      if (v === null) q = q.is(k, null)
+      else q = q.eq(k, v)
     }
-    const { data } = await q
+    const { data, error } = await q
+    if (error) {
+      console.error('[QuickCreateSelect]', table, 'load error:', error)
+    }
     setOptions(data || [])
     onOptionsChange?.(data || [])
     setLoading(false)
