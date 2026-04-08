@@ -39,6 +39,10 @@ interface CellState {
   horas_extras_50?: number | null
   horas_extras_100?: number | null
   horas_noturnas?: number | null
+  entrada?: string | null
+  saida_almoco?: string | null
+  volta_almoco?: string | null
+  saida?: string | null
 }
 
 export default function PontoCellEditor({
@@ -48,6 +52,8 @@ export default function PontoCellEditor({
   initial,
   onClose,
   onSaved,
+  modeloCobranca,
+  escala,
 }: {
   funcionario: { id: string; nome: string; cargo?: string; admissao?: string; deleted_at?: string | null }
   obraId: string
@@ -55,7 +61,18 @@ export default function PontoCellEditor({
   initial: CellState
   onClose: () => void
   onSaved: () => void
+  /** Modelo de cobrança da obra. hh_diaria = modo simples (horas manuais); outros = modo detalhado (pontos) */
+  modeloCobranca?: 'hh_diaria' | 'hh_hora_efetiva' | 'hh_220'
+  /** Escala da obra — usada quando modeloCobranca != hh_diaria */
+  escala?: {
+    escala_entrada?: string | null
+    escala_saida_seg_qui?: string | null
+    escala_saida_sex?: string | null
+    escala_almoco_minutos?: number | null
+    escala_tolerancia_min?: number | null
+  }
 }) {
+  const isDetalhado = modeloCobranca && modeloCobranca !== 'hh_diaria'
   // Validação de período do vínculo
   const dataLimiteInicio = funcionario.admissao ?? null
   const dataLimiteFim = funcionario.deleted_at ? funcionario.deleted_at.split('T')[0] : null
@@ -75,8 +92,45 @@ export default function PontoCellEditor({
   const [file, setFile] = useState<File | null>(null)
   const totalHoras = (parseFloat(horasNormais) || 0) + (parseFloat(he50) || 0) + (parseFloat(he100) || 0)
   const [saving, setSaving] = useState(false)
+  // Modo detalhado: pontos do relógio biométrico
+  const [entrada, setEntrada] = useState<string>(initial.entrada?.slice(0, 5) || '')
+  const [saidaAlmoco, setSaidaAlmoco] = useState<string>(initial.saida_almoco?.slice(0, 5) || '')
+  const [voltaAlmoco, setVoltaAlmoco] = useState<string>(initial.volta_almoco?.slice(0, 5) || '')
+  const [saidaPonto, setSaidaPonto] = useState<string>(initial.saida?.slice(0, 5) || '')
+  const [preview, setPreview] = useState<any>(null)
+  const [calculando, setCalculando] = useState(false)
   const supabase = createClient()
   const toast = useToast()
+
+  // Dia da semana pra decidir escala saída (seg-qui vs sex)
+  const diaSem = new Date(data + 'T12:00').getDay()  // 0=dom 6=sáb
+  const escalaSaida = diaSem === 5 ? escala?.escala_saida_sex : escala?.escala_saida_seg_qui
+  const tipoDia = diaSem === 6 ? 'sabado' : (diaSem === 0 ? 'domingo_feriado' : 'util')
+
+  async function recalcular() {
+    if (!isDetalhado) return
+    setCalculando(true)
+    try {
+      const { data: calc, error } = await supabase.rpc('calcular_horas_ponto', {
+        p_entrada: entrada || null,
+        p_saida_almoco: saidaAlmoco || null,
+        p_volta_almoco: voltaAlmoco || null,
+        p_saida: saidaPonto || null,
+        p_escala_entrada: escala?.escala_entrada || '07:00',
+        p_escala_saida: escalaSaida || '17:00',
+        p_almoco_minutos: escala?.escala_almoco_minutos || 60,
+        p_tolerancia_min: escala?.escala_tolerancia_min || 10,
+        p_tipo_dia: tipoDia,
+      })
+      if (error) { toast.error('Erro: ' + error.message); return }
+      setPreview(calc)
+      setHorasNormais(String(calc?.horas_normais ?? 0))
+      setHe50(String(calc?.horas_extras_50 ?? 0))
+      setHe100(String(calc?.horas_extras_100 ?? 0))
+    } finally {
+      setCalculando(false)
+    }
+  }
 
   useEffect(() => {
     function handleEsc(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
@@ -126,6 +180,14 @@ export default function PontoCellEditor({
         horas_extras_100: isFinite(h100) && h100 > 0 ? h100 : 0,
         horas_noturnas:   isFinite(hnot) && hnot > 0 ? hnot : 0,
         horas_trabalhadas: totalHoras > 0 ? totalHoras : null,
+        // Pontos do relógio (modo detalhado)
+        entrada:       isDetalhado && entrada      ? entrada      : null,
+        saida_almoco:  isDetalhado && saidaAlmoco  ? saidaAlmoco  : null,
+        volta_almoco:  isDetalhado && voltaAlmoco  ? voltaAlmoco  : null,
+        saida:         isDetalhado && saidaPonto   ? saidaPonto   : null,
+        atraso_minutos: isDetalhado && preview?.atraso_minutos ? preview.atraso_minutos : 0,
+        horas_previstas: isDetalhado && preview?.escala_minutos ? preview.escala_minutos / 60 : null,
+        origem_registro: isDetalhado ? 'manual' : 'manual',
         registrado_por: user?.id ?? null,
       })
       if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
@@ -210,7 +272,53 @@ export default function PontoCellEditor({
           </div>
         </div>
 
-        {status === 'presente' && (
+        {status === 'presente' && isDetalhado && (
+          <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center justify-between mb-2">
+              <label className="block text-xs font-semibold text-blue-800">Pontos do relógio biométrico</label>
+              <span className="text-[10px] text-blue-600">
+                Escala: {escala?.escala_entrada || '07:00'} → {escalaSaida || '17:00'}
+                {tipoDia !== 'util' && ` (${tipoDia})`}
+              </span>
+            </div>
+            <div className="grid grid-cols-4 gap-2">
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Entrada</label>
+                <input type="time" value={entrada} onChange={e => setEntrada(e.target.value)}
+                  className="w-full px-2 py-1.5 border border-blue-200 rounded-md text-sm bg-white" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Saída almoço</label>
+                <input type="time" value={saidaAlmoco} onChange={e => setSaidaAlmoco(e.target.value)}
+                  className="w-full px-2 py-1.5 border border-blue-200 rounded-md text-sm bg-white" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Volta almoço</label>
+                <input type="time" value={voltaAlmoco} onChange={e => setVoltaAlmoco(e.target.value)}
+                  className="w-full px-2 py-1.5 border border-blue-200 rounded-md text-sm bg-white" />
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-500 mb-1">Saída</label>
+                <input type="time" value={saidaPonto} onChange={e => setSaidaPonto(e.target.value)}
+                  className="w-full px-2 py-1.5 border border-blue-200 rounded-md text-sm bg-white" />
+              </div>
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-2">
+              <button type="button" onClick={recalcular} disabled={calculando}
+                className="text-[11px] px-3 py-1 bg-blue-600 text-white rounded-md font-bold hover:bg-blue-700 disabled:opacity-50">
+                {calculando ? 'Calculando...' : 'Calcular horas'}
+              </button>
+              {preview && (
+                <div className="text-[11px] text-blue-800 font-semibold">
+                  Normais: {Number(preview.horas_normais).toFixed(2)}h · HE 70%: {Number(preview.horas_extras_50).toFixed(2)}h · HE 100%: {Number(preview.horas_extras_100).toFixed(2)}h
+                  {preview.atraso_minutos > 0 && <span className="text-red-600"> · Atraso: {preview.atraso_minutos}min</span>}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {status === 'presente' && !isDetalhado && (
           <div className="mb-3 p-3 bg-gray-50 border border-gray-100 rounded-lg">
             <label className="block text-xs font-semibold text-gray-700 mb-2">Horas do dia</label>
             <div className="grid grid-cols-2 gap-2">

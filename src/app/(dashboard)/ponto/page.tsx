@@ -53,7 +53,7 @@ export default function PontoPage() {
   const podeEditar = !pontoFechado || isAdmin
 
   useEffect(() => {
-    supabase.from('obras').select('id,nome').eq('status', 'ativo').is('deleted_at', null).order('nome')
+    supabase.from('obras').select('id,nome,modelo_cobranca,escala_entrada,escala_saida_seg_qui,escala_saida_sex,escala_almoco_minutos,escala_tolerancia_min').eq('status', 'ativo').is('deleted_at', null).order('nome')
       .then(({ data }) => setObras(data ?? []))
     // Buscar role do usuário
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -504,6 +504,7 @@ export default function PontoPage() {
         const func = funcionarios.find(f => f.id === editing.funcId)
         if (!func) return null
         const dateStr = `${ano}-${String(mes).padStart(2,'0')}-${String(editing.day).padStart(2,'0')}`
+        const obra = obras.find(o => o.id === obraId)
         return (
           <PontoCellEditor
             funcionario={func}
@@ -512,6 +513,14 @@ export default function PontoPage() {
             initial={buildEditorInitial(editing.funcId, editing.day)}
             onClose={() => setEditing(null)}
             onSaved={loadData}
+            modeloCobranca={obra?.modelo_cobranca}
+            escala={{
+              escala_entrada: obra?.escala_entrada,
+              escala_saida_seg_qui: obra?.escala_saida_seg_qui,
+              escala_saida_sex: obra?.escala_saida_sex,
+              escala_almoco_minutos: obra?.escala_almoco_minutos,
+              escala_tolerancia_min: obra?.escala_tolerancia_min,
+            }}
           />
         )
       })()}

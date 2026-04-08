@@ -26,6 +26,12 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
     indice_reajuste: '', percentual_reajuste: '',
     // Horário
     horario_inicio: '', horario_fim: '', dias_uteis_mes: '', carga_horaria_dia: '',
+    // Modelo de faturamento HH
+    modelo_cobranca: 'hh_diaria',
+    escala_entrada: '07:00', escala_saida_seg_qui: '17:00', escala_saida_sex: '16:00',
+    escala_almoco_minutos: '60', escala_tolerancia_min: '10',
+    tem_adicional_noturno: false, adicional_noturno_pct: '30',
+    he_pct_normal: '70', he_pct_domingo_feriado: '100',
     // Contatos
     contato_contratante_nome: '', contato_contratante_email: '', contato_contratante_tel: '',
     contato_contratada_nome: '', contato_contratada_email: '', contato_contratada_tel: '',
@@ -79,7 +85,17 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
           contato_contratada_email: data.contato_contratada_email ?? '',
           contato_contratada_tel: data.contato_contratada_tel ?? '',
           bm_dia_unico: data.bm_dia_unico ?? false,
-        })
+          modelo_cobranca: data.modelo_cobranca ?? 'hh_diaria',
+          escala_entrada: data.escala_entrada ?? '07:00',
+          escala_saida_seg_qui: data.escala_saida_seg_qui ?? '17:00',
+          escala_saida_sex: data.escala_saida_sex ?? '16:00',
+          escala_almoco_minutos: String(data.escala_almoco_minutos ?? 60),
+          escala_tolerancia_min: String(data.escala_tolerancia_min ?? 10),
+          tem_adicional_noturno: data.tem_adicional_noturno ?? false,
+          adicional_noturno_pct: String(data.adicional_noturno_pct ?? 30),
+          he_pct_normal: String(data.he_pct_normal ?? 70),
+          he_pct_domingo_feriado: String(data.he_pct_domingo_feriado ?? 100),
+        } as any)
       }
       setLoading(false)
     })
@@ -129,6 +145,16 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
       contato_contratada_email: n(form.contato_contratada_email),
       contato_contratada_tel: n(form.contato_contratada_tel),
       bm_dia_unico: !!form.bm_dia_unico,
+      modelo_cobranca: form.modelo_cobranca || 'hh_diaria',
+      escala_entrada: n(form.escala_entrada),
+      escala_saida_seg_qui: n(form.escala_saida_seg_qui),
+      escala_saida_sex: n(form.escala_saida_sex),
+      escala_almoco_minutos: num(form.escala_almoco_minutos),
+      escala_tolerancia_min: num(form.escala_tolerancia_min),
+      tem_adicional_noturno: !!form.tem_adicional_noturno,
+      adicional_noturno_pct: num(form.adicional_noturno_pct),
+      he_pct_normal: num(form.he_pct_normal),
+      he_pct_domingo_feriado: num(form.he_pct_domingo_feriado),
     }
     const { error: upErr } = await supabase.from('obras').update(payload).eq('id', params.id)
     if (upErr) { setError(upErr.message); setSaving(false); return }
@@ -362,6 +388,74 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
               <div>
                 <label className={lbl}>Dias úteis/mês</label>
                 <input type="number" value={form.dias_uteis_mes} onChange={e => set('dias_uteis_mes', e.target.value)} placeholder="22" className={inp} />
+              </div>
+            </div>
+          </section>
+
+          {/* === MODELO DE FATURAMENTO HH === */}
+          <section>
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Modelo de Faturamento</h2>
+            <div className="grid grid-cols-1 gap-3">
+              <div>
+                <label className={lbl}>Modelo *</label>
+                <select value={form.modelo_cobranca} onChange={e => set('modelo_cobranca', e.target.value)} className={inp + ' bg-white'}>
+                  <option value="hh_diaria">HH-Diária (9h/dia fixo, independente do ponto)</option>
+                  <option value="hh_hora_efetiva">HH-Hora Efetiva (calcula pelo ponto real)</option>
+                  <option value="hh_220">HH-220 Horas (base mensal 220h com DSR)</option>
+                </select>
+                <p className="text-[11px] text-gray-500 mt-1">
+                  {form.modelo_cobranca === 'hh_diaria' && 'Fatura 9h por colaborador por dia, independentemente das horas efetivas. Usado na Cesari.'}
+                  {form.modelo_cobranca === 'hh_hora_efetiva' && 'Fatura apenas horas trabalhadas conforme ponto biométrico. Atrasos e almoço excedido descontam.'}
+                  {form.modelo_cobranca === 'hh_220' && 'Base mensal de 220h com DSR embutido. Absenteísmo impacta diretamente o faturamento.'}
+                </p>
+              </div>
+            </div>
+
+            <h3 className="text-[11px] font-bold text-gray-500 uppercase mt-4 mb-2">Escala de trabalho</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className={lbl}>Entrada (seg-sex)</label>
+                <input type="time" value={form.escala_entrada} onChange={e => set('escala_entrada', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Saída seg-qui</label>
+                <input type="time" value={form.escala_saida_seg_qui} onChange={e => set('escala_saida_seg_qui', e.target.value)} className={inp} />
+                <p className="text-[10px] text-gray-400 mt-0.5">9h com 1h de almoço</p>
+              </div>
+              <div>
+                <label className={lbl}>Saída sexta</label>
+                <input type="time" value={form.escala_saida_sex} onChange={e => set('escala_saida_sex', e.target.value)} className={inp} />
+                <p className="text-[10px] text-gray-400 mt-0.5">8h com 1h de almoço</p>
+              </div>
+              <div>
+                <label className={lbl}>Almoço (minutos)</label>
+                <input type="number" min="30" max="120" value={form.escala_almoco_minutos} onChange={e => set('escala_almoco_minutos', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Tolerância CLT (min)</label>
+                <input type="number" min="0" max="30" value={form.escala_tolerancia_min} onChange={e => set('escala_tolerancia_min', e.target.value)} className={inp} />
+                <p className="text-[10px] text-gray-400 mt-0.5">Até {form.escala_tolerancia_min || 0}min não desconta</p>
+              </div>
+            </div>
+
+            <h3 className="text-[11px] font-bold text-gray-500 uppercase mt-4 mb-2">Percentuais de hora extra</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className={lbl}>HE dia útil / sábado (%)</label>
+                <input type="number" step="1" value={form.he_pct_normal} onChange={e => set('he_pct_normal', e.target.value)} className={inp} />
+                <p className="text-[10px] text-gray-400 mt-0.5">Passar da escala em dia útil ou sábado</p>
+              </div>
+              <div>
+                <label className={lbl}>HE domingo/feriado (%)</label>
+                <input type="number" step="1" value={form.he_pct_domingo_feriado} onChange={e => set('he_pct_domingo_feriado', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className={lbl}>Adicional noturno (%)</label>
+                <div className="flex items-center gap-2">
+                  <input type="checkbox" checked={!!form.tem_adicional_noturno} onChange={e => set('tem_adicional_noturno', e.target.checked)} className="w-4 h-4" />
+                  <input type="number" step="1" value={form.adicional_noturno_pct} onChange={e => set('adicional_noturno_pct', e.target.value)} disabled={!form.tem_adicional_noturno} className={inp + ' flex-1'} />
+                </div>
+                <p className="text-[10px] text-gray-400 mt-0.5">22h-5h, se aplicável</p>
               </div>
             </div>
           </section>
