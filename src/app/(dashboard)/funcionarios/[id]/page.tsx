@@ -6,7 +6,17 @@ import { DesativarFuncionarioBtn } from '@/components/DeleteActions'
 import BackButton from '@/components/BackButton'
 import FuncionarioDocumentos from '@/components/FuncionarioDocumentos'
 import FuncionarioHistoricoSalarial from '@/components/FuncionarioHistoricoSalarial'
-import FuncionarioTabs, { Tab, TAB_ICONS } from '@/components/FuncionarioTabs'
+import FuncionarioTabs, { Tab } from '@/components/FuncionarioTabs'
+import { User, Briefcase, DollarSign, Clock, FileText, History } from 'lucide-react'
+
+const TAB_ICONS = {
+  visao: <User className="w-3.5 h-3.5" />,
+  contrato: <Briefcase className="w-3.5 h-3.5" />,
+  remuneracao: <DollarSign className="w-3.5 h-3.5" />,
+  ponto: <Clock className="w-3.5 h-3.5" />,
+  docs: <FileText className="w-3.5 h-3.5" />,
+  historico: <History className="w-3.5 h-3.5" />,
+}
 
 const STATUS_COLOR: Record<string, string> = {
   disponivel: 'bg-green-100 text-green-700 border-green-200',

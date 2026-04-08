@@ -1,6 +1,5 @@
 'use client'
 import { useState, ReactNode } from 'react'
-import { User, Briefcase, DollarSign, Clock, FileText, History, TrendingUp, AlertTriangle } from 'lucide-react'
 
 export interface Tab {
   id: string
@@ -46,15 +45,4 @@ export default function FuncionarioTabs({ tabs, defaultTab }: { tabs: Tab[]; def
       <div>{current?.content}</div>
     </div>
   )
-}
-
-export const TAB_ICONS = {
-  visao: <User className="w-3.5 h-3.5" />,
-  contrato: <Briefcase className="w-3.5 h-3.5" />,
-  remuneracao: <DollarSign className="w-3.5 h-3.5" />,
-  ponto: <Clock className="w-3.5 h-3.5" />,
-  docs: <FileText className="w-3.5 h-3.5" />,
-  historico: <History className="w-3.5 h-3.5" />,
-  salarial: <TrendingUp className="w-3.5 h-3.5" />,
-  avisos: <AlertTriangle className="w-3.5 h-3.5" />,
 }
