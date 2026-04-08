@@ -38,29 +38,19 @@ interface NavGroupDef {
 
 const NAV_GROUPS: NavGroupDef[] = [
   {
-    label: 'Engenharia',
+    label: 'Obras',
     links: [
       { href: '/obras', label: 'Obras', icon: ic.obras },
       { href: '/boletins', label: 'Boletins de Medição', icon: ic.bm },
     ],
   },
   {
-    label: 'Administrativo',
+    label: 'Pessoas',
     links: [
       { href: '/funcionarios', label: 'Funcionários', icon: ic.func },
       { href: '/alocacao', label: 'Alocação de Equipes', icon: ic.func },
       { href: '/ponto', label: 'Ponto', icon: ic.faltas },
-      { href: '/faltas', label: 'Faltas', icon: ic.faltas },
-      { href: '/rh/banco-horas', label: 'Banco de Horas', icon: ic.docs },
-      { href: '/rh/ferias', label: 'Férias', icon: ic.docs },
-      { href: '/rh/treinamentos', label: 'Treinamentos NR', icon: ic.docs },
-      { href: '/rh/admissoes', label: 'Admissões', icon: ic.func },
-      { href: '/rh/desligamentos', label: 'Desligamentos', icon: ic.faltas },
       { href: '/rh/folha', label: 'Folha de Pagamento', icon: ic.fin },
-      { href: '/rh/correcoes', label: 'Correções Salariais', icon: ic.fin },
-      { href: '/rh/rescisoes', label: 'Rescisões', icon: ic.faltas },
-      { href: '/documentos', label: 'Documentos', icon: ic.docs },
-      { href: '/rastreio', label: 'Vencimentos', icon: ic.docs },
     ],
   },
   {
@@ -68,7 +58,6 @@ const NAV_GROUPS: NavGroupDef[] = [
     links: [
       { href: '/estoque', label: 'Almoxarifado', icon: ic.stock },
       { href: '/compras/fornecedores', label: 'Fornecedores', icon: ic.client },
-      { href: '/compras/cotacoes', label: 'Cotações', icon: ic.bm },
       { href: '/compras/pedidos', label: 'Pedidos', icon: ic.stock },
     ],
   },
@@ -76,13 +65,8 @@ const NAV_GROUPS: NavGroupDef[] = [
     label: 'Financeiro',
     links: [
       { href: '/financeiro', label: 'Lançamentos', icon: ic.fin },
-      { href: '/financeiro/contas', label: 'Contas Correntes', icon: ic.fin },
-      { href: '/financeiro/cashflow', label: 'Fluxo de Caixa 90d', icon: ic.report },
-      { href: '/financeiro/ofx', label: 'Conciliação OFX', icon: ic.fin },
-      { href: '/relatorios', label: 'Relatórios', icon: ic.report },
+      { href: '/financeiro/cashflow', label: 'Fluxo de Caixa', icon: ic.report },
       { href: '/relatorios/margem', label: 'Margem DRE', icon: ic.fin },
-      { href: '/relatorios/bm-comparativo', label: 'BM: Orçado × Real', icon: ic.report },
-      { href: '/relatorios/absenteismo', label: 'Absenteísmo', icon: ic.report },
       { href: '/forecast', label: 'Forecast', icon: ic.report },
     ],
   },
@@ -91,9 +75,65 @@ const NAV_GROUPS: NavGroupDef[] = [
     links: [
       { href: '/cadastros', label: 'Visão Geral', icon: ic.cad },
       { href: '/cadastros/funcoes', label: 'Funções', icon: ic.cad },
-      { href: '/cadastros/categorias', label: 'Categorias Financeiras', icon: ic.cad },
       { href: '/clientes', label: 'Clientes', icon: ic.client },
       { href: '/tipos-contrato', label: 'Tipos de Contrato', icon: ic.docs },
+    ],
+  },
+]
+
+// Submenus por módulo — aparecem como tabs horizontais abaixo do Topbar
+export interface ModuleTab { href: string; label: string; match?: string[] }
+export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
+  {
+    // Módulo Pessoas — ativa quando em /funcionarios, /rh/*, /alocacao, /ponto, /faltas, /documentos, /rastreio
+    groupPaths: ['/funcionarios', '/rh/', '/alocacao', '/ponto', '/faltas', '/documentos', '/rastreio'],
+    tabs: [
+      { href: '/funcionarios', label: 'Funcionários', match: ['/funcionarios'] },
+      { href: '/rh/admissoes', label: 'Admissões' },
+      { href: '/rh/treinamentos', label: 'Treinamentos NR' },
+      { href: '/rh/ferias', label: 'Férias' },
+      { href: '/rh/banco-horas', label: 'Banco de Horas' },
+      { href: '/rh/folha', label: 'Folha' },
+      { href: '/rh/correcoes', label: 'Correções' },
+      { href: '/rh/desligamentos', label: 'Desligamentos', match: ['/rh/desligamentos', '/rh/rescisoes'] },
+      { href: '/alocacao', label: 'Alocação' },
+      { href: '/ponto', label: 'Ponto' },
+      { href: '/faltas', label: 'Faltas' },
+      { href: '/documentos', label: 'Documentos' },
+      { href: '/rastreio', label: 'Vencimentos' },
+    ],
+  },
+  {
+    // Módulo Financeiro
+    groupPaths: ['/financeiro', '/relatorios', '/forecast', '/executivo'],
+    tabs: [
+      { href: '/financeiro', label: 'Lançamentos', match: ['/financeiro'] },
+      { href: '/financeiro/contas', label: 'Contas Correntes' },
+      { href: '/financeiro/cashflow', label: 'Fluxo de Caixa' },
+      { href: '/financeiro/ofx', label: 'Conciliação OFX' },
+      { href: '/relatorios/margem', label: 'Margem DRE' },
+      { href: '/relatorios/bm-comparativo', label: 'BM: Orçado × Real' },
+      { href: '/relatorios/absenteismo', label: 'Absenteísmo' },
+      { href: '/forecast', label: 'Forecast' },
+      { href: '/executivo', label: 'Painel Executivo' },
+    ],
+  },
+  {
+    // Módulo Obras
+    groupPaths: ['/obras', '/boletins'],
+    tabs: [
+      { href: '/obras', label: 'Obras' },
+      { href: '/boletins', label: 'Boletins de Medição' },
+    ],
+  },
+  {
+    // Módulo Compras
+    groupPaths: ['/estoque', '/compras'],
+    tabs: [
+      { href: '/estoque', label: 'Almoxarifado' },
+      { href: '/compras/fornecedores', label: 'Fornecedores' },
+      { href: '/compras/cotacoes', label: 'Cotações' },
+      { href: '/compras/pedidos', label: 'Pedidos' },
     ],
   },
 ]
@@ -103,6 +143,16 @@ const PATH_MAP: Record<string, { group: string; label: string }> = {}
 NAV_GROUPS.forEach(g => {
   g.links.forEach(l => {
     if (!l.disabled) PATH_MAP[l.href] = { group: g.label, label: l.label }
+  })
+})
+// Adiciona os links das sub-tabs que não estão mais nos NAV_GROUPS principais
+MODULE_TABS.forEach(mod => {
+  const groupLabel = mod.groupPaths.includes('/funcionarios') ? 'Pessoas'
+    : mod.groupPaths.includes('/financeiro') ? 'Financeiro'
+    : mod.groupPaths.includes('/obras') ? 'Obras'
+    : mod.groupPaths.includes('/estoque') ? 'Compras' : ''
+  mod.tabs.forEach(t => {
+    if (!PATH_MAP[t.href]) PATH_MAP[t.href] = { group: groupLabel, label: t.label }
   })
 })
 PATH_MAP['/dashboard'] = { group: '', label: 'Dashboard' }

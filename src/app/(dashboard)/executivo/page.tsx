@@ -11,6 +11,8 @@ export default function ExecutivoPage() {
   const [cashflow, setCashflow] = useState<any[]>([])
   const [alertas, setAlertas] = useState<any[]>([])
   const [rescPendentes, setRescPendentes] = useState<any[]>([])
+  const [rescMes, setRescMes] = useState<any[]>([])
+  const [rescPrevistas, setRescPrevistas] = useState<any[]>([])
   const [obras, setObras] = useState<any[]>([])
   const [contasSaldo, setContasSaldo] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -18,12 +20,14 @@ export default function ExecutivoPage() {
 
   useEffect(() => {
     (async () => {
-      const [d, dm, cf, al, rp, o, cs] = await Promise.all([
+      const [d, dm, cf, al, rp, rm, rprev, o, cs] = await Promise.all([
         supabase.from('vw_dre_obra').select('*'),
         supabase.from('vw_dre_obra_mes').select('*'),
         supabase.from('vw_cashflow_projetado').select('*'),
         supabase.from('vw_alertas').select('*').order('dias_restantes').limit(10),
-        supabase.from('rescisoes').select('*, funcionarios(nome)').eq('status', 'rascunho').is('deleted_at', null),
+        supabase.from('rescisoes').select('*, funcionarios(nome)').in('status', ['rascunho','homologada']).is('deleted_at', null),
+        supabase.from('vw_rescisoes_mes').select('*').limit(12),
+        supabase.from('vw_rescisoes_previstas').select('*'),
         supabase.from('obras').select('*').eq('status', 'ativo').is('deleted_at', null),
         supabase.from('vw_contas_saldo').select('*'),
       ])
@@ -32,6 +36,8 @@ export default function ExecutivoPage() {
       setCashflow(cf.data || [])
       setAlertas(al.data || [])
       setRescPendentes(rp.data || [])
+      setRescMes(rm.data || [])
+      setRescPrevistas(rprev.data || [])
       setObras(o.data || [])
       setContasSaldo((cs.data || []).reduce((s: number, c: any) => s + Number(c.saldo || 0), 0))
       setLoading(false)
@@ -159,6 +165,74 @@ export default function ExecutivoPage() {
           <div className="text-2xl font-bold text-red-700 font-display">{alertas.length}</div>
         </div>
       </div>
+
+      {/* Rescisões — acumulado mensal e previstas */}
+      {(rescMes.length > 0 || rescPrevistas.length > 0) && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-bold text-brand flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-violet-500" /> Rescisões
+            </h3>
+            <Link href="/rh/rescisoes" className="text-xs text-brand hover:underline">Ver todas →</Link>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+            {/* Últimos meses */}
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Histórico mensal</p>
+              {rescMes.length > 0 ? (
+                <div className="space-y-1.5">
+                  {rescMes.slice(0, 6).map((m: any) => {
+                    const maxValor = Math.max(...rescMes.map((x: any) => Number(x.total_liquido || 0)))
+                    const pct = maxValor > 0 ? (Number(m.total_liquido || 0) / maxValor * 100) : 0
+                    const MESES = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+                    return (
+                      <div key={`${m.ano}-${m.mes}`}>
+                        <div className="flex items-center justify-between text-xs mb-0.5">
+                          <span className="text-gray-600 font-medium">{MESES[m.mes]}/{m.ano} · {m.qtd} rescis.</span>
+                          <span className="font-bold text-gray-900">{fmtK(m.total_liquido)}</span>
+                        </div>
+                        <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-violet-500 rounded-full" style={{ width: `${pct}%` }} />
+                        </div>
+                        {Number(m.total_pendente_liquido || 0) > 0 && (
+                          <div className="text-[10px] text-amber-600 mt-0.5">
+                            {fmtK(m.total_pendente_liquido)} pendente de pagamento
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ) : <p className="text-xs text-gray-400 italic">Sem rescisões realizadas.</p>}
+            </div>
+            {/* Previstas */}
+            <div>
+              <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">
+                Previstas nos próximos 60 dias ({rescPrevistas.length})
+              </p>
+              {rescPrevistas.length > 0 ? (
+                <div className="space-y-1.5">
+                  {rescPrevistas.slice(0, 6).map((r: any) => (
+                    <Link key={r.funcionario_id} href={`/funcionarios/${r.funcionario_id}`}
+                      className="flex items-center justify-between py-1.5 border-b border-gray-50 hover:bg-gray-50/80 rounded px-1">
+                      <div>
+                        <div className="text-xs font-semibold text-gray-800">{r.nome}</div>
+                        <div className="text-[10px] text-gray-400">{r.cargo} · {r.obra}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-[11px] font-bold ${r.dias_para_fim <= 15 ? 'text-red-700' : r.dias_para_fim <= 30 ? 'text-amber-700' : 'text-gray-600'}`}>
+                          {r.dias_para_fim}d
+                        </div>
+                        <div className="text-[10px] text-gray-400">{new Date(r.fim_contrato + 'T12:00').toLocaleDateString('pt-BR')}</div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              ) : <p className="text-xs text-gray-400 italic">Nenhuma rescisão prevista.</p>}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Alertas + rescisões pendentes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

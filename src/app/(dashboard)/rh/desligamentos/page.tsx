@@ -88,20 +88,95 @@ export default function DesligamentosPage() {
   }
 
   async function concluirDesligamento(desl: any) {
-    if (!window.confirm('Concluir este desligamento? O funcionario sera marcado como inativo.')) return
+    if (!window.confirm('Concluir este desligamento? O funcionario sera marcado como inativo e uma rescisão será criada automaticamente.')) return
+
+    const dataSaida = desl.data_prevista_saida || new Date().toISOString().split('T')[0]
+
+    // Mapeia tipo_desligamento do workflow → tipo da tabela rescisoes
+    const tipoMap: Record<string, string> = {
+      sem_justa_causa: 'sem_justa_causa',
+      justa_causa: 'justa_causa',
+      pedido_demissao: 'pedido_demissao',
+      termino_contrato: 'fim_contrato_determinado',
+      acordo: 'comum_acordo',
+    }
+    const tipoRescisao = tipoMap[desl.tipo_desligamento] || 'sem_justa_causa'
+    const avisoTipo = tipoRescisao === 'justa_causa' ? 'nao_aplicavel' : 'indenizado'
 
     await supabase.from('desligamentos_workflow').update({
       status: 'concluido',
       concluido_em: new Date().toISOString(),
-      data_real_saida: desl.data_prevista_saida || new Date().toISOString().split('T')[0],
+      data_real_saida: dataSaida,
     }).eq('id', desl.id)
 
     await supabase.from('funcionarios').update({ status: 'inativo' }).eq('id', desl.funcionario_id)
 
     await supabase.from('alocacoes').update({
       ativo: false,
-      data_fim: desl.data_prevista_saida || new Date().toISOString().split('T')[0],
+      data_fim: dataSaida,
     }).eq('funcionario_id', desl.funcionario_id).eq('ativo', true)
+
+    // Verifica se já existe rescisão pra esse funcionário
+    const { data: rescExistente } = await supabase.from('rescisoes')
+      .select('id').eq('funcionario_id', desl.funcionario_id).is('deleted_at', null).limit(1).maybeSingle()
+
+    if (!rescExistente) {
+      // Calcula rescisão via função Postgres
+      const { data: calc, error: cErr } = await supabase.rpc('calcular_rescisao', {
+        p_funcionario_id: desl.funcionario_id,
+        p_data_desligamento: dataSaida,
+        p_tipo: tipoRescisao,
+        p_aviso_tipo: avisoTipo,
+      })
+      if (cErr) {
+        toast.error('Desligamento concluído, mas rescisão falhou: ' + cErr.message)
+      } else if (calc) {
+        // Busca alocação mais recente pra linkar
+        const { data: aloc } = await supabase.from('alocacoes')
+          .select('id, obra_id').eq('funcionario_id', desl.funcionario_id)
+          .order('data_inicio', { ascending: false }).limit(1).maybeSingle()
+        const { data: { user } } = await supabase.auth.getUser()
+
+        const { data: rescInserida } = await supabase.from('rescisoes').insert({
+          funcionario_id: desl.funcionario_id,
+          alocacao_id: aloc?.id ?? null,
+          obra_id: aloc?.obra_id ?? null,
+          tipo: tipoRescisao,
+          aviso_previo_tipo: avisoTipo,
+          aviso_previo_dias: calc.aviso_dias,
+          data_aviso: dataSaida,
+          data_desligamento: dataSaida,
+          salario_base_rescisao: calc.salario_base,
+          salario_total_rescisao: calc.salario_total,
+          saldo_salario: calc.saldo_salario,
+          aviso_previo_valor: calc.aviso_previo_valor,
+          ferias_vencidas: calc.ferias_vencidas,
+          ferias_proporcionais: calc.ferias_proporcionais,
+          terco_ferias: calc.terco_ferias,
+          decimo_proporcional: calc.decimo_proporcional,
+          fgts_mes: calc.fgts_mes,
+          fgts_aviso: calc.fgts_aviso,
+          fgts_13: calc.fgts_13,
+          fgts_saldo_estimado: calc.fgts_saldo_estimado,
+          multa_fgts_40: calc.multa_fgts_40,
+          desconto_inss: calc.desconto_inss,
+          desconto_irrf: calc.desconto_irrf,
+          total_proventos: calc.total_proventos,
+          total_descontos: calc.total_descontos,
+          valor_liquido: calc.valor_liquido,
+          custo_total_empresa: calc.valor_empresa_total,
+          status: 'rascunho',
+          observacao: `Criada automaticamente pela conclusão do desligamento ${desl.id}`,
+          created_by: user?.id ?? null,
+        }).select().single()
+
+        if (rescInserida) {
+          toast.success('Desligamento concluído e rescisão criada', `Líquido calculado: ${Number(calc.valor_liquido).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} — revise em /rh/rescisoes`)
+          loadData()
+          return
+        }
+      }
+    }
 
     toast.success('Desligamento concluido!', `Funcionario marcado como inativo`)
     loadData()
