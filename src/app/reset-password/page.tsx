@@ -11,9 +11,10 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
 
   useEffect(() => {
+    // Lazy: cria o client dentro do useEffect (evita crash no prerender sem env vars)
+    const supabase = createClient()
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (event === 'PASSWORD_RECOVERY') {
@@ -33,6 +34,7 @@ export default function ResetPasswordPage() {
     if (password.length < 6) { setError('Minimo 6 caracteres.'); return }
     setLoading(true)
     setError('')
+    const supabase = createClient()
     const { error } = await supabase.auth.updateUser({ password })
     if (error) { setError(error.message); setLoading(false); return }
     setDone(true)

@@ -18,12 +18,23 @@ const MOTIVOS: Record<string, string> = {
 export default function CorrecoesPage() {
   const [correcoes, setCorrecoes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('correcoes_salariais').select('*, funcoes(nome), obras(nome)').order('data_efetivo', { ascending: false }).then(({ data }) => {
-      setCorrecoes(data || []); setLoading(false)
-    })
+    ;(async () => {
+      try {
+        const { data, error: qErr } = await supabase.from('correcoes_salariais')
+          .select('*, funcoes(nome), obras(nome)')
+          .order('data_efetivo', { ascending: false })
+        if (qErr) throw qErr
+        setCorrecoes(data || [])
+      } catch (e: any) {
+        setError('Erro ao carregar correções: ' + (e?.message || 'desconhecido'))
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [])
 
   const fmt = (v: any) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -48,6 +59,8 @@ export default function CorrecoesPage() {
           <Plus className="w-4 h-4" /> Nova correção
         </Link>
       </div>
+
+      {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-xl border border-red-200">{error}</div>}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
         <table className="w-full text-sm">

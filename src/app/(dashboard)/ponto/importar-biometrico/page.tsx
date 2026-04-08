@@ -109,13 +109,19 @@ export default function ImportarBiometricoPage() {
     const o = obras.find(x => x.id === obraId)
     setObra(o)
     // Buscar funcionários alocados na obra com id_ponto ou matrícula
-    supabase.from('alocacoes')
-      .select('funcionario_id, funcionarios(id, nome, matricula, id_ponto, cpf)')
-      .eq('obra_id', obraId).eq('ativo', true)
-      .then(({ data }) => {
+    ;(async () => {
+      try {
+        const { data, error } = await supabase.from('alocacoes')
+          .select('funcionario_id, funcionarios(id, nome, matricula, id_ponto, cpf)')
+          .eq('obra_id', obraId).eq('ativo', true)
+        if (error) throw error
         const funcs = (data || []).map((a: any) => a.funcionarios).filter(Boolean)
         setFuncionarios(funcs)
-      })
+      } catch (e: any) {
+        toast.error('Erro ao carregar funcionários da obra: ' + (e?.message || 'desconhecido'))
+        setFuncionarios([])
+      }
+    })()
   }, [obraId, obras])
 
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {

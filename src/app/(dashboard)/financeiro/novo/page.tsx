@@ -23,10 +23,20 @@ export default function NovoLancamentoPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('obras').select('id,nome,cliente').eq('status','ativo').is('deleted_at', null).order('nome')
-      .then(({ data }) => setObras(data ?? []))
-    supabase.from('contas_correntes').select('id,nome,banco').eq('ativo', true).is('deleted_at', null).order('nome')
-      .then(({ data }) => setContas(data ?? []))
+    ;(async () => {
+      try {
+        const [{ data: obrasData, error: obrasErr }, { data: contasData, error: contasErr }] = await Promise.all([
+          supabase.from('obras').select('id,nome,cliente').eq('status','ativo').is('deleted_at', null).order('nome'),
+          supabase.from('contas_correntes').select('id,nome,banco').eq('ativo', true).is('deleted_at', null).order('nome'),
+        ])
+        if (obrasErr) throw obrasErr
+        if (contasErr) throw contasErr
+        setObras(obrasData ?? [])
+        setContas(contasData ?? [])
+      } catch (e: any) {
+        setError('Erro ao carregar listas: ' + (e?.message || 'desconhecido'))
+      }
+    })()
   }, [])
 
   function set(field: string, value: any) { setForm(f => ({ ...f, [field]: value })) }

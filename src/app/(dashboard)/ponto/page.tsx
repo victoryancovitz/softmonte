@@ -170,10 +170,11 @@ export default function PontoPage() {
     if (!confirm(`Fechar o ponto de ${meses[mes - 1]}/${ano}? Após fechado, apenas administradores poderão editar.`)) return
     setFechando(true)
     const { data: { user } } = await supabase.auth.getUser()
-    const { data: prof } = await supabase.from('profiles').select('nome').eq('id', user?.id ?? '').single()
+    if (!user) { toast.error('Sessão expirada — faça login novamente'); setFechando(false); return }
+    const { data: prof } = await supabase.from('profiles').select('nome').eq('id', user.id).maybeSingle()
     const { error } = await supabase.from('ponto_fechamentos').insert({
       obra_id: obraId, mes, ano,
-      fechado_por: user?.id ?? null,
+      fechado_por: user.id,
       fechado_por_nome: (prof as any)?.nome ?? null,
     })
     setFechando(false)

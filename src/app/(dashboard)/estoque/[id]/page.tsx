@@ -18,8 +18,20 @@ export default function MovimentarEstoquePage({ params }: { params: { id: string
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('estoque_itens').select('*').eq('id', params.id).is('deleted_at', null).single().then(({ data }) => setItem(data))
-    supabase.from('obras').select('id,nome').eq('status','ativo').is('deleted_at', null).order('nome').then(({ data }) => setObras(data ?? []))
+    ;(async () => {
+      try {
+        const [{ data: itemData, error: itemErr }, { data: obrasData, error: obrasErr }] = await Promise.all([
+          supabase.from('estoque_itens').select('*').eq('id', params.id).is('deleted_at', null).single(),
+          supabase.from('obras').select('id,nome').eq('status','ativo').is('deleted_at', null).order('nome'),
+        ])
+        if (itemErr) throw itemErr
+        if (obrasErr) throw obrasErr
+        setItem(itemData)
+        setObras(obrasData ?? [])
+      } catch (e: any) {
+        setError('Erro ao carregar: ' + (e?.message || 'desconhecido'))
+      }
+    })()
   }, [params.id])
 
   function set(field: string, value: string) { setForm(f => ({ ...f, [field]: value })) }
@@ -42,7 +54,8 @@ export default function MovimentarEstoquePage({ params }: { params: { id: string
       }),
     ])
     if (movErr) { setError(movErr.message); setLoading(false); return }
-    await supabase.from('estoque_itens').update({ quantidade: novaQtd }).eq('id', params.id)
+    const { error: updErr } = await supabase.from('estoque_itens').update({ quantidade: novaQtd }).eq('id', params.id)
+    if (updErr) { setError('Movimentação registrada mas falha ao atualizar saldo: ' + updErr.message); setLoading(false); return }
     setSuccess(true)
     setTimeout(() => router.push('/estoque'), 1500)
   }

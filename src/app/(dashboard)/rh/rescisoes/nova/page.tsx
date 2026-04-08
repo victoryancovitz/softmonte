@@ -88,6 +88,7 @@ export default function NovaRescisaoPage() {
     if (!preview) { toast.error('Calcule primeiro'); return }
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { toast.error('Sessão expirada — faça login novamente'); setSaving(false); return }
 
     const { data: alocacao } = await supabase.from('alocacoes')
       .select('id, obra_id').eq('funcionario_id', form.funcionario_id).order('data_inicio', { ascending: false }).limit(1).maybeSingle()
@@ -126,8 +127,8 @@ export default function NovaRescisaoPage() {
       custo_total_empresa: custoEmpresa,
       status,
       homologada_em: status === 'homologada' ? new Date().toISOString() : null,
-      homologada_por: status === 'homologada' ? user?.id : null,
-      created_by: user?.id ?? null,
+      homologada_por: status === 'homologada' ? user.id : null,
+      created_by: user.id,
     }).select().single()
 
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
@@ -135,7 +136,7 @@ export default function NovaRescisaoPage() {
     // Se homologada, gera lançamento no financeiro
     if (status === 'homologada' && data) {
       const funcNome = funcionarios.find(f => f.id === form.funcionario_id)?.nome || 'Funcionário'
-      const { data: lanc } = await supabase.from('financeiro_lancamentos').insert({
+      const { data: lanc, error: lancErr } = await supabase.from('financeiro_lancamentos').insert({
         obra_id: alocacao?.obra_id ?? null,
         tipo: 'despesa',
         nome: `Rescisão — ${funcNome}`,
@@ -146,10 +147,13 @@ export default function NovaRescisaoPage() {
         data_vencimento: form.data_desligamento,
         origem: 'rescisao',
         observacao: `Rescisão homologada ref ${data.id}`,
-        created_by: user?.id ?? null,
+        created_by: user.id,
       }).select().single()
-      if (lanc) {
-        await supabase.from('rescisoes').update({ financeiro_lancamento_id: lanc.id }).eq('id', data.id)
+      if (lancErr) {
+        toast.error('Rescisão salva mas falha ao gerar lançamento financeiro: ' + lancErr.message)
+      } else if (lanc) {
+        const { error: linkErr } = await supabase.from('rescisoes').update({ financeiro_lancamento_id: lanc.id }).eq('id', data.id)
+        if (linkErr) toast.error('Rescisão salva mas falha ao vincular lançamento: ' + linkErr.message)
       }
     }
 

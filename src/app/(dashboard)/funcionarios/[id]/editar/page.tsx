@@ -18,10 +18,17 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('funcionarios').select('*').eq('id', params.id).single().then(({ data }) => {
-      if (data) setForm(data)
-      setLoading(false)
-    })
+    ;(async () => {
+      try {
+        const { data, error } = await supabase.from('funcionarios').select('*').eq('id', params.id).single()
+        if (error) throw error
+        if (data) setForm(data)
+      } catch (e: any) {
+        setError('Erro ao carregar funcionário: ' + (e?.message || 'desconhecido'))
+      } finally {
+        setLoading(false)
+      }
+    })()
   }, [params.id])
 
   function set(field: string, value: any) { setForm((f: any) => ({ ...f, [field]: value })) }

@@ -18,10 +18,16 @@ export default function ConfiguracoesPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('empresa_config').select('*').limit(1).single()
-      .then(({ data }) => {
+    ;(async () => {
+      try {
+        // .maybeSingle() porque a tabela pode estar vazia na primeira instalação
+        const { data, error: qErr } = await supabase.from('empresa_config').select('*').limit(1).maybeSingle()
+        if (qErr) throw qErr
         if (data) setForm(data)
-      })
+      } catch (e: any) {
+        setError('Erro ao carregar configuração: ' + (e?.message || 'desconhecido'))
+      }
+    })()
   }, [])
 
   function set(field: string, value: any) {

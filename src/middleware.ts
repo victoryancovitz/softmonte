@@ -23,11 +23,18 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/forgot-password') ||
-    request.nextUrl.pathname.startsWith('/reset-password')
+  const pathname = request.nextUrl.pathname
+  const isAuthPage = pathname.startsWith('/login') ||
+    pathname.startsWith('/forgot-password') ||
+    pathname.startsWith('/reset-password')
+  const isApiRoute = pathname.startsWith('/api/')
 
   if (!user && !isAuthPage) {
+    // Rotas /api/* retornam 401 JSON em vez de redirect HTML pra /login,
+    // pra clientes fetch receberem erro tratável.
+    if (isApiRoute) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    }
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

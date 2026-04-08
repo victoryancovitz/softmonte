@@ -42,11 +42,13 @@ export default function NovaAlocacaoPage() {
   useEffect(() => {
     if (funcionarios.length === 0) return
     const ids = funcionarios.map(f => f.id)
-    supabase.from('alocacoes')
-      .select('id, funcionario_id, obra_id, cargo_na_obra, data_inicio, obras(nome)')
-      .in('funcionario_id', ids)
-      .eq('ativo', true)
-      .then(({ data }) => {
+    ;(async () => {
+      try {
+        const { data, error } = await supabase.from('alocacoes')
+          .select('id, funcionario_id, obra_id, cargo_na_obra, data_inicio, obras(nome)')
+          .in('funcionario_id', ids)
+          .eq('ativo', true)
+        if (error) throw error
         const map: AtivaMap = {}
         ;(data ?? []).forEach((a: any) => {
           const fid = a.funcionario_id
@@ -59,7 +61,11 @@ export default function NovaAlocacaoPage() {
           })
         })
         setAtivasMap(map)
-      })
+      } catch (e: any) {
+        console.error('[alocacao/nova] erro carregando ativasMap:', e)
+        // Não bloqueia a UI — apenas não exibe os badges informativos
+      }
+    })()
   }, [funcionarios])
 
   const funcionariosFiltrados = useMemo(() => {

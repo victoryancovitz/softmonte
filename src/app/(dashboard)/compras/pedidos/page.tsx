@@ -50,45 +50,66 @@ export default function PedidosPage() {
 
   async function confirmarRecebimento(pedido: Requisicao) {
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    const itens = Array.isArray(pedido.itens) ? pedido.itens : []
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Sessão expirada — faça login novamente')
+      const itens = Array.isArray(pedido.itens) ? pedido.itens : []
 
-    for (let i = 0; i < itens.length; i++) {
-      const qtd = qtdRecebida[i] ?? itens[i].quantidade ?? 1
-      if (qtd > 0) {
-        // Try to find matching estoque_itens by name
-        const descItem = itens[i].descricao ?? ''
-        const { data: estoqueItem } = descItem
-          ? await supabase.from('estoque_itens').select('id').ilike('nome', `%${descItem}%`).is('deleted_at', null).limit(1).single()
-          : { data: null }
+      for (let i = 0; i < itens.length; i++) {
+        const qtd = qtdRecebida[i] ?? itens[i].quantidade ?? 1
+        if (qtd <= 0) continue
 
-        await supabase.from('estoque_movimentacoes').insert({
-          item_id: estoqueItem?.id ?? null,
+        // Busca item de estoque por nome exato (case-insensitive) — evita match ambíguo
+        const descItem = (itens[i].descricao ?? '').trim()
+        let estoqueItemId: string | null = null
+        if (descItem) {
+          const { data: estoqueItem, error: estErr } = await supabase
+            .from('estoque_itens')
+            .select('id')
+            .ilike('nome', descItem)
+            .is('deleted_at', null)
+            .limit(1)
+            .maybeSingle()
+          if (estErr) throw new Error('Erro buscando item de estoque: ' + estErr.message)
+          estoqueItemId = estoqueItem?.id ?? null
+        }
+
+        const { error: movErr } = await supabase.from('estoque_movimentacoes').insert({
+          item_id: estoqueItemId,
           tipo: 'entrada',
           quantidade: qtd,
           obra_id: pedido.obra_id,
           motivo: `Recebimento pedido #${pedido.numero ?? pedido.id.slice(0, 8)}`,
           observacao: `${descItem}${obsReceb ? ' — ' + obsReceb : ''}`,
-          created_by: user?.id ?? null,
+          created_by: user.id,
         })
+        if (movErr) throw new Error('Erro registrando movimentação: ' + movErr.message)
 
-        // Update estoque quantity if item found
-        if (estoqueItem?.id) {
-          const { data: current } = await supabase.from('estoque_itens').select('quantidade').eq('id', estoqueItem.id).single()
+        // Atualiza saldo se o item foi identificado
+        if (estoqueItemId) {
+          const { data: current, error: curErr } = await supabase
+            .from('estoque_itens').select('quantidade').eq('id', estoqueItemId).single()
+          if (curErr) throw new Error('Erro lendo saldo atual: ' + curErr.message)
           if (current) {
-            await supabase.from('estoque_itens').update({
+            const { error: updErr } = await supabase.from('estoque_itens').update({
               quantidade: (current.quantidade ?? 0) + qtd,
-            }).eq('id', estoqueItem.id)
+            }).eq('id', estoqueItemId)
+            if (updErr) throw new Error('Erro atualizando saldo: ' + updErr.message)
           }
         }
       }
-    }
 
-    await supabase.from('requisicoes').update({ status: 'recebido' }).eq('id', pedido.id)
-    toast.success('Recebimento registrado!', 'Estoque atualizado')
-    setRecebendo(null)
-    setSaving(false)
-    loadData()
+      const { error: statusErr } = await supabase.from('requisicoes').update({ status: 'recebido' }).eq('id', pedido.id)
+      if (statusErr) throw new Error('Erro marcando pedido como recebido: ' + statusErr.message)
+
+      toast.success('Recebimento registrado!', 'Estoque atualizado')
+      setRecebendo(null)
+      loadData()
+    } catch (e: any) {
+      toast.error(e?.message || 'Erro ao confirmar recebimento')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const aprovados = pedidos.filter(p => p.status === 'aprovado')

@@ -42,7 +42,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
 
   async function loadBM() {
     const { data: bmData, error: bmErr } = await supabase.from('boletins_medicao')
-      .select('*, obras(id,nome,cliente,local)')
+      .select('*, obras(id,nome,cliente,cliente_id,local)')
       .eq('id', params.id)
       .is('deleted_at', null)
       .maybeSingle()
@@ -52,21 +52,45 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
 
     if (bmData) {
       // Fetch bm_itens
-      const { data: itens } = await supabase.from('bm_itens')
+      const { data: itens, error: itensErr } = await supabase.from('bm_itens')
         .select('*').eq('boletim_id', params.id).order('ordem')
+      if (itensErr) { toast.error('Erro ao carregar itens do BM: ' + itensErr.message) }
       setBmItens(itens ?? [])
 
-      // Fetch client contacts
-      if (bmData.obras?.cliente) {
-        const { data: cliente } = await supabase.from('clientes')
+      // Fetch client contacts — prefer cliente_id (FK), fallback to nome exato
+      const obra = bmData.obras
+      if (obra?.cliente_id) {
+        const { data: cliente, error: cliErr } = await supabase.from('clientes')
           .select('email_principal,email_medicao,email_fiscal,contatos')
-          .ilike('nome', bmData.obras.cliente)
-          .limit(1).single()
-        if (cliente) {
+          .eq('id', obra.cliente_id)
+          .is('deleted_at', null)
+          .maybeSingle()
+        if (cliErr) {
+          console.error('[boletins/[id]] erro buscando cliente:', cliErr)
+        } else if (cliente) {
           setClienteData(cliente)
           if (!envioEmails) {
             setEnvioEmails(cliente.email_medicao || cliente.email_principal || '')
           }
+        }
+      } else if (obra?.cliente) {
+        // Fallback legacy: obras antigas sem cliente_id. Match exato (não .ilike) pra evitar match parcial.
+        const { data: cliente, error: cliErr } = await supabase.from('clientes')
+          .select('email_principal,email_medicao,email_fiscal,contatos,nome')
+          .eq('nome', obra.cliente)
+          .is('deleted_at', null)
+          .limit(1)
+          .maybeSingle()
+        if (cliErr) {
+          console.error('[boletins/[id]] erro buscando cliente legacy:', cliErr)
+        } else if (cliente) {
+          setClienteData(cliente)
+          if (!envioEmails) {
+            setEnvioEmails(cliente.email_medicao || cliente.email_principal || '')
+          }
+        } else {
+          // Cliente não encontrado — avisa o usuário que precisa vincular
+          toast.error(`Cliente "${obra.cliente}" não encontrado no cadastro. Vincule a obra a um cliente para envio automático do BM.`)
         }
       }
     }
@@ -340,10 +364,11 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   async function handleDeleteBM(deleteFinanceiro: boolean) {
     setDeletingBm(true)
     const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { toast.error('Sessão expirada — faça login novamente'); setDeletingBm(false); return }
 
     // 1. Soft-delete o BM
     const { error: bmErr } = await supabase.from('boletins_medicao')
-      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
       .eq('id', params.id)
     if (bmErr) {
       toast.error('Erro ao excluir BM: ' + bmErr.message)
@@ -374,7 +399,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       }
 
       const { error: finErr } = await supabase.from('financeiro_lancamentos')
-        .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+        .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
         .eq('obra_id', bm.obras.id)
         .eq('origem', 'bm_aprovado')
         .eq('nome', nome)

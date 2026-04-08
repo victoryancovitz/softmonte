@@ -100,11 +100,12 @@ export default function FolhaPage() {
         valor_liquido: Number(c.salario_liquido_empresa || 0), // líquido detalhado fica p/ holerite
         custo_total_empresa: Number(c.custo_real_mes || 0),
       }))
-      await supabase.from('folha_itens').insert(itens)
+      const { error: itensErr } = await supabase.from('folha_itens').insert(itens)
+      if (itensErr) throw new Error('Falha ao salvar itens da folha: ' + itensErr.message)
 
       // 6) Lançamento no financeiro (1 agregado)
       const obraNome = obras.find(o => o.id === form.obra_id)?.nome || 'Obra'
-      const { data: lanc } = await supabase.from('financeiro_lancamentos').insert({
+      const { data: lanc, error: lancErr } = await supabase.from('financeiro_lancamentos').insert({
         obra_id: form.obra_id,
         tipo: 'despesa',
         nome: `Folha ${String(form.mes).padStart(2,'0')}/${form.ano} — ${obraNome}`,
@@ -117,9 +118,11 @@ export default function FolhaPage() {
         observacao: `Gerado automaticamente pelo fechamento de folha ${ff.id}`,
         created_by: user?.id ?? null,
       }).select().single()
+      if (lancErr) throw new Error('Falha ao gerar lançamento financeiro da folha: ' + lancErr.message)
 
       if (lanc) {
-        await supabase.from('folha_fechamentos').update({ lancamentos_gerados: 1 }).eq('id', ff.id)
+        const { error: updFFErr } = await supabase.from('folha_fechamentos').update({ lancamentos_gerados: 1 }).eq('id', ff.id)
+        if (updFFErr) throw new Error('Falha ao marcar folha como lançada: ' + updFFErr.message)
       }
 
       toast.success(`Folha ${String(form.mes).padStart(2,'0')}/${form.ano} fechada: R$ ${tot.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`)
@@ -137,10 +140,17 @@ export default function FolhaPage() {
     if (!reverterAlvo) return
     const f = reverterAlvo
     try {
-      await supabase.from('financeiro_lancamentos').update({ deleted_at: new Date().toISOString() })
+      const { error: delLancErr } = await supabase.from('financeiro_lancamentos')
+        .update({ deleted_at: new Date().toISOString() })
         .eq('obra_id', f.obra_id).eq('origem', 'folha_fechamento').ilike('observacao', `%${f.id}%`)
+      if (delLancErr) throw new Error('Falha ao remover lançamentos financeiros: ' + delLancErr.message)
+
       const { data: { user } } = await supabase.auth.getUser()
-      await supabase.from('folha_fechamentos').update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null, status: 'revertida' }).eq('id', f.id)
+      if (!user) throw new Error('Sessão expirada — faça login novamente')
+      const { error: updFFErr } = await supabase.from('folha_fechamentos')
+        .update({ deleted_at: new Date().toISOString(), deleted_by: user.id, status: 'revertida' })
+        .eq('id', f.id)
+      if (updFFErr) throw new Error('Falha ao reverter fechamento: ' + updFFErr.message)
       setFechamentos(prev => prev.filter(x => x.id !== f.id))
       setReverterAlvo(null)
       toast.success('Fechamento revertido.')

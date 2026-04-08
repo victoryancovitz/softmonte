@@ -109,7 +109,7 @@ export default function CotacoesPage() {
     if (!formDescricao.trim()) return
     setSaving(true)
     const numero = `COT-${Date.now().toString(36).toUpperCase()}`
-    await supabase.from('cotacoes').insert({
+    const { error } = await supabase.from('cotacoes').insert({
       numero,
       obra_id: formObraId || null,
       descricao: formDescricao,
@@ -119,16 +119,18 @@ export default function CotacoesPage() {
       status: 'aberta',
       fornecedores_convidados: [],
     })
+    setSaving(false)
+    if (error) { toast.error('Erro ao criar cotação: ' + error.message); return }
+    toast.success('Cotação criada')
     resetForm()
     setShowForm(false)
-    setSaving(false)
     loadData()
   }
 
   async function handleApprove(cotacao: Cotacao) {
     if (!approveForm.fornecedor.trim() || !approveForm.valor) return
     setSaving(true)
-    await supabase
+    const { error } = await supabase
       .from('cotacoes')
       .update({
         status: 'aprovada',
@@ -137,17 +139,20 @@ export default function CotacoesPage() {
         motivo_escolha: approveForm.motivo || null,
       })
       .eq('id', cotacao.id)
+    setSaving(false)
+    if (error) { toast.error('Erro ao aprovar cotação: ' + error.message); return }
     setApproving(null)
     setApproveForm({ fornecedor: '', valor: '', motivo: '' })
-    setSaving(false)
+    toast.success('Cotação aprovada')
     loadData()
   }
 
   async function handleDelete(cotacao: Cotacao) {
     if (!confirm(`Excluir cotação ${cotacao.numero}? Esta ação não pode ser desfeita.`)) return
     const { data: { user } } = await supabase.auth.getUser()
+    if (!user) { toast.error('Sessão expirada — faça login novamente'); return }
     const { error } = await supabase.from('cotacoes')
-      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
       .eq('id', cotacao.id)
     if (error) { toast.error('Erro: ' + error.message); return }
     toast.success('Cotação excluída')

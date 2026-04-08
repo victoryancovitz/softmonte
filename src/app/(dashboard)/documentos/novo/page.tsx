@@ -18,7 +18,15 @@ export default function NovoDocumentoPage() {
   const supabase = createClient()
 
   useEffect(() => {
-    supabase.from('funcionarios').select('id,nome,cargo').is('deleted_at', null).order('nome').then(({ data }) => setFuncionarios(data ?? []))
+    ;(async () => {
+      try {
+        const { data, error: qErr } = await supabase.from('funcionarios').select('id,nome,cargo').is('deleted_at', null).order('nome')
+        if (qErr) throw qErr
+        setFuncionarios(data ?? [])
+      } catch (e: any) {
+        setError('Erro ao carregar funcionários: ' + (e?.message || 'desconhecido'))
+      }
+    })()
     const fp = params.get('funcionario')
     const tp = params.get('tipo')
     if (fp || tp) setForm(f => ({ ...f, ...(fp ? { funcionario_id: fp } : {}), ...(tp ? { tipo: tp } : {}) }))
