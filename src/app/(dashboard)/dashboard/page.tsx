@@ -56,6 +56,7 @@ export default async function DashboardPage() {
   let admissoesAndamento = 0, desligamentosAndamento = 0, docsVencidos = 0, nrVencendo = 0
   let absenteismoCriticos: any[] = []
   let absenteismoAlto: any[] = []
+  let habitualidade: any[] = []
   if (isFinanceiro) {
     const [{ data: fin }, { data: contas }] = await Promise.all([
       supabase.from('financeiro_lancamentos').select('tipo,status,valor').is('deleted_at', null).gte('data_competencia', mesInicio),
@@ -70,19 +71,21 @@ export default async function DashboardPage() {
     saldoContas = (contas ?? []).reduce((s: number, c: any) => s + Number(c.saldo_atual ?? 0), 0)
   }
   if (isRh) {
-    const [{ count: adm }, { count: des }, { count: dv }, { data: absData }] = await Promise.all([
+    const [{ count: adm }, { count: des }, { count: dv }, { data: absData }, { data: habData }] = await Promise.all([
       supabase.from('admissoes_workflow').select('id', { count: 'exact', head: true }).eq('status', 'em_andamento'),
       supabase.from('desligamentos_workflow').select('id', { count: 'exact', head: true }).eq('status', 'em_andamento'),
       supabase.from('documentos').select('id', { count: 'exact', head: true }).lte('vencimento', hojeStr).is('deleted_at', null),
       supabase.from('vw_absenteismo').select('funcionario_id,nome,cargo,obra,taxa_falta_pct,taxa_injustificada_pct,total_faltas,faltas_injustificadas,ano,mes,funcionario_ativo')
         .eq('ano', hoje.getFullYear()).eq('mes', hoje.getMonth() + 1)
         .eq('funcionario_ativo', true),
+      supabase.from('vw_alertas_habitualidade').select('*').limit(10),
     ])
     admissoesAndamento = adm ?? 0
     desligamentosAndamento = des ?? 0
     docsVencidos = dv ?? 0
     absenteismoCriticos = (absData || []).filter((r: any) => Number(r.taxa_falta_pct) >= 15)
     absenteismoAlto = (absData || []).filter((r: any) => Number(r.taxa_falta_pct) >= 8 && Number(r.taxa_falta_pct) < 15)
+    habitualidade = habData || []
   }
   const fmtR = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -202,6 +205,50 @@ export default async function DashboardPage() {
                 <Link href="/faltas"
                   className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-200 bg-white hover:bg-gray-50">
                   Ver faltas
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ALERTA RH: Habitualidade de pagamentos extras ── */}
+      {isRh && habitualidade.length > 0 && (
+        <div className="mb-6 rounded-xl border p-4 bg-amber-50 border-amber-200">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-amber-100">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#d97706" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold text-amber-800">
+                Risco de habitualidade: {habitualidade.length} funcionário(s) com bônus recorrente
+              </h3>
+              <p className="text-xs text-amber-700 mt-0.5">
+                Pagamentos recorrentes em 3+ meses podem caracterizar salário-utilidade pela Justiça do Trabalho.
+              </p>
+              <div className="mt-2 space-y-1">
+                {habitualidade.slice(0, 3).map((h: any) => (
+                  <div key={h.funcionario_id} className="flex items-center justify-between text-xs">
+                    <Link href={`/funcionarios/${h.funcionario_id}`} className="text-amber-700 font-semibold hover:underline truncate max-w-xs">
+                      {h.nome}
+                    </Link>
+                    <span className="text-amber-600">
+                      {h.cargo} · {h.meses_seguidos} meses consecutivos
+                    </span>
+                  </div>
+                ))}
+                {habitualidade.length > 3 && (
+                  <div className="text-xs text-amber-600 italic">+ {habitualidade.length - 3} outros...</div>
+                )}
+              </div>
+              <div className="mt-3 flex gap-2">
+                <Link href="/rh/pagamentos-extras"
+                  className="text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-600 text-white hover:bg-amber-700">
+                  Ver pagamentos extras →
                 </Link>
               </div>
             </div>

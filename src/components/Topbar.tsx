@@ -95,6 +95,7 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/rh/banco-horas', label: 'Banco de Horas' },
       { href: '/rh/folha', label: 'Folha' },
       { href: '/rh/correcoes', label: 'Correções' },
+      { href: '/rh/pagamentos-extras', label: 'Pagamentos Extras' },
       { href: '/rh/desligamentos', label: 'Desligamentos', match: ['/rh/desligamentos', '/rh/rescisoes'] },
       { href: '/alocacao', label: 'Alocação' },
       { href: '/ponto', label: 'Ponto' },

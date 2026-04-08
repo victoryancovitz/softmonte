@@ -6,6 +6,7 @@ import { DesativarFuncionarioBtn } from '@/components/DeleteActions'
 import BackButton from '@/components/BackButton'
 import FuncionarioDocumentos from '@/components/FuncionarioDocumentos'
 import FuncionarioHistoricoSalarial from '@/components/FuncionarioHistoricoSalarial'
+import PagamentosExtrasFuncionario from '@/components/PagamentosExtrasFuncionario'
 import FuncionarioTabs, { Tab } from '@/components/FuncionarioTabs'
 import { User, Briefcase, DollarSign, Clock, FileText, History } from 'lucide-react'
 
@@ -387,6 +388,15 @@ export default async function FuncionarioPage({ params }: { params: { id: string
             <Link href="/rh/correcoes" className="text-[11px] text-brand hover:underline">Correções coletivas →</Link>
           </div>
           <FuncionarioHistoricoSalarial funcionarioId={f.id} />
+        </div>
+
+        {/* Pagamentos extras (bônus, comissões, PLR, por fora) */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Pagamentos extras</h2>
+            <Link href="/rh/pagamentos-extras" className="text-[11px] text-brand hover:underline">Visão global →</Link>
+          </div>
+          <PagamentosExtrasFuncionario funcionarioId={f.id} />
         </div>
       </div>
     ),
