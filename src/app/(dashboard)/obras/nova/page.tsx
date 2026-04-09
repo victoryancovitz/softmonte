@@ -6,7 +6,7 @@ import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
 import QuickCreateSelect from '@/components/QuickCreateSelect'
-import { Check, ChevronRight, ChevronLeft, Plus, Loader2 } from 'lucide-react'
+import { Check, ChevronRight, ChevronLeft, Plus, Loader2, Trash2 } from 'lucide-react'
 
 /**
  * Wizard unificado de criação de obra.
@@ -43,6 +43,15 @@ export default function NovaObraWizardPage() {
   const [step, setStep] = useState(1)
   const [clientes, setClientes] = useState<any[]>([])
   const [tiposContrato, setTiposContrato] = useState<any[]>([])
+  const [funcoesCadastradas, setFuncoesCadastradas] = useState<{ id: string; nome: string }[]>([])
+  const [composicao, setComposicao] = useState<Array<{
+    funcao_nome: string
+    quantidade: number
+    carga_horaria_dia: number
+    valor_hh: number
+    valor_hh_70: number
+    valor_hh_100: number
+  }>>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -77,10 +86,12 @@ export default function NovaObraWizardPage() {
   // Carrega listas + trata query params
   useEffect(() => {
     (async () => {
-      const [{ data: cli }, { data: tpc }] = await Promise.all([
+      const [{ data: cli }, { data: tpc }, { data: funcs }] = await Promise.all([
         supabase.from('clientes').select('id,nome,cnpj,cidade,estado').is('deleted_at', null).order('nome'),
         supabase.from('tipos_contrato').select('*').eq('ativo', true).order('nome'),
+        supabase.from('funcoes').select('id,nome').is('deleted_at', null).order('nome'),
       ])
+      setFuncoesCadastradas((funcs ?? []) as { id: string; nome: string }[])
       setClientes(cli || [])
       setTiposContrato(tpc || [])
 
@@ -138,7 +149,7 @@ export default function NovaObraWizardPage() {
   function next() {
     const check = canAdvance()
     if (!check.ok) { toast.error(check.reason!); return }
-    setStep(s => Math.min(s + 1, 4))
+    setStep(s => Math.min(s + 1, 5))
   }
   function back() { setStep(s => Math.max(s - 1, 1)) }
 
@@ -173,6 +184,27 @@ export default function NovaObraWizardPage() {
         console.error('[obras/nova] insert error:', error, 'payload:', payload)
         throw error
       }
+      // Salvar composição de funções (se houver)
+      if (composicao.length > 0) {
+        const compRows = composicao
+          .filter(c => c.funcao_nome.trim())
+          .map(c => ({
+            obra_id: obra.id,
+            funcao_nome: c.funcao_nome.toUpperCase().trim(),
+            quantidade_contratada: c.quantidade,
+            carga_horaria_dia: c.carga_horaria_dia,
+            custo_hora_contratado: c.valor_hh,
+            custo_hora_extra_70: c.valor_hh_70,
+            custo_hora_extra_100: c.valor_hh_100,
+            ativo: true,
+            origem: 'wizard',
+          }))
+        if (compRows.length > 0) {
+          const { error: compErr } = await supabase.from('contrato_composicao').insert(compRows)
+          if (compErr) console.error('[obras/nova] composicao error:', compErr)
+        }
+      }
+
       toast.success('Obra criada!', `${form.nome} pronta pra alocação`)
       router.push(`/obras/${obra.id}`)
     } catch (err: any) {
@@ -194,7 +226,8 @@ export default function NovaObraWizardPage() {
     { n: 1, l: 'Cliente' },
     { n: 2, l: 'Contrato' },
     { n: 3, l: 'Dados da obra' },
-    { n: 4, l: 'Revisar' },
+    { n: 4, l: 'Funções e Valores' },
+    { n: 5, l: 'Revisar' },
   ]
 
   return (
@@ -431,8 +464,128 @@ export default function NovaObraWizardPage() {
           </div>
         )}
 
-        {/* PASSO 4: REVISAR */}
+        {/* PASSO 4: COMPOSIÇÃO DE FUNÇÕES */}
         {step === 4 && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="text-lg font-bold font-display text-brand mb-1">Composição de Funções e Valores</h2>
+              <p className="text-xs text-gray-500">
+                Cadastre as funções que serão cobradas nesta obra e o valor R$/HH de cada uma.
+                As funções vêm do cadastro em Cadastros → Funções.
+              </p>
+            </div>
+
+            {composicao.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-100 bg-gray-50">
+                      <th className="text-left px-2 py-2 font-semibold text-gray-600">Função</th>
+                      <th className="text-center px-2 py-2 font-semibold text-gray-600 w-16">Qtd</th>
+                      <th className="text-center px-2 py-2 font-semibold text-gray-600 w-16">H/dia</th>
+                      <th className="text-right px-2 py-2 font-semibold text-gray-600 w-24">R$/HH</th>
+                      <th className="text-right px-2 py-2 font-semibold text-gray-600 w-24">R$/HH 70%</th>
+                      <th className="text-right px-2 py-2 font-semibold text-gray-600 w-24">R$/HH 100%</th>
+                      <th className="w-10"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {composicao.map((c, idx) => (
+                      <tr key={idx} className="border-b border-gray-50">
+                        <td className="px-2 py-1.5">
+                          <select value={c.funcao_nome}
+                            onChange={e => {
+                              const next = [...composicao]
+                              next[idx] = { ...next[idx], funcao_nome: e.target.value }
+                              setComposicao(next)
+                            }}
+                            className="w-full px-2 py-1 border border-gray-200 rounded text-xs">
+                            <option value="">Selecione...</option>
+                            {funcoesCadastradas.map(f => (
+                              <option key={f.id} value={f.nome}>{f.nome}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-2 py-1.5 text-center">
+                          <input type="number" min={1} value={c.quantidade}
+                            onChange={e => {
+                              const next = [...composicao]
+                              next[idx] = { ...next[idx], quantidade: Number(e.target.value) }
+                              setComposicao(next)
+                            }}
+                            className="w-14 px-1 py-1 border border-gray-200 rounded text-xs text-center" />
+                        </td>
+                        <td className="px-2 py-1.5 text-center">
+                          <input type="number" min={1} max={24} step={0.5} value={c.carga_horaria_dia}
+                            onChange={e => {
+                              const next = [...composicao]
+                              next[idx] = { ...next[idx], carga_horaria_dia: Number(e.target.value) }
+                              setComposicao(next)
+                            }}
+                            className="w-14 px-1 py-1 border border-gray-200 rounded text-xs text-center" />
+                        </td>
+                        <td className="px-2 py-1.5 text-right">
+                          <input type="number" min={0} step={0.01} value={c.valor_hh}
+                            onChange={e => {
+                              const base = Number(e.target.value) || 0
+                              const next = [...composicao]
+                              next[idx] = {
+                                ...next[idx],
+                                valor_hh: base,
+                                valor_hh_70: Math.round(base * 1.7 * 100) / 100,
+                                valor_hh_100: Math.round(base * 2.0 * 100) / 100,
+                              }
+                              setComposicao(next)
+                            }}
+                            className="w-20 px-1 py-1 border border-gray-200 rounded text-xs text-right" />
+                        </td>
+                        <td className="px-2 py-1.5 text-right">
+                          <input type="number" min={0} step={0.01} value={c.valor_hh_70}
+                            onChange={e => {
+                              const next = [...composicao]
+                              next[idx] = { ...next[idx], valor_hh_70: Number(e.target.value) }
+                              setComposicao(next)
+                            }}
+                            className="w-20 px-1 py-1 border border-gray-200 rounded text-xs text-right" />
+                        </td>
+                        <td className="px-2 py-1.5 text-right">
+                          <input type="number" min={0} step={0.01} value={c.valor_hh_100}
+                            onChange={e => {
+                              const next = [...composicao]
+                              next[idx] = { ...next[idx], valor_hh_100: Number(e.target.value) }
+                              setComposicao(next)
+                            }}
+                            className="w-20 px-1 py-1 border border-gray-200 rounded text-xs text-right" />
+                        </td>
+                        <td className="px-2 py-1.5 text-center">
+                          <button type="button" onClick={() => setComposicao(composicao.filter((_, i) => i !== idx))}
+                            className="text-gray-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <button type="button" onClick={() => setComposicao(prev => [...prev, {
+              funcao_nome: '', quantidade: 1, carga_horaria_dia: 8,
+              valor_hh: 0, valor_hh_70: 0, valor_hh_100: 0,
+            }])}
+              className="px-3 py-1.5 border border-brand text-brand rounded-lg text-xs font-bold hover:bg-brand/5 flex items-center gap-1.5">
+              <Plus className="w-3.5 h-3.5" /> Adicionar função
+            </button>
+
+            {composicao.length === 0 && (
+              <div className="p-4 border border-dashed border-gray-200 rounded-lg text-center text-xs text-gray-400">
+                Nenhuma função adicionada. Você pode pular este passo e cadastrar depois em Editar Obra.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PASSO 5: REVISAR */}
+        {step === 5 && (
           <div className="space-y-4">
             <div>
               <h2 className="text-lg font-bold font-display text-brand mb-1">Revisar e criar</h2>
@@ -481,8 +634,16 @@ export default function NovaObraWizardPage() {
                 </dd>
               </div>
             </dl>
+            {composicao.length > 0 && (
+              <div className="flex justify-between py-2 border-b border-gray-50">
+                <dt className="text-xs text-gray-500">Composição</dt>
+                <dd className="text-xs text-gray-700 text-right">
+                  {composicao.map(c => `${c.funcao_nome} (${c.quantidade}× R$${c.valor_hh.toFixed(2)}/HH)`).join(', ')}
+                </dd>
+              </div>
+            )}
             <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700">
-              <strong>Próximos passos após criar a obra:</strong> alocar funcionários, definir composição de equipe (função × valor HH), importar ponto e gerar o primeiro BM.
+              <strong>Próximos passos após criar a obra:</strong> alocar funcionários, importar ponto e gerar o primeiro BM.
             </div>
           </div>
         )}
@@ -493,7 +654,7 @@ export default function NovaObraWizardPage() {
             className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-30 flex items-center gap-1">
             <ChevronLeft className="w-4 h-4" /> Voltar
           </button>
-          {step < 4 ? (
+          {step < 5 ? (
             <button type="button" onClick={next}
               className="px-6 py-2 bg-brand text-white rounded-lg text-sm font-bold hover:bg-brand-dark flex items-center gap-1">
               Avançar <ChevronRight className="w-4 h-4" />
