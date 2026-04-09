@@ -17,6 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     .eq('id', params.id)
     .single()
   if (!bm) return NextResponse.json({ error: 'BM não encontrado' }, { status: 404 })
+  if (!bm.obras) return NextResponse.json({ error: 'Obra vinculada a este BM foi removida' }, { status: 404 })
 
   // Carrega itens do BM
   const { data: itens } = await supabase
