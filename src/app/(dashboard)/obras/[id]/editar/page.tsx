@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import DeleteEntityButton from '@/components/DeleteEntityButton'
+import ComposicaoFuncoes from '@/components/ComposicaoFuncoes'
 import { useToast } from '@/components/Toast'
 
 const STATUS_OPTIONS = [
@@ -482,6 +483,13 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
               </div>
             </div>
           </section>
+
+          {/* === COMPOSIÇÃO DE FUNÇÕES === */}
+          {form.modelo_cobranca && form.modelo_cobranca.startsWith('hh') && (
+            <section>
+              <ComposicaoFuncoes obraId={params.id} />
+            </section>
+          )}
 
           {/* === BOTÕES === */}
           <div className="flex gap-3 pt-2 items-center border-t border-gray-100">
