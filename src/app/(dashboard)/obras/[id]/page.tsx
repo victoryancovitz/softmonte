@@ -23,6 +23,24 @@ const STATUS_BADGE: Record<string, string> = {
   aprovado: 'bg-green-100 text-green-700',
   pago: 'bg-emerald-100 text-emerald-700',
   pendente: 'bg-yellow-100 text-yellow-700',
+  em_aberto: 'bg-blue-100 text-blue-700',
+  cancelado: 'bg-red-100 text-red-700',
+  concluido: 'bg-green-100 text-green-700',
+  em_andamento: 'bg-blue-100 text-blue-700',
+  pausado: 'bg-gray-100 text-gray-500',
+  provisionado: 'bg-purple-100 text-purple-700',
+  atrasado: 'bg-red-100 text-red-700',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  ativo: 'Ativo', aberto: 'Aberto', fechado: 'Fechado', enviado: 'Enviado',
+  aprovado: 'Aprovado', pago: 'Pago', pendente: 'Pendente', em_aberto: 'Em Aberto',
+  cancelado: 'Cancelado', concluido: 'Concluído', em_andamento: 'Em Andamento',
+  pausado: 'Pausado', provisionado: 'Provisão', atrasado: 'Atrasado',
+}
+
+function fmtStatus(s: string): string {
+  return STATUS_LABEL[s] ?? s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -172,7 +190,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
           <p className="text-gray-500 mt-1">{obra.cliente} · {obra.local}</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${STATUS_BADGE[obra.status] ?? 'bg-gray-100 text-gray-600'}`}>{obra.status}</span>
+          <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${STATUS_BADGE[obra.status] ?? 'bg-gray-100 text-gray-600'}`}>{fmtStatus(obra.status)}</span>
           <Link href={`/obras/${obra.id}/editar`} className="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">Editar</Link>
           <ObraStatusBtns obraId={obra.id} status={obra.status} role={role} />
         </div>
@@ -230,7 +248,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               </div>
               <div>
                 <span className="text-gray-500">Status:</span>
-                <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[obra.status] ?? 'bg-gray-100 text-gray-600'}`}>{obra.status}</span>
+                <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[obra.status] ?? 'bg-gray-100 text-gray-600'}`}>{fmtStatus(obra.status)}</span>
               </div>
               <div>
                 <span className="text-gray-500">Início:</span>
@@ -478,7 +496,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
                       {new Date(b.data_inicio + 'T12:00').toLocaleDateString('pt-BR')} — {new Date(b.data_fim + 'T12:00').toLocaleDateString('pt-BR')}
                     </div>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[b.status] ?? 'bg-gray-100 text-gray-600'}`}>{b.status}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[b.status] ?? 'bg-gray-100 text-gray-600'}`}>{fmtStatus(b.status)}</span>
                 </Link>
               ))}
             </div>
@@ -530,7 +548,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
                     <span className={`text-sm font-semibold ${l.tipo === 'receita' ? 'text-green-700' : 'text-red-700'}`}>
                       {l.tipo === 'receita' ? '+' : '-'}{fmt(Number(l.valor))}
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[l.status] ?? 'bg-gray-100 text-gray-600'}`}>{l.status}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[l.status] ?? 'bg-gray-100 text-gray-600'}`}>{fmtStatus(l.status)}</span>
                   </div>
                 </div>
               ))}
@@ -582,7 +600,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
                         e.status === 'concluido' ? 'bg-green-100 text-green-700' :
                         e.status === 'em_andamento' ? 'bg-blue-100 text-blue-700' :
                         e.status === 'atrasado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'
-                      }`}>{e.status}</span>
+                      }`}>{fmtStatus(e.status)}</span>
                       <span className="text-xs text-gray-400">{e.percentual_fisico}%</span>
                     </div>
                   </div>
@@ -650,7 +668,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold">RNC #{r.numero}</span>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${impactColor[r.impacto] ?? 'bg-gray-100'}`}>{r.impacto?.toUpperCase()}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${statusColor[r.status] ?? 'bg-gray-100'}`}>{r.status}</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${statusColor[r.status] ?? 'bg-gray-100'}`}>{fmtStatus(r.status)}</span>
                       </div>
                       <span className="text-xs text-gray-400">{r.responsavel_nome}</span>
                     </div>

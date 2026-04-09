@@ -22,7 +22,14 @@ function normalizeTipo(tipo: string): string {
   const SIGLAS = ['ASO', 'NR', 'CPF', 'RG', 'PIS', 'CTPS', 'EPI', 'ESOCIAL', 'CLT']
   if (SIGLAS.includes(upper)) return upper
   if (upper.startsWith('NR-') || upper.startsWith('NR ')) return upper
-  // Outros: primeira letra maiúscula
+  // Mapeamento especial com acentos
+  const ESPECIAIS: Record<string, string> = {
+    'ADMISSAO': 'Admissão', 'DECLARACAO': 'Declaração', 'COMPROVANTE': 'Comprovante',
+    'CONTRATO': 'Contrato', 'ATESTADO': 'Atestado', 'HOLERITE': 'Holerite',
+    'PONTO': 'Ponto', 'TERMO': 'Termo', 'FERIAS': 'Férias', 'BENEFICIO': 'Benefício',
+    'REGISTRO': 'Registro', 'OUTRO': 'Outro',
+  }
+  if (ESPECIAIS[upper]) return ESPECIAIS[upper]
   return tipo.charAt(0).toUpperCase() + tipo.slice(1).toLowerCase()
 }
 

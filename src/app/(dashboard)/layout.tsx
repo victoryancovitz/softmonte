@@ -15,7 +15,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .from('profiles').select('*').eq('user_id', user.id).single()
 
   return (
-    <div className="min-h-screen bg-[#F4F6FA]">
+    <div className="min-h-screen bg-[#F4F6FA] pt-12">
       <Topbar profile={profile} />
       <ModuleTabs />
       <main>

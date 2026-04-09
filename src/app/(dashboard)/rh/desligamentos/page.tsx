@@ -25,11 +25,21 @@ const ETAPAS = [
 ] as const
 
 const TIPO_LABELS: Record<string, { label: string; cls: string }> = {
+  demissao_sem_justa_causa: { label: 'Sem Justa Causa', cls: 'bg-red-100 text-red-700' },
   sem_justa_causa: { label: 'Sem Justa Causa', cls: 'bg-red-100 text-red-700' },
-  justa_causa: { label: 'Justa Causa', cls: 'bg-red-200 text-red-800' },
+  demissao_por_justa_causa: { label: 'Por Justa Causa', cls: 'bg-red-200 text-red-800' },
+  justa_causa: { label: 'Por Justa Causa', cls: 'bg-red-200 text-red-800' },
   pedido_demissao: { label: 'Pedido de Demissão', cls: 'bg-amber-100 text-amber-700' },
   termino_contrato: { label: 'Término de Contrato', cls: 'bg-blue-100 text-blue-700' },
-  acordo: { label: 'Acordo', cls: 'bg-purple-100 text-purple-700' },
+  acordo: { label: 'Acordo Mútuo', cls: 'bg-purple-100 text-purple-700' },
+  acordo_mutual: { label: 'Acordo Mútuo', cls: 'bg-purple-100 text-purple-700' },
+  aposentadoria: { label: 'Aposentadoria', cls: 'bg-gray-100 text-gray-600' },
+  falecimento: { label: 'Falecimento', cls: 'bg-gray-200 text-gray-700' },
+}
+
+/** Fallback: converte snake_case para Title Case */
+function formatSnake(s: string): string {
+  return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 function formatDate(d: string | null): string {
@@ -245,7 +255,7 @@ export default function DesligamentosPage() {
             const isOpen = expanded.has(desl.id)
             const progress = getProgress(desl)
             const allDone = progress.done === progress.total
-            const tipoInfo = TIPO_LABELS[desl.tipo_desligamento] ?? { label: desl.tipo_desligamento, cls: 'bg-gray-100 text-gray-600' }
+            const tipoInfo = TIPO_LABELS[desl.tipo_desligamento] ?? { label: formatSnake(desl.tipo_desligamento || ''), cls: 'bg-gray-100 text-gray-600' }
 
             return (
               <div key={desl.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -383,7 +393,7 @@ export default function DesligamentosPage() {
               </thead>
               <tbody>
                 {concluidos.map(desl => {
-                  const tipoInfo = TIPO_LABELS[desl.tipo_desligamento] ?? { label: desl.tipo_desligamento, cls: 'bg-gray-100 text-gray-600' }
+                  const tipoInfo = TIPO_LABELS[desl.tipo_desligamento] ?? { label: formatSnake(desl.tipo_desligamento || ''), cls: 'bg-gray-100 text-gray-600' }
                   return (
                     <tr key={desl.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                       <td className="px-4 py-3">

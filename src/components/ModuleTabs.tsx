@@ -30,7 +30,7 @@ export default function ModuleTabs() {
   }
 
   return (
-    <nav className="bg-white border-b border-gray-100 sticky top-14 z-30 overflow-x-auto scrollbar-thin">
+    <nav className="bg-white border-b border-gray-100 sticky top-12 z-30 overflow-x-auto scrollbar-thin">
       <div className="flex gap-1 px-3 sm:px-6 min-w-max">
         {mod.tabs.map(tab => {
           const active = isActive(tab)
