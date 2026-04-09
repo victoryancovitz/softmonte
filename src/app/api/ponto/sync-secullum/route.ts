@@ -92,6 +92,35 @@ type Marcacao = {
   payloadCru: any
 }
 
+/** Determina o status do dia a partir do cartão Secullum */
+function parseStatusDia(cartao: any): string {
+  if (cartao.Folga === true) return 'folga'
+  if (cartao.Compensado === true) return 'compensado'
+
+  // Checa os slots — se TODOS são AFASTAM, FERIAS, PENDENT, etc.
+  const vals: string[] = []
+  for (const label of MARCACAO_LABELS) {
+    const v = cartao[label]
+    if (v != null && v !== '') vals.push(String(v).toUpperCase().trim())
+  }
+
+  if (vals.length === 0) return 'sem_marcacao'
+  if (vals.every(v => v === 'AFASTAM')) return 'afastamento'
+  if (vals.every(v => v === 'FERIAS')) return 'ferias'
+  if (vals.every(v => v === 'PENDENT')) return 'pendente'
+  if (vals.some(v => isTime(v))) return 'presente'
+  // Mix de status texto sem horários
+  if (vals.every(v => ['AFASTAM', 'FERIAS', 'PENDENT', 'INTREGR', ''].includes(v))) return 'afastamento'
+  return 'sem_marcacao'
+}
+
+type DiaStatus = {
+  pis: string
+  data: string
+  status: string
+  secullumId: number | null
+}
+
 /** Transforma um cartão diário em 0..10 marcações individuais */
 function parseDiaBatidas(cartao: any): Marcacao[] {
   const data = parseData(cartao.Data)
@@ -219,17 +248,32 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // 3. Explode cartões diários em marcações individuais
+  // 3. Explode cartões diários em marcações + coleta status por dia
   const allMarcacoes: Marcacao[] = []
+  const allDiaStatus: DiaStatus[] = []
   let cartoesSemMarcacao = 0
   for (const cartao of batidas) {
-    const marcacoes = parseDiaBatidas(cartao as any)
+    const c = cartao as any
+    const data = parseData(c.Data)
+    const pis = onlyDigits(c.Funcionario?.NumeroPis || c.Funcionario?.Pis || '')
+    const secullumId = typeof c.Id === 'number' ? c.Id : null
+
+    if (data && pis) {
+      allDiaStatus.push({ pis, data, status: parseStatusDia(c), secullumId })
+    }
+
+    const marcacoes = parseDiaBatidas(c)
     if (marcacoes.length === 0) cartoesSemMarcacao++
     allMarcacoes.push(...marcacoes)
   }
 
   // 4. Mapeia PIS da Secullum → funcionario_id do Softmonte
-  const pisList = Array.from(new Set(allMarcacoes.map(m => m.pis).filter(Boolean)))
+  // Coleta PIS tanto das marcações quanto dos status (pra gravar status de afastados também)
+  const allPis = new Set([
+    ...allMarcacoes.map(m => m.pis).filter(Boolean),
+    ...allDiaStatus.map(d => d.pis).filter(Boolean),
+  ])
+  const pisList = Array.from(allPis)
   const pisToFuncId = new Map<string, string>()
 
   if (pisList.length > 0) {
@@ -276,7 +320,29 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // 6. Upsert em lotes
+  // 6. Upsert ponto_dia_status (status por dia por funcionário)
+  const statusRows = allDiaStatus
+    .filter(d => pisToFuncId.has(d.pis))
+    .map(d => ({
+      funcionario_id: pisToFuncId.get(d.pis)!,
+      data: d.data,
+      status: d.status,
+      secullum_cartao_id: d.secullumId,
+    }))
+
+  let statusInseridos = 0
+  if (statusRows.length > 0) {
+    for (let i = 0; i < statusRows.length; i += 500) {
+      const chunk = statusRows.slice(i, i + 500)
+      const { error: stErr, count } = await supabase
+        .from('ponto_dia_status')
+        .upsert(chunk, { onConflict: 'funcionario_id,data', count: 'exact' })
+      if (stErr) console.error('[sync-secullum] status upsert error:', stErr)
+      else statusInseridos += count || 0
+    }
+  }
+
+  // 7. Upsert marcações em lotes
   const BATCH = 500
   let inseridas = 0
   const erros: string[] = []
@@ -314,6 +380,7 @@ export async function POST(req: NextRequest) {
     cartoes_diarios: batidas.length,
     total_marcacoes: allMarcacoes.length,
     novas: inseridas,
+    status_dias: statusInseridos,
     ignoradas_sem_horario: ignoradas,
     sem_match: semMatch.length,
     funcionarios_sem_match: semMatch.slice(0, 20),
