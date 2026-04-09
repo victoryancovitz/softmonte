@@ -43,7 +43,7 @@ export default function NovoBMPage() {
 
   useEffect(() => {
     // Bloqueia obras canceladas E encerradas
-    supabase.from('obras').select('id,nome,cliente,data_inicio,data_prev_fim,status,bm_dia_unico,modelo_cobranca,escala_almoco_minutos,carga_horaria_dia')
+    supabase.from('obras').select('id,nome,cliente,data_inicio,data_prev_fim,status,bm_dia_unico,modelo_cobranca,escala_almoco_minutos,carga_horaria_dia').eq('status', 'ativo').is('deleted_at', null)
       .is('deleted_at', null)
       .not('status', 'in', '(cancelado,encerrado)')
       .order('nome')
