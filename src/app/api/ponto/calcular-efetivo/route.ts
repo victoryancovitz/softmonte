@@ -255,7 +255,7 @@ export async function POST(req: NextRequest) {
     let tipoDia = 'util'
     let previstasMin = cargaMin
     if (ds === 0) { // domingo
-      tipoDia = 'domingo'
+      tipoDia = 'domingo_feriado'
       previstasMin = 0
     } else if (ds === 6) { // sábado
       tipoDia = 'sabado'
@@ -287,7 +287,7 @@ export async function POST(req: NextRequest) {
         heMin = totalTrabMin - previstasMin
         normaisMin = previstasMin
       }
-    } else if (tipoDia === 'domingo') {
+    } else if (tipoDia === 'domingo_feriado') {
       // Todo trabalho em domingo é HE 100%
       heDomFeriadoMin = totalTrabMin
       normaisMin = 0
