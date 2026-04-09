@@ -234,12 +234,14 @@ export default function PontoMarcacoesGrid() {
     }
 
     // 5. Carregar atribuicoes existentes de efetivo_diario para o periodo
+    //    + a ÚLTIMA atribuição ANTES do mês (pra herança cross-mês funcionar)
     const atribMap = new Map<string, Map<string, string>>()
     if (funcIds.length > 0) {
-      // Paginado por chunks de funcIds
       const CHUNK = 50
       for (let i = 0; i < funcIds.length; i += CHUNK) {
         const chunk = funcIds.slice(i, i + CHUNK)
+
+        // 5a. Atribuições do mês atual
         let offset = 0
         while (true) {
           const { data: efData } = await supabase
@@ -249,6 +251,7 @@ export default function PontoMarcacoesGrid() {
             .gte('data', dateStart)
             .lte('data', dateEnd)
             .not('obra_id', 'is', null)
+            .eq('origem_registro', 'atribuicao_manual')
             .range(offset, offset + 999)
           if (!efData || efData.length === 0) break
           for (const row of efData as Atribuicao[]) {
@@ -257,6 +260,29 @@ export default function PontoMarcacoesGrid() {
           }
           if (efData.length < 1000) break
           offset += 1000
+        }
+
+        // 5b. Última atribuição ANTES do mês (pra herança cross-mês)
+        //     Pra cada funcionário do chunk, busca o registro mais recente antes de dateStart
+        const { data: prevData } = await supabase
+          .from('efetivo_diario')
+          .select('funcionario_id, data, obra_id')
+          .in('funcionario_id', chunk)
+          .lt('data', dateStart)
+          .not('obra_id', 'is', null)
+          .eq('origem_registro', 'atribuicao_manual')
+          .order('data', { ascending: false })
+          .limit(chunk.length) // 1 por func no melhor caso
+
+        // Agrupa por func e pega o mais recente de cada
+        if (prevData) {
+          const seen = new Set<string>()
+          for (const row of prevData as Atribuicao[]) {
+            if (seen.has(row.funcionario_id)) continue
+            seen.add(row.funcionario_id)
+            if (!atribMap.has(row.funcionario_id)) atribMap.set(row.funcionario_id, new Map())
+            atribMap.get(row.funcionario_id)!.set(row.data, row.obra_id)
+          }
         }
       }
     }
@@ -374,46 +400,21 @@ export default function PontoMarcacoesGrid() {
     return null
   }, [atribuicoes, alocacoesMap])
 
-  /** Atribuir obra a um funcionario a partir de um dia (persiste até fim do mês ou próxima atribuição diferente) */
+  /** Atribuir obra a um funcionario num dia. 1 registro = persiste pra sempre via herança. */
   async function atribuirObra(funcId: string, day: number, obraId: string | null) {
+    const dateStr = `${ano}-${String(mes).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     setSaving(true)
 
-    // Calcula quais dias gravar: do dia selecionado até o fim do mês
-    // Para se encontrar uma atribuição manual existente com outra obra APÓS este dia
-    const funcAtrib = atribuicoes.get(funcId)
-    const diasParaGravar: string[] = []
-    const diasParaRemover: string[] = []
+    if (obraId) {
+      // Remove qualquer registro existente neste dia (evita conflito de PK com obra diferente)
+      await supabase.from('efetivo_diario').delete().eq('funcionario_id', funcId).eq('data', dateStr)
 
-    for (let d = day; d <= totalDays; d++) {
-      const ds = `${ano}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`
-
-      // Se este dia já tem atribuição manual DIFERENTE e é depois do dia clicado, para
-      if (d > day && funcAtrib?.has(ds)) {
-        const obraExistente = funcAtrib.get(ds)
-        if (obraExistente !== obraId) break
-      }
-
-      if (obraId) {
-        diasParaGravar.push(ds)
-      } else {
-        diasParaRemover.push(ds)
-      }
-    }
-
-    if (obraId && diasParaGravar.length > 0) {
-      // Primeiro remove registros existentes pra estes dias (evita conflito de PK)
-      for (const ds of diasParaGravar) {
-        await supabase.from('efetivo_diario').delete().eq('funcionario_id', funcId).eq('data', ds)
-      }
-
-      // Insere em batch
-      const rows = diasParaGravar.map(ds => ({
+      const { error } = await supabase.from('efetivo_diario').insert({
         funcionario_id: funcId,
         obra_id: obraId,
-        data: ds,
+        data: dateStr,
         origem_registro: 'atribuicao_manual',
-      }))
-      const { error } = await supabase.from('efetivo_diario').insert(rows)
+      })
       if (error) {
         toast.error('Erro ao atribuir obra: ' + error.message)
         setSaving(false)
@@ -421,25 +422,22 @@ export default function PontoMarcacoesGrid() {
         return
       }
 
-      // Atualizar estado local
+      // Atualizar estado local — herança visual cuida dos dias seguintes
       setAtribuicoes(prev => {
         const next = new Map(prev)
         if (!next.has(funcId)) next.set(funcId, new Map())
-        const funcMap = next.get(funcId)!
-        for (const ds of diasParaGravar) funcMap.set(ds, obraId)
+        next.get(funcId)!.set(dateStr, obraId)
         return next
       })
-    } else if (!obraId && diasParaRemover.length > 0) {
-      // "Sem obra" — remover atribuição dos dias em diante
-      for (const ds of diasParaRemover) {
-        await supabase.from('efetivo_diario').delete().eq('funcionario_id', funcId).eq('data', ds)
-      }
+    } else {
+      // "Sem obra" — remove a atribuição deste dia (herança para de valer a partir daqui)
+      await supabase.from('efetivo_diario').delete().eq('funcionario_id', funcId).eq('data', dateStr)
 
       setAtribuicoes(prev => {
         const next = new Map(prev)
         const funcMap = next.get(funcId)
         if (funcMap) {
-          for (const ds of diasParaRemover) funcMap.delete(ds)
+          funcMap.delete(dateStr)
           if (funcMap.size === 0) next.delete(funcId)
         }
         return next
@@ -449,8 +447,7 @@ export default function PontoMarcacoesGrid() {
     setSaving(false)
     setDropdownOpen(null)
     const obraNome = obraId ? obras.find(o => o.id === obraId)?.nome ?? 'Obra' : 'Sem obra'
-    const diasMsg = obraId ? diasParaGravar.length : diasParaRemover.length
-    toast.success(`${obraNome} atribuída do dia ${day} ao ${day + diasMsg - 1}/${mes}`)
+    toast.success(`${obraNome} a partir de ${day}/${mes} (vale até nova realocação)`)
   }
 
   /** Monta conteudo da celula para um funcionario+dia */

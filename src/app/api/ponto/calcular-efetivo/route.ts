@@ -219,7 +219,31 @@ export async function POST(req: NextRequest) {
       existenteMap.set(`${e.funcionario_id}|${e.data}`, e.obra_id)
     }
   }
-  console.log('[calcular-efetivo] atribuicoes manuais existentes:', existenteMap.size)
+
+  // Busca última atribuição ANTES do período pra herança cross-mês
+  // (pra cada funcionário, pega o registro manual mais recente antes de dataInicio)
+  const lastBeforeMap = new Map<string, string>() // funcId -> obra_id
+  if (funcIds.length > 0) {
+    const { data: prevData } = await supabase
+      .from('efetivo_diario')
+      .select('funcionario_id, data, obra_id')
+      .in('funcionario_id', funcIds)
+      .lt('data', dataInicio)
+      .not('obra_id', 'is', null)
+      .eq('origem_registro', 'atribuicao_manual')
+      .order('data', { ascending: false })
+      .limit(funcIds.length)
+
+    if (prevData) {
+      const seen = new Set<string>()
+      for (const row of prevData as any[]) {
+        if (seen.has(row.funcionario_id)) continue
+        seen.add(row.funcionario_id)
+        lastBeforeMap.set(row.funcionario_id, row.obra_id)
+      }
+    }
+  }
+  console.log('[calcular-efetivo] atribuicoes manuais:', existenteMap.size, 'herancas pre-periodo:', lastBeforeMap.size)
 
   // 3. Lê alocações ativas que cobrem o período (fallback pra quem não tem atribuição manual)
   let allocsQ = supabase
@@ -275,7 +299,7 @@ export async function POST(req: NextRequest) {
       return existenteMap.get(manualKey)!
     }
 
-    // b) Herança: busca atribuição manual do dia anterior mais recente
+    // b) Herança: busca atribuição manual do dia anterior mais recente (no período)
     let bestDate: string | null = null
     Array.from(existenteMap.entries()).forEach(([key, _oId]) => {
       const [fId, d] = key.split('|')
@@ -285,6 +309,11 @@ export async function POST(req: NextRequest) {
     })
     if (bestDate) {
       return existenteMap.get(`${funcId}|${bestDate}`)!
+    }
+
+    // b2) Herança cross-mês: usa a última atribuição ANTES do período
+    if (lastBeforeMap.has(funcId)) {
+      return lastBeforeMap.get(funcId)!
     }
 
     // c) Fallback: alocação ativa no dia
