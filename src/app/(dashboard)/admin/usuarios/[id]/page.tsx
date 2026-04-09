@@ -217,7 +217,7 @@ export default function EditarUsuarioPage() {
         </div>
       </div>
 
-      {/* Save */}
+      {/* Save + Delete */}
       <div className="flex items-center gap-3">
         <button
           onClick={handleSave}
@@ -232,6 +232,31 @@ export default function EditarUsuarioPage() {
         >
           Cancelar
         </Link>
+        <div className="ml-auto">
+          <button
+            onClick={async () => {
+              if (!window.confirm(`Excluir o usuário "${profile.nome}"? Ele perderá acesso imediatamente.`)) return
+              setSaving(true)
+              const { data: { user: currentUser } } = await supabase.auth.getUser()
+              const { error: delErr } = await supabase.from('profiles').update({
+                deleted_at: new Date().toISOString(),
+                deleted_by: currentUser?.id ?? null,
+                ativo: false,
+              }).eq('id', params.id)
+              if (delErr) {
+                toast.show('Erro ao excluir: ' + delErr.message, 'error')
+                setSaving(false)
+              } else {
+                toast.show('Usuário excluído')
+                router.push('/admin/usuarios')
+              }
+            }}
+            disabled={saving}
+            className="px-4 py-2.5 border border-red-200 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 transition-colors disabled:opacity-40"
+          >
+            Excluir usuário
+          </button>
+        </div>
       </div>
     </div>
   )
