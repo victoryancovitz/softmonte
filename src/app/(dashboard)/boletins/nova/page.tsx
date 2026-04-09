@@ -43,7 +43,7 @@ export default function NovoBMPage() {
 
   useEffect(() => {
     // Bloqueia obras canceladas E encerradas
-    supabase.from('obras').select('id,nome,cliente,data_inicio,data_prev_fim,status,bm_dia_unico,modelo_cobranca')
+    supabase.from('obras').select('id,nome,cliente,data_inicio,data_prev_fim,status,bm_dia_unico,modelo_cobranca,escala_almoco_minutos,carga_horaria_dia')
       .is('deleted_at', null)
       .not('status', 'in', '(cancelado,encerrado)')
       .order('nome')
@@ -157,6 +157,51 @@ export default function NovoBMPage() {
     const obraSel = obras.find(o => o.id === form.obra_id)
     const modeloCobranca = obraSel?.modelo_cobranca || 'hh_diaria'
 
+    // Para HH-Hora Efetiva: busca marcações BRUTAS pra calcular horas reais
+    // (não depende de calcular-efetivo ter rodado)
+    type MarcDia = { funcionario_id: string; data: string; horas: string[] }
+    const marcPorFuncDia = new Map<string, number>() // "funcId|data" -> horas trabalhadas
+    if (modeloCobranca === 'hh_hora_efetiva') {
+      const funcIds = Array.from(new Set((efetivo as any[]).map((e: any) => e.funcionarios?.id).filter(Boolean)))
+      if (funcIds.length > 0) {
+        const { data: marcData } = await supabase
+          .from('ponto_marcacoes')
+          .select('funcionario_id, data, hora')
+          .in('funcionario_id', funcIds)
+          .gte('data', form.data_inicio)
+          .lte('data', form.data_fim)
+          .order('hora')
+
+        // Agrupa batidas por func+dia e calcula horas: (última - primeira) - almoço
+        const escalaAlmoco = Number(obraSel?.escala_almoco_minutos ?? 60)
+        const grouped = new Map<string, string[]>() // "funcId|data" -> [horas]
+        for (const m of (marcData ?? []) as any[]) {
+          const key = `${m.funcionario_id}|${m.data}`
+          if (!grouped.has(key)) grouped.set(key, [])
+          grouped.get(key)!.push(String(m.hora).slice(0, 5))
+        }
+        grouped.forEach((horas, key) => {
+          if (horas.length < 2) return
+          const sorted = [...horas].sort()
+          const first = sorted[0].split(':').map(Number)
+          const last = sorted[sorted.length - 1].split(':').map(Number)
+          const entradaMin = first[0] * 60 + first[1]
+          const saidaMin = last[0] * 60 + last[1]
+          let intervalo = escalaAlmoco
+          if (sorted.length >= 4) {
+            // Usa batidas 2 e 3 como intervalo real
+            const s2 = sorted[1].split(':').map(Number)
+            const e3 = sorted[2].split(':').map(Number)
+            intervalo = (e3[0] * 60 + e3[1]) - (s2[0] * 60 + s2[1])
+          } else if (saidaMin - entradaMin <= 360) {
+            intervalo = 0 // jornada <= 6h, sem almoço
+          }
+          const totalMin = Math.max(0, (saidaMin - entradaMin) - intervalo)
+          marcPorFuncDia.set(key, Math.round((totalMin / 60) * 100) / 100)
+        })
+      }
+    }
+
     // Step 1: aggregate by funcionario first (so we can list per function)
     const perFunc: Record<string, { func: any; tipos: Record<string, Set<string>>; horas: { normais: number; he50: number; he100: number } }> = {}
     efetivo.forEach((e: any) => {
@@ -166,10 +211,33 @@ export default function NovoBMPage() {
         perFunc[f.id] = { func: f, tipos: { util: new Set(), sabado: new Set(), domingo_feriado: new Set() }, horas: { normais: 0, he50: 0, he100: 0 } }
       }
       ;(perFunc[f.id].tipos[e.tipo_dia] ?? perFunc[f.id].tipos.util).add(e.data)
-      // Acumula horas reais do ponto
-      perFunc[f.id].horas.normais += Number(e.horas_normais ?? 0)
-      perFunc[f.id].horas.he50 += Number(e.horas_extras_50 ?? 0)
-      perFunc[f.id].horas.he100 += Number(e.horas_extras_100 ?? 0)
+
+      // Acumula horas: se efetivo_diario já tem horas calculadas, usa. Senão usa marcações brutas.
+      const horasEfetivo = Number(e.horas_normais ?? 0)
+      const he50Efetivo = Number(e.horas_extras_50 ?? 0)
+      const he100Efetivo = Number(e.horas_extras_100 ?? 0)
+
+      if (horasEfetivo > 0 || he50Efetivo > 0 || he100Efetivo > 0) {
+        perFunc[f.id].horas.normais += horasEfetivo
+        perFunc[f.id].horas.he50 += he50Efetivo
+        perFunc[f.id].horas.he100 += he100Efetivo
+      } else if (modeloCobranca === 'hh_hora_efetiva') {
+        // Fallback: calcula das marcações brutas
+        const key = `${f.id}|${e.data}`
+        const horasCalc = marcPorFuncDia.get(key) ?? 0
+        const carga = Number(obraSel?.carga_horaria_dia ?? 8)
+        if (e.tipo_dia === 'domingo_feriado') {
+          perFunc[f.id].horas.he100 += horasCalc
+        } else if (e.tipo_dia === 'sabado') {
+          const normais = Math.min(horasCalc, carga)
+          perFunc[f.id].horas.normais += normais
+          perFunc[f.id].horas.he50 += Math.max(0, horasCalc - carga)
+        } else {
+          const normais = Math.min(horasCalc, carga)
+          perFunc[f.id].horas.normais += normais
+          perFunc[f.id].horas.he50 += Math.max(0, horasCalc - carga)
+        }
+      }
     })
 
     // Step 2: group funcionarios by função (cargo)
