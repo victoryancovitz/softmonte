@@ -74,40 +74,30 @@ export default function ConvitePage() {
     setLoading(true)
     setErro('')
 
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: form.email,
-      password: form.senha,
-    })
-
-    if (authError) { setErro(authError.message); setLoading(false); return }
-
-    if (authData.user) {
-      // Call RPC to mark convite as used and create profile
-      const { data: rpcResult, error: rpcError } = await supabase.rpc('usar_convite', {
-        p_token: params.token as string,
-        p_user_id: authData.user.id,
-        p_email: form.email,
+    try {
+      // Usa API server-side pra criar usuário já confirmado (sem precisar de email)
+      const resp = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: params.token,
+          email: form.email,
+          password: form.senha,
+        }),
       })
 
-      // Check both RPC-level error and function-level {ok: false}
-      const rpcFailed = rpcError || (rpcResult && rpcResult.ok === false)
+      const result = await resp.json()
 
-      if (rpcFailed) {
-        // Fallback: update manually
-        await supabase.from('convites').update({ usado_em: new Date().toISOString(), ativo: false }).eq('token', params.token as string)
-        await supabase.from('profiles').upsert({
-          user_id: authData.user.id,
-          nome: convite.nome_convidado,
-          email: form.email,
-          role: convite.role,
-          acessos: convite.acessos,
-          ativo: true,
-          funcionario_id: convite.funcionario_id,
-        })
+      if (!resp.ok) {
+        setErro(result.error || 'Erro ao criar conta')
+        setLoading(false)
+        return
       }
-    }
 
-    setEtapa('sucesso')
+      setEtapa('sucesso')
+    } catch (err: any) {
+      setErro('Erro de conexão: ' + (err?.message || 'tente novamente'))
+    }
     setLoading(false)
   }
 
