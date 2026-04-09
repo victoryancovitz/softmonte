@@ -129,9 +129,10 @@ export async function autenticar(usuario: string, senha: string): Promise<Secull
   }
 
   const banco = bancosPontoWeb[0]
-  const identificador = banco.identificador || ''
-  // O C# oficial usa Guid.Parse(identificador).ToString("N") — formato sem hífens.
-  const bancoId = identificador.replace(/-/g, '')
+  // O debug revelou que a API aceita o id NUMÉRICO (ex: 124008), não o GUID.
+  // O exemplo C# da Secullum usava GUID sem hífens, mas na prática o id numérico
+  // é o formato que retorna 200 no header secullumidbancoselecionado.
+  const bancoId = String(banco.id || '')
 
   return {
     accessToken,
