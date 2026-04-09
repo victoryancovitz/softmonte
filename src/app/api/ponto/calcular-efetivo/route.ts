@@ -109,18 +109,32 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServerClient()
 
-  // 1. Lê marcações do período
-  const { data: marcacoes, error: mErr } = await supabase
-    .from('ponto_marcacoes')
-    .select('funcionario_id, data, hora, sequencia')
-    .gte('data', dataInicio)
-    .lte('data', dataFim)
-    .order('funcionario_id')
-    .order('data')
-    .order('hora')
-  if (mErr) return NextResponse.json({ error: 'Erro lendo marcações: ' + mErr.message }, { status: 500 })
+  // 1. Lê marcações do período (pagina pra superar o limite padrão de 1000 linhas do Supabase)
+  const PAGE = 1000
+  let allMarcacoes: Marcacao[] = []
+  let offset = 0
+  let keepFetching = true
+  while (keepFetching) {
+    const { data: page, error: mErr } = await supabase
+      .from('ponto_marcacoes')
+      .select('funcionario_id, data, hora, sequencia')
+      .gte('data', dataInicio)
+      .lte('data', dataFim)
+      .order('funcionario_id')
+      .order('data')
+      .order('hora')
+      .range(offset, offset + PAGE - 1)
+    if (mErr) return NextResponse.json({ error: 'Erro lendo marcações: ' + mErr.message }, { status: 500 })
+    const rows = (page ?? []) as Marcacao[]
+    allMarcacoes = allMarcacoes.concat(rows)
+    if (rows.length < PAGE) keepFetching = false
+    else offset += PAGE
+  }
 
-  if (!marcacoes || marcacoes.length === 0) {
+  const marcacoes = allMarcacoes
+  console.log('[calcular-efetivo] marcacoes:', marcacoes.length, 'periodo:', dataInicio, dataFim)
+
+  if (marcacoes.length === 0) {
     return NextResponse.json({
       ok: true,
       mensagem: 'Nenhuma marcação no período. Sincronize o ponto primeiro.',
