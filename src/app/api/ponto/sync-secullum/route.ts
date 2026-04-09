@@ -30,58 +30,97 @@ function onlyDigits(s: string | null | undefined): string {
   return (s || '').replace(/\D/g, '')
 }
 
-/** Acessa campo case-insensitive (Secullum retorna PascalCase, parser espera camelCase) */
-function get(b: any, ...keys: string[]): string | undefined {
-  for (const k of keys) {
-    if (b[k] != null && b[k] !== '') return String(b[k])
-  }
-  return undefined
+/**
+ * Formato real da Secullum: cada registro é um CARTÃO DIÁRIO com até 5 pares.
+ *
+ * {
+ *   Id: 30924,
+ *   FuncionarioId: 23,
+ *   Data: "2026-01-07T00:00:00",
+ *   Entrada1: "07:30" | "AFASTAM" | "FERIAS" | "PENDENT" | null,
+ *   Saida1: "12:30" | ...,
+ *   Entrada2: "13:30",
+ *   Saida2: "17:30",
+ *   ...até Entrada5/Saida5
+ *   Funcionario: { NumeroPis: "123...", NumeroFolha: "1024", NumeroIdentificador: "1024" },
+ *   FonteDadosEntrada1: { Tipo: 0, Origem: 1 } | null,
+ *   ...
+ * }
+ */
+
+const MARCACAO_LABELS = ['Entrada1','Saida1','Entrada2','Saida2','Entrada3','Saida3','Entrada4','Saida4','Entrada5','Saida5'] as const
+
+/** Verifica se um valor é um horário HH:mm (não "AFASTAM", "FERIAS", "PENDENT", null, etc) */
+function isTime(val: any): boolean {
+  if (typeof val !== 'string') return false
+  return /^\d{1,2}:\d{2}(:\d{2})?$/.test(val.trim())
 }
 
-/** Extrai data e hora lidando com PascalCase/camelCase e múltiplos formatos */
-function parseBatida(b: SecullumBatida): { data: string; hora: string } | null {
-  const a = b as any
-
-  // Formato 1: data + hora separados (Data/data, Hora/hora)
-  const dataStr = get(a, 'Data', 'data')
-  const horaStr = get(a, 'Hora', 'hora')
-  if (dataStr && horaStr) {
-    // dataStr pode ser "2026-04-07" ou "2026-04-07T00:00:00" ou "07/04/2026"
-    let dataParsed = dataStr.slice(0, 10)
-    if (dataParsed.includes('/')) {
-      // dd/MM/yyyy → yyyy-MM-dd
-      const parts = dataParsed.split('/')
-      if (parts.length === 3) dataParsed = `${parts[2]}-${parts[1]}-${parts[0]}`
-    }
-    return { data: dataParsed, hora: horaStr.slice(0, 5) }
+/** Extrai data (yyyy-MM-dd) do campo Data que vem como "2026-01-07T00:00:00" */
+function parseData(dataStr: string | null | undefined): string | null {
+  if (!dataStr) return null
+  const s = String(dataStr)
+  // ISO: "2026-01-07T00:00:00"
+  if (s.includes('T') || s.includes('-')) return s.slice(0, 10)
+  // dd/MM/yyyy
+  if (s.includes('/')) {
+    const parts = s.split('/')
+    if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`
   }
-
-  // Formato 2: dataHora combinado (DataHora/dataHora)
-  const dtHora = get(a, 'DataHora', 'dataHora')
-  if (dtHora) {
-    const d = new Date(dtHora)
-    if (isNaN(d.getTime())) return null
-    const yyyy = d.getUTCFullYear()
-    const mm = String(d.getUTCMonth() + 1).padStart(2, '0')
-    const dd = String(d.getUTCDate()).padStart(2, '0')
-    const hh = String(d.getUTCHours()).padStart(2, '0')
-    const mi = String(d.getUTCMinutes()).padStart(2, '0')
-    return { data: `${yyyy}-${mm}-${dd}`, hora: `${hh}:${mi}` }
-  }
-
   return null
 }
 
-/** Extrai FonteDados.Tipo e FonteDados.Origem, lidando com variações de casing */
-function parseFonteDados(b: SecullumBatida): { tipo: number | null; origem: number | null } {
-  const fd = (b as any).FonteDados ?? (b as any).fonteDados ?? null
-  if (!fd) return { tipo: null, origem: null }
-  const tipo = fd.Tipo ?? fd.tipo ?? null
-  const origem = fd.Origem ?? fd.origem ?? null
+/** Extrai FonteDados de um slot específico (FonteDadosEntrada1, etc) */
+function parseFonteDados(b: any, label: string): { tipo: number | null; origem: number | null } {
+  const fd = b[`FonteDados${label}`]
+  if (!fd || typeof fd !== 'object') return { tipo: null, origem: null }
   return {
-    tipo: typeof tipo === 'number' ? tipo : null,
-    origem: typeof origem === 'number' ? origem : null,
+    tipo: typeof fd.Tipo === 'number' ? fd.Tipo : null,
+    origem: typeof fd.Origem === 'number' ? fd.Origem : null,
   }
+}
+
+type Marcacao = {
+  data: string
+  hora: string
+  sequencia: number
+  pis: string
+  nome: string
+  secullumId: number | null
+  fonteTipo: number | null
+  fonteOrigem: number | null
+  payloadCru: any
+}
+
+/** Transforma um cartão diário em 0..10 marcações individuais */
+function parseDiaBatidas(cartao: any): Marcacao[] {
+  const data = parseData(cartao.Data)
+  if (!data) return []
+
+  const pis = onlyDigits(cartao.Funcionario?.NumeroPis || cartao.Funcionario?.Pis || '')
+  const nome = cartao.Funcionario?.Nome || ''
+  const secullumId = typeof cartao.Id === 'number' ? cartao.Id : null
+
+  const marcacoes: Marcacao[] = []
+  let seq = 0
+  for (const label of MARCACAO_LABELS) {
+    const val = cartao[label]
+    if (!isTime(val)) continue
+    seq++
+    const { tipo, origem } = parseFonteDados(cartao, label)
+    marcacoes.push({
+      data,
+      hora: val.trim().slice(0, 5), // "07:30" ou "7:30" → "07:30"/"7:30"
+      sequencia: seq,
+      pis,
+      nome,
+      secullumId,
+      fonteTipo: tipo,
+      fonteOrigem: origem,
+      payloadCru: cartao,
+    })
+  }
+  return marcacoes
 }
 
 export async function POST(req: NextRequest) {
@@ -180,30 +219,19 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // 3. Mapeia CPFs/PIS da Secullum → funcionario_id do Softmonte
-  // A API Secullum retorna campos em PascalCase (Cpf, NumeroPis, etc)
-  function getCpf(b: any): string {
-    return onlyDigits(b.funcionarioCpf || b.FuncionarioCpf || b.Cpf || b.cpf || '')
-  }
-  function getPis(b: any): string {
-    return onlyDigits(b.funcionarioPis || b.FuncionarioPis || b.NumeroPis || b.Pis || b.pis || '')
-  }
-  function getNome(b: any): string {
-    return b.funcionarioNome || b.FuncionarioNome || b.Nome || b.nome || ''
+  // 3. Explode cartões diários em marcações individuais
+  const allMarcacoes: Marcacao[] = []
+  let cartoesSemMarcacao = 0
+  for (const cartao of batidas) {
+    const marcacoes = parseDiaBatidas(cartao as any)
+    if (marcacoes.length === 0) cartoesSemMarcacao++
+    allMarcacoes.push(...marcacoes)
   }
 
-  const cpfs = Array.from(new Set(batidas.map(getCpf).filter(Boolean)))
-  const pisList = Array.from(new Set(batidas.map(getPis).filter(Boolean)))
-
-  const cpfToFuncId = new Map<string, string>()
+  // 4. Mapeia PIS da Secullum → funcionario_id do Softmonte
+  const pisList = Array.from(new Set(allMarcacoes.map(m => m.pis).filter(Boolean)))
   const pisToFuncId = new Map<string, string>()
 
-  if (cpfs.length > 0) {
-    const { data } = await supabase.from('funcionarios').select('id, cpf').in('cpf', cpfs)
-    ;(data || []).forEach((f: any) => {
-      if (f.cpf) cpfToFuncId.set(onlyDigits(f.cpf), f.id)
-    })
-  }
   if (pisList.length > 0) {
     const { data } = await supabase.from('funcionarios').select('id, pis').in('pis', pisList)
     ;(data || []).forEach((f: any) => {
@@ -211,7 +239,7 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // 4. Prepara rows pra upsert
+  // 5. Prepara rows pra upsert
   type Row = {
     funcionario_id: string
     data: string
@@ -225,44 +253,30 @@ export async function POST(req: NextRequest) {
   }
   const rows: Row[] = []
   const semMatchSet = new Set<string>()
-  let ignoradas = 0
+  let ignoradas = cartoesSemMarcacao // cartões sem nenhuma batida real (AFASTAM, FERIAS, etc)
 
-  const seqMap = new Map<string, number>()
-
-  for (const b of batidas) {
-    const parsed = parseBatida(b)
-    if (!parsed) {
-      ignoradas++
-      continue
-    }
-    const cpf = getCpf(b)
-    const pis = getPis(b)
-    const funcId = (cpf && cpfToFuncId.get(cpf)) || (pis && pisToFuncId.get(pis)) || null
+  for (const m of allMarcacoes) {
+    const funcId = (m.pis && pisToFuncId.get(m.pis)) || null
 
     if (!funcId) {
-      semMatchSet.add(getNome(b) || cpf || pis || '(sem id)')
+      semMatchSet.add(m.nome || m.pis || '(sem id)')
       continue
     }
 
-    const key = `${funcId}|${parsed.data}|${parsed.hora}`
-    const seq = (seqMap.get(key) || 0) + 1
-    seqMap.set(key, seq)
-
-    const { tipo, origem: fonteOrigem } = parseFonteDados(b)
     rows.push({
       funcionario_id: funcId,
-      data: parsed.data,
-      hora: parsed.hora,
-      sequencia: seq,
+      data: m.data,
+      hora: m.hora,
+      sequencia: m.sequencia,
       origem: 'secullum_api',
-      origem_id: b.id != null ? String(b.id) : null,
-      payload_cru: b,
-      fonte_tipo: tipo,
-      fonte_origem: fonteOrigem,
+      origem_id: m.secullumId != null ? String(m.secullumId) : null,
+      payload_cru: m.payloadCru,
+      fonte_tipo: m.fonteTipo,
+      fonte_origem: m.fonteOrigem,
     })
   }
 
-  // 5. Upsert em lotes
+  // 6. Upsert em lotes
   const BATCH = 500
   let inseridas = 0
   const erros: string[] = []
@@ -287,27 +301,25 @@ export async function POST(req: NextRequest) {
   const finalStatus = erros.length === 0 ? 'ok' : 'error'
   await finishLog({
     status: finalStatus,
-    total_batidas: batidas.length,
+    total_batidas: allMarcacoes.length,
     novas: inseridas,
     ignoradas,
     sem_match: semMatch.length,
     erro: erros.length > 0 ? erros.join('; ') : null,
   })
 
-  // Amostra de batida crua pra debug (ajuda diagnosticar quando ignoradas > 0)
-  const amostraBatida = batidas.length > 0 ? batidas[0] : null
-
   return NextResponse.json({
     ok: erros.length === 0,
     periodo: { dataInicio, dataFim },
-    total_batidas: batidas.length,
+    cartoes_diarios: batidas.length,
+    total_marcacoes: allMarcacoes.length,
     novas: inseridas,
-    ignoradas,
+    ignoradas_sem_horario: ignoradas,
     sem_match: semMatch.length,
     funcionarios_sem_match: semMatch.slice(0, 20),
     erros,
     banco_secullum: session.bancoNome,
     log_id: logId,
-    amostra_batida_crua: amostraBatida,
+    amostra_batida_crua: batidas.length > 0 ? batidas[0] : null,
   })
 }
