@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
+import SearchInput from '@/components/SearchInput'
 import { DollarSign, AlertTriangle, Plus, RefreshCw, Trash2 } from 'lucide-react'
 
 const TIPOS: { v: string; l: string; cor: string }[] = [
@@ -27,6 +28,7 @@ export default function PagamentosExtrasPage() {
   const [obraFiltro, setObraFiltro] = useState('')
   const [competenciaFiltro, setCompetenciaFiltro] = useState('')
   const [regenerating, setRegenerating] = useState(false)
+  const [busca, setBusca] = useState('')
   const supabase = createClient()
   const toast = useToast()
 
@@ -52,6 +54,14 @@ export default function PagamentosExtrasPage() {
     if (tipoFiltro && p.tipo !== tipoFiltro) return false
     if (obraFiltro && p.obra_id !== obraFiltro) return false
     if (competenciaFiltro && !p.competencia.startsWith(competenciaFiltro)) return false
+    if (busca.trim()) {
+      const q = busca.toLowerCase()
+      if (
+        !p.funcionarios?.nome?.toLowerCase().includes(q) &&
+        !p.descricao?.toLowerCase().includes(q) &&
+        !p.funcionarios?.cargo?.toLowerCase().includes(q)
+      ) return false
+    }
     return true
   })
 
@@ -190,7 +200,10 @@ export default function PagamentosExtrasPage() {
         </div>
       )}
 
-      {/* Filtros */}
+      {/* Busca e Filtros */}
+      <div className="mb-3">
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar por funcionario ou descricao..." />
+      </div>
       <div className="flex flex-wrap gap-2 mb-4">
         <select value={tipoFiltro} onChange={e => setTipoFiltro(e.target.value)}
           className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">

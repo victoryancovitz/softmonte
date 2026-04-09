@@ -1,8 +1,9 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
+import SearchInput from '@/components/SearchInput'
 import { FileText, Clock, DollarSign, Calendar, ChevronDown, ChevronUp, Edit2, Check, X } from 'lucide-react'
 
 export default function TiposContratoPage() {
@@ -12,6 +13,7 @@ export default function TiposContratoPage() {
   const [expandido, setExpandido] = useState<string | null>(null)
   const [editando, setEditando] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<any>({})
+  const [busca, setBusca] = useState('')
   const supabase = createClient()
 
   useEffect(() => { load() }, [])
@@ -57,6 +59,16 @@ export default function TiposContratoPage() {
 
   const fmt = (v: number) => v?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) ?? '—'
 
+  const filteredTipos = useMemo(() => {
+    if (!busca.trim()) return tipos
+    const q = busca.toLowerCase()
+    return tipos.filter(t =>
+      t.nome?.toLowerCase().includes(q) ||
+      t.codigo?.toLowerCase().includes(q) ||
+      t.descricao?.toLowerCase().includes(q)
+    )
+  }, [tipos, busca])
+
   if (loading) return <div className="p-4 sm:p-6 text-gray-400 text-sm">Carregando...</div>
 
   return (
@@ -73,9 +85,13 @@ export default function TiposContratoPage() {
         </div>
       </div>
 
-      {tipos.length > 0 ? (
+      <div className="mb-4">
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar tipo de contrato..." />
+      </div>
+
+      {filteredTipos.length > 0 ? (
         <div className="space-y-4">
-          {tipos.map(tipo => {
+          {filteredTipos.map(tipo => {
             const isOpen = expandido === tipo.id
             const comps = composicoes[tipo.id] || []
             return (

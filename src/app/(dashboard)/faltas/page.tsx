@@ -1,18 +1,6 @@
 import { createClient } from '@/lib/supabase-server'
 import Link from 'next/link'
-
-const TIPO_BADGE: Record<string, { label: string; cls: string }> = {
-  falta_injustificada:  { label: 'FALTA', cls: 'bg-red-100 text-red-700' },
-  falta_justificada:    { label: 'JUSTIFICADA', cls: 'bg-orange-100 text-orange-700' },
-  atestado_medico:      { label: 'ATESTADO', cls: 'bg-blue-100 text-blue-700' },
-  atestado_acidente:    { label: 'ACIDENTE', cls: 'bg-blue-100 text-blue-700' },
-  licenca_maternidade:  { label: 'LIC. MATERNIDADE', cls: 'bg-green-100 text-green-700' },
-  licenca_paternidade:  { label: 'LIC. PATERNIDADE', cls: 'bg-green-100 text-green-700' },
-  folga_compensatoria:  { label: 'FOLGA', cls: 'bg-gray-100 text-gray-600' },
-  feriado:              { label: 'FERIADO', cls: 'bg-gray-100 text-gray-600' },
-  suspensao:            { label: 'SUSPENSÃO', cls: 'bg-red-100 text-red-700' },
-  outro:                { label: 'OUTRO', cls: 'bg-gray-100 text-gray-600' },
-}
+import FaltasTable from './FaltasTable'
 
 export default async function FaltasPage() {
   const supabase = createClient()
@@ -22,20 +10,24 @@ export default async function FaltasPage() {
     .select('*, funcionarios(nome, cargo, matricula), obras(nome)')
     .order('data', { ascending: false })
 
-  const rows = faltas ?? []
+  const rows = (faltas ?? []).map((f: any) => ({
+    ...f,
+    funcionario_nome: f.funcionarios?.nome ?? '',
+    obra_nome: f.obras?.nome ?? '',
+  }))
 
   // KPIs: current month
   const now = new Date()
   const mesAtual = now.getMonth()
   const anoAtual = now.getFullYear()
 
-  const doMes = rows.filter(f => {
+  const doMes = rows.filter((f: any) => {
     const d = new Date(f.data + 'T12:00:00')
     return d.getMonth() === mesAtual && d.getFullYear() === anoAtual
   })
 
-  const faltasInjustificadasMes = doMes.filter(f => f.tipo === 'falta_injustificada').length
-  const atestadosMes = doMes.filter(f => f.tipo === 'atestado_medico').length
+  const faltasInjustificadasMes = doMes.filter((f: any) => f.tipo === 'falta_injustificada').length
+  const atestadosMes = doMes.filter((f: any) => f.tipo === 'atestado_medico').length
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
@@ -46,7 +38,7 @@ export default async function FaltasPage() {
         </div>
         <div className="flex gap-2">
           <Link href="/relatorios/absenteismo" className="px-4 py-2 border border-gray-200 text-gray-700 rounded-xl text-sm font-semibold hover:bg-gray-50">
-            Ver índice de absenteísmo →
+            Ver indice de absenteismo →
           </Link>
           <Link href="/faltas/nova" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark">
             + Registrar
@@ -57,15 +49,15 @@ export default async function FaltasPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Faltas Injustificadas (mês)</p>
+          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Faltas Injustificadas (mes)</p>
           <p className="text-2xl font-bold text-red-600 mt-1">{faltasInjustificadasMes}</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Atestados (mês)</p>
+          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Atestados (mes)</p>
           <p className="text-2xl font-bold text-blue-600 mt-1">{atestadosMes}</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Total no mês</p>
+          <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Total no mes</p>
           <p className="text-2xl font-bold text-gray-800 mt-1">{doMes.length}</p>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
@@ -74,55 +66,7 @@ export default async function FaltasPage() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
-              {['Funcionário', 'Obra', 'Data', 'Tipo', 'Observação', 'Arquivo'].map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length > 0 ? rows.map((f: any) => {
-              const badge = TIPO_BADGE[f.tipo] ?? { label: f.tipo, cls: 'bg-gray-100 text-gray-600' }
-              const dataFormatada = f.data
-                ? new Date(f.data + 'T12:00:00').toLocaleDateString('pt-BR')
-                : '—'
-              return (
-                <tr key={f.id} className="border-b border-gray-50 hover:bg-gray-50/80">
-                  <td className="px-4 py-3">
-                    <div className="font-semibold">{f.funcionarios?.nome ?? '—'}</div>
-                    <div className="text-xs text-gray-400">{f.funcionarios?.cargo} · {f.funcionarios?.matricula}</div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{f.obras?.nome ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-600">{dataFormatada}</td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${badge.cls}`}>{badge.label}</span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs max-w-[200px] truncate">{f.observacao ?? '—'}</td>
-                  <td className="px-4 py-3">
-                    {f.arquivo_url ? (
-                      <a href={f.arquivo_url} target="_blank" rel="noopener noreferrer" className="text-xs text-brand hover:underline">
-                        Ver arquivo
-                      </a>
-                    ) : (
-                      <span className="text-xs text-gray-300">—</span>
-                    )}
-                  </td>
-                </tr>
-              )
-            }) : (
-              <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-gray-400">
-                  Nenhuma falta ou atestado registrado.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+      <FaltasTable rows={rows} />
     </div>
   )
 }
