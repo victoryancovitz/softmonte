@@ -43,15 +43,22 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // Funcionário logado é isolado ao /portal: ao tentar acessar / ou /dashboard,
-  // redireciona pra /portal. Outras rotas internas continuam acessíveis (RLS controla).
-  if (user && (pathname === '/' || pathname === '/dashboard')) {
+  // Verificar perfil pra: (a) bloquear usuários inativos/deletados, (b) redirect funcionário
+  if (user && !isAuthPage && !isApiRoute) {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, ativo, deleted_at')
       .eq('user_id', user.id)
       .maybeSingle()
-    if (profile?.role === 'funcionario' && !isPortalRoute) {
+
+    // Usuário bloqueado (ativo=false) ou deletado → força logout
+    if (profile && (profile.ativo === false || profile.deleted_at)) {
+      await supabase.auth.signOut()
+      return NextResponse.redirect(new URL('/login', request.url))
+    }
+
+    // Funcionário logado é isolado ao /portal
+    if (profile?.role === 'funcionario' && (pathname === '/' || pathname === '/dashboard') && !isPortalRoute) {
       return NextResponse.redirect(new URL('/portal', request.url))
     }
   }

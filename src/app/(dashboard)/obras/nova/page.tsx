@@ -43,7 +43,7 @@ export default function NovaObraWizardPage() {
   const [step, setStep] = useState(1)
   const [clientes, setClientes] = useState<any[]>([])
   const [tiposContrato, setTiposContrato] = useState<any[]>([])
-  const [funcoesCadastradas, setFuncoesCadastradas] = useState<{ id: string; nome: string }[]>([])
+  const [funcoesCadastradas, setFuncoesCadastradas] = useState<{ id: string; nome: string; categoria?: string; custo_hora?: number }[]>([])
   const [composicao, setComposicao] = useState<Array<{
     funcao_nome: string
     quantidade: number
@@ -89,9 +89,9 @@ export default function NovaObraWizardPage() {
       const [{ data: cli }, { data: tpc }, { data: funcs }] = await Promise.all([
         supabase.from('clientes').select('id,nome,cnpj,cidade,estado').is('deleted_at', null).order('nome'),
         supabase.from('tipos_contrato').select('*').eq('ativo', true).order('nome'),
-        supabase.from('funcoes').select('id,nome').is('deleted_at', null).order('nome'),
+        supabase.from('funcoes').select('id, nome, categoria, custo_hora').eq('ativo', true).order('categoria').order('nome'),
       ])
-      setFuncoesCadastradas((funcs ?? []) as { id: string; nome: string }[])
+      setFuncoesCadastradas((funcs ?? []) as { id: string; nome: string; categoria?: string; custo_hora?: number }[])
       setClientes(cli || [])
       setTiposContrato(tpc || [])
 
@@ -465,13 +465,54 @@ export default function NovaObraWizardPage() {
         )}
 
         {/* PASSO 4: COMPOSIÇÃO DE FUNÇÕES */}
-        {step === 4 && (
+        {step === 4 && (() => {
+          const modelo = form.modelo_cobranca
+          const mostraHDia = modelo === 'hh_diaria'
+          const mostraHE = modelo !== 'hh_220'
+
+          function onSelectFuncao(idx: number, nome: string) {
+            const func = funcoesCadastradas.find(f => f.nome === nome)
+            const base = Number(func?.custo_hora ?? 0)
+            const next = [...composicao]
+            next[idx] = {
+              ...next[idx],
+              funcao_nome: nome,
+              valor_hh: base,
+              valor_hh_70: Math.round(base * 1.7 * 100) / 100,
+              valor_hh_100: Math.round(base * 2.0 * 100) / 100,
+            }
+            setComposicao(next)
+          }
+
+          function onChangeValorHH(idx: number, base: number) {
+            const next = [...composicao]
+            next[idx] = {
+              ...next[idx],
+              valor_hh: base,
+              valor_hh_70: Math.round(base * 1.7 * 100) / 100,
+              valor_hh_100: Math.round(base * 2.0 * 100) / 100,
+            }
+            setComposicao(next)
+          }
+
+          // Agrupa funções por categoria pra o dropdown
+          const categorias = new Map<string, typeof funcoesCadastradas>()
+          funcoesCadastradas.forEach(f => {
+            const cat = f.categoria || 'Outros'
+            if (!categorias.has(cat)) categorias.set(cat, [])
+            categorias.get(cat)!.push(f)
+          })
+
+          return (
           <div className="space-y-4">
             <div>
               <h2 className="text-lg font-bold font-display text-brand mb-1">Composição de Funções e Valores</h2>
               <p className="text-xs text-gray-500">
-                Cadastre as funções que serão cobradas nesta obra e o valor R$/HH de cada uma.
-                As funções vêm do cadastro em Cadastros → Funções.
+                {modelo === 'hh_hora_efetiva'
+                  ? 'As horas são calculadas pelo cartão ponto (Secullum). Informe apenas o valor R$/HH contratado para cada função.'
+                  : modelo === 'hh_220'
+                  ? 'Base mensal 220h. Informe o valor R$/HH por função.'
+                  : 'Informe a jornada diária fixa e o valor R$/HH contratado por função.'}
               </p>
             </div>
 
@@ -480,12 +521,12 @@ export default function NovaObraWizardPage() {
                 <table className="w-full text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-gray-100 bg-gray-50">
-                      <th className="text-left px-2 py-2 font-semibold text-gray-600">Função</th>
+                      <th className="text-left px-2 py-2 font-semibold text-gray-600 min-w-[160px]">Função</th>
                       <th className="text-center px-2 py-2 font-semibold text-gray-600 w-16">Qtd</th>
-                      <th className="text-center px-2 py-2 font-semibold text-gray-600 w-16">H/dia</th>
+                      {mostraHDia && <th className="text-center px-2 py-2 font-semibold text-gray-600 w-16">H/dia</th>}
                       <th className="text-right px-2 py-2 font-semibold text-gray-600 w-24">R$/HH</th>
-                      <th className="text-right px-2 py-2 font-semibold text-gray-600 w-24">R$/HH 70%</th>
-                      <th className="text-right px-2 py-2 font-semibold text-gray-600 w-24">R$/HH 100%</th>
+                      {mostraHE && <th className="text-right px-2 py-2 font-semibold text-gray-600 w-24">R$/HH 70%</th>}
+                      {mostraHE && <th className="text-right px-2 py-2 font-semibold text-gray-600 w-24">R$/HH 100%</th>}
                       <th className="w-10"></th>
                     </tr>
                   </thead>
@@ -494,69 +535,47 @@ export default function NovaObraWizardPage() {
                       <tr key={idx} className="border-b border-gray-50">
                         <td className="px-2 py-1.5">
                           <select value={c.funcao_nome}
-                            onChange={e => {
-                              const next = [...composicao]
-                              next[idx] = { ...next[idx], funcao_nome: e.target.value }
-                              setComposicao(next)
-                            }}
+                            onChange={e => onSelectFuncao(idx, e.target.value)}
                             className="w-full px-2 py-1 border border-gray-200 rounded text-xs">
-                            <option value="">Selecione...</option>
-                            {funcoesCadastradas.map(f => (
-                              <option key={f.id} value={f.nome}>{f.nome}</option>
+                            <option value="">Selecione a função...</option>
+                            {Array.from(categorias.entries()).map(([cat, funcs]) => (
+                              <optgroup key={cat} label={cat}>
+                                {funcs.map(f => <option key={f.id} value={f.nome}>{f.nome}</option>)}
+                              </optgroup>
                             ))}
                           </select>
                         </td>
                         <td className="px-2 py-1.5 text-center">
                           <input type="number" min={1} value={c.quantidade}
-                            onChange={e => {
-                              const next = [...composicao]
-                              next[idx] = { ...next[idx], quantidade: Number(e.target.value) }
-                              setComposicao(next)
-                            }}
+                            onChange={e => { const n = [...composicao]; n[idx] = { ...n[idx], quantidade: Number(e.target.value) }; setComposicao(n) }}
                             className="w-14 px-1 py-1 border border-gray-200 rounded text-xs text-center" />
                         </td>
-                        <td className="px-2 py-1.5 text-center">
-                          <input type="number" min={1} max={24} step={0.5} value={c.carga_horaria_dia}
-                            onChange={e => {
-                              const next = [...composicao]
-                              next[idx] = { ...next[idx], carga_horaria_dia: Number(e.target.value) }
-                              setComposicao(next)
-                            }}
-                            className="w-14 px-1 py-1 border border-gray-200 rounded text-xs text-center" />
-                        </td>
+                        {mostraHDia && (
+                          <td className="px-2 py-1.5 text-center">
+                            <input type="number" min={1} max={24} step={0.5} value={c.carga_horaria_dia}
+                              onChange={e => { const n = [...composicao]; n[idx] = { ...n[idx], carga_horaria_dia: Number(e.target.value) }; setComposicao(n) }}
+                              className="w-14 px-1 py-1 border border-gray-200 rounded text-xs text-center" />
+                          </td>
+                        )}
                         <td className="px-2 py-1.5 text-right">
                           <input type="number" min={0} step={0.01} value={c.valor_hh}
-                            onChange={e => {
-                              const base = Number(e.target.value) || 0
-                              const next = [...composicao]
-                              next[idx] = {
-                                ...next[idx],
-                                valor_hh: base,
-                                valor_hh_70: Math.round(base * 1.7 * 100) / 100,
-                                valor_hh_100: Math.round(base * 2.0 * 100) / 100,
-                              }
-                              setComposicao(next)
-                            }}
+                            onChange={e => onChangeValorHH(idx, Number(e.target.value) || 0)}
                             className="w-20 px-1 py-1 border border-gray-200 rounded text-xs text-right" />
                         </td>
-                        <td className="px-2 py-1.5 text-right">
-                          <input type="number" min={0} step={0.01} value={c.valor_hh_70}
-                            onChange={e => {
-                              const next = [...composicao]
-                              next[idx] = { ...next[idx], valor_hh_70: Number(e.target.value) }
-                              setComposicao(next)
-                            }}
-                            className="w-20 px-1 py-1 border border-gray-200 rounded text-xs text-right" />
-                        </td>
-                        <td className="px-2 py-1.5 text-right">
-                          <input type="number" min={0} step={0.01} value={c.valor_hh_100}
-                            onChange={e => {
-                              const next = [...composicao]
-                              next[idx] = { ...next[idx], valor_hh_100: Number(e.target.value) }
-                              setComposicao(next)
-                            }}
-                            className="w-20 px-1 py-1 border border-gray-200 rounded text-xs text-right" />
-                        </td>
+                        {mostraHE && (
+                          <td className="px-2 py-1.5 text-right">
+                            <input type="number" min={0} step={0.01} value={c.valor_hh_70}
+                              onChange={e => { const n = [...composicao]; n[idx] = { ...n[idx], valor_hh_70: Number(e.target.value) }; setComposicao(n) }}
+                              className="w-20 px-1 py-1 border border-gray-200 rounded text-xs text-right" />
+                          </td>
+                        )}
+                        {mostraHE && (
+                          <td className="px-2 py-1.5 text-right">
+                            <input type="number" min={0} step={0.01} value={c.valor_hh_100}
+                              onChange={e => { const n = [...composicao]; n[idx] = { ...n[idx], valor_hh_100: Number(e.target.value) }; setComposicao(n) }}
+                              className="w-20 px-1 py-1 border border-gray-200 rounded text-xs text-right" />
+                          </td>
+                        )}
                         <td className="px-2 py-1.5 text-center">
                           <button type="button" onClick={() => setComposicao(composicao.filter((_, i) => i !== idx))}
                             className="text-gray-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
@@ -582,7 +601,8 @@ export default function NovaObraWizardPage() {
               </div>
             )}
           </div>
-        )}
+          )
+        })()}
 
         {/* PASSO 5: REVISAR */}
         {step === 5 && (

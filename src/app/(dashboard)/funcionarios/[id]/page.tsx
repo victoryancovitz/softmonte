@@ -72,7 +72,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
     { count: faltasCount }, { count: docsCount }, { data: rescisao },
     { data: vinculosHistorico }, { data: arquivadosHistorico },
   ] = await Promise.all([
-    supabase.from('alocacoes').select('*, obras(nome, status)').eq('funcionario_id', params.id).order('data_inicio', { ascending: false }),
+    supabase.from('alocacoes').select('*, obras!inner(nome, status, deleted_at)').eq('funcionario_id', params.id).is('obras.deleted_at', null).order('data_inicio', { ascending: false }),
     supabase.from('faltas').select('*').eq('funcionario_id', params.id).order('data', { ascending: false }).limit(20),
     supabase.from('documentos').select('*').eq('funcionario_id', params.id).is('deleted_at', null).order('vencimento'),
     supabase.from('efetivo_diario').select('data,tipo_dia,obras(nome)').eq('funcionario_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
