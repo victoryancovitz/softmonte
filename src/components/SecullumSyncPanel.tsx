@@ -39,24 +39,27 @@ export default function SecullumSyncPanel({ obraId }: { obraId?: string }) {
   const [loading, setLoading] = useState<'sync' | 'calc' | 'rec' | null>(null)
   const [lastResult, setLastResult] = useState<any>(null)
 
+  const [initialFillDone, setInitialFillDone] = useState(false)
+
   // Carrega status quando abre o painel
   useEffect(() => {
     if (!open) return
-    loadStatus()
+    loadStatus(!initialFillDone)
   }, [open])
 
-  async function loadStatus() {
+  async function loadStatus(autoFillDates = false) {
     setLoadingStatus(true)
     try {
       const r = await fetch('/api/ponto/status')
       if (r.ok) {
         const j = await r.json()
         setStatus(j)
-        // Auto-preenche dataInicio com o dia seguinte ao último importado
-        if (j.importacao?.ultima_data) {
+        // Auto-preenche datas apenas na primeira abertura (não após cada sync)
+        if (autoFillDates && j.importacao?.ultima_data) {
           const ultimaDate = new Date(j.importacao.ultima_data + 'T12:00:00')
           ultimaDate.setDate(ultimaDate.getDate() + 1)
           setDataInicio(ultimaDate.toISOString().slice(0, 10))
+          setInitialFillDone(true)
         }
       }
     } catch { /* silencioso */ }
@@ -81,7 +84,7 @@ export default function SecullumSyncPanel({ obraId }: { obraId?: string }) {
       setLastResult({ kind: 'sync', data: j, ok: r.ok })
       if (r.ok) {
         toast.success(`Sync ok: ${j.novas ?? 0} marcações novas`)
-        loadStatus() // atualiza status após sync
+        loadStatus(false) // atualiza status sem resetar datas do usuário
       } else {
         toast.error('Erro: ' + (j.error || 'desconhecido'))
       }
