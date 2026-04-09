@@ -105,16 +105,23 @@ export default function PontoMarcacoesGrid() {
     return map
   }, [obras])
 
-  // Fechar dropdown ao clicar fora
+  // Fechar dropdown com Escape ou clique fora
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setDropdownOpen(null)
-      }
+    if (!dropdownOpen) return
+    function handleKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setDropdownOpen(null)
     }
-    if (dropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
+    function handleClick(e: MouseEvent) {
+      // Delay check: se o target está dentro do dropdown, ignora
+      if (dropdownRef.current?.contains(e.target as Node)) return
+      setDropdownOpen(null)
+    }
+    // Usar 'click' (não 'mousedown') pra não conflitar com o botão que abre
+    document.addEventListener('click', handleClick, true)
+    document.addEventListener('keydown', handleKey)
+    return () => {
+      document.removeEventListener('click', handleClick, true)
+      document.removeEventListener('keydown', handleKey)
     }
   }, [dropdownOpen])
 
@@ -135,29 +142,44 @@ export default function PontoMarcacoesGrid() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  /** Fetch paginado pra contornar limite de 1000 linhas do Supabase */
+  async function fetchAll<T>(table: string, select: string, filters: Record<string, any>, order?: string[]): Promise<T[]> {
+    const PAGE = 1000
+    let offset = 0
+    let all: T[] = []
+    while (true) {
+      let q = supabase.from(table).select(select).gte('data', dateStart).lte('data', dateEnd).range(offset, offset + PAGE - 1)
+      for (const [k, v] of Object.entries(filters)) {
+        if (v === null) q = q.is(k, null)
+        else q = q.eq(k, v)
+      }
+      if (order) for (const o of order) q = q.order(o)
+      const { data, error } = await q
+      if (error || !data || data.length === 0) break
+      all = all.concat(data as T[])
+      if (data.length < PAGE) break
+      offset += PAGE
+    }
+    return all
+  }
+
   async function loadData() {
     setLoading(true)
 
-    // 1. Buscar funcionarios que possuem marcacoes nesse periodo
-    const { data: marcData } = await supabase
-      .from('ponto_marcacoes')
-      .select('funcionario_id, data, hora, sequencia')
-      .gte('data', dateStart)
-      .lte('data', dateEnd)
-      .order('funcionario_id')
-      .order('data')
-      .order('sequencia')
+    // 1. Buscar marcacoes (paginado)
+    const marcs = await fetchAll<MarcacaoBruta>(
+      'ponto_marcacoes',
+      'funcionario_id, data, hora, sequencia',
+      {},
+      ['funcionario_id', 'data', 'sequencia']
+    )
 
-    const marcs = (marcData ?? []) as MarcacaoBruta[]
-
-    // 2. Buscar status dos dias
-    const { data: statusData } = await supabase
-      .from('ponto_dia_status')
-      .select('funcionario_id, data, status')
-      .gte('data', dateStart)
-      .lte('data', dateEnd)
-
-    const sts = (statusData ?? []) as DiaStatus[]
+    // 2. Buscar status dos dias (paginado)
+    const sts = await fetchAll<DiaStatus>(
+      'ponto_dia_status',
+      'funcionario_id, data, status',
+      {}
+    )
 
     // 3. Coletar todos os func_ids unicos (de marcacoes + status)
     const funcIdsSet = new Set<string>()
@@ -182,22 +204,29 @@ export default function PontoMarcacoesGrid() {
     }
 
     // 5. Carregar atribuicoes existentes de efetivo_diario para o periodo
-    //    (qualquer registro com obra_id preenchido)
     const atribMap = new Map<string, Map<string, string>>()
     if (funcIds.length > 0) {
-      const CHUNK = 100
+      // Paginado por chunks de funcIds
+      const CHUNK = 50
       for (let i = 0; i < funcIds.length; i += CHUNK) {
         const chunk = funcIds.slice(i, i + CHUNK)
-        const { data: efData } = await supabase
-          .from('efetivo_diario')
-          .select('funcionario_id, data, obra_id')
-          .in('funcionario_id', chunk)
-          .gte('data', dateStart)
-          .lte('data', dateEnd)
-          .not('obra_id', 'is', null)
-        for (const row of (efData ?? []) as Atribuicao[]) {
-          if (!atribMap.has(row.funcionario_id)) atribMap.set(row.funcionario_id, new Map())
-          atribMap.get(row.funcionario_id)!.set(row.data, row.obra_id)
+        let offset = 0
+        while (true) {
+          const { data: efData } = await supabase
+            .from('efetivo_diario')
+            .select('funcionario_id, data, obra_id')
+            .in('funcionario_id', chunk)
+            .gte('data', dateStart)
+            .lte('data', dateEnd)
+            .not('obra_id', 'is', null)
+            .range(offset, offset + 999)
+          if (!efData || efData.length === 0) break
+          for (const row of efData as Atribuicao[]) {
+            if (!atribMap.has(row.funcionario_id)) atribMap.set(row.funcionario_id, new Map())
+            atribMap.get(row.funcionario_id)!.set(row.data, row.obra_id)
+          }
+          if (efData.length < 1000) break
+          offset += 1000
         }
       }
     }
@@ -443,7 +472,7 @@ export default function PontoMarcacoesGrid() {
     return (
       <div
         ref={dropdownRef}
-        className="absolute z-50 mt-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px] max-h-[200px] overflow-y-auto"
+        className="absolute z-[100] mt-1 left-1/2 -translate-x-1/2 bg-white border border-gray-200 rounded-lg shadow-2xl py-1 min-w-[180px] max-h-[200px] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
       >
         <button
