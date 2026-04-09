@@ -56,10 +56,10 @@ export default function PontoPage() {
   useEffect(() => {
     supabase.from('obras').select('id,nome,modelo_cobranca,escala_entrada,escala_saida_seg_qui,escala_saida_sex,escala_almoco_minutos,escala_tolerancia_min').eq('status', 'ativo').is('deleted_at', null).order('nome')
       .then(({ data }) => setObras(data ?? []))
-    // Buscar role do usuário
+    // Buscar role do usuário (profiles.user_id é a FK pra auth.users.id)
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        supabase.from('profiles').select('role').eq('id', user.id).single()
+        supabase.from('profiles').select('role').eq('user_id', user.id).maybeSingle()
           .then(({ data }) => setRole((data as any)?.role ?? ''))
       }
     })
@@ -172,7 +172,7 @@ export default function PontoPage() {
     setFechando(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { toast.error('Sessão expirada — faça login novamente'); setFechando(false); return }
-    const { data: prof } = await supabase.from('profiles').select('nome').eq('id', user.id).maybeSingle()
+    const { data: prof } = await supabase.from('profiles').select('nome').eq('user_id', user.id).maybeSingle()
     const { error } = await supabase.from('ponto_fechamentos').insert({
       obra_id: obraId, mes, ano,
       fechado_por: user.id,

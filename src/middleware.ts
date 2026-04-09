@@ -28,6 +28,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/forgot-password') ||
     pathname.startsWith('/reset-password')
   const isApiRoute = pathname.startsWith('/api/')
+  const isPortalRoute = pathname.startsWith('/portal')
 
   if (!user && !isAuthPage) {
     // Rotas /api/* retornam 401 JSON em vez de redirect HTML pra /login,
@@ -38,8 +39,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (user && request.nextUrl.pathname === '/login') {
+  if (user && pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  // Funcionário logado é isolado ao /portal: ao tentar acessar / ou /dashboard,
+  // redireciona pra /portal. Outras rotas internas continuam acessíveis (RLS controla).
+  if (user && (pathname === '/' || pathname === '/dashboard')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', user.id)
+      .maybeSingle()
+    if (profile?.role === 'funcionario' && !isPortalRoute) {
+      return NextResponse.redirect(new URL('/portal', request.url))
+    }
   }
 
   return response
