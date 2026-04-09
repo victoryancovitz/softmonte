@@ -598,7 +598,10 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400 text-sm">Nenhuma etapa cadastrada.</div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+              <p className="text-gray-500 font-medium mb-1">Nenhuma etapa de cronograma cadastrada</p>
+              <p className="text-xs text-gray-400">Funcionalidade de gerenciamento de cronograma em desenvolvimento. Em breve sera possivel criar e acompanhar etapas diretamente por aqui.</p>
+            </div>
           )}
         </div>
       )}
@@ -624,7 +627,10 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               ))}
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400 text-sm">Nenhum registro no diário.</div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+              <p className="text-gray-500 font-medium mb-1">Nenhum registro no diario de obra</p>
+              <p className="text-xs text-gray-400">Funcionalidade de diario de obra em desenvolvimento. Em breve sera possivel registrar atividades diarias, clima e ocorrencias.</p>
+            </div>
           )}
         </div>
       )}
@@ -655,7 +661,10 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               })}
             </div>
           ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center text-gray-400 text-sm">Nenhuma RNC registrada.</div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
+              <p className="text-gray-500 font-medium mb-1">Nenhum registro de nao conformidade</p>
+              <p className="text-xs text-gray-400">Funcionalidade de RNC em desenvolvimento. Em breve sera possivel registrar e acompanhar nao conformidades da obra.</p>
+            </div>
           )}
         </div>
       )}

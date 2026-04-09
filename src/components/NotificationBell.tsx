@@ -51,9 +51,10 @@ export default function NotificationBell() {
   }
 
   useEffect(() => {
-    loadCount()
-    const interval = setInterval(loadCount, 5 * 60 * 1000)
-    return () => clearInterval(interval)
+    // Aguardar um instante para garantir que o NotificationTrigger ja disparou a geracao
+    const initialTimeout = setTimeout(loadCount, 2000)
+    const interval = setInterval(loadCount, 60 * 1000)
+    return () => { clearTimeout(initialTimeout); clearInterval(interval) }
   }, [])
 
   useEffect(() => {

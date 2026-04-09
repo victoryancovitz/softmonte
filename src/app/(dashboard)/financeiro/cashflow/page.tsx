@@ -98,6 +98,20 @@ export default function CashflowPage() {
         </div>
       </div>
 
+      {saldoInicial === 0 && eventos.length === 0 && (
+        <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-amber-500 mt-0.5" />
+          <div>
+            <div className="font-bold text-amber-700 text-sm">Nenhuma conta corrente cadastrada</div>
+            <div className="text-amber-600 text-xs mt-0.5">
+              Saldo inicial R$0,00. Cadastre contas correntes em{' '}
+              <Link href="/financeiro/contas" className="underline font-semibold hover:text-amber-800">Financeiro &rarr; Contas Correntes</Link>{' '}
+              para que o saldo inicial seja calculado automaticamente.
+            </div>
+          </div>
+        </div>
+      )}
+
       {temEstouro && (
         <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
           <AlertCircle className="w-5 h-5 text-red-500 mt-0.5" />

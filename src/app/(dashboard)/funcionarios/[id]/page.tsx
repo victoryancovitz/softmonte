@@ -180,9 +180,12 @@ export default async function FuncionarioPage({ params }: { params: { id: string
           </div>
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Contato & banco</h2>
-            <dl className="space-y-2 text-sm">
-              {[
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Contato & banco</h2>
+              <Link href={`/funcionarios/${f.id}/editar`} className="text-[11px] text-brand hover:underline">Editar</Link>
+            </div>
+            {(() => {
+              const items = [
                 ['Telefone', f.telefone],
                 ['Endereço', f.endereco],
                 ['Cidade', f.cidade_endereco],
@@ -191,13 +194,20 @@ export default async function FuncionarioPage({ params }: { params: { id: string
                 ['Agência/Conta', f.agencia_conta],
                 ['PIX', f.pix],
                 ['VT Estrutura', f.vt_estrutura],
-              ].filter(([, v]) => v).map(([k, v]) => (
-                <div key={k as string} className="flex justify-between gap-2 py-1 border-b border-gray-50 last:border-0">
-                  <dt className="text-[11px] text-gray-500">{k}</dt>
-                  <dd className="text-xs font-medium text-gray-800 text-right">{v as string}</dd>
-                </div>
-              ))}
-            </dl>
+              ].filter(([, v]) => v)
+              return items.length > 0 ? (
+                <dl className="space-y-2 text-sm">
+                  {items.map(([k, v]) => (
+                    <div key={k as string} className="flex justify-between gap-2 py-1 border-b border-gray-50 last:border-0">
+                      <dt className="text-[11px] text-gray-500">{k}</dt>
+                      <dd className="text-xs font-medium text-gray-800 text-right">{v as string}</dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : (
+                <p className="text-xs text-gray-400 italic">Nenhum dado de contato ou bancario cadastrado. <Link href={`/funcionarios/${f.id}/editar`} className="text-brand hover:underline">Preencher agora</Link></p>
+              )
+            })()}
           </div>
         </div>
 

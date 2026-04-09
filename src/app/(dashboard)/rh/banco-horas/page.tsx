@@ -310,8 +310,15 @@ export default function BancoHorasPage() {
               </tr>
             ) : rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-4 py-12 text-center text-gray-400">
-                  {obraId ? 'Nenhum registro para este periodo.' : 'Selecione uma obra.'}
+                <td colSpan={9} className="px-4 py-12 text-center">
+                  {obraId ? (
+                    <div className="space-y-2">
+                      <p className="text-gray-500 font-medium">Nenhum registro de banco de horas para {MESES[mes - 1]}/{ano}.</p>
+                      <p className="text-xs text-gray-400">Os registros sao gerados a partir dos lancamentos de efetivo diario. Verifique se ha lancamentos de ponto para esta obra e periodo.</p>
+                    </div>
+                  ) : (
+                    <p className="text-gray-400">Selecione uma obra para visualizar o banco de horas.</p>
+                  )}
                 </td>
               </tr>
             ) : rows.filter(row => !busca || row.funcionarios?.nome?.toLowerCase().includes(busca.toLowerCase())).map(row => (

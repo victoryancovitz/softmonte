@@ -76,7 +76,7 @@ export default function FeriasPage() {
       supabase
         .from('funcionarios')
         .select('id, nome, cargo, admissao, status')
-        .in('status', ['alocado', 'disponivel', 'pendente'])
+        .in('status', ['alocado', 'disponivel', 'afastado'])
         .order('nome'),
     ])
     setFerias(feriasRes.data ?? [])

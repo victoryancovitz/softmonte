@@ -265,7 +265,7 @@ export default function DesligamentosPage() {
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tipoInfo.cls}`}>{tipoInfo.label}</span>
                       </div>
                       <p className="text-xs text-gray-500">
-                        {desl.funcionarios?.cargo ?? ''} &middot; {desl.obras?.nome ?? '—'} &middot; Saida: {formatDate(desl.data_prevista_saida)}
+                        {desl.funcionarios?.cargo ?? ''} &middot; {desl.obras?.nome ?? '—'} &middot; Saida: {formatDate(desl.data_real_saida ?? desl.data_prevista_saida)}
                       </p>
                     </div>
                   </div>
@@ -395,7 +395,7 @@ export default function DesligamentosPage() {
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${tipoInfo.cls}`}>{tipoInfo.label}</span>
                       </td>
-                      <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(desl.data_prevista_saida)}</td>
+                      <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(desl.data_real_saida ?? desl.data_prevista_saida)}</td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
                           {desl.concluido_em ? new Date(desl.concluido_em).toLocaleDateString('pt-BR') : 'Concluído'}
