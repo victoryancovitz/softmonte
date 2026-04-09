@@ -374,84 +374,72 @@ export default function PontoMarcacoesGrid() {
     return null
   }, [atribuicoes, alocacoesMap])
 
-  /** Atribuir obra a um funcionario em um dia (upsert em efetivo_diario) */
+  /** Atribuir obra a um funcionario a partir de um dia (persiste até fim do mês ou próxima atribuição diferente) */
   async function atribuirObra(funcId: string, day: number, obraId: string | null) {
-    const dateStr = `${ano}-${String(mes).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     setSaving(true)
 
-    if (obraId) {
-      // Upsert: grava efetivo_diario com a obra escolhida
-      const { error } = await supabase
-        .from('efetivo_diario')
-        .upsert({
-          funcionario_id: funcId,
-          obra_id: obraId,
-          data: dateStr,
-          origem_registro: 'atribuicao_manual',
-        }, {
-          onConflict: 'obra_id,funcionario_id,data',
-        })
+    // Calcula quais dias gravar: do dia selecionado até o fim do mês
+    // Para se encontrar uma atribuição manual existente com outra obra APÓS este dia
+    const funcAtrib = atribuicoes.get(funcId)
+    const diasParaGravar: string[] = []
+    const diasParaRemover: string[] = []
 
+    for (let d = day; d <= totalDays; d++) {
+      const ds = `${ano}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+
+      // Se este dia já tem atribuição manual DIFERENTE e é depois do dia clicado, para
+      if (d > day && funcAtrib?.has(ds)) {
+        const obraExistente = funcAtrib.get(ds)
+        if (obraExistente !== obraId) break
+      }
+
+      if (obraId) {
+        diasParaGravar.push(ds)
+      } else {
+        diasParaRemover.push(ds)
+      }
+    }
+
+    if (obraId && diasParaGravar.length > 0) {
+      // Primeiro remove registros existentes pra estes dias (evita conflito de PK)
+      for (const ds of diasParaGravar) {
+        await supabase.from('efetivo_diario').delete().eq('funcionario_id', funcId).eq('data', ds)
+      }
+
+      // Insere em batch
+      const rows = diasParaGravar.map(ds => ({
+        funcionario_id: funcId,
+        obra_id: obraId,
+        data: ds,
+        origem_registro: 'atribuicao_manual',
+      }))
+      const { error } = await supabase.from('efetivo_diario').insert(rows)
       if (error) {
-        // Se o conflito e por um registro com outra obra, atualizar o existente
-        // Tenta primeiro deletar registros antigos deste func+data e inserir novo
-        const { error: delError } = await supabase
-          .from('efetivo_diario')
-          .delete()
-          .eq('funcionario_id', funcId)
-          .eq('data', dateStr)
-
-        if (!delError) {
-          const { error: insError } = await supabase
-            .from('efetivo_diario')
-            .insert({
-              funcionario_id: funcId,
-              obra_id: obraId,
-              data: dateStr,
-              origem_registro: 'atribuicao_manual',
-            })
-
-          if (insError) {
-            toast.error('Erro ao atribuir obra: ' + insError.message)
-            setSaving(false)
-            setDropdownOpen(null)
-            return
-          }
-        } else {
-          toast.error('Erro ao atribuir obra: ' + delError.message)
-          setSaving(false)
-          setDropdownOpen(null)
-          return
-        }
+        toast.error('Erro ao atribuir obra: ' + error.message)
+        setSaving(false)
+        setDropdownOpen(null)
+        return
       }
 
       // Atualizar estado local
       setAtribuicoes(prev => {
         const next = new Map(prev)
         if (!next.has(funcId)) next.set(funcId, new Map())
-        next.get(funcId)!.set(dateStr, obraId)
+        const funcMap = next.get(funcId)!
+        for (const ds of diasParaGravar) funcMap.set(ds, obraId)
         return next
       })
-    } else {
-      // "Sem obra" — remover atribuicao
-      const { error } = await supabase
-        .from('efetivo_diario')
-        .delete()
-        .eq('funcionario_id', funcId)
-        .eq('data', dateStr)
-
-      if (error) {
-        toast.error('Erro ao remover atribuicao: ' + error.message)
-        setSaving(false)
-        setDropdownOpen(null)
-        return
+    } else if (!obraId && diasParaRemover.length > 0) {
+      // "Sem obra" — remover atribuição dos dias em diante
+      for (const ds of diasParaRemover) {
+        await supabase.from('efetivo_diario').delete().eq('funcionario_id', funcId).eq('data', ds)
       }
 
       setAtribuicoes(prev => {
         const next = new Map(prev)
         const funcMap = next.get(funcId)
         if (funcMap) {
-          funcMap.delete(dateStr)
+          for (const ds of diasParaRemover) funcMap.delete(ds)
           if (funcMap.size === 0) next.delete(funcId)
         }
         return next
@@ -461,7 +449,8 @@ export default function PontoMarcacoesGrid() {
     setSaving(false)
     setDropdownOpen(null)
     const obraNome = obraId ? obras.find(o => o.id === obraId)?.nome ?? 'Obra' : 'Sem obra'
-    toast.success(`${obraNome} atribuida ao dia ${day}/${mes}`)
+    const diasMsg = obraId ? diasParaGravar.length : diasParaRemover.length
+    toast.success(`${obraNome} atribuída do dia ${day} ao ${day + diasMsg - 1}/${mes}`)
   }
 
   /** Monta conteudo da celula para um funcionario+dia */

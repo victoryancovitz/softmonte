@@ -15,6 +15,10 @@ interface PreviewRow {
   dias_normais: number
   dias_he70: number
   dias_he100: number
+  // Horas reais do ponto (pra modelo HH-Hora Efetiva)
+  hh_normais_real: number
+  hh_he70_real: number
+  hh_he100_real: number
   // Lista de funcionários (para detalhamento)
   funcionarios: Array<{ id: string; nome: string; dias_normais: number; dias_he70: number; dias_he100: number; datas: string[] }>
   // Valores R$/HH (editáveis)
@@ -39,7 +43,7 @@ export default function NovoBMPage() {
 
   useEffect(() => {
     // Bloqueia obras canceladas E encerradas
-    supabase.from('obras').select('id,nome,cliente,data_inicio,data_prev_fim,status,bm_dia_unico')
+    supabase.from('obras').select('id,nome,cliente,data_inicio,data_prev_fim,status,bm_dia_unico,modelo_cobranca')
       .is('deleted_at', null)
       .not('status', 'in', '(cancelado,encerrado)')
       .order('nome')
@@ -118,10 +122,10 @@ export default function NovoBMPage() {
 
     setPreviewing(true)
 
-    // Fetch efetivo_diario for the obra + period
+    // Fetch efetivo_diario for the obra + period (inclui horas reais pra modelo hora efetiva)
     const { data: efetivo, error: efErr } = await supabase
       .from('efetivo_diario')
-      .select('funcionario_id, data, tipo_dia, funcionarios(id, nome, cargo)')
+      .select('funcionario_id, data, tipo_dia, horas_normais, horas_extras_50, horas_extras_100, funcionarios(id, nome, cargo)')
       .eq('obra_id', form.obra_id)
       .gte('data', form.data_inicio)
       .lte('data', form.data_fim)
@@ -149,21 +153,30 @@ export default function NovoBMPage() {
     const obra = obras.find(o => o.id === form.obra_id)
     const diaUnico = obra?.bm_dia_unico === true
 
+    // Identifica o modelo de cobrança da obra
+    const obraSel = obras.find(o => o.id === form.obra_id)
+    const modeloCobranca = obraSel?.modelo_cobranca || 'hh_diaria'
+
     // Step 1: aggregate by funcionario first (so we can list per function)
-    const perFunc: Record<string, { func: any; tipos: Record<string, Set<string>> }> = {}
+    const perFunc: Record<string, { func: any; tipos: Record<string, Set<string>>; horas: { normais: number; he50: number; he100: number } }> = {}
     efetivo.forEach((e: any) => {
       const f = e.funcionarios
       if (!f) return
       if (!perFunc[f.id]) {
-        perFunc[f.id] = { func: f, tipos: { util: new Set(), sabado: new Set(), domingo_feriado: new Set() } }
+        perFunc[f.id] = { func: f, tipos: { util: new Set(), sabado: new Set(), domingo_feriado: new Set() }, horas: { normais: 0, he50: 0, he100: 0 } }
       }
       ;(perFunc[f.id].tipos[e.tipo_dia] ?? perFunc[f.id].tipos.util).add(e.data)
+      // Acumula horas reais do ponto
+      perFunc[f.id].horas.normais += Number(e.horas_normais ?? 0)
+      perFunc[f.id].horas.he50 += Number(e.horas_extras_50 ?? 0)
+      perFunc[f.id].horas.he100 += Number(e.horas_extras_100 ?? 0)
     })
 
     // Step 2: group funcionarios by função (cargo)
     const perFuncao: Record<string, {
       cargo: string
       funcs: Array<{ id: string; nome: string; dias_normais: number; dias_he70: number; dias_he100: number; datas: string[] }>
+      horasReais: { normais: number; he50: number; he100: number }
     }> = {}
 
     Object.values(perFunc).forEach(g => {
@@ -190,12 +203,15 @@ export default function NovoBMPage() {
         datas = Array.from(new Set<string>(allArr)).sort()
       }
 
-      if (!perFuncao[cargoKey]) perFuncao[cargoKey] = { cargo, funcs: [] }
+      if (!perFuncao[cargoKey]) perFuncao[cargoKey] = { cargo, funcs: [], horasReais: { normais: 0, he50: 0, he100: 0 } }
       perFuncao[cargoKey].funcs.push({
         id: g.func.id,
         nome: g.func.nome_guerra ?? g.func.nome,
         dias_normais, dias_he70, dias_he100, datas
       })
+      perFuncao[cargoKey].horasReais.normais += g.horas.normais
+      perFuncao[cargoKey].horasReais.he50 += g.horas.he50
+      perFuncao[cargoKey].horasReais.he100 += g.horas.he100
     })
 
     // Step 3: build rows - one per função
@@ -214,6 +230,9 @@ export default function NovoBMPage() {
         dias_normais: totalNormais,
         dias_he70: totalHe70,
         dias_he100: totalHe100,
+        hh_normais_real: Math.round(group.horasReais.normais * 100) / 100,
+        hh_he70_real: Math.round(group.horasReais.he50 * 100) / 100,
+        hh_he100_real: Math.round(group.horasReais.he100 * 100) / 100,
         funcionarios: group.funcs.sort((a, b) => a.nome.localeCompare(b.nome)),
         valor_hh_normal: Number(comp?.custo_hora_contratado ?? 0),
         valor_hh_he70: Number(comp?.custo_hora_extra_70 ?? 0),
@@ -235,9 +254,25 @@ export default function NovoBMPage() {
     })
   }
 
-  function rowHHNormal(r: PreviewRow) { return r.dias_normais * r.carga_horaria_dia }
-  function rowHHHe70(r: PreviewRow) { return r.dias_he70 * r.carga_horaria_dia }
-  function rowHHHe100(r: PreviewRow) { return r.dias_he100 * r.carga_horaria_dia }
+  // Modelo de cobrança determina como calcular HH:
+  // hh_diaria: dias × carga_horaria_dia (fatura por dia fixo)
+  // hh_hora_efetiva: horas reais do ponto (fatura pelas horas efetivamente trabalhadas)
+  // hh_220h: 220h/mês fixo (mensalista)
+  const obraSelecionada = obras.find(o => o.id === form.obra_id)
+  const modelo = obraSelecionada?.modelo_cobranca || 'hh_diaria'
+
+  function rowHHNormal(r: PreviewRow) {
+    if (modelo === 'hh_hora_efetiva') return r.hh_normais_real
+    return r.dias_normais * r.carga_horaria_dia
+  }
+  function rowHHHe70(r: PreviewRow) {
+    if (modelo === 'hh_hora_efetiva') return r.hh_he70_real
+    return r.dias_he70 * r.carga_horaria_dia
+  }
+  function rowHHHe100(r: PreviewRow) {
+    if (modelo === 'hh_hora_efetiva') return r.hh_he100_real
+    return r.dias_he100 * r.carga_horaria_dia
+  }
   function rowTotal(r: PreviewRow) {
     return rowHHNormal(r) * r.valor_hh_normal
          + rowHHHe70(r)   * r.valor_hh_he70
