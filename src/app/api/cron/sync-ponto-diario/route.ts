@@ -18,17 +18,24 @@ function onlyDigits(s: string | null | undefined): string {
   return (s || '').replace(/\D/g, '')
 }
 
+function g(b: any, ...keys: string[]): string | undefined {
+  for (const k of keys) { if (b[k] != null && b[k] !== '') return String(b[k]) }
+  return undefined
+}
 function parseBatida(b: SecullumBatida): { data: string; hora: string } | null {
-  if (b.data && b.hora) return { data: b.data.slice(0, 10), hora: b.hora.slice(0, 5) }
-  if (b.dataHora) {
-    const d = new Date(b.dataHora)
+  const a = b as any
+  const dataStr = g(a, 'Data', 'data')
+  const horaStr = g(a, 'Hora', 'hora')
+  if (dataStr && horaStr) {
+    let dp = dataStr.slice(0, 10)
+    if (dp.includes('/')) { const p = dp.split('/'); if (p.length === 3) dp = `${p[2]}-${p[1]}-${p[0]}` }
+    return { data: dp, hora: horaStr.slice(0, 5) }
+  }
+  const dtH = g(a, 'DataHora', 'dataHora')
+  if (dtH) {
+    const d = new Date(dtH)
     if (isNaN(d.getTime())) return null
-    const yyyy = d.getUTCFullYear()
-    const mm = String(d.getUTCMonth() + 1).padStart(2, '0')
-    const dd = String(d.getUTCDate()).padStart(2, '0')
-    const hh = String(d.getUTCHours()).padStart(2, '0')
-    const mi = String(d.getUTCMinutes()).padStart(2, '0')
-    return { data: `${yyyy}-${mm}-${dd}`, hora: `${hh}:${mi}` }
+    return { data: `${d.getUTCFullYear()}-${String(d.getUTCMonth()+1).padStart(2,'0')}-${String(d.getUTCDate()).padStart(2,'0')}`, hora: `${String(d.getUTCHours()).padStart(2,'0')}:${String(d.getUTCMinutes()).padStart(2,'0')}` }
   }
   return null
 }
@@ -89,9 +96,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, data, total_batidas: 0, mensagem: 'Nenhuma batida ontem' })
   }
 
-  // 2. Mapeia CPF/PIS
-  const cpfs = Array.from(new Set(batidas.map(b => onlyDigits(b.funcionarioCpf || (b as any).cpf)).filter(Boolean)))
-  const pisList = Array.from(new Set(batidas.map(b => onlyDigits(b.funcionarioPis || (b as any).pis)).filter(Boolean)))
+  // 2. Mapeia CPF/PIS (Secullum retorna PascalCase)
+  const getCpf = (b: any) => onlyDigits(b.funcionarioCpf || b.FuncionarioCpf || b.Cpf || b.cpf || '')
+  const getPis = (b: any) => onlyDigits(b.funcionarioPis || b.FuncionarioPis || b.NumeroPis || b.Pis || b.pis || '')
+  const cpfs = Array.from(new Set(batidas.map(getCpf).filter(Boolean)))
+  const pisList = Array.from(new Set(batidas.map(getPis).filter(Boolean)))
   const cpfToFunc = new Map<string, string>()
   const pisToFunc = new Map<string, string>()
   if (cpfs.length > 0) {
@@ -110,8 +119,8 @@ export async function GET(req: NextRequest) {
   for (const b of batidas) {
     const p = parseBatida(b)
     if (!p) { ignoradas++; continue }
-    const cpf = onlyDigits(b.funcionarioCpf || (b as any).cpf)
-    const pis = onlyDigits(b.funcionarioPis || (b as any).pis)
+    const cpf = getCpf(b)
+    const pis = getPis(b)
     const funcId = (cpf && cpfToFunc.get(cpf)) || (pis && pisToFunc.get(pis)) || null
     if (!funcId) { semMatch++; continue }
     const key = `${funcId}|${p.data}|${p.hora}`

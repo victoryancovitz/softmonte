@@ -30,16 +30,36 @@ function onlyDigits(s: string | null | undefined): string {
   return (s || '').replace(/\D/g, '')
 }
 
-/** Extrai data e hora lidando com os múltiplos formatos possíveis da API */
-function parseBatida(b: SecullumBatida): { data: string; hora: string } | null {
-  if (b.data && b.hora) {
-    return {
-      data: b.data.slice(0, 10),
-      hora: b.hora.slice(0, 5),
-    }
+/** Acessa campo case-insensitive (Secullum retorna PascalCase, parser espera camelCase) */
+function get(b: any, ...keys: string[]): string | undefined {
+  for (const k of keys) {
+    if (b[k] != null && b[k] !== '') return String(b[k])
   }
-  if (b.dataHora) {
-    const d = new Date(b.dataHora)
+  return undefined
+}
+
+/** Extrai data e hora lidando com PascalCase/camelCase e múltiplos formatos */
+function parseBatida(b: SecullumBatida): { data: string; hora: string } | null {
+  const a = b as any
+
+  // Formato 1: data + hora separados (Data/data, Hora/hora)
+  const dataStr = get(a, 'Data', 'data')
+  const horaStr = get(a, 'Hora', 'hora')
+  if (dataStr && horaStr) {
+    // dataStr pode ser "2026-04-07" ou "2026-04-07T00:00:00" ou "07/04/2026"
+    let dataParsed = dataStr.slice(0, 10)
+    if (dataParsed.includes('/')) {
+      // dd/MM/yyyy → yyyy-MM-dd
+      const parts = dataParsed.split('/')
+      if (parts.length === 3) dataParsed = `${parts[2]}-${parts[1]}-${parts[0]}`
+    }
+    return { data: dataParsed, hora: horaStr.slice(0, 5) }
+  }
+
+  // Formato 2: dataHora combinado (DataHora/dataHora)
+  const dtHora = get(a, 'DataHora', 'dataHora')
+  if (dtHora) {
+    const d = new Date(dtHora)
     if (isNaN(d.getTime())) return null
     const yyyy = d.getUTCFullYear()
     const mm = String(d.getUTCMonth() + 1).padStart(2, '0')
@@ -48,6 +68,7 @@ function parseBatida(b: SecullumBatida): { data: string; hora: string } | null {
     const mi = String(d.getUTCMinutes()).padStart(2, '0')
     return { data: `${yyyy}-${mm}-${dd}`, hora: `${hh}:${mi}` }
   }
+
   return null
 }
 
@@ -160,16 +181,19 @@ export async function POST(req: NextRequest) {
   }
 
   // 3. Mapeia CPFs/PIS da Secullum → funcionario_id do Softmonte
-  const cpfs = Array.from(
-    new Set(
-      batidas.map(b => onlyDigits(b.funcionarioCpf || (b as any).cpf)).filter(Boolean),
-    ),
-  )
-  const pisList = Array.from(
-    new Set(
-      batidas.map(b => onlyDigits(b.funcionarioPis || (b as any).pis)).filter(Boolean),
-    ),
-  )
+  // A API Secullum retorna campos em PascalCase (Cpf, NumeroPis, etc)
+  function getCpf(b: any): string {
+    return onlyDigits(b.funcionarioCpf || b.FuncionarioCpf || b.Cpf || b.cpf || '')
+  }
+  function getPis(b: any): string {
+    return onlyDigits(b.funcionarioPis || b.FuncionarioPis || b.NumeroPis || b.Pis || b.pis || '')
+  }
+  function getNome(b: any): string {
+    return b.funcionarioNome || b.FuncionarioNome || b.Nome || b.nome || ''
+  }
+
+  const cpfs = Array.from(new Set(batidas.map(getCpf).filter(Boolean)))
+  const pisList = Array.from(new Set(batidas.map(getPis).filter(Boolean)))
 
   const cpfToFuncId = new Map<string, string>()
   const pisToFuncId = new Map<string, string>()
@@ -211,12 +235,12 @@ export async function POST(req: NextRequest) {
       ignoradas++
       continue
     }
-    const cpf = onlyDigits(b.funcionarioCpf || (b as any).cpf)
-    const pis = onlyDigits(b.funcionarioPis || (b as any).pis)
+    const cpf = getCpf(b)
+    const pis = getPis(b)
     const funcId = (cpf && cpfToFuncId.get(cpf)) || (pis && pisToFuncId.get(pis)) || null
 
     if (!funcId) {
-      semMatchSet.add(b.funcionarioNome || cpf || pis || '(sem id)')
+      semMatchSet.add(getNome(b) || cpf || pis || '(sem id)')
       continue
     }
 
@@ -270,6 +294,9 @@ export async function POST(req: NextRequest) {
     erro: erros.length > 0 ? erros.join('; ') : null,
   })
 
+  // Amostra de batida crua pra debug (ajuda diagnosticar quando ignoradas > 0)
+  const amostraBatida = batidas.length > 0 ? batidas[0] : null
+
   return NextResponse.json({
     ok: erros.length === 0,
     periodo: { dataInicio, dataFim },
@@ -281,5 +308,6 @@ export async function POST(req: NextRequest) {
     erros,
     banco_secullum: session.bancoNome,
     log_id: logId,
+    amostra_batida_crua: amostraBatida,
   })
 }
