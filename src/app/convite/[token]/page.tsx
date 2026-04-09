@@ -247,15 +247,15 @@ export default function ConvitePage() {
         <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L20 7" stroke="#059669" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </div>
-        <h1 className="text-xl font-bold text-gray-900 mb-2">Conta criada!</h1>
-        <p className="text-gray-500 text-sm mb-4">
-          Verifique seu email <strong>{form.email}</strong> para confirmar o cadastro.
+        <h1 className="text-xl font-bold text-gray-900 mb-2">Conta criada com sucesso!</h1>
+        <p className="text-gray-500 text-sm mb-2">
+          Bem-vindo(a), <strong>{convite?.nome_convidado}</strong>!
         </p>
-        <p className="text-xs text-gray-400 mb-6">
-          Após confirmar, faça login em softmonte.vercel.app
+        <p className="text-gray-500 text-sm mb-4">
+          Sua conta está pronta. Use o email <strong>{form.email}</strong> e a senha que você definiu pra fazer login.
         </p>
         <a href="/login" className="inline-block px-6 py-2.5 bg-[#00215B] text-white rounded-xl text-sm font-semibold hover:bg-[#001640] transition-all">
-          Ir para o login
+          Fazer login agora
         </a>
       </div>
     </div>
