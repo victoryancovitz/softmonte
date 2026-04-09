@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import { ObraStatusBtns } from '@/components/DeleteActions'
 import BackButton from '@/components/BackButton'
 import EntityDocumentos from '@/components/EntityDocumentos'
+import DocsAlocadosSection from './DocsAlocadosSection'
 
 const TIPOS_DOC_OBRA = [
   { value: 'contrato', label: 'Contrato' },
@@ -510,32 +511,8 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
             title="Contratos, Aditivos e Documentos da Obra"
           />
 
-          {/* Documentos de funcionários alocados */}
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-bold text-brand font-display">Documentos dos funcionários alocados ({docsComDias.length})</h2>
-            </div>
-            {docsComDias.length > 0 ? (
-              <div className="divide-y divide-gray-100">
-                {docsComDias.map((d: any) => (
-                  <div key={d.id} className="py-2 flex items-center justify-between">
-                    <div>
-                      <div className="text-sm font-medium">{d.tipo}</div>
-                      <div className="text-xs text-gray-500 mt-0.5">
-                        {d.funcionarios?.nome ?? '—'}
-                        {d.vencimento && ` · Venc. ${new Date(d.vencimento + 'T12:00').toLocaleDateString('pt-BR')}`}
-                      </div>
-                    </div>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${docStatusColor(d.dias)}`}>
-                      {docStatusLabel(d.dias)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-sm text-gray-400">Nenhum documento dos funcionários alocados.</p>
-            )}
-          </div>
+          {/* Documentos de funcionários alocados — com filtros e agrupamento */}
+          <DocsAlocadosSection docs={docsComDias} />
         </div>
       )}
 
