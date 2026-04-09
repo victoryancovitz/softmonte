@@ -164,13 +164,25 @@ export default function NovoBMPage() {
     if (modeloCobranca === 'hh_hora_efetiva') {
       const funcIds = Array.from(new Set((efetivo as any[]).map((e: any) => e.funcionarios?.id).filter(Boolean)))
       if (funcIds.length > 0) {
-        const { data: marcData } = await supabase
-          .from('ponto_marcacoes')
-          .select('funcionario_id, data, hora')
-          .in('funcionario_id', funcIds)
-          .gte('data', form.data_inicio)
-          .lte('data', form.data_fim)
-          .order('hora')
+        // Busca paginada (Supabase limita a 1000 por default)
+        let allMarc: any[] = []
+        let offset = 0
+        const PAGE = 1000
+        while (true) {
+          const { data: page } = await supabase
+            .from('ponto_marcacoes')
+            .select('funcionario_id, data, hora')
+            .in('funcionario_id', funcIds)
+            .gte('data', form.data_inicio)
+            .lte('data', form.data_fim)
+            .order('hora')
+            .range(offset, offset + PAGE - 1)
+          if (!page || page.length === 0) break
+          allMarc = allMarc.concat(page)
+          if (page.length < PAGE) break
+          offset += PAGE
+        }
+        const marcData = allMarc
 
         // Agrupa batidas por func+dia e calcula horas: (última - primeira) - almoço
         const escalaAlmoco = Number(obraSel?.escala_almoco_minutos ?? 60)
