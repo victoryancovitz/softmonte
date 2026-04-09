@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 
-const TIPOS = ['ASO','NR-10','NR-35','NR-33','NR-12','CIPA','outro']
+const TIPOS = ['ASO','NR-01','NR-06','NR-10','NR-12','NR-18','NR-20','NR-33','NR-35','NR','CIPA','EPI','RG','CPF','PIS','CTPS','contrato','admissao','esocial','comprovante','atestado','holerite','ponto','declaracao','termo','outro']
 
 export default function NovoDocumentoPage() {
   const [funcionarios, setFuncionarios] = useState<any[]>([])
