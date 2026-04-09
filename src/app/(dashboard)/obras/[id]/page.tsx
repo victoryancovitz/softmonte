@@ -90,6 +90,15 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
   const ativosIds = new Set((alocados ?? []).map((a: any) => a.funcionarios?.id).filter(Boolean))
   const desligados = Object.values(funcsComPontoMap).filter((f: any) => !ativosIds.has(f.id))
 
+  // Todos os funcionários do efetivo: alocados + com registro de efetivo_diario (sem duplicatas)
+  const efetivoFuncsMap: Record<string, any> = {}
+  ;(alocados ?? []).forEach((a: any) => {
+    if (a.funcionarios) efetivoFuncsMap[a.funcionarios.id] = a.funcionarios
+  })
+  Object.entries(funcsComPontoMap).forEach(([id, f]) => {
+    if (!efetivoFuncsMap[id]) efetivoFuncsMap[id] = f
+  })
+
   // Detecta funcionários com multi-alocação (alocados também em OUTRAS obras ativas)
   const funcIdsAlocados = Array.from(ativosIds)
   let multiMap: Record<string, { obra_id: string; obra_nome: string }[]> = {}
@@ -313,8 +322,11 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
                       </div>
                       <div className="flex items-center gap-1.5 flex-wrap justify-end shrink-0">
                         {(() => {
-                          const funcDocs = docsComDias.filter((d: any) => d.funcionario_id === f?.id)
-                          const aso = funcDocs.find((d: any) => d.tipo === 'ASO')
+                          const funcDocs = docsComDias.filter((d: any) => d.funcionario_id === f?.id && d.tipo === 'ASO')
+                          // Pick the ASO with the latest vencimento (best validity)
+                          const asoValido = funcDocs.filter((d: any) => d.dias !== null && d.dias > 0).sort((a: any, b: any) => b.dias - a.dias)[0]
+                          const asoMaisRecente = funcDocs.sort((a: any, b: any) => (b.dias ?? -Infinity) - (a.dias ?? -Infinity))[0]
+                          const aso = asoValido ?? asoMaisRecente
                           const badges: { label: string; cls: string; title: string }[] = []
                           if (!aso) {
                             badges.push({ label: 'Sem ASO', cls: 'bg-red-100 text-red-700', title: 'Nenhum ASO cadastrado' })
@@ -385,9 +397,43 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
       {/* ===== EFETIVO ===== */}
       {activeTab === 'efetivo' && (
         <div>
+          {/* Lista de funcionários do efetivo (alocados + com registro de ponto) */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-sm font-semibold text-gray-700">Funcionários no Efetivo ({Object.keys(efetivoFuncsMap).length})</h2>
+              <Link href="/efetivo" className="text-xs text-brand hover:underline font-medium">Ir para Efetivo</Link>
+            </div>
+            {Object.keys(efetivoFuncsMap).length > 0 ? (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
+                {Object.values(efetivoFuncsMap).map((f: any) => {
+                  const nome = f.nome_guerra ?? f.nome ?? 'Sem nome'
+                  const temPonto = !!funcsComPontoMap[f.id]
+                  const temAlocacao = ativosIds.has(f.id)
+                  return (
+                    <Link key={f.id} href={`/funcionarios/${f.id}`} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 block">
+                      <div>
+                        <div className="text-sm font-semibold">{nome}</div>
+                        <div className="text-xs text-gray-500">{f.cargo ?? '—'}{f.id_ponto ? ` · ID Ponto ${f.id_ponto}` : ''}</div>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {temAlocacao && <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-green-100 text-green-700">Alocado</span>}
+                        {temPonto && <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-blue-100 text-blue-700">Com ponto</span>}
+                        {!temAlocacao && <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-gray-100 text-gray-500">Sem alocação ativa</span>}
+                      </div>
+                    </Link>
+                  )
+                })}
+              </div>
+            ) : (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-8 text-center text-gray-400 text-sm">
+                Nenhum funcionário no efetivo desta obra.
+              </div>
+            )}
+          </div>
+
+          {/* Registros diários */}
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-gray-700">Efetivo Diário — últimos 30 dias</h2>
-            <Link href="/efetivo" className="text-xs text-brand hover:underline font-medium">Ir para Efetivo</Link>
           </div>
           {efetivoSorted.length > 0 ? (
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">

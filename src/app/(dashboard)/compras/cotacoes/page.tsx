@@ -107,6 +107,9 @@ export default function CotacoesPage() {
 
   async function handleSave() {
     if (!formDescricao.trim()) return
+    if (!formObraId) { toast.error('Selecione uma obra'); return }
+    const itensComDescricao = formItens.filter((it) => it.descricao.trim())
+    if (itensComDescricao.length === 0) { toast.error('Adicione pelo menos um item com descrição'); return }
     setSaving(true)
     const numero = `COT-${Date.now().toString(36).toUpperCase()}`
     const { error } = await supabase.from('cotacoes').insert({
