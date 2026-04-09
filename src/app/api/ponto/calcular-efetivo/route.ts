@@ -1,14 +1,15 @@
 /**
  * POST /api/ponto/calcular-efetivo
  *
- * Lê ponto_marcacoes (batidas brutas do colaborador) e alocacoes ativas
- * para gerar linhas em efetivo_diario, aplicando a ESCALA DA OBRA onde
- * o funcionário estava alocado no dia.
+ * Lê ponto_marcacoes (batidas brutas do colaborador) e calcula efetivo_diario.
  *
- * Regra crítica: cálculo segue a escala da obra, não do funcionário.
- * Se o funcionário está alocado em N obras no mesmo dia, o efetivo fica
- * na obra pra qual há evidência de presença (hoje: primeira alocação ativa
- * não-terminada; no futuro pode ser derivado de apontamento manual).
+ * Prioridade para definir a obra do dia:
+ * 1. Atribuição manual existente em efetivo_diario (operador definiu via grid)
+ * 2. Alocação ativa no período (fallback)
+ * 3. Sem obra → não calcula (pula o dia)
+ *
+ * Quando recalcula, MANTÉM a obra_id que o operador escolheu e apenas
+ * recalcula as horas baseado nas marcações + escala da obra.
  *
  * Body JSON: {
  *   dataInicio: "YYYY-MM-DD",
@@ -46,6 +47,13 @@ type Alocacao = {
   obra_id: string
   data_inicio: string | null
   data_fim: string | null
+}
+
+type EfetivoDiarioExistente = {
+  funcionario_id: string
+  data: string
+  obra_id: string | null
+  origem_registro: string | null
 }
 
 /** Converte HH:mm (ou HH:mm:ss) em minutos desde 00:00. */
@@ -143,8 +151,44 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  // 2. Lê alocações ativas que cobrem o período (pra mapear funcionario+data → obra)
   const funcIds = Array.from(new Set((marcacoes as Marcacao[]).map(m => m.funcionario_id)))
+
+  // 2. Lê atribuições manuais existentes em efetivo_diario (operador definiu a obra via grid)
+  let allExistentes: EfetivoDiarioExistente[] = []
+  {
+    let efOffset = 0
+    let efKeep = true
+    while (efKeep) {
+      let q = supabase
+        .from('efetivo_diario')
+        .select('funcionario_id, data, obra_id, origem_registro')
+        .in('funcionario_id', funcIds)
+        .gte('data', dataInicio)
+        .lte('data', dataFim)
+        .range(efOffset, efOffset + PAGE - 1)
+      if (obraId) q = q.eq('obra_id', obraId)
+      const { data: efPage, error: efErr } = await q
+      if (efErr) {
+        console.warn('[calcular-efetivo] Erro lendo efetivo_diario existente:', efErr.message)
+        break
+      }
+      const rows = (efPage ?? []) as EfetivoDiarioExistente[]
+      allExistentes = allExistentes.concat(rows)
+      if (rows.length < PAGE) efKeep = false
+      else efOffset += PAGE
+    }
+  }
+
+  // Mapa: funcId|data -> obra_id (atribuicao manual existente)
+  const existenteMap = new Map<string, string>()
+  for (const e of allExistentes) {
+    if (e.obra_id) {
+      existenteMap.set(`${e.funcionario_id}|${e.data}`, e.obra_id)
+    }
+  }
+  console.log('[calcular-efetivo] atribuicoes manuais existentes:', existenteMap.size)
+
+  // 3. Lê alocações ativas que cobrem o período (fallback pra quem não tem atribuição manual)
   let allocsQ = supabase
     .from('alocacoes')
     .select('id, funcionario_id, obra_id, data_inicio, data_fim')
@@ -154,27 +198,31 @@ export async function POST(req: NextRequest) {
   const { data: alocacoes, error: aErr } = await allocsQ
   if (aErr) return NextResponse.json({ error: 'Erro lendo alocações: ' + aErr.message }, { status: 500 })
 
-  // 3. Lê obras com escalas
-  const obraIds = Array.from(new Set((alocacoes as Alocacao[] || []).map(a => a.obra_id)))
+  // 4. Lê obras com escalas — precisa de todas as obras referenciadas (atribuições + alocações)
+  const obraIdsSet = new Set<string>()
+  Array.from(existenteMap.values()).forEach(oId => obraIdsSet.add(oId))
+  ;(alocacoes as Alocacao[] || []).forEach(a => obraIdsSet.add(a.obra_id))
+  const obraIds = Array.from(obraIdsSet)
+
   if (obraIds.length === 0) {
     return NextResponse.json({
       ok: true,
-      mensagem: 'Nenhuma alocação ativa para os funcionários com ponto no período.',
+      mensagem: 'Nenhuma obra encontrada (sem atribuição manual e sem alocação ativa). Atribua obras no grid de marcações primeiro.',
       criados: 0,
       atualizados: 0,
     })
   }
+
   const { data: obras, error: oErr } = await supabase
     .from('obras')
     .select('id, escala_entrada, escala_saida_seg_qui, escala_saida_sex, escala_almoco_minutos, escala_tolerancia_min, carga_horaria_dia, tem_adicional_noturno, adicional_noturno_pct, he_pct_domingo_feriado')
     .in('id', obraIds)
-    .is('deleted_at', null)
   if (oErr) return NextResponse.json({ error: 'Erro lendo obras: ' + oErr.message }, { status: 500 })
 
   const obraMap = new Map<string, Obra>()
   ;(obras as Obra[] || []).forEach(o => obraMap.set(o.id, o))
 
-  // 4. Agrupa marcações por (funcionario, data)
+  // 5. Agrupa marcações por (funcionario, data)
   type DayKey = string // `${funcId}|${data}`
   const dayGroups = new Map<DayKey, Marcacao[]>()
   for (const m of marcacoes as Marcacao[]) {
@@ -183,21 +231,41 @@ export async function POST(req: NextRequest) {
     dayGroups.get(key)!.push(m)
   }
 
-  // 5. Pra cada grupo, encontra obra via alocação ativa no dia
-  //    (data entre data_inicio e data_fim, ou data_fim null)
+  // 6. Pra cada grupo, encontra obra via:
+  //    a) atribuição manual existente em efetivo_diario
+  //    b) herança da atribuição manual do dia anterior mais recente
+  //    c) alocação ativa no dia (fallback)
   function acharObraDoDia(funcId: string, data: string): string | null {
+    // a) Atribuição manual explícita neste dia
+    const manualKey = `${funcId}|${data}`
+    if (existenteMap.has(manualKey)) {
+      return existenteMap.get(manualKey)!
+    }
+
+    // b) Herança: busca atribuição manual do dia anterior mais recente
+    let bestDate: string | null = null
+    Array.from(existenteMap.entries()).forEach(([key, _oId]) => {
+      const [fId, d] = key.split('|')
+      if (fId === funcId && d < data && (!bestDate || d > bestDate)) {
+        bestDate = d
+      }
+    })
+    if (bestDate) {
+      return existenteMap.get(`${funcId}|${bestDate}`)!
+    }
+
+    // c) Fallback: alocação ativa no dia
     const candidatas = (alocacoes as Alocacao[] || []).filter(a =>
       a.funcionario_id === funcId &&
       (!a.data_inicio || a.data_inicio <= data) &&
       (!a.data_fim || a.data_fim >= data),
     )
     if (candidatas.length === 0) return null
-    // Se múltiplas, pega a mais recentemente iniciada
     candidatas.sort((a, b) => (b.data_inicio || '').localeCompare(a.data_inicio || ''))
     return candidatas[0].obra_id
   }
 
-  // 6. Calcula e prepara upsert em efetivo_diario
+  // 7. Calcula e prepara upsert em efetivo_diario
   type Row = {
     funcionario_id: string
     obra_id: string
@@ -228,7 +296,10 @@ export async function POST(req: NextRequest) {
       return
     }
     const obra = obraMap.get(obraFinalId)
-    if (!obra) return
+    if (!obra) {
+      semObra.push(`${funcId}|${data}`)
+      return
+    }
 
     const carga = Number(obra.carga_horaria_dia ?? 8)
     const cargaMin = carga * 60
@@ -337,10 +408,40 @@ export async function POST(req: NextRequest) {
     }
   })
 
-  // 7. Upsert em efetivo_diario (em lotes)
+  // 8. Upsert em efetivo_diario (em lotes)
+  //    Para dias que já tinham atribuição manual com obra diferente, precisamos
+  //    deletar o registro antigo antes de inserir o novo (pois a PK é obra_id+func+data)
   let criados = 0
   const erros: string[] = []
+
   if (rows.length > 0) {
+    // Primeiro, para cada row, verificar se existe um registro com outra obra_id
+    // e deletar se necessário (o operador pode ter atribuído via grid e a PK inclui obra_id)
+    const deletarAntes: { funcionario_id: string; data: string; obra_id_antiga: string }[] = []
+    for (const row of rows) {
+      const existenteKey = `${row.funcionario_id}|${row.data}`
+      const existenteObraId = existenteMap.get(existenteKey)
+      // Se já existe com a MESMA obra, o upsert vai funcionar normalmente
+      // Se existe com OUTRA obra, precisamos deletar o antigo
+      if (existenteObraId && existenteObraId !== row.obra_id) {
+        deletarAntes.push({
+          funcionario_id: row.funcionario_id,
+          data: row.data,
+          obra_id_antiga: existenteObraId,
+        })
+      }
+    }
+
+    // Deletar registros com obra_id diferente que seriam conflitantes
+    for (const del of deletarAntes) {
+      await supabase
+        .from('efetivo_diario')
+        .delete()
+        .eq('funcionario_id', del.funcionario_id)
+        .eq('data', del.data)
+        .eq('obra_id', del.obra_id_antiga)
+    }
+
     const BATCH = 500
     for (let i = 0; i < rows.length; i += BATCH) {
       const chunk = rows.slice(i, i + BATCH)
@@ -362,6 +463,7 @@ export async function POST(req: NextRequest) {
     criados_ou_atualizados: criados,
     sem_obra_no_dia: semObra.length,
     amostra_sem_obra: semObra.slice(0, 10),
+    atribuicoes_manuais_respeitadas: existenteMap.size,
     sem_escala_configurada: Array.from(new Set(semEscala)).slice(0, 10),
     erros,
   })

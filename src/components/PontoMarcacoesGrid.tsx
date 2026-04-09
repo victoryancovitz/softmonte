@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
+import { useToast } from '@/components/Toast'
 import SearchInput from '@/components/SearchInput'
 
 function getDaysInMonth(month: number, year: number): number {
@@ -36,6 +37,30 @@ type DiaStatus = {
   status: string
 }
 
+type Obra = {
+  id: string
+  nome: string
+}
+
+/** Atribuicao de obra por (funcionario, data) vinda de efetivo_diario */
+type Atribuicao = {
+  funcionario_id: string
+  data: string
+  obra_id: string
+}
+
+// Cores para chips de obra (cicla por indice)
+const OBRA_COLORS = [
+  { bg: 'bg-indigo-100', text: 'text-indigo-700', border: 'border-indigo-200' },
+  { bg: 'bg-teal-100', text: 'text-teal-700', border: 'border-teal-200' },
+  { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200' },
+  { bg: 'bg-pink-100', text: 'text-pink-700', border: 'border-pink-200' },
+  { bg: 'bg-cyan-100', text: 'text-cyan-700', border: 'border-cyan-200' },
+  { bg: 'bg-lime-100', text: 'text-lime-700', border: 'border-lime-200' },
+  { bg: 'bg-violet-100', text: 'text-violet-700', border: 'border-violet-200' },
+  { bg: 'bg-rose-100', text: 'text-rose-700', border: 'border-rose-200' },
+]
+
 const STATUS_COLORS: Record<string, { bg: string; text: string; label: string }> = {
   afastamento: { bg: 'bg-blue-100', text: 'text-blue-700', label: 'AFAST' },
   ferias: { bg: 'bg-purple-100', text: 'text-purple-700', label: 'FERIAS' },
@@ -57,17 +82,58 @@ export default function PontoMarcacoesGrid() {
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
   const [marcacoes, setMarcacoes] = useState<MarcacaoBruta[]>([])
   const [statusDias, setStatusDias] = useState<DiaStatus[]>([])
+  const [obras, setObras] = useState<Obra[]>([])
+  // funcId -> data -> obra_id
+  const [atribuicoes, setAtribuicoes] = useState<Map<string, Map<string, string>>>(new Map())
+  // Celula com dropdown aberto: "funcId|day"
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
 
   const supabase = createClient()
+  const toast = useToast()
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const totalDays = getDaysInMonth(mes, ano)
   const days = useMemo(() => Array.from({ length: totalDays }, (_, i) => i + 1), [totalDays])
   const dateStart = `${ano}-${String(mes).padStart(2, '0')}-01`
   const dateEnd = `${ano}-${String(mes).padStart(2, '0')}-${String(totalDays).padStart(2, '0')}`
 
+  // Mapa de obra_id -> indice de cor
+  const obraColorMap = useMemo(() => {
+    const map = new Map<string, number>()
+    obras.forEach((o, i) => map.set(o.id, i % OBRA_COLORS.length))
+    return map
+  }, [obras])
+
+  // Fechar dropdown ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setDropdownOpen(null)
+      }
+    }
+    if (dropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [dropdownOpen])
+
   useEffect(() => {
     loadData()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mes, ano])
+
+  // Carregar obras ativas uma vez
+  useEffect(() => {
+    supabase
+      .from('obras')
+      .select('id, nome')
+      .eq('status', 'ativo')
+      .is('deleted_at', null)
+      .order('nome')
+      .then(({ data }) => setObras((data ?? []) as Obra[]))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function loadData() {
     setLoading(true)
@@ -102,7 +168,6 @@ export default function PontoMarcacoesGrid() {
     // 4. Buscar dados dos funcionarios
     let funcs: Funcionario[] = []
     if (funcIds.length > 0) {
-      // Supabase .in() tem limite de ~100 params; paginar se necessario
       const CHUNK = 100
       for (let i = 0; i < funcIds.length; i += CHUNK) {
         const chunk = funcIds.slice(i, i + CHUNK)
@@ -116,10 +181,32 @@ export default function PontoMarcacoesGrid() {
       }
     }
 
+    // 5. Carregar atribuicoes existentes de efetivo_diario para o periodo
+    //    (qualquer registro com obra_id preenchido)
+    const atribMap = new Map<string, Map<string, string>>()
+    if (funcIds.length > 0) {
+      const CHUNK = 100
+      for (let i = 0; i < funcIds.length; i += CHUNK) {
+        const chunk = funcIds.slice(i, i + CHUNK)
+        const { data: efData } = await supabase
+          .from('efetivo_diario')
+          .select('funcionario_id, data, obra_id')
+          .in('funcionario_id', chunk)
+          .gte('data', dateStart)
+          .lte('data', dateEnd)
+          .not('obra_id', 'is', null)
+        for (const row of (efData ?? []) as Atribuicao[]) {
+          if (!atribMap.has(row.funcionario_id)) atribMap.set(row.funcionario_id, new Map())
+          atribMap.get(row.funcionario_id)!.set(row.data, row.obra_id)
+        }
+      }
+    }
+
     funcs.sort((a, b) => a.nome.localeCompare(b.nome))
     setFuncionarios(funcs)
     setMarcacoes(marcs)
     setStatusDias(sts)
+    setAtribuicoes(atribMap)
     setLoading(false)
   }
 
@@ -155,12 +242,123 @@ export default function PontoMarcacoesGrid() {
     )
   }, [funcionarios, busca])
 
+  /**
+   * Resolve a obra atribuida para (funcId, dateStr).
+   * Se nao tem atribuicao explicita, herda do dia anterior mais recente.
+   */
+  const getObraAtribuida = useCallback((funcId: string, dateStr: string): string | null => {
+    const funcAtrib = atribuicoes.get(funcId)
+    if (!funcAtrib) return null
+
+    // Atribuicao explicita neste dia
+    if (funcAtrib.has(dateStr)) return funcAtrib.get(dateStr)!
+
+    // Heranca: busca o dia anterior mais recente que tenha atribuicao
+    // (dentro do mes visivel + pode ter atribuicao de meses anteriores carregada)
+    let bestDate: string | null = null
+    Array.from(funcAtrib.keys()).forEach(d => {
+      if (d < dateStr && (!bestDate || d > bestDate)) {
+        bestDate = d
+      }
+    })
+    return bestDate ? funcAtrib.get(bestDate)! : null
+  }, [atribuicoes])
+
+  /** Atribuir obra a um funcionario em um dia (upsert em efetivo_diario) */
+  async function atribuirObra(funcId: string, day: number, obraId: string | null) {
+    const dateStr = `${ano}-${String(mes).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    setSaving(true)
+
+    if (obraId) {
+      // Upsert: grava efetivo_diario com a obra escolhida
+      const { error } = await supabase
+        .from('efetivo_diario')
+        .upsert({
+          funcionario_id: funcId,
+          obra_id: obraId,
+          data: dateStr,
+          origem_registro: 'atribuicao_manual',
+        }, {
+          onConflict: 'obra_id,funcionario_id,data',
+        })
+
+      if (error) {
+        // Se o conflito e por um registro com outra obra, atualizar o existente
+        // Tenta primeiro deletar registros antigos deste func+data e inserir novo
+        const { error: delError } = await supabase
+          .from('efetivo_diario')
+          .delete()
+          .eq('funcionario_id', funcId)
+          .eq('data', dateStr)
+
+        if (!delError) {
+          const { error: insError } = await supabase
+            .from('efetivo_diario')
+            .insert({
+              funcionario_id: funcId,
+              obra_id: obraId,
+              data: dateStr,
+              origem_registro: 'atribuicao_manual',
+            })
+
+          if (insError) {
+            toast.error('Erro ao atribuir obra: ' + insError.message)
+            setSaving(false)
+            setDropdownOpen(null)
+            return
+          }
+        } else {
+          toast.error('Erro ao atribuir obra: ' + delError.message)
+          setSaving(false)
+          setDropdownOpen(null)
+          return
+        }
+      }
+
+      // Atualizar estado local
+      setAtribuicoes(prev => {
+        const next = new Map(prev)
+        if (!next.has(funcId)) next.set(funcId, new Map())
+        next.get(funcId)!.set(dateStr, obraId)
+        return next
+      })
+    } else {
+      // "Sem obra" — remover atribuicao
+      const { error } = await supabase
+        .from('efetivo_diario')
+        .delete()
+        .eq('funcionario_id', funcId)
+        .eq('data', dateStr)
+
+      if (error) {
+        toast.error('Erro ao remover atribuicao: ' + error.message)
+        setSaving(false)
+        setDropdownOpen(null)
+        return
+      }
+
+      setAtribuicoes(prev => {
+        const next = new Map(prev)
+        const funcMap = next.get(funcId)
+        if (funcMap) {
+          funcMap.delete(dateStr)
+          if (funcMap.size === 0) next.delete(funcId)
+        }
+        return next
+      })
+    }
+
+    setSaving(false)
+    setDropdownOpen(null)
+    const obraNome = obraId ? obras.find(o => o.id === obraId)?.nome ?? 'Obra' : 'Sem obra'
+    toast.success(`${obraNome} atribuida ao dia ${day}/${mes}`)
+  }
+
   /** Monta conteudo da celula para um funcionario+dia */
   function getCellContent(funcId: string, day: number): { display: string; cls: string; title: string } {
     const dateStr = `${ano}-${String(mes).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
     if (isWeekend(ano, mes, day)) {
-      // Ainda assim, mostra batidas se houver (trabalho em fim de semana)
       const batidas = marcMap.get(funcId)?.get(dateStr)
       if (batidas && batidas.length > 0) {
         const compact = formatBatidas(batidas)
@@ -199,11 +397,94 @@ export default function PontoMarcacoesGrid() {
     return parts.join(' ')
   }
 
+  /** Renderiza chip de obra para uma celula */
+  function renderObraChip(funcId: string, day: number) {
+    const dateStr = `${ano}-${String(mes).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const obraId = getObraAtribuida(funcId, dateStr)
+    const cellKey = `${funcId}|${day}`
+    const isOpen = dropdownOpen === cellKey
+    const isExplicit = atribuicoes.get(funcId)?.has(dateStr) ?? false
+
+    if (!obraId) {
+      return (
+        <button
+          onClick={(e) => { e.stopPropagation(); setDropdownOpen(isOpen ? null : cellKey) }}
+          className="mt-0.5 text-[8px] px-1 py-0.5 rounded border border-dashed border-gray-300 text-gray-400 hover:border-brand hover:text-brand transition-colors"
+          title="Clique para atribuir obra"
+        >
+          + obra
+        </button>
+      )
+    }
+
+    const obra = obras.find(o => o.id === obraId)
+    const colorIdx = obraColorMap.get(obraId) ?? 0
+    const color = OBRA_COLORS[colorIdx]
+    const nomeAbrev = obra ? (obra.nome.length > 8 ? obra.nome.slice(0, 7) + '..' : obra.nome) : '??'
+
+    return (
+      <button
+        onClick={(e) => { e.stopPropagation(); setDropdownOpen(isOpen ? null : cellKey) }}
+        className={`mt-0.5 text-[8px] px-1 py-0.5 rounded border ${color.bg} ${color.text} ${color.border} ${!isExplicit ? 'opacity-60 border-dashed' : ''} hover:opacity-100 transition-opacity`}
+        title={`${obra?.nome ?? 'Obra desconhecida'}${!isExplicit ? ' (herdado)' : ''} — clique para alterar`}
+      >
+        {nomeAbrev}
+      </button>
+    )
+  }
+
+  /** Renderiza dropdown de selecao de obra */
+  function renderObraDropdown(funcId: string, day: number) {
+    const cellKey = `${funcId}|${day}`
+    if (dropdownOpen !== cellKey) return null
+    const dateStr = `${ano}-${String(mes).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const currentObraId = getObraAtribuida(funcId, dateStr)
+
+    return (
+      <div
+        ref={dropdownRef}
+        className="absolute z-50 mt-1 left-0 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[160px] max-h-[200px] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={() => atribuirObra(funcId, day, null)}
+          disabled={saving}
+          className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 ${!currentObraId ? 'font-bold text-brand' : 'text-gray-600'}`}
+        >
+          Sem obra
+        </button>
+        {obras.length === 0 && (
+          <div className="px-3 py-2 text-[10px] text-gray-400 italic">
+            Nenhuma obra ativa. Crie uma obra primeiro.
+          </div>
+        )}
+        {obras.map(o => {
+          const colorIdx = obraColorMap.get(o.id) ?? 0
+          const color = OBRA_COLORS[colorIdx]
+          const isSelected = o.id === currentObraId
+          return (
+            <button
+              key={o.id}
+              onClick={() => atribuirObra(funcId, day, o.id)}
+              disabled={saving}
+              className={`w-full text-left px-3 py-1.5 text-[11px] hover:bg-gray-50 flex items-center gap-2 ${isSelected ? 'font-bold' : ''}`}
+            >
+              <span className={`w-2 h-2 rounded-full ${color.bg} border ${color.border}`}></span>
+              <span className={isSelected ? 'text-brand' : 'text-gray-700'}>{o.nome}</span>
+              {isSelected && <span className="text-brand text-[9px] ml-auto">atual</span>}
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
+
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
       <h2 className="text-sm font-bold text-brand mb-1">Marcacoes Brutas do Ponto</h2>
       <p className="text-xs text-gray-500 mb-4">
         Todas as batidas importadas da Secullum, por funcionario e dia. Independente de obra.
+        <span className="ml-1 text-brand font-medium">Clique em &quot;+ obra&quot; para atribuir a obra do dia.</span>
       </p>
 
       {/* Filtros */}
@@ -251,7 +532,7 @@ export default function PontoMarcacoesGrid() {
                   Funcionario
                 </th>
                 {days.map(d => (
-                  <th key={d} className={`px-0.5 py-1.5 text-center font-semibold min-w-[70px] ${isWeekend(ano, mes, d) ? 'text-gray-400 bg-gray-50' : 'text-gray-500'}`}>
+                  <th key={d} className={`px-0.5 py-1.5 text-center font-semibold min-w-[80px] ${isWeekend(ano, mes, d) ? 'text-gray-400 bg-gray-50' : 'text-gray-500'}`}>
                     {d}
                   </th>
                 ))}
@@ -266,9 +547,25 @@ export default function PontoMarcacoesGrid() {
                   </td>
                   {days.map(d => {
                     const cell = getCellContent(func.id, d)
+                    const cellKey = `${func.id}|${d}`
+                    const isWk = isWeekend(ano, mes, d)
+                    const hasBatidas = (() => {
+                      const dateStr = `${ano}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+                      const b = marcMap.get(func.id)?.get(dateStr)
+                      return b && b.length > 0
+                    })()
                     return (
-                      <td key={d} className={`px-0.5 py-1 text-center whitespace-nowrap ${cell.cls}`} title={cell.title}>
-                        {cell.display}
+                      <td key={d} className={`px-0.5 py-1 text-center whitespace-nowrap ${cell.cls} relative`} title={cell.title}>
+                        <div className="flex flex-col items-center">
+                          <span>{cell.display}</span>
+                          {/* Chip de obra — so mostra se tem batidas ou status nao-vazio */}
+                          {(hasBatidas || (!isWk && cell.display !== '')) && (
+                            <div className="relative">
+                              {renderObraChip(func.id, d)}
+                              {renderObraDropdown(func.id, d)}
+                            </div>
+                          )}
+                        </div>
                       </td>
                     )
                   })}
@@ -288,6 +585,8 @@ export default function PontoMarcacoesGrid() {
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-100 border border-red-200"></span> Falta</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-50 border border-amber-200"></span> FDS c/ batida</span>
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-200"></span> FDS / Sem dados</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-100 border border-indigo-200"></span> Obra atribuida</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-100 border border-dashed border-indigo-200 opacity-60"></span> Obra herdada</span>
         </div>
       )}
     </div>
