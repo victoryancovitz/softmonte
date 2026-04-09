@@ -153,6 +153,39 @@ export async function POST(req: NextRequest) {
 
   const funcIds = Array.from(new Set((marcacoes as Marcacao[]).map(m => m.funcionario_id)))
 
+  // 1b. Lê dados de admissão e desligamento dos funcionários para filtrar dias fora do período ativo
+  type FuncPeriodo = { id: string; admissao: string | null; deleted_at: string | null }
+  const funcPeriodoMap = new Map<string, FuncPeriodo>()
+  {
+    const CHUNK = 100
+    for (let i = 0; i < funcIds.length; i += CHUNK) {
+      const chunk = funcIds.slice(i, i + CHUNK)
+      const { data: fData } = await supabase
+        .from('funcionarios')
+        .select('id, admissao, deleted_at')
+        .in('id', chunk)
+      if (fData) {
+        for (const f of fData as FuncPeriodo[]) {
+          funcPeriodoMap.set(f.id, f)
+        }
+      }
+    }
+  }
+
+  /** Verifica se a data está dentro do período ativo do funcionário (admissão → desligamento). */
+  function isDentroDoPeridoAtivo(funcId: string, data: string): boolean {
+    const fp = funcPeriodoMap.get(funcId)
+    if (!fp) return true // se não encontrou o funcionário, não filtra
+    // Antes da admissão → ignorar
+    if (fp.admissao && data < fp.admissao) return false
+    // Após o desligamento (deleted_at) → ignorar
+    if (fp.deleted_at) {
+      const desligamento = fp.deleted_at.split('T')[0] // timestamptz → YYYY-MM-DD
+      if (data > desligamento) return false
+    }
+    return true
+  }
+
   // 2. Lê atribuições manuais existentes em efetivo_diario (operador definiu a obra via grid)
   let allExistentes: EfetivoDiarioExistente[] = []
   {
@@ -290,6 +323,10 @@ export async function POST(req: NextRequest) {
 
   dayGroups.forEach((batidas, key) => {
     const [funcId, data] = key.split('|')
+
+    // Ignora dias fora do período ativo do funcionário (antes da admissão ou após desligamento)
+    if (!isDentroDoPeridoAtivo(funcId, data)) return
+
     const obraFinalId = acharObraDoDia(funcId, data)
     if (!obraFinalId) {
       semObra.push(`${funcId}|${data}`)

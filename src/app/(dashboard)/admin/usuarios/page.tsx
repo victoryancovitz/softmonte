@@ -53,7 +53,7 @@ export default function AdminUsuariosPage() {
   async function loadData() {
     setLoading(true)
     const [{ data: prof }, { data: conv }] = await Promise.all([
-      supabase.from('profiles').select('*').order('nome'),
+      supabase.from('profiles').select('*').is('deleted_at', null).order('nome'),
       supabase.from('convites').select('*').order('created_at', { ascending: false }),
     ])
     setProfiles(prof ?? [])

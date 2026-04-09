@@ -22,6 +22,15 @@ type Funcionario = {
   id: string
   nome: string
   cargo: string | null
+  admissao: string | null
+  deleted_at: string | null
+}
+
+type AlocacaoAtiva = {
+  funcionario_id: string
+  obra_id: string
+  data_inicio: string | null
+  data_fim: string | null
 }
 
 type MarcacaoBruta = {
@@ -85,6 +94,8 @@ export default function PontoMarcacoesGrid() {
   const [obras, setObras] = useState<Obra[]>([])
   // funcId -> data -> obra_id
   const [atribuicoes, setAtribuicoes] = useState<Map<string, Map<string, string>>>(new Map())
+  // Alocacoes ativas: funcId -> AlocacaoAtiva[]
+  const [alocacoesMap, setAlocacoesMap] = useState<Map<string, AlocacaoAtiva[]>>(new Map())
   // Celula com dropdown aberto: "funcId|day"
   const [dropdownOpen, setDropdownOpen] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -187,7 +198,7 @@ export default function PontoMarcacoesGrid() {
     sts.forEach(s => funcIdsSet.add(s.funcionario_id))
     const funcIds = Array.from(funcIdsSet)
 
-    // 4. Buscar dados dos funcionarios
+    // 4. Buscar dados dos funcionarios (inclui admissao e deleted_at para filtrar faltas)
     let funcs: Funcionario[] = []
     if (funcIds.length > 0) {
       const CHUNK = 100
@@ -195,11 +206,30 @@ export default function PontoMarcacoesGrid() {
         const chunk = funcIds.slice(i, i + CHUNK)
         const { data: fData } = await supabase
           .from('funcionarios')
-          .select('id, nome, cargo')
+          .select('id, nome, cargo, admissao, deleted_at')
           .in('id', chunk)
-          .is('deleted_at', null)
           .order('nome')
         funcs = funcs.concat((fData ?? []) as Funcionario[])
+      }
+    }
+
+    // 4b. Buscar alocacoes ativas para o periodo (fallback de obra quando nao tem atribuicao manual)
+    const alocMap = new Map<string, AlocacaoAtiva[]>()
+    if (funcIds.length > 0) {
+      const CHUNK = 100
+      for (let i = 0; i < funcIds.length; i += CHUNK) {
+        const chunk = funcIds.slice(i, i + CHUNK)
+        const { data: alocData } = await supabase
+          .from('alocacoes')
+          .select('funcionario_id, obra_id, data_inicio, data_fim')
+          .eq('ativo', true)
+          .in('funcionario_id', chunk)
+        if (alocData) {
+          for (const a of alocData as AlocacaoAtiva[]) {
+            if (!alocMap.has(a.funcionario_id)) alocMap.set(a.funcionario_id, [])
+            alocMap.get(a.funcionario_id)!.push(a)
+          }
+        }
       }
     }
 
@@ -236,6 +266,7 @@ export default function PontoMarcacoesGrid() {
     setMarcacoes(marcs)
     setStatusDias(sts)
     setAtribuicoes(atribMap)
+    setAlocacoesMap(alocMap)
     setLoading(false)
   }
 
@@ -273,25 +304,75 @@ export default function PontoMarcacoesGrid() {
 
   /**
    * Resolve a obra atribuida para (funcId, dateStr).
-   * Se nao tem atribuicao explicita, herda do dia anterior mais recente.
+   * Prioridade:
+   * 1. Atribuicao explicita (manual) neste dia em efetivo_diario
+   * 2. Heranca do dia anterior mais recente com atribuicao manual
+   * 3. Alocacao ativa no dia (fallback automatico)
    */
   const getObraAtribuida = useCallback((funcId: string, dateStr: string): string | null => {
     const funcAtrib = atribuicoes.get(funcId)
-    if (!funcAtrib) return null
 
-    // Atribuicao explicita neste dia
-    if (funcAtrib.has(dateStr)) return funcAtrib.get(dateStr)!
+    // 1. Atribuicao explicita neste dia
+    if (funcAtrib?.has(dateStr)) return funcAtrib.get(dateStr)!
 
-    // Heranca: busca o dia anterior mais recente que tenha atribuicao
-    // (dentro do mes visivel + pode ter atribuicao de meses anteriores carregada)
-    let bestDate: string | null = null
-    Array.from(funcAtrib.keys()).forEach(d => {
-      if (d < dateStr && (!bestDate || d > bestDate)) {
-        bestDate = d
+    // 2. Heranca: busca o dia anterior mais recente que tenha atribuicao
+    if (funcAtrib) {
+      let bestDate: string | null = null
+      Array.from(funcAtrib.keys()).forEach(d => {
+        if (d < dateStr && (!bestDate || d > bestDate)) {
+          bestDate = d
+        }
+      })
+      if (bestDate) return funcAtrib.get(bestDate)!
+    }
+
+    // 3. Fallback: alocacao ativa no dia
+    const alocs = alocacoesMap.get(funcId)
+    if (alocs) {
+      const candidatas = alocs.filter(a =>
+        (!a.data_inicio || a.data_inicio <= dateStr) &&
+        (!a.data_fim || a.data_fim >= dateStr)
+      )
+      if (candidatas.length > 0) {
+        // Pega a alocacao mais recente
+        candidatas.sort((a, b) => (b.data_inicio || '').localeCompare(a.data_inicio || ''))
+        return candidatas[0].obra_id
       }
-    })
-    return bestDate ? funcAtrib.get(bestDate)! : null
-  }, [atribuicoes])
+    }
+
+    return null
+  }, [atribuicoes, alocacoesMap])
+
+  /** Identifica a origem da atribuicao: 'manual' | 'herdado' | 'alocacao' | null */
+  const getOrigemAtribuicao = useCallback((funcId: string, dateStr: string): 'manual' | 'herdado' | 'alocacao' | null => {
+    const funcAtrib = atribuicoes.get(funcId)
+
+    // 1. Atribuicao explicita
+    if (funcAtrib?.has(dateStr)) return 'manual'
+
+    // 2. Heranca
+    if (funcAtrib) {
+      let bestDate: string | null = null
+      Array.from(funcAtrib.keys()).forEach(d => {
+        if (d < dateStr && (!bestDate || d > bestDate)) {
+          bestDate = d
+        }
+      })
+      if (bestDate) return 'herdado'
+    }
+
+    // 3. Alocacao
+    const alocs = alocacoesMap.get(funcId)
+    if (alocs) {
+      const candidatas = alocs.filter(a =>
+        (!a.data_inicio || a.data_inicio <= dateStr) &&
+        (!a.data_fim || a.data_fim >= dateStr)
+      )
+      if (candidatas.length > 0) return 'alocacao'
+    }
+
+    return null
+  }, [atribuicoes, alocacoesMap])
 
   /** Atribuir obra a um funcionario em um dia (upsert em efetivo_diario) */
   async function atribuirObra(funcId: string, day: number, obraId: string | null) {
@@ -384,8 +465,25 @@ export default function PontoMarcacoesGrid() {
   }
 
   /** Monta conteudo da celula para um funcionario+dia */
+  /** Verifica se a data esta dentro do periodo ativo do funcionario (admissao -> desligamento). */
+  function isDentroDoPeridoAtivo(funcId: string, dateStr: string): boolean {
+    const func = funcionarios.find(f => f.id === funcId)
+    if (!func) return true
+    if (func.admissao && dateStr < func.admissao) return false
+    if (func.deleted_at) {
+      const desligamento = func.deleted_at.split('T')[0]
+      if (dateStr > desligamento) return false
+    }
+    return true
+  }
+
   function getCellContent(funcId: string, day: number): { display: string; cls: string; title: string } {
     const dateStr = `${ano}-${String(mes).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+
+    // Dia fora do periodo ativo do funcionario: nao contar como falta
+    if (!isDentroDoPeridoAtivo(funcId, dateStr)) {
+      return { display: '', cls: 'bg-gray-50 text-gray-300', title: 'Fora do periodo ativo' }
+    }
 
     if (isWeekend(ano, mes, day)) {
       const batidas = marcMap.get(funcId)?.get(dateStr)
@@ -405,6 +503,7 @@ export default function PontoMarcacoesGrid() {
     }
 
     if (status) {
+      // Se status e falta mas o dia esta fora do periodo ativo, ja foi tratado acima
       const st = STATUS_COLORS[status]
       if (st) return { display: st.label, cls: `${st.bg} ${st.text}`, title: status }
       if (status === 'presente') return { display: 'P', cls: 'bg-green-100 text-green-700', title: 'Presente (sem batidas detalhadas)' }
@@ -432,7 +531,7 @@ export default function PontoMarcacoesGrid() {
     const obraId = getObraAtribuida(funcId, dateStr)
     const cellKey = `${funcId}|${day}`
     const isOpen = dropdownOpen === cellKey
-    const isExplicit = atribuicoes.get(funcId)?.has(dateStr) ?? false
+    const origem = getOrigemAtribuicao(funcId, dateStr)
 
     if (!obraId) {
       return (
@@ -451,13 +550,20 @@ export default function PontoMarcacoesGrid() {
     const color = OBRA_COLORS[colorIdx]
     const nomeAbrev = obra ? (obra.nome.length > 8 ? obra.nome.slice(0, 7) + '..' : obra.nome) : '??'
 
+    // Visual distinction: manual = solid, herdado = dashed + opacity, alocacao = dotted + checkmark
+    const isManual = origem === 'manual'
+    const isAlocacao = origem === 'alocacao'
+    const borderStyle = isManual ? '' : isAlocacao ? 'border-dotted' : 'border-dashed'
+    const opacityStyle = isManual ? '' : isAlocacao ? 'opacity-80' : 'opacity-60'
+    const origemLabel = isManual ? '' : isAlocacao ? ' (alocacao)' : ' (herdado)'
+
     return (
       <button
         onClick={(e) => { e.stopPropagation(); setDropdownOpen(isOpen ? null : cellKey) }}
-        className={`mt-0.5 text-[8px] px-1 py-0.5 rounded border ${color.bg} ${color.text} ${color.border} ${!isExplicit ? 'opacity-60 border-dashed' : ''} hover:opacity-100 transition-opacity`}
-        title={`${obra?.nome ?? 'Obra desconhecida'}${!isExplicit ? ' (herdado)' : ''} — clique para alterar`}
+        className={`mt-0.5 text-[8px] px-1 py-0.5 rounded border ${color.bg} ${color.text} ${color.border} ${borderStyle} ${opacityStyle} hover:opacity-100 transition-opacity`}
+        title={`${obra?.nome ?? 'Obra desconhecida'}${origemLabel} — clique para alterar`}
       >
-        {nomeAbrev}
+        {isAlocacao && <span className="mr-0.5">&#10003;</span>}{nomeAbrev}
       </button>
     )
   }
@@ -616,6 +722,7 @@ export default function PontoMarcacoesGrid() {
           <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-gray-100 border border-gray-200"></span> FDS / Sem dados</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-100 border border-indigo-200"></span> Obra atribuida</span>
           <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-100 border border-dashed border-indigo-200 opacity-60"></span> Obra herdada</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-100 border border-dotted border-indigo-200 opacity-80"></span> &#10003; Alocacao ativa</span>
         </div>
       )}
     </div>

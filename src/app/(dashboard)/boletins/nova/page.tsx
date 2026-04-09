@@ -127,7 +127,12 @@ export default function NovoBMPage() {
       .lte('data', form.data_fim)
 
     if (efErr) { setError(efErr.message); setPreviewing(false); return }
-    if (!efetivo || efetivo.length === 0) { setPreview([]); setPreviewing(false); return }
+    if (!efetivo || efetivo.length === 0) {
+      setError('Nenhum registro encontrado em efetivo_diario para esta obra no periodo. Importe e calcule o ponto primeiro (Ponto > Importar Secullum > Calcular Efetivo).')
+      setPreview([])
+      setPreviewing(false)
+      return
+    }
 
     // Fetch contrato_composicao for this obra
     const { data: composicao } = await supabase
@@ -400,10 +405,10 @@ export default function NovoBMPage() {
         preview.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-dashed border-gray-300 p-10 text-center">
             <div className="text-gray-400 text-3xl mb-3">📋</div>
-            <p className="text-gray-600 font-medium text-sm mb-1">Nenhum registro de ponto encontrado para esta obra no período selecionado.</p>
-            <p className="text-gray-400 text-xs mb-4">Verifique se o efetivo diário foi registrado para o período informado.</p>
+            <p className="text-gray-600 font-medium text-sm mb-1">Nenhum registro de efetivo diario encontrado para esta obra no periodo selecionado.</p>
+            <p className="text-gray-400 text-xs mb-4">Importe e calcule o ponto primeiro: Ponto &gt; Importar Secullum &gt; Calcular Efetivo.</p>
             <Link href="/ponto" className="text-brand text-sm font-medium hover:underline">
-              Ir para Ponto para registrar →
+              Ir para Ponto para importar e calcular &rarr;
             </Link>
           </div>
         ) : (

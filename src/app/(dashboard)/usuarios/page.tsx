@@ -34,7 +34,7 @@ export default function UsuariosPage() {
   async function loadData() {
     const [{ data: { user } }, { data: prof }] = await Promise.all([
       supabase.auth.getUser(),
-      supabase.from('profiles').select('*').order('nome'),
+      supabase.from('profiles').select('*').is('deleted_at', null).order('nome'),
     ])
     setCurrentUser(user?.id ?? null)
     setProfiles(prof ?? [])
