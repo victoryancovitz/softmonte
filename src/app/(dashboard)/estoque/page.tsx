@@ -13,7 +13,7 @@ export default async function EstoquePage() {
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-xl font-bold font-display text-brand">Estoque</h1>
+          <h1 className="text-xl font-bold font-display text-brand">Almoxarifado</h1>
           <p className="text-sm text-gray-500 mt-0.5">{totalItens} itens · {criticos.length} abaixo do minimo</p>
         </div>
         <Link href="/estoque/novo" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-dark">+ Novo item</Link>

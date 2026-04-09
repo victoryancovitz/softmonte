@@ -11,7 +11,7 @@ export default async function ObrasPage() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-xl font-semibold font-display">Obras</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{obras?.length ?? 0} obras cadastradas</p>
+          <p className="text-sm text-gray-500 mt-0.5">{obras?.length ?? 0} obra{(obras?.length ?? 0) !== 1 ? 's' : ''} cadastrada{(obras?.length ?? 0) !== 1 ? 's' : ''}</p>
         </div>
         <Link href="/obras/nova" className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark transition-colors">+ Nova obra</Link>
       </div>

@@ -172,8 +172,8 @@ export default function FeriasPage() {
       <div className="flex items-center gap-3 mb-5">
         <BackButton fallback="/rh" />
         <div>
-          <h1 className="text-xl font-bold font-display text-brand">Gestao de Ferias</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{consolidated.length} funcionario(s)</p>
+          <h1 className="text-xl font-bold font-display text-brand">Gestão de Férias</h1>
+          <p className="text-sm text-gray-500 mt-0.5">{consolidated.length} funcionário(s)</p>
         </div>
       </div>
 
@@ -213,7 +213,7 @@ export default function FeriasPage() {
       <div className="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
         {([
           { key: 'todos', label: 'Todos' },
-          { key: 'vencidas', label: `Ferias Vencidas (${totalVencidas})` },
+          { key: 'vencidas', label: `Férias Vencidas (${totalVencidas})` },
           { key: 'programadas', label: `Programadas (${totalProgramadas})` },
         ] as { key: TabFilter; label: string }[]).map(t => (
           <button
@@ -238,7 +238,7 @@ export default function FeriasPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
-              {['Nome', 'Admissao', 'Anos Empresa', 'Dias Direito', 'Dias Gozados', 'Dias Restantes', 'Status', 'Acoes'].map(h => (
+              {['Nome', 'Admissão', 'Anos Empresa', 'Dias Direito', 'Dias Gozados', 'Dias Restantes', 'Status', 'Ações'].map(h => (
                 <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
               ))}
             </tr>
@@ -304,7 +304,7 @@ export default function FeriasPage() {
                     <div className="mt-3 p-3 bg-gray-50 rounded-xl border border-gray-200 space-y-3">
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-xs font-semibold text-gray-500 mb-1">Inicio Gozo</label>
+                          <label className="block text-xs font-semibold text-gray-500 mb-1">Início Gozo</label>
                           <input
                             type="date"
                             value={formData.data_inicio_gozo}
@@ -339,7 +339,7 @@ export default function FeriasPage() {
                           disabled={saving}
                           className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50"
                         >
-                          {saving ? 'Salvando...' : 'Confirmar Programacao'}
+                          {saving ? 'Salvando...' : 'Confirmar Programação'}
                         </button>
                         <button
                           onClick={() => setFormOpen(null)}

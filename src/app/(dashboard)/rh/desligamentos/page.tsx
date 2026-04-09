@@ -13,13 +13,13 @@ import {
 } from 'lucide-react'
 
 const ETAPAS = [
-  { key: 'etapa_aviso_previo', label: 'Aviso Previo' },
-  { key: 'etapa_devolucao_epi', label: 'Devolucao de EPI' },
-  { key: 'etapa_devolucao_ferramentas', label: 'Devolucao de Ferramentas' },
+  { key: 'etapa_aviso_previo', label: 'Aviso Prévio' },
+  { key: 'etapa_devolucao_epi', label: 'Devolução de EPI' },
+  { key: 'etapa_devolucao_ferramentas', label: 'Devolução de Ferramentas' },
   { key: 'etapa_exame_demissional', label: 'Exame Demissional' },
   { key: 'etapa_baixa_ctps', label: 'Baixa CTPS' },
-  { key: 'etapa_calculo_rescisao', label: 'Calculo Rescisao' },
-  { key: 'etapa_homologacao', label: 'Homologacao' },
+  { key: 'etapa_calculo_rescisao', label: 'Cálculo Rescisão' },
+  { key: 'etapa_homologacao', label: 'Homologação' },
   { key: 'etapa_esocial', label: 'eSocial' },
   { key: 'etapa_acerto_banco_horas', label: 'Acerto Banco de Horas' },
 ] as const
@@ -27,8 +27,8 @@ const ETAPAS = [
 const TIPO_LABELS: Record<string, { label: string; cls: string }> = {
   sem_justa_causa: { label: 'Sem Justa Causa', cls: 'bg-red-100 text-red-700' },
   justa_causa: { label: 'Justa Causa', cls: 'bg-red-200 text-red-800' },
-  pedido_demissao: { label: 'Pedido Demissao', cls: 'bg-amber-100 text-amber-700' },
-  termino_contrato: { label: 'Termino Contrato', cls: 'bg-blue-100 text-blue-700' },
+  pedido_demissao: { label: 'Pedido de Demissão', cls: 'bg-amber-100 text-amber-700' },
+  termino_contrato: { label: 'Término de Contrato', cls: 'bg-blue-100 text-blue-700' },
   acordo: { label: 'Acordo', cls: 'bg-purple-100 text-purple-700' },
 }
 
@@ -376,7 +376,7 @@ export default function DesligamentosPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  {['Funcionario', 'Cargo', 'Tipo', 'Data Saida', 'Concluido em'].map(h => (
+                  {['Funcionário', 'Cargo', 'Tipo', 'Data Saída', 'Concluído em'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -398,7 +398,7 @@ export default function DesligamentosPage() {
                       <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(desl.data_prevista_saida)}</td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                          {desl.concluido_em ? new Date(desl.concluido_em).toLocaleDateString('pt-BR') : 'Concluido'}
+                          {desl.concluido_em ? new Date(desl.concluido_em).toLocaleDateString('pt-BR') : 'Concluído'}
                         </span>
                       </td>
                     </tr>

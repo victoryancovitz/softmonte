@@ -27,10 +27,10 @@ const CHECKLIST_ITEMS = [
   { key: 'etapa_exame_admissional', label: 'Exame Admissional' },
   { key: 'etapa_ctps', label: 'CTPS' },
   { key: 'etapa_contrato_assinado', label: 'Contrato Assinado' },
-  { key: 'etapa_dados_bancarios', label: 'Dados Bancarios' },
+  { key: 'etapa_dados_bancarios', label: 'Dados Bancários' },
   { key: 'etapa_epi_entregue', label: 'EPI Entregue' },
   { key: 'etapa_nr_obrigatorias', label: 'Treinamentos NR' },
-  { key: 'etapa_integracao', label: 'Integracao SST' },
+  { key: 'etapa_integracao', label: 'Integração SST' },
   { key: 'etapa_uniforme', label: 'Uniforme' },
   { key: 'etapa_esocial', label: 'eSocial' },
 ] as const
@@ -65,7 +65,7 @@ export default function NovaAdmissaoPage() {
   }, [])
 
   async function handleSubmit() {
-    if (!funcId) { setError('Selecione um funcionario.'); return }
+    if (!funcId) { setError('Selecione um funcionário.'); return }
     if (!dataPrevista) { setError('Informe a data prevista.'); return }
 
     setSaving(true)
@@ -110,7 +110,7 @@ export default function NovaAdmissaoPage() {
       .limit(1)
 
     if (existing && existing.length > 0) {
-      setError('Este funcionario ja possui uma admissao em andamento.')
+      setError('Este funcionário já possui uma admissão em andamento.')
       setSaving(false)
       return
     }
@@ -137,7 +137,7 @@ export default function NovaAdmissaoPage() {
       return
     }
 
-    toast.success('Admissao criada!', `${selectedFunc?.nome ?? 'Funcionario'} — processo iniciado`)
+    toast.success('Admissão criada!', `${selectedFunc?.nome ?? 'Funcionário'} — processo iniciado`)
     router.push('/rh/admissoes')
   }
 
@@ -147,14 +147,14 @@ export default function NovaAdmissaoPage() {
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <Breadcrumb fallback="/rh/admissoes" items={[
         { label: 'RH', href: '/rh/admissoes' },
-        { label: 'Admissoes', href: '/rh/admissoes' },
-        { label: 'Nova admissao' },
+        { label: 'Admissões', href: '/rh/admissoes' },
+        { label: 'Nova admissão' },
       ]} />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <div className="flex items-center gap-3 mb-6">
           <UserPlus className="w-5 h-5 text-brand" />
-          <h1 className="text-lg font-bold font-display text-brand">Nova Admissao</h1>
+          <h1 className="text-lg font-bold font-display text-brand">Nova Admissão</h1>
         </div>
 
         {/* Selected employee preview */}
@@ -174,7 +174,7 @@ export default function NovaAdmissaoPage() {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Funcionario *</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Funcionário *</label>
             <select value={funcId} onChange={e => setFuncId(e.target.value)}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
               <option value="">Selecione...</option>
@@ -199,22 +199,22 @@ export default function NovaAdmissaoPage() {
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Responsavel RH</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Responsável RH</label>
             <input type="text" value={responsavel} onChange={e => setResponsavel(e.target.value)}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-              placeholder="Nome do responsavel" />
+              placeholder="Nome do responsável" />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Observacoes</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Observações</label>
             <textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={3}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none"
-              placeholder="Observacoes sobre a admissao..." />
+              placeholder="Observações sobre a admissão..." />
           </div>
 
           {/* Checklist preview */}
           <div className="border-t border-gray-100 pt-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Etapas que serao criadas</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Etapas que serão criadas</p>
             <div className="grid grid-cols-2 gap-2">
               {CHECKLIST_ITEMS.map(item => (
                 <div key={item.key} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
@@ -229,7 +229,7 @@ export default function NovaAdmissaoPage() {
         <div className="flex gap-3 pt-4 mt-4 border-t border-gray-100">
           <button onClick={handleSubmit} disabled={saving}
             className="px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50">
-            {saving ? 'Criando...' : 'Criar Admissao'}
+            {saving ? 'Criando...' : 'Criar Admissão'}
           </button>
           <button onClick={() => router.push('/rh/admissoes')}
             className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">

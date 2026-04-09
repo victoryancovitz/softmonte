@@ -66,7 +66,7 @@ export default function MovimentarEstoquePage({ params }: { params: { id: string
     <div className="p-4 sm:p-6 max-w-xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback="/estoque" />
-        <Link href="/estoque" className="text-gray-400 hover:text-gray-600">Estoque</Link>
+        <Link href="/estoque" className="text-gray-400 hover:text-gray-600">Almoxarifado</Link>
         <span className="text-gray-300">/</span>
         <span className="font-medium">{item.nome}</span>
       </div>

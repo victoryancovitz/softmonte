@@ -17,10 +17,10 @@ const ETAPAS = [
   { key: 'etapa_exame_admissional', label: 'Exame Admissional' },
   { key: 'etapa_ctps', label: 'CTPS' },
   { key: 'etapa_contrato_assinado', label: 'Contrato Assinado' },
-  { key: 'etapa_dados_bancarios', label: 'Dados Bancarios' },
+  { key: 'etapa_dados_bancarios', label: 'Dados Bancários' },
   { key: 'etapa_epi_entregue', label: 'EPI Entregue' },
   { key: 'etapa_nr_obrigatorias', label: 'Treinamentos NR' },
-  { key: 'etapa_integracao', label: 'Integracao SST' },
+  { key: 'etapa_integracao', label: 'Integração SST' },
   { key: 'etapa_uniforme', label: 'Uniforme' },
   { key: 'etapa_esocial', label: 'eSocial' },
 ] as const
@@ -81,12 +81,12 @@ export default function AdmissoesPage() {
   }
 
   async function concluirAdmissao(admId: string) {
-    if (!window.confirm('Concluir esta admissao?')) return
+    if (!window.confirm('Concluir esta admissão?')) return
     await supabase.from('admissoes_workflow').update({
       status: 'concluida',
       concluida_em: new Date().toISOString(),
     }).eq('id', admId)
-    toast.success('Admissao concluida!')
+    toast.success('Admissão concluída!')
     loadData()
   }
 
@@ -107,14 +107,14 @@ export default function AdmissoesPage() {
         <div className="flex items-center gap-3">
           <BackButton fallback="/rh" />
           <div>
-            <h1 className="text-xl font-bold font-display text-brand">Admissoes</h1>
+            <h1 className="text-xl font-bold font-display text-brand">Admissões</h1>
             <p className="text-sm text-gray-500 mt-0.5">{emAndamento.length} em andamento</p>
           </div>
         </div>
         <Link href="/rh/admissoes/novo"
           className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark flex items-center gap-2">
           <Plus className="w-4 h-4" />
-          Nova Admissao
+          Nova Admissão
         </Link>
       </div>
 
@@ -130,7 +130,7 @@ export default function AdmissoesPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center gap-2 mb-1">
             <CheckCircle2 className="w-4 h-4 text-green-500" />
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Concluidas este Mes</p>
+            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Concluídas este Mês</p>
           </div>
           <p className="text-2xl font-bold text-green-600">{concluidasMes}</p>
         </div>
@@ -138,7 +138,7 @@ export default function AdmissoesPage() {
 
       {/* Search */}
       <div className="mb-4">
-        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar admissao..." />
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar admissão..." />
       </div>
 
       {/* Cards */}
@@ -146,14 +146,14 @@ export default function AdmissoesPage() {
         <div className="text-center py-12 text-gray-400">Carregando...</div>
       ) : emAndamento.length === 0 && concluidas.length === 0 ? (
         <EmptyState
-          titulo="Nenhuma admissao registrada"
-          descricao="Cadastre um funcionario e inicie o processo de admissao."
+          titulo="Nenhuma admissão registrada"
+          descricao="Cadastre um funcionário e inicie o processo de admissão."
           icone={<UserPlus className="w-12 h-12" />}
-          acao={{ label: 'Ir para Funcionarios', href: '/funcionarios' }}
+          acao={{ label: 'Ir para Funcionários', href: '/funcionarios' }}
         />
       ) : emAndamento.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center text-gray-400">
-          Nenhuma admissao em andamento.
+          Nenhuma admissão em andamento.
         </div>
       ) : (
         <div className="space-y-3">
@@ -239,7 +239,7 @@ export default function AdmissoesPage() {
                           className="px-6 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 flex items-center gap-2"
                         >
                           <CheckCircle2 className="w-4 h-4" />
-                          Concluir Admissao
+                          Concluir Admissão
                         </button>
                       </div>
                     )}
@@ -254,12 +254,12 @@ export default function AdmissoesPage() {
       {/* Concluidas section */}
       {concluidas.length > 0 && (
         <div className="mt-8">
-          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Concluidas</h2>
+          <h2 className="text-sm font-bold text-gray-500 uppercase tracking-wide mb-3">Concluídas</h2>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  {['Funcionario', 'Cargo', 'Obra', 'Data Prevista', 'Concluida em'].map(h => (
+                  {['Funcionário', 'Cargo', 'Obra', 'Data Prevista', 'Concluída em'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                   ))}
                 </tr>
@@ -277,7 +277,7 @@ export default function AdmissoesPage() {
                     <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(adm.data_prevista_inicio)}</td>
                     <td className="px-4 py-3">
                       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">
-                        {adm.concluida_em ? new Date(adm.concluida_em).toLocaleDateString('pt-BR') : 'Concluida'}
+                        {adm.concluida_em ? new Date(adm.concluida_em).toLocaleDateString('pt-BR') : 'Concluída'}
                       </span>
                     </td>
                   </tr>

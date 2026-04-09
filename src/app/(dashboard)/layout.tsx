@@ -18,7 +18,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="min-h-screen bg-[#F4F6FA]">
       <Topbar profile={profile} />
       <ModuleTabs />
-      <main className="min-h-screen">
+      <main>
         <ToastProvider>{children}</ToastProvider>
         <InstallPrompt />
         <NotificationTrigger />

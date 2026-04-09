@@ -28,7 +28,7 @@ export default function NovoItemPage() {
     <div className="p-4 sm:p-6 max-w-2xl mx-auto">
       <div className="flex items-center gap-3 mb-6">
         <BackButton fallback="/estoque" />
-        <Link href="/estoque" className="text-gray-400 hover:text-gray-600 text-sm">Estoque</Link>
+        <Link href="/estoque" className="text-gray-400 hover:text-gray-600 text-sm">Almoxarifado</Link>
         <span className="text-gray-300">/</span>
         <span className="text-sm font-medium">Novo item</span>
       </div>

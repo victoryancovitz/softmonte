@@ -69,7 +69,7 @@ export default function MargemPage() {
                       <span className="font-semibold text-gray-900">{obra.obra}</span>
                       <span className="text-xs text-gray-400">{obra.cliente}</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${statusColor[obra.status_margem] ?? 'bg-gray-100 text-gray-600'}`}>
-                        {obra.status_margem?.toUpperCase()}
+                        {obra.status_margem ? obra.status_margem.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : '—'}
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-4 text-xs text-gray-500 mt-1">
@@ -184,7 +184,7 @@ export default function MargemPage() {
                                   </td>
                                   <td className="px-3 py-2">
                                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${statusColor[f.status_margem] ?? 'bg-gray-100'}`}>
-                                      {f.status_margem?.toUpperCase()}
+                                      {f.status_margem ? f.status_margem.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) : '—'}
                                     </span>
                                   </td>
                                 </tr>

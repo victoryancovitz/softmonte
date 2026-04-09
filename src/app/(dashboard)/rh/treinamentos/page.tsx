@@ -421,7 +421,7 @@ export default function TreinamentosPage() {
             tab === 'por_funcionario' ? 'bg-white text-brand shadow-sm' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Users className="w-4 h-4" /> Por Funcionario
+          <Users className="w-4 h-4" /> Por Funcionário
         </button>
         <button
           onClick={() => setTab('vencimentos')}
@@ -436,7 +436,7 @@ export default function TreinamentosPage() {
       {loading ? (
         <div className="text-center py-12 text-gray-400">Carregando...</div>
       ) : tab === 'por_funcionario' ? (
-        /* Por Funcionario - Accordion */
+        /* Por Funcionário - Accordion */
         <div className="space-y-2">
           {Object.entries(byFuncionario).length === 0 ? (
             <EmptyState
@@ -530,7 +530,7 @@ export default function TreinamentosPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {['Funcionario', 'Treinamento', 'NR', 'Vencimento', 'Dias', 'Urgencia', ''].map(h => (
+                {['Funcionário', 'Treinamento', 'NR', 'Vencimento', 'Dias', 'Urgência', ''].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>

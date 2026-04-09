@@ -345,7 +345,7 @@ export default function CotacoesPage() {
         return loading ? (
         <p className="text-sm text-gray-400">Carregando...</p>
       ) : filteredCotacoes.length === 0 ? (
-        <EmptyState titulo="Nenhuma cotacao aberta" descricao="Crie uma cotacao para iniciar o processo de compras." acao={{ label: 'Nova Cotacao', href: '#' }} />
+        <EmptyState titulo="Nenhuma cotação aberta" descricao="Crie uma cotação para iniciar o processo de compras." acao={{ label: 'Nova Cotação', href: '#' }} />
       ) : (
         <div className="space-y-3">
           {filteredCotacoes.map((c) => {
