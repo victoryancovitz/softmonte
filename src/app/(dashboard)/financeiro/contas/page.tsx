@@ -26,6 +26,27 @@ const TIPO_LABEL: Record<string, string> = {
   aplicacao: 'Aplicação',
 }
 
+const BANCOS: Record<string, { cor: string; sigla: string }> = {
+  'BTG':       { cor: '#003399', sigla: 'BTG' },
+  'Santander': { cor: '#EC0000', sigla: 'SAN' },
+  'Bradesco':  { cor: '#CC0000', sigla: 'BDB' },
+  'Itaú':      { cor: '#EC7000', sigla: 'ITÁ' },
+  'Caixa':     { cor: '#006699', sigla: 'CEF' },
+  'Nubank':    { cor: '#820AD1', sigla: 'NUB' },
+  'Inter':     { cor: '#FF7A00', sigla: 'INT' },
+}
+
+function BancoIcon({ banco }: { banco: string | null }) {
+  const match = banco ? Object.entries(BANCOS).find(([k]) => banco.toLowerCase().includes(k.toLowerCase())) : null
+  const cor = match ? match[1].cor : '#9ca3af'
+  const sigla = match ? match[1].sigla : (banco?.slice(0, 2).toUpperCase() || '??')
+  return (
+    <div className="w-8 h-8 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0" style={{ backgroundColor: cor }}>
+      {sigla}
+    </div>
+  )
+}
+
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 export default function ContasCorrentesPage() {
@@ -203,20 +224,33 @@ export default function ContasCorrentesPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {contas.map(c => (
-            <div key={c.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all">
+            <div key={c.id} className={`bg-white rounded-xl shadow-sm border p-5 hover:shadow-md transition-all ${(c as any).is_padrao ? 'border-amber-300' : 'border-gray-100'}`}>
               <div className="flex items-start justify-between mb-3">
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{TIPO_LABEL[c.tipo] ?? c.tipo}</p>
-                  <h3 className="text-base font-bold text-gray-900 mt-0.5">{c.nome}</h3>
-                  {(c.banco || c.agencia || c.conta) && (
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {c.banco && <span>{c.banco}</span>}
-                      {c.agencia && <span className="ml-2">Ag. {c.agencia}</span>}
-                      {c.conta && <span className="ml-2">C/C {c.conta}</span>}
-                    </p>
-                  )}
+                <div className="flex items-center gap-3">
+                  <BancoIcon banco={c.banco} />
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="text-base font-bold text-gray-900">{c.nome}</h3>
+                      {(c as any).is_padrao && <span className="text-amber-500 text-sm" title="Conta padrão">★</span>}
+                    </div>
+                    <p className="text-xs text-gray-400">{TIPO_LABEL[c.tipo] ?? c.tipo}</p>
+                    {(c.banco || c.agencia || c.conta) && (
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {c.banco && <span>{c.banco}</span>}
+                        {c.agencia && <span className="ml-2">Ag. {c.agencia}</span>}
+                        {c.conta && <span className="ml-2">C/C {c.conta}</span>}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <div className="flex gap-1">
+                  {!(c as any).is_padrao && (
+                    <button onClick={async () => {
+                      await supabase.from('contas_correntes').update({ is_padrao: true }).eq('id', c.id)
+                      toast.success('Conta definida como padrão')
+                      loadContas()
+                    }} className="text-xs text-amber-600 hover:text-amber-800 px-2 py-1" title="Definir como padrão">★</button>
+                  )}
                   <button onClick={() => abrirEditar(c)}
                     className="text-xs text-gray-500 hover:text-brand px-2 py-1">Editar</button>
                   <button onClick={() => apagar(c)}
