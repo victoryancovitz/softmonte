@@ -5,10 +5,10 @@ import FuncionariosView from '@/components/FuncionariosView'
 export default async function FuncionariosPage() {
   const supabase = createClient()
 
+  // Carrega TODOS (incluindo desligados) — o filtro é feito no FuncionariosView client-side
   const { data: all } = await supabase
     .from('funcionarios')
     .select('*')
-    .is('deleted_at', null)
     .order('nome')
 
   const funcs = all ?? []

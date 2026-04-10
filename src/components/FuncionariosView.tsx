@@ -10,9 +10,7 @@ import { TIPO_VINCULO } from '@/lib/formatters'
 const STATUS_COLOR: Record<string, string> = {
   disponivel: 'bg-green-100 text-green-700',
   alocado:    'bg-blue-100 text-blue-700',
-  afastado:   'bg-yellow-100 text-yellow-700',
-  inativo:    'bg-gray-100 text-gray-500',
-  desligado:  'bg-red-100 text-red-700',
+  inativo:    'bg-red-100 text-red-700',
 }
 
 const ALERTA_BADGE: Record<string, { label: string; cls: string }> = {
@@ -72,7 +70,9 @@ export default function FuncionariosView({
       try {
         const o = JSON.parse(saved)
         if (o.q) { setQ(o.q); setSearchInput(o.q) }
-        if (o.status) setStatus(o.status)
+        // Só restaurar status válidos
+        const validStatus = ['', 'ativos', 'alocado', 'disponivel', 'inativo']
+        if (o.status && validStatus.includes(o.status)) setStatus(o.status)
         if (o.cargo) setCargo(o.cargo)
         if (o.admDe) setAdmDe(o.admDe)
         if (o.admAte) setAdmAte(o.admAte)
@@ -138,8 +138,8 @@ export default function FuncionariosView({
         f.cargo?.toLowerCase().includes(ql)
       )
     }
-    if (status === 'desligado') result = result.filter(f => f.deleted_at != null)
-    else if (status === 'ativos') result = result.filter(f => f.deleted_at == null)
+    if (status === 'inativo') result = result.filter(f => f.deleted_at != null)
+    else if (status === 'ativos') result = result.filter(f => f.deleted_at == null && (f.status === 'alocado' || f.status === 'disponivel'))
     else if (status) result = result.filter(f => f.status === status && f.deleted_at == null)
     if (cargo) result = result.filter(f => f.cargo === cargo)
     if (admDe) result = result.filter(f => f.admissao && f.admissao >= admDe)
@@ -152,7 +152,10 @@ export default function FuncionariosView({
   const hasFilter = q || status || cargo || admDe || admAte || obraAtual || tipoVinculo
 
   function clearFilters() {
-    setQ(''); setStatus(''); setCargo(''); setAdmDe(''); setAdmAte(''); setObraAtual(''); setTipoVinculo('')
+    setQ(''); setSearchInput(''); setStatus(''); setCargo(''); setAdmDe(''); setAdmAte(''); setObraAtual(''); setTipoVinculo('')
+    setSortField('nome'); setSortDir('asc')
+    if (typeof window !== 'undefined') localStorage.removeItem('funcionarios_filters')
+    router.replace('/funcionarios', { scroll: false })
   }
 
   // Selection helpers
@@ -219,12 +222,11 @@ export default function FuncionariosView({
           </div>
           <select value={status} onChange={e => setStatus(e.target.value)}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
-            <option value="">Todos (incluindo desligados)</option>
-            <option value="ativos">Apenas ativos</option>
+            <option value="">Todos</option>
+            <option value="ativos">Ativos</option>
             <option value="disponivel">Disponível</option>
             <option value="alocado">Alocado</option>
-            <option value="afastado">Afastado</option>
-            <option value="desligado">Desligado</option>
+            <option value="inativo">Desligados</option>
           </select>
           <select value={cargo} onChange={e => setCargo(e.target.value)}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
