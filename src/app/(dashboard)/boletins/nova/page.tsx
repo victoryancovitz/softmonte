@@ -20,7 +20,7 @@ interface PreviewRow {
   hh_he70_real: number
   hh_he100_real: number
   // Lista de funcionários (para detalhamento)
-  funcionarios: Array<{ id: string; nome: string; dias_normais: number; dias_he70: number; dias_he100: number; datas: string[] }>
+  funcionarios: Array<{ id: string; nome: string; dias_normais: number; dias_he70: number; dias_he100: number; datas: string[]; hh_normais_real?: number; hh_he70_real?: number; hh_he100_real?: number }>
   // Valores R$/HH (editáveis)
   valor_hh_normal: number
   valor_hh_he70: number
@@ -300,7 +300,7 @@ export default function NovoBMPage() {
     // Step 2: group funcionarios by função (cargo)
     const perFuncao: Record<string, {
       cargo: string
-      funcs: Array<{ id: string; nome: string; dias_normais: number; dias_he70: number; dias_he100: number; datas: string[] }>
+      funcs: Array<{ id: string; nome: string; dias_normais: number; dias_he70: number; dias_he100: number; datas: string[]; hh_normais_real?: number; hh_he70_real?: number; hh_he100_real?: number }>
       horasReais: { normais: number; he50: number; he100: number }
     }> = {}
 
@@ -332,7 +332,11 @@ export default function NovoBMPage() {
       perFuncao[cargoKey].funcs.push({
         id: g.func.id,
         nome: g.func.nome_guerra ?? g.func.nome,
-        dias_normais, dias_he70, dias_he100, datas
+        dias_normais, dias_he70, dias_he100, datas,
+        // Horas reais por funcionário (pra modelo hora efetiva)
+        hh_normais_real: Math.round(g.horas.normais * 100) / 100,
+        hh_he70_real: Math.round(g.horas.he50 * 100) / 100,
+        hh_he100_real: Math.round(g.horas.he100 * 100) / 100,
       })
       perFuncao[cargoKey].horasReais.normais += g.horas.normais
       perFuncao[cargoKey].horasReais.he50 += g.horas.he50
@@ -457,6 +461,13 @@ export default function NovoBMPage() {
         ]
         tipos.forEach(t => {
           if (t.dias <= 0) return
+          // Pra hora efetiva: usar horas reais, não dias × carga
+          const hhCalc = modelo === 'hh_hora_efetiva'
+            ? (t.tipo === 'normal' ? (f as any).hh_normais_real ?? t.dias * r.carga_horaria_dia
+              : t.tipo === 'extra_70' ? (f as any).hh_he70_real ?? 0
+              : (f as any).hh_he100_real ?? 0)
+            : t.dias * r.carga_horaria_dia
+          const valorCalc = hhCalc * t.valor_hh
           itens.push({
             boletim_id: bmData.id,
             funcionario_id: f.id,
@@ -466,7 +477,8 @@ export default function NovoBMPage() {
             efetivo: 1,
             dias: t.dias,
             carga_horaria_dia: r.carga_horaria_dia,
-            // hh_total e valor_total são GENERATED ALWAYS no banco
+            hh_total: Math.round(hhCalc * 100) / 100,
+            valor_total: Math.round(valorCalc * 100) / 100,
             valor_hh: t.valor_hh,
             ordem: ordem++,
           })
