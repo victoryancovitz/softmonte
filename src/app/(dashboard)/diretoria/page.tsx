@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import RefreshButton from './RefreshButton'
-import { Target, DollarSign, AlertTriangle, Users, Calendar, ArrowRight, Clock, Gauge, Receipt, Wallet } from 'lucide-react'
+import { Target, DollarSign, AlertTriangle, Users, Calendar, ArrowRight } from 'lucide-react'
 
 const fmt = (v: any) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const fmtK = (v: any) => {
@@ -27,7 +27,7 @@ export default async function DiretoriaPage() {
     { data: obrasAtivas }, { data: contasSaldo }, { data: lancamentos },
     { data: funcAtivos }, { data: pontoMes }, { data: bmsAprovados },
     { data: bmItensAll }, { data: funcoes }, { data: desligados90 },
-    { data: bmsSemNfe }, { data: receitasAbertas },
+    { data: receitasAbertas }, { data: prazosLegais }, { data: bmsMesAtual },
   ] = await Promise.all([
     supabase.from('vw_dre_obra_mes').select('*').limit(500),
     supabase.from('vw_dre_obra').select('*').limit(500),
@@ -45,9 +45,10 @@ export default async function DiretoriaPage() {
     supabase.from('bm_itens').select('boletim_id, hh_total, funcao_nome'),
     supabase.from('funcoes').select('id, nome, custo_hora, salario_base, jornada_horas_mes, ativo').eq('ativo', true),
     supabase.from('funcionarios').select('id').gte('deleted_at', ha90d),
-    // Extra queries for "Atenção Hoje"
-    supabase.from('boletins_medicao').select('id, numero, valor_aprovado, aprovado_em, nfe_numero, obra_id').eq('status', 'aprovado').is('nfe_numero', null).is('deleted_at', null),
+    // Queries for "Decisões Pendentes"
     supabase.from('financeiro_lancamentos').select('id, valor, data_vencimento').eq('tipo', 'receita').neq('status', 'pago').is('deleted_at', null),
+    supabase.from('vw_prazos_legais').select('funcionario_id, nome, alerta_tipo, prazo_experiencia_2').limit(100),
+    supabase.from('boletins_medicao').select('id').gte('data_inicio', mesInicio).is('deleted_at', null),
   ])
 
   const funcs = funcAtivos ?? []
@@ -79,43 +80,11 @@ export default async function DiretoriaPage() {
   const proxContrato = (obrasAtivas ?? []).filter((o: any) => o.data_prev_fim).sort((a: any, b: any) => a.data_prev_fim.localeCompare(b.data_prev_fim))[0]
   const diasParaFim = proxContrato ? Math.ceil((new Date(proxContrato.data_prev_fim).getTime() - Date.now()) / 86400000) : null
 
-  // === SEÇÃO 2: KPIs HH ===
-  // KPI 1 — Utilização (presença no mês vs disponível)
-  const diasUnicosPonto = new Set((pontoMes ?? []).map((p: any) => `${p.funcionario_id}::${p.data}`)).size
-  const cargaDia = obra?.carga_horaria_dia || 8
+  // === SEÇÃO CONTRATO: KPIs ===
   const diasUteisMes = obra?.dias_uteis_mes || 21
-  const hhRealizadas = diasUnicosPonto * cargaDia
-  const hhDisponiveis = funcs.length * diasUteisMes * cargaDia
-  const utilizacaoPct = hhDisponiveis > 0 ? (hhRealizadas / hhDisponiveis * 100) : 0
-
-  // KPI 2 — Receita por HH
   const bmIds = new Set((bmsAprovados ?? []).map((b: any) => b.id))
   const itensBmAprovados = (bmItensAll ?? []).filter((i: any) => bmIds.has(i.boletim_id))
-  const hhFaturadas = itensBmAprovados.reduce((s: number, i: any) => s + Number(i.hh_total || 0), 0)
   const receitaBmTotal = (bmsAprovados ?? []).reduce((s: number, b: any) => s + Number(b.valor_aprovado || 0), 0)
-  const receitaPorHH = hhFaturadas > 0 ? receitaBmTotal / hhFaturadas : 0
-  const precoMedioContratado = (() => {
-    const fn = (funcoes ?? []).filter((f: any) => f.custo_hora)
-    return fn.length > 0 ? fn.reduce((s: number, f: any) => s + Number(f.custo_hora), 0) / fn.length : 0
-  })()
-
-  // KPI 3 — Ciclo de aprovação
-  const bmsComAprovacao = (bmsAprovados ?? []).filter((b: any) => b.aprovado_em && b.created_at)
-  const ciclosAprovacao = bmsComAprovacao.map((b: any) => (new Date(b.aprovado_em).getTime() - new Date(b.created_at).getTime()) / 86400000)
-  const cicloMedio = ciclosAprovacao.length > 0 ? ciclosAprovacao.reduce((s, d) => s + d, 0) / ciclosAprovacao.length : null
-  const cicloMin = ciclosAprovacao.length > 0 ? Math.min(...ciclosAprovacao) : null
-  const cicloMax = ciclosAprovacao.length > 0 ? Math.max(...ciclosAprovacao) : null
-
-  // KPI 4 — Custo real MO
-  const custoTotal = funcs.reduce((s: number, f: any) => {
-    const sal = Number(f.salario_base || 0)
-    const jornada = 220
-    const custoHora = (sal * 1.72) / jornada + Number(f.vt_mensal || 0) / jornada + Number(f.vr_diario || 0) * diasUteisMes / jornada + Number(f.va_mensal || 0) / jornada
-    return s + custoHora
-  }, 0)
-  const custoMedioHH = funcs.length > 0 ? custoTotal / funcs.length : 0
-  const folhaEncargos = funcs.reduce((s: number, f: any) => s + Number(f.salario_base || 0) * 1.72, 0)
-  const margemHH = receitaPorHH - custoMedioHH
 
   // === SEÇÃO 3: EQUIPE ===
   const alocados = funcs.filter((f: any) => f.status === 'alocado').length
@@ -147,15 +116,21 @@ export default async function DiretoriaPage() {
   })
   margemFuncao.sort((a, b) => b.margem - a.margem)
 
-  // === ATENÇÃO HOJE ===
-  const bmSemNf = (bmsSemNfe ?? []).map((b: any) => ({
-    ...b,
-    diasSemNf: Math.ceil((Date.now() - new Date(b.aprovado_em).getTime()) / 86400000),
-  }))
-  const receitaVencida = (receitasAbertas ?? []).filter((r: any) => r.data_vencimento && r.data_vencimento < hojeStr)
-  const totalVencido = receitaVencida.reduce((s: number, r: any) => s + Number(r.valor || 0), 0)
-  const obraVencendo = (obrasAtivas ?? []).find((o: any) => o.data_prev_fim && Math.ceil((new Date(o.data_prev_fim).getTime() - Date.now()) / 86400000) <= 30)
-  const diasObraVencendo = obraVencendo ? Math.ceil((new Date(obraVencendo.data_prev_fim).getTime() - Date.now()) / 86400000) : null
+  // === DECISÕES PENDENTES ===
+  // Contratos sem decisão de renovação
+  const contratosPendentes = (prazosLegais ?? [])
+    .filter((p: any) => p.alerta_tipo === 'experiencia_2_vencendo')
+    .map((p: any) => ({ ...p, dias: p.prazo_experiencia_2 ? Math.ceil((new Date(p.prazo_experiencia_2).getTime() - Date.now()) / 86400000) : 99 }))
+    .sort((a: any, b: any) => a.dias - b.dias)
+    .slice(0, 5)
+
+  // Obra encerrando
+  const obraEncerrando = (obrasAtivas ?? []).find((o: any) => o.data_prev_fim && Math.ceil((new Date(o.data_prev_fim).getTime() - Date.now()) / 86400000) <= 45)
+  const diasObraEncerrando = obraEncerrando ? Math.ceil((new Date(obraEncerrando.data_prev_fim).getTime() - Date.now()) / 86400000) : null
+
+  // BM do mês atual não criado
+  const bmMesAtualCriado = (bmsMesAtual ?? []).length > 0
+  const diaAtual = hoje.getDate()
 
   // Receita em aberto com próximo vencimento
   const receitasOrdenadas = (receitasAbertas ?? []).filter((r: any) => r.data_vencimento).sort((a: any, b: any) => a.data_vencimento.localeCompare(b.data_vencimento))
@@ -198,45 +173,6 @@ export default async function DiretoriaPage() {
         <div />
         <RefreshButton />
       </div>
-
-      {/* ══════ ATENÇÃO HOJE ══════ */}
-      {(bmSemNf.length > 0 || totalVencido > 0 || obraVencendo) && (
-        <div className="mb-6 space-y-2">
-          {bmSemNf.map((b: any) => (
-            <Link key={b.id} href={`/boletins/${b.id}`}
-              className="flex items-center gap-3 bg-white border-l-4 border-l-red-500 rounded-lg px-4 py-3 hover:shadow-md transition-all">
-              <span className="text-red-500 text-lg flex-shrink-0">&#x1F534;</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-semibold text-gray-900">BM-{String(b.numero).padStart(2, '0')} aprovado há {b.diasSemNf}d sem NF-e emitida</div>
-                <div className="text-xs text-gray-500">R$ {Number(b.valor_aprovado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} aguardando faturamento</div>
-              </div>
-              <span className="text-xs font-semibold text-brand flex-shrink-0">Emitir NF-e →</span>
-            </Link>
-          ))}
-          {totalVencido > 0 && (
-            <Link href="/financeiro?tab=lancamentos&tipo=receita&status=em_aberto"
-              className="flex items-center gap-3 bg-white border-l-4 border-l-red-500 rounded-lg px-4 py-3 hover:shadow-md transition-all">
-              <span className="text-red-500 text-lg flex-shrink-0">&#x1F534;</span>
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-gray-900">{fmt(totalVencido)} em receita com vencimento em atraso</div>
-                <div className="text-xs text-gray-500">{receitaVencida.length} lançamento(s) vencido(s)</div>
-              </div>
-              <span className="text-xs font-semibold text-brand flex-shrink-0">Ver lançamentos →</span>
-            </Link>
-          )}
-          {obraVencendo && (
-            <Link href={`/obras/${obraVencendo.id}`}
-              className="flex items-center gap-3 bg-white border-l-4 border-l-amber-500 rounded-lg px-4 py-3 hover:shadow-md transition-all">
-              <span className="text-amber-500 text-lg flex-shrink-0">&#x26A0;&#xFE0F;</span>
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-gray-900">{obraVencendo.nome} vence em {diasObraVencendo} dias</div>
-                <div className="text-xs text-gray-500">Contrato encerra em {new Date(obraVencendo.data_prev_fim + 'T12:00').toLocaleDateString('pt-BR')}</div>
-              </div>
-              <span className="text-xs font-semibold text-brand flex-shrink-0">Ver contrato →</span>
-            </Link>
-          )}
-        </div>
-      )}
 
       {/* ══════ SEÇÃO 1: SAÚDE FINANCEIRA ══════ */}
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Saúde Financeira</p>
@@ -315,90 +251,7 @@ export default async function DiretoriaPage() {
         </Link>
       </div>
 
-      {/* ══════ SEÇÃO 2: PERFORMANCE OPERACIONAL HH ══════ */}
-      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Performance Operacional</p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-        {/* KPI 1 — Utilização */}
-        <Link href="/ponto" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all">
-          <div className="flex items-center gap-2 mb-2"><Gauge className="w-4 h-4 text-brand" /><span className="text-[10px] font-bold text-gray-400 uppercase">Utilização da Equipe</span></div>
-          {hhDisponiveis > 0 ? (
-            <>
-              <div className={`text-3xl font-bold font-display ${colorPct(utilizacaoPct, 90, 75)}`}>{utilizacaoPct.toFixed(1)}%</div>
-              <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden mt-2">
-                <div className={`h-full rounded-full ${bgPct(utilizacaoPct, 90, 75)}`} style={{ width: `${Math.min(utilizacaoPct, 100)}%` }} />
-              </div>
-              <div className="text-xs text-gray-500 mt-2">{hhRealizadas.toLocaleString('pt-BR')} HH de {hhDisponiveis.toLocaleString('pt-BR')} possíveis</div>
-            </>
-          ) : (
-            <div className="text-gray-400 text-sm mt-1" title="Importe o ponto do Secullum para calcular">—</div>
-          )}
-        </Link>
-
-        {/* KPI 2 — Receita por HH */}
-        <Link href="/boletins" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all">
-          <div className="flex items-center gap-2 mb-2"><Receipt className="w-4 h-4 text-brand" /><span className="text-[10px] font-bold text-gray-400 uppercase">Receita por HH Efetiva</span></div>
-          {hhFaturadas > 0 ? (
-            <>
-              <div className="text-3xl font-bold font-display text-brand">{fmt(receitaPorHH)}</div>
-              <div className="text-xs text-gray-500 mt-2">{hhFaturadas.toLocaleString('pt-BR')} HH faturadas · {fmtK(receitaBmTotal)}</div>
-              <div className="text-xs text-gray-400 mt-1">Preço médio contratado: {fmt(precoMedioContratado)}/HH</div>
-            </>
-          ) : (
-            <div className="text-gray-400 text-sm mt-1" title="Nenhum BM aprovado ainda">—</div>
-          )}
-        </Link>
-
-        {/* KPI 3 — Ciclo de aprovação */}
-        <Link href="/boletins" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all">
-          <div className="flex items-center gap-2 mb-2"><Clock className="w-4 h-4 text-brand" /><span className="text-[10px] font-bold text-gray-400 uppercase">Ciclo de Aprovação do BM</span></div>
-          {cicloMedio !== null ? (
-            <>
-              <div className={`text-3xl font-bold font-display ${colorPct(30 - cicloMedio, 15, 0)}`}>{Math.round(cicloMedio)} dias</div>
-              <div className="text-xs text-gray-500 mt-2">Baseado em {bmsComAprovacao.length} BM(s) aprovado(s)</div>
-              <div className="text-xs text-gray-400 mt-1">Mín: {Math.round(cicloMin!)}d · Máx: {Math.round(cicloMax!)}d</div>
-            </>
-          ) : (
-            <div className="text-gray-400 text-sm mt-1" title="Nenhum BM aprovado ainda">—</div>
-          )}
-        </Link>
-
-        {/* KPI 4 — Custo real MO */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex items-center gap-2 mb-2"><Wallet className="w-4 h-4 text-brand" /><span className="text-[10px] font-bold text-gray-400 uppercase">Custo Real de MO</span></div>
-          <div className="text-3xl font-bold font-display text-gray-900">{fmt(custoMedioHH)}</div>
-          <div className="text-xs text-gray-500 mt-2">Custo médio por HH (salário + encargos + benefícios)</div>
-          <div className="text-xs text-gray-400 mt-1">Folha total com encargos: {fmtK(folhaEncargos)}</div>
-          {receitaPorHH > 0 && (
-            <div className={`mt-2 text-xs font-semibold px-2 py-1 rounded inline-block ${margemHH >= 0 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-              {margemHH >= 0 ? `Margem R$ ${margemHH.toFixed(2)}/HH` : `Margem negativa: -R$ ${Math.abs(margemHH).toFixed(2)}/HH`}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ══════ SEÇÃO 3: EQUIPE ══════ */}
-      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Equipe</p>
-
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <Link href="/funcionarios" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all">
-          <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Headcount</div>
-          <div className="text-3xl font-bold text-gray-900 font-display">{funcs.length}</div>
-          <div className="text-xs text-gray-500 mt-1">{alocados} alocados · {disponiveis} disponíveis</div>
-        </Link>
-        <Link href="/rh/desligamentos" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all">
-          <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Turnover 90 dias</div>
-          <div className={`text-3xl font-bold font-display ${colorPct(15 - turnover90, 10, 0)}`}>{turnover90.toFixed(1)}%</div>
-          <div className="text-xs text-gray-500 mt-1">{(desligados90 ?? []).length} desligado(s) nos últimos 90 dias</div>
-        </Link>
-        <Link href="/rh/vencimentos" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all">
-          <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Alertas de Vencimento</div>
-          <div className="text-3xl font-bold text-red-700 font-display">{alertasTotal}</div>
-          <div className="text-xs text-gray-500 mt-1">{alertasExp} contrato(s) · {alertasTotal - alertasExp} outro(s)</div>
-        </Link>
-      </div>
-
-      {/* ══════ SEÇÃO 4: CONTRATO ATIVO ══════ */}
+      {/* ══════ SEÇÃO 2: CONTRATO ATIVO ══════ */}
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Contrato Ativo</p>
 
       {obra ? (
@@ -445,7 +298,7 @@ export default async function DiretoriaPage() {
               <div className="text-[10px] font-bold text-gray-400 uppercase mb-2">Margem por Função</div>
               {margemFuncao.length > 0 ? (
                 <table className="w-full text-xs">
-                  <thead><tr className="text-gray-400"><th className="text-left pb-1">Função</th><th className="text-center pb-1">HC</th><th className="text-right pb-1">Venda</th><th className="text-right pb-1">Custo</th><th className="text-right pb-1">Margem</th></tr></thead>
+                  <thead><tr className="text-gray-400"><th className="text-left pb-1">Função</th><th className="text-center pb-1">Qtd</th><th className="text-right pb-1">R$/HH fat.</th><th className="text-right pb-1">R$/HH custo</th><th className="text-right pb-1">Margem%</th></tr></thead>
                   <tbody>
                     {margemFuncao.slice(0, 6).map(mf => (
                       <tr key={mf.nome} className="border-t border-gray-50">
@@ -468,13 +321,68 @@ export default async function DiretoriaPage() {
         </div>
       )}
 
-      {/* Atalhos */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Link href="/financeiro" className="p-3 bg-white rounded-lg border border-gray-100 hover:border-brand/50 hover:shadow-sm transition-all text-center text-xs font-semibold text-gray-700">Lançamentos</Link>
-        <Link href="/financeiro/dre" className="p-3 bg-white rounded-lg border border-gray-100 hover:border-brand/50 hover:shadow-sm transition-all text-center text-xs font-semibold text-gray-700">DRE & Margem</Link>
-        <Link href="/rh/folha" className="p-3 bg-white rounded-lg border border-gray-100 hover:border-brand/50 hover:shadow-sm transition-all text-center text-xs font-semibold text-gray-700">Folha</Link>
-        <Link href="/forecast" className="p-3 bg-white rounded-lg border border-gray-100 hover:border-brand/50 hover:shadow-sm transition-all text-center text-xs font-semibold text-gray-700">Forecast</Link>
+      {/* ══════ SEÇÃO 3: EQUIPE ══════ */}
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Equipe</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <Link href="/funcionarios" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all">
+          <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Headcount</div>
+          <div className="text-3xl font-bold text-gray-900 font-display">{funcs.length}</div>
+          <div className="text-xs text-gray-500 mt-1">{alocados} alocados · {disponiveis} disponíveis</div>
+        </Link>
+        <Link href="/rh/desligamentos" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all">
+          <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Turnover 90 dias</div>
+          <div className={`text-3xl font-bold font-display ${colorPct(15 - turnover90, 10, 0)}`}>{turnover90.toFixed(1)}%</div>
+          <div className="text-xs text-gray-500 mt-1">{(desligados90 ?? []).length} desligado(s) nos últimos 90 dias</div>
+        </Link>
+        <Link href="/rh/vencimentos" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-all">
+          <div className="text-[10px] font-bold text-gray-400 uppercase mb-1">Pendências RH</div>
+          <div className="text-2xl font-bold text-red-700 font-display">{alertasTotal}</div>
+          <div className="text-xs text-gray-500 mt-1 space-y-0.5">
+            {alertasPorTipo.contratos ? <div>{alertasPorTipo.contratos} contrato(s) de experiência</div> : null}
+            {(alertasPorTipo.asos || alertasPorTipo.nrs) ? <div>{alertasPorTipo.asos || 0} ASOs · {alertasPorTipo.nrs || 0} NRs</div> : null}
+            {alertasPorTipo.outros ? <div>{alertasPorTipo.outros} outro(s)</div> : null}
+          </div>
+          <span className="text-[10px] text-brand font-semibold mt-2 inline-block">Ver todas →</span>
+        </Link>
       </div>
+
+      {/* ══════ SEÇÃO 4: DECISÕES PENDENTES ══════ */}
+      {(contratosPendentes.length > 0 || obraEncerrando || (!bmMesAtualCriado && diaAtual >= 15)) && (
+        <>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Decisões Pendentes</p>
+          <div className="space-y-3 mb-5">
+            {contratosPendentes.length > 0 && (
+              <Link href="/rh/vencimentos?categoria=contratos"
+                className="block bg-white border-l-4 border-l-amber-500 rounded-xl shadow-sm p-5 hover:shadow-md transition-all">
+                <div className="text-sm font-bold text-gray-900 mb-1">Decisão de contrato pendente</div>
+                <div className="text-xs text-gray-600">
+                  {contratosPendentes.map((c: any, i: number) => (
+                    <span key={c.funcionario_id}>{i > 0 ? ' · ' : ''}{c.nome?.split(' ')[0]} ({c.dias}d)</span>
+                  ))}
+                </div>
+                <span className="text-xs font-semibold text-brand mt-2 inline-block">Decidir →</span>
+              </Link>
+            )}
+            {obraEncerrando && (
+              <Link href={`/obras/${obraEncerrando.id}`}
+                className={`block bg-white border-l-4 ${diasObraEncerrando !== null && diasObraEncerrando <= 20 ? 'border-l-red-500' : 'border-l-amber-500'} rounded-xl shadow-sm p-5 hover:shadow-md transition-all`}>
+                <div className="text-sm font-bold text-gray-900 mb-1">{obraEncerrando.nome} encerra em {diasObraEncerrando} dias</div>
+                <div className="text-xs text-gray-500">Renovação ou encerramento deve ser comunicado ao cliente</div>
+                <span className="text-xs font-semibold text-brand mt-2 inline-block">Ver contrato →</span>
+              </Link>
+            )}
+            {!bmMesAtualCriado && diaAtual >= 15 && (
+              <Link href="/boletins/nova"
+                className="block bg-white border-l-4 border-l-gray-400 rounded-xl shadow-sm p-5 hover:shadow-md transition-all">
+                <div className="text-sm font-bold text-gray-900 mb-1">BM do mês atual ainda não foi criado</div>
+                <div className="text-xs text-gray-500">Já estamos no dia {diaAtual} — considere criar o BM deste período</div>
+                <span className="text-xs font-semibold text-brand mt-2 inline-block">Criar BM →</span>
+              </Link>
+            )}
+          </div>
+        </>
+      )}
     </div>
   )
 }
