@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
-import { Target, DollarSign, AlertTriangle, Users, Calendar, ArrowRight, TrendingUp } from 'lucide-react'
+import { Target, DollarSign, AlertTriangle, Users, Calendar, ArrowRight } from 'lucide-react'
 
 export default function SumarioExecutivoPage() {
   const [dre, setDre] = useState<any[]>([])
@@ -84,17 +84,30 @@ export default function SumarioExecutivoPage() {
   const margemOk = margemPct >= alvoMedio
   const saldo30Ok = saldo30 >= 0
 
+  const MESES = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
   if (loading) return <div className="p-6 text-gray-400 text-sm">Carregando...</div>
+
+  // KPI card data with links
+  const kpiCards = [
+    { label: 'Receita recebida', value: receitaPaga, color: 'text-green-600', bg: 'bg-green-50', hover: 'hover:bg-green-100', href: '/financeiro?tab=lancamentos&tipo=receita&status=pago', title: 'Ver lançamentos de receita recebida' },
+    { label: 'Receita em aberto', value: receitaAberto, color: 'text-emerald-600', bg: 'bg-emerald-50', hover: 'hover:bg-emerald-100', href: '/financeiro?tab=lancamentos&tipo=receita&status=em_aberto', title: 'Ver receitas em aberto' },
+    { label: 'Despesa paga', value: despesaPaga, color: 'text-red-600', bg: 'bg-red-50', hover: 'hover:bg-red-100', href: '/financeiro?tab=lancamentos&tipo=despesa&status=pago', title: 'Ver despesas pagas' },
+    { label: 'Despesa em aberto', value: despesaAberto, color: 'text-orange-600', bg: 'bg-orange-50', hover: 'hover:bg-orange-100', href: '/financeiro?tab=lancamentos&tipo=despesa&status=em_aberto', title: 'Ver despesas em aberto' },
+    { label: 'Provisões futuras', value: provisoes, color: 'text-purple-600', bg: 'bg-purple-50', hover: 'hover:bg-purple-100', href: '/financeiro?tab=lancamentos&is_provisao=true', title: 'Ver provisões futuras' },
+    { label: 'Resultado total', value: resultadoTotal, color: resultadoTotal >= 0 ? 'text-green-700' : 'text-red-700', bg: resultadoTotal >= 0 ? 'bg-green-50' : 'bg-red-50', hover: resultadoTotal >= 0 ? 'hover:bg-green-100' : 'hover:bg-red-100', href: '/financeiro/dre', title: 'Ver DRE & Resultado' },
+  ]
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-      <h1 className="text-2xl font-bold font-display text-brand mb-1">Sumario Executivo</h1>
-      <p className="text-sm text-gray-500 mb-6">Saude da operacao em tempo real — margem, caixa, resultado e alertas.</p>
+      <h1 className="text-2xl font-bold font-display text-brand mb-1">Sumário Executivo</h1>
+      <p className="text-sm text-gray-500 mb-6">Saúde da operação em tempo real — margem, caixa, resultado e alertas.</p>
 
       {/* Hero: 2 cards principais */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
         {/* Margem real x alvo */}
-        <div className={`rounded-2xl shadow-sm border p-5 ${margemOk ? 'bg-gradient-to-br from-green-50 to-white border-green-200' : 'bg-gradient-to-br from-red-50 to-white border-red-200'}`}>
+        <Link href="/financeiro/dre" title="Ver DRE & Resultado"
+          className={`block rounded-2xl shadow-sm border p-5 cursor-pointer transition-shadow hover:shadow-md ${margemOk ? 'bg-gradient-to-br from-green-50 to-white border-green-200' : 'bg-gradient-to-br from-red-50 to-white border-red-200'}`}>
           <div className="flex items-start justify-between mb-3">
             <div>
               <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Margem Real Acumulada</div>
@@ -113,13 +126,14 @@ export default function SumarioExecutivoPage() {
             <span>Receita: <strong>{fmtK(totReceita)}</strong></span>
             <span>Custo MO: <strong>{fmtK(totCusto)}</strong></span>
           </div>
-          <Link href="/financeiro/dre" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand">
             Ver DRE completo <ArrowRight className="w-3 h-3" />
-          </Link>
-        </div>
+          </span>
+        </Link>
 
         {/* Cashflow 30d */}
-        <div className={`rounded-2xl shadow-sm border p-5 ${saldo30Ok ? 'bg-gradient-to-br from-blue-50 to-white border-blue-200' : 'bg-gradient-to-br from-red-50 to-white border-red-200'}`}>
+        <Link href="/financeiro/cashflow" title="Ver Fluxo de Caixa completo"
+          className={`block rounded-2xl shadow-sm border p-5 cursor-pointer transition-shadow hover:shadow-md ${saldo30Ok ? 'bg-gradient-to-br from-blue-50 to-white border-blue-200' : 'bg-gradient-to-br from-red-50 to-white border-red-200'}`}>
           <div className="flex items-start justify-between mb-3">
             <div>
               <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Caixa Projetado (30 dias)</div>
@@ -136,76 +150,72 @@ export default function SumarioExecutivoPage() {
               <div className="text-sm font-bold text-green-700">{fmtK(entrada30)}</div>
             </div>
             <div className="p-2 bg-white/60 rounded-lg">
-              <div className="text-[10px] text-gray-400 font-semibold uppercase">Saidas</div>
+              <div className="text-[10px] text-gray-400 font-semibold uppercase">Saídas</div>
               <div className="text-sm font-bold text-red-700">{fmtK(Math.abs(saida30))}</div>
             </div>
           </div>
-          <Link href="/financeiro/cashflow" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
+          <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand">
             Ver fluxo completo <ArrowRight className="w-3 h-3" />
-          </Link>
-        </div>
+          </span>
+        </Link>
       </div>
 
-      {/* KPIs financeiros */}
+      {/* KPIs financeiros — clicáveis */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-        {[
-          { label: 'Receita recebida', value: receitaPaga, color: 'text-green-600', bg: 'bg-green-50' },
-          { label: 'Receita em aberto', value: receitaAberto, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Despesa paga', value: despesaPaga, color: 'text-red-600', bg: 'bg-red-50' },
-          { label: 'Despesa em aberto', value: despesaAberto, color: 'text-orange-600', bg: 'bg-orange-50' },
-          { label: 'Provisoes futuras', value: provisoes, color: 'text-purple-600', bg: 'bg-purple-50' },
-          { label: 'Resultado total', value: resultadoTotal, color: resultadoTotal >= 0 ? 'text-green-700' : 'text-red-700', bg: resultadoTotal >= 0 ? 'bg-green-50' : 'bg-red-50' },
-        ].map(k => (
-          <div key={k.label} className={`${k.bg} rounded-xl p-3`}>
+        {kpiCards.map(k => (
+          <Link key={k.label} href={k.href} title={k.title}
+            className={`${k.bg} ${k.hover} rounded-xl p-3 cursor-pointer transition-all hover:shadow-md`}>
             <div className="text-xs text-gray-500 mb-1 leading-tight">{k.label}</div>
             <div className={`text-base font-bold ${k.color}`}>{fmt(k.value)}</div>
-          </div>
+          </Link>
         ))}
       </div>
 
-      {/* Linha secundaria: marcos e obras */}
+      {/* Linha secundária: marcos e obras — clicáveis */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
+        <Link href="/obras" title="Ver todas as obras ativas"
+          className="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer transition-all hover:shadow-md hover:border-brand/30">
           <div className="flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-violet-500" /><span className="text-[10px] font-bold text-gray-400 uppercase">Obras ativas</span></div>
           <div className="text-2xl font-bold text-gray-900 font-display">{obras.length}</div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <div className="flex items-center gap-2 mb-1"><Calendar className="w-4 h-4 text-amber-500" /><span className="text-[10px] font-bold text-gray-400 uppercase">Proximo fim de contrato</span></div>
+        </Link>
+        <Link href="/rh/vencimentos?categoria=contratos" title="Ver vencimentos de contratos"
+          className="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer transition-all hover:shadow-md hover:border-brand/30">
+          <div className="flex items-center gap-2 mb-1"><Calendar className="w-4 h-4 text-amber-500" /><span className="text-[10px] font-bold text-gray-400 uppercase">Próximo fim de contrato</span></div>
           <div className="text-sm font-bold text-gray-900">
             {proxContrato ? (
               <>
                 <div>{proxContrato.nome}</div>
                 <div className={`text-xs font-normal ${(diasParaFim ?? 99) <= 30 ? 'text-red-600' : 'text-gray-500'}`}>
-                  {diasParaFim !== null ? (diasParaFim >= 0 ? `${diasParaFim} dias` : `vencido ha ${-diasParaFim}d`) : '—'}
+                  {diasParaFim !== null ? (diasParaFim >= 0 ? `${diasParaFim} dias` : `vencido há ${-diasParaFim}d`) : '—'}
                 </div>
               </>
             ) : '—'}
           </div>
-        </div>
-        <div className="bg-white rounded-xl border border-gray-100 p-4">
-          <div className="flex items-center gap-2 mb-1"><AlertTriangle className="w-4 h-4 text-red-500" /><span className="text-[10px] font-bold text-gray-400 uppercase">Alertas criticos</span></div>
+        </Link>
+        <Link href="/rh/vencimentos" title="Ver Central de Vencimentos"
+          className="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer transition-all hover:shadow-md hover:border-brand/30">
+          <div className="flex items-center gap-2 mb-1"><AlertTriangle className="w-4 h-4 text-red-500" /><span className="text-[10px] font-bold text-gray-400 uppercase">Alertas críticos</span></div>
           <div className="text-2xl font-bold text-red-700 font-display">{alertas.length}</div>
-        </div>
+        </Link>
       </div>
 
-      {/* Rescisoes */}
+      {/* Rescisões */}
       {(rescMes.length > 0 || rescPrevistas.length > 0) && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-5">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-bold text-brand flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-violet-500" /> Rescisoes
-            </h3>
-            <Link href="/rh/rescisoes" className="text-xs text-brand hover:underline">Ver todas →</Link>
+            <Link href="/rh/desligamentos" className="text-sm font-bold text-brand flex items-center gap-2 hover:underline">
+              <AlertTriangle className="w-4 h-4 text-violet-500" /> Rescisões
+            </Link>
+            <Link href="/rh/desligamentos" className="text-xs text-brand hover:underline">Ver todas →</Link>
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Historico mensal</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Histórico mensal</p>
               {rescMes.length > 0 ? (
                 <div className="space-y-1.5">
                   {rescMes.slice(0, 6).map((m: any) => {
                     const maxValor = Math.max(...rescMes.map((x: any) => Number(x.total_liquido || 0)))
                     const pct = maxValor > 0 ? (Number(m.total_liquido || 0) / maxValor * 100) : 0
-                    const MESES = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
                     return (
                       <div key={`${m.ano}-${m.mes}`}>
                         <div className="flex items-center justify-between text-xs mb-0.5">
@@ -224,17 +234,17 @@ export default function SumarioExecutivoPage() {
                     )
                   })}
                 </div>
-              ) : <p className="text-xs text-gray-400 italic">Sem rescisoes realizadas.</p>}
+              ) : <p className="text-xs text-gray-400 italic">Sem rescisões realizadas.</p>}
             </div>
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">
-                Previstas nos proximos 60 dias ({rescPrevistas.length})
+                Previstas nos próximos 60 dias ({rescPrevistas.length})
               </p>
               {rescPrevistas.length > 0 ? (
                 <div className="space-y-1.5">
                   {rescPrevistas.slice(0, 6).map((r: any) => (
                     <Link key={r.funcionario_id} href={`/funcionarios/${r.funcionario_id}`}
-                      className="flex items-center justify-between py-1.5 border-b border-gray-50 hover:bg-gray-50/80 rounded px-1">
+                      className="flex items-center justify-between py-1.5 border-b border-gray-50 hover:bg-gray-50/80 rounded px-1 cursor-pointer">
                       <div>
                         <div className="text-xs font-semibold text-gray-800">{r.nome}</div>
                         <div className="text-[10px] text-gray-400">{r.cargo} · {r.obra}</div>
@@ -248,61 +258,67 @@ export default function SumarioExecutivoPage() {
                     </Link>
                   ))}
                 </div>
-              ) : <p className="text-xs text-gray-400 italic">Nenhuma rescisao prevista.</p>}
+              ) : <p className="text-xs text-gray-400 italic">Nenhuma rescisão prevista.</p>}
             </div>
           </div>
         </div>
       )}
 
-      {/* Alertas + rescisoes pendentes */}
+      {/* Alertas + rescisões pendentes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h3 className="text-sm font-bold text-brand mb-3 flex items-center gap-2">
+          <Link href="/rh/vencimentos" className="text-sm font-bold text-brand mb-3 flex items-center gap-2 hover:underline">
             <AlertTriangle className="w-4 h-4 text-red-500" /> Alertas operacionais
-          </h3>
+          </Link>
           {alertas.length > 0 ? (
-            <ul className="space-y-2">
+            <ul className="space-y-2 mt-3">
               {alertas.slice(0, 6).map((a: any, i: number) => (
-                <li key={i} className="flex items-start gap-2 text-xs py-1.5 border-b border-gray-50 last:border-0">
-                  <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${Number(a.dias_restantes) <= 7 ? 'bg-red-500' : Number(a.dias_restantes) <= 15 ? 'bg-amber-500' : 'bg-gray-300'}`} />
-                  <div className="flex-1">
-                    <div className="font-semibold text-gray-700">{a.descricao || a.tipo}</div>
-                    <div className="text-gray-400">
-                      {a.funcionario_nome || a.obra_nome || ''} · {Number(a.dias_restantes)} dias
+                <li key={i}>
+                  <Link href={a.funcionario_id ? `/funcionarios/${a.funcionario_id}` : '/rh/vencimentos'}
+                    className="flex items-start gap-2 text-xs py-1.5 border-b border-gray-50 last:border-0 hover:bg-gray-50/80 rounded px-1 cursor-pointer">
+                    <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${Number(a.dias_restantes) <= 7 ? 'bg-red-500' : Number(a.dias_restantes) <= 15 ? 'bg-amber-500' : 'bg-gray-300'}`} />
+                    <div className="flex-1">
+                      <div className="font-semibold text-gray-700">{a.descricao || a.tipo}</div>
+                      <div className="text-gray-400">
+                        {a.funcionario_nome || a.obra_nome || ''} · {Number(a.dias_restantes)} dias
+                      </div>
                     </div>
-                  </div>
+                  </Link>
                 </li>
               ))}
             </ul>
-          ) : <p className="text-xs text-gray-400">Nenhum alerta critico.</p>}
+          ) : <p className="text-xs text-gray-400 mt-3">Nenhum alerta crítico.</p>}
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h3 className="text-sm font-bold text-brand mb-3 flex items-center gap-2">
-            <Users className="w-4 h-4 text-amber-500" /> Rescisoes em rascunho
-          </h3>
+          <Link href="/rh/desligamentos" className="text-sm font-bold text-brand mb-3 flex items-center gap-2 hover:underline">
+            <Users className="w-4 h-4 text-amber-500" /> Rescisões em rascunho
+          </Link>
           {rescPendentes.length > 0 ? (
-            <ul className="space-y-2">
+            <ul className="space-y-2 mt-3">
               {rescPendentes.map((r: any) => (
-                <li key={r.id} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
-                  <div>
-                    <div className="text-xs font-semibold text-gray-700">{r.funcionarios?.nome}</div>
-                    <div className="text-[10px] text-gray-400">{new Date(r.data_desligamento + 'T12:00').toLocaleDateString('pt-BR')}</div>
-                  </div>
-                  <Link href={`/rh/rescisoes/${r.id}`} className="text-[11px] text-brand font-semibold hover:underline">Revisar</Link>
+                <li key={r.id}>
+                  <Link href={`/rh/rescisoes/${r.id}`}
+                    className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0 hover:bg-gray-50/80 rounded px-1 cursor-pointer">
+                    <div>
+                      <div className="text-xs font-semibold text-gray-700">{r.funcionarios?.nome}</div>
+                      <div className="text-[10px] text-gray-400">{new Date(r.data_desligamento + 'T12:00').toLocaleDateString('pt-BR')}</div>
+                    </div>
+                    <span className="text-[11px] text-brand font-semibold">Revisar</span>
+                  </Link>
                 </li>
               ))}
             </ul>
-          ) : <p className="text-xs text-gray-400">Nenhuma rescisao pendente.</p>}
+          ) : <p className="text-xs text-gray-400 mt-3">Nenhuma rescisão pendente.</p>}
         </div>
       </div>
 
-      {/* Atalhos rapidos */}
+      {/* Atalhos rápidos */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        <Link href="/financeiro" className="p-3 bg-white rounded-lg border border-gray-100 hover:border-brand/50 transition-colors text-center text-xs font-semibold text-gray-700">Lancamentos</Link>
-        <Link href="/financeiro/dre" className="p-3 bg-white rounded-lg border border-gray-100 hover:border-brand/50 transition-colors text-center text-xs font-semibold text-gray-700">DRE & Margem</Link>
-        <Link href="/rh/folha" className="p-3 bg-white rounded-lg border border-gray-100 hover:border-brand/50 transition-colors text-center text-xs font-semibold text-gray-700">Folha</Link>
-        <Link href="/forecast" className="p-3 bg-white rounded-lg border border-gray-100 hover:border-brand/50 transition-colors text-center text-xs font-semibold text-gray-700">Forecast</Link>
+        <Link href="/financeiro" className="p-3 bg-white rounded-lg border border-gray-100 hover:border-brand/50 hover:shadow-sm transition-all text-center text-xs font-semibold text-gray-700">Lançamentos</Link>
+        <Link href="/financeiro/dre" className="p-3 bg-white rounded-lg border border-gray-100 hover:border-brand/50 hover:shadow-sm transition-all text-center text-xs font-semibold text-gray-700">DRE & Margem</Link>
+        <Link href="/rh/folha" className="p-3 bg-white rounded-lg border border-gray-100 hover:border-brand/50 hover:shadow-sm transition-all text-center text-xs font-semibold text-gray-700">Folha</Link>
+        <Link href="/forecast" className="p-3 bg-white rounded-lg border border-gray-100 hover:border-brand/50 hover:shadow-sm transition-all text-center text-xs font-semibold text-gray-700">Forecast</Link>
       </div>
     </div>
   )

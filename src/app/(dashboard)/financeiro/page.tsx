@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import ConfirmButton from '@/components/ConfirmButton'
@@ -22,7 +23,16 @@ const CAT_COLORS: Record<string, string> = {
   'Receita HH Homem-Hora': '#10b981',
 }
 
-export default function FinanceiroPage() {
+export default function FinanceiroPageWrapper() {
+  return (
+    <Suspense fallback={<div className="p-6 text-gray-400 text-sm">Carregando...</div>}>
+      <FinanceiroPage />
+    </Suspense>
+  )
+}
+
+function FinanceiroPage() {
+  const searchParams = useSearchParams()
   const [obras, setObras] = useState<any[]>([])
   const [obraId, setObraId] = useState<string>('all')
   const [lancamentos, setLancamentos] = useState<any[]>([])
@@ -31,8 +41,24 @@ export default function FinanceiroPage() {
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'fluxo' | 'lancamentos'>('fluxo')
   const [busca, setBusca] = useState('')
+  // Filtros vindos da URL (clicados do Sumário Executivo)
+  const [filtroTipo, setFiltroTipo] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState('')
+  const [filtroProvisao, setFiltroProvisao] = useState(false)
   const supabase = createClient()
   const toast = useToast()
+
+  // Aplica filtros da URL ao montar
+  useEffect(() => {
+    const urlTab = searchParams.get('tab')
+    const urlTipo = searchParams.get('tipo')
+    const urlStatus = searchParams.get('status')
+    const urlProv = searchParams.get('is_provisao')
+    if (urlTab === 'lancamentos') setTab('lancamentos')
+    if (urlTipo) setFiltroTipo(urlTipo)
+    if (urlStatus) setFiltroStatus(urlStatus)
+    if (urlProv === 'true') setFiltroProvisao(true)
+  }, [searchParams])
 
   useEffect(() => {
     supabase.from('obras').select('id,nome').is('deleted_at', null).order('nome').then(({ data }) => setObras(data ?? []))
@@ -257,8 +283,28 @@ export default function FinanceiroPage() {
         </div>
 
         {tab === 'lancamentos' && (
-          <div className="px-5 pt-3">
+          <div className="px-5 pt-3 space-y-2">
             <SearchInput value={busca} onChange={setBusca} placeholder="Buscar lançamento..." />
+            {(filtroTipo || filtroStatus || filtroProvisao) && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs text-gray-500">Filtros ativos:</span>
+                {filtroTipo && (
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${filtroTipo === 'receita' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                    {filtroTipo === 'receita' ? 'Receita' : 'Despesa'}
+                  </span>
+                )}
+                {filtroStatus && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 font-medium">
+                    {filtroStatus === 'pago' ? 'Pago' : filtroStatus === 'em_aberto' ? 'Em aberto' : filtroStatus}
+                  </span>
+                )}
+                {filtroProvisao && (
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 font-medium">Provisão</span>
+                )}
+                <button onClick={() => { setFiltroTipo(''); setFiltroStatus(''); setFiltroProvisao(false) }}
+                  className="text-xs text-brand hover:underline font-medium ml-1">Limpar filtros</button>
+              </div>
+            )}
           </div>
         )}
 
@@ -301,7 +347,13 @@ export default function FinanceiroPage() {
               </tr>
             </thead>
             <tbody>
-              {lancamentos.filter(l => !busca || l.nome?.toLowerCase().includes(busca.toLowerCase()) || l.categoria?.toLowerCase().includes(busca.toLowerCase()) || l.tipo?.toLowerCase().includes(busca.toLowerCase())).map(l => (
+              {lancamentos.filter(l => {
+                if (busca && !l.nome?.toLowerCase().includes(busca.toLowerCase()) && !l.categoria?.toLowerCase().includes(busca.toLowerCase()) && !l.tipo?.toLowerCase().includes(busca.toLowerCase())) return false
+                if (filtroTipo && l.tipo !== filtroTipo) return false
+                if (filtroStatus && l.status !== filtroStatus) return false
+                if (filtroProvisao && !l.is_provisao) return false
+                return true
+              }).map(l => (
                 <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                   <td className="px-4 py-2.5 text-gray-500 text-xs">{new Date(l.data_competencia+'T12:00:00').toLocaleDateString('pt-BR')}</td>
                   <td className="px-4 py-2.5 font-medium">

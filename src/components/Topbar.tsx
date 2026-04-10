@@ -153,6 +153,7 @@ MODULE_TABS.forEach(mod => {
   })
 })
 PATH_MAP['/dashboard'] = { group: '', label: 'Dashboard' }
+PATH_MAP['/financeiro/sumario'] = { group: 'Financeiro', label: 'Sumário Executivo' }
 PATH_MAP['/executivo'] = { group: '', label: 'Painel Executivo' }
 PATH_MAP['/portal'] = { group: '', label: 'Portal do Funcionário' }
 PATH_MAP['/configuracoes'] = { group: '', label: 'Configurações' }
@@ -235,7 +236,7 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
         {/* Main bar — 48px */}
         <div className="h-12 bg-[#0f1e2e] flex items-center px-4">
           {/* Logo */}
-          <Link href="/dashboard" className="flex items-center gap-2.5 mr-6 flex-shrink-0">
+          <Link href="/financeiro/sumario" className="flex items-center gap-2.5 mr-6 flex-shrink-0">
             <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
               <rect x="4" y="20" width="8" height="10" rx="1" fill="#c8960c"/>
               <rect x="13" y="12" width="8" height="18" rx="1" fill="#c8960c" opacity=".85"/>
@@ -411,7 +412,7 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
       <div className="lg:hidden">
         {/* Mobile top bar */}
         <div className="fixed top-0 left-0 right-0 z-40 bg-[#0f1e2e] flex items-center justify-between px-4 h-12">
-          <Link href="/dashboard" className="flex items-center gap-2">
+          <Link href="/financeiro/sumario" className="flex items-center gap-2">
             <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
               <rect x="4" y="20" width="8" height="10" rx="1" fill="#c8960c"/>
               <rect x="13" y="12" width="8" height="18" rx="1" fill="#c8960c" opacity=".85"/>
