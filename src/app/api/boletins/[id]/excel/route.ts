@@ -503,31 +503,78 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   // === Aba Lançamentos: linha por dia × função ===
   const ws2 = wb.addWorksheet('Lançamentos')
 
-  // Carrega efetivo_diario do período (com nome do funcionário para a aba de calendário)
-  const { data: efetivo } = await supabase
-    .from('efetivo_diario')
-    .select('data, tipo_dia, funcionario_id, funcionarios(nome, nome_guerra, cargo)')
+  // Carrega presença real: alocações + ponto_marcacoes (não depende de efetivo_diario)
+  const { data: alocsPeriodo } = await supabase
+    .from('alocacoes')
+    .select('funcionario_id, data_inicio, data_fim, funcionarios(id, nome, nome_guerra, cargo)')
     .eq('obra_id', bm.obras.id)
-    .gte('data', bm.data_inicio)
-    .lte('data', bm.data_fim)
+    .lte('data_inicio', bm.data_fim)
+    .or(`data_fim.is.null,data_fim.gte.${bm.data_inicio}`)
+
+  const funcIdsObra = (alocsPeriodo ?? []).map((a: any) => a.funcionario_id).filter(Boolean)
+
+  // Busca marcações de ponto paginada
+  let allPontoMarcs: any[] = []
+  if (funcIdsObra.length > 0) {
+    let offset = 0
+    while (true) {
+      const { data: page } = await supabase
+        .from('ponto_marcacoes')
+        .select('funcionario_id, data')
+        .in('funcionario_id', funcIdsObra)
+        .gte('data', bm.data_inicio)
+        .lte('data', bm.data_fim)
+        .range(offset, offset + 999)
+      if (!page || page.length === 0) break
+      allPontoMarcs = allPontoMarcs.concat(page)
+      if (page.length < 1000) break
+      offset += 1000
+    }
+  }
+
+  // Mapa funcionario_id → {nome, cargo, datas com ponto}
+  type FuncPresenca = { nome: string; cargo: string; datas: Set<string> }
+  const funcPresMap: Record<string, FuncPresenca> = {}
+  ;(alocsPeriodo ?? []).forEach((a: any) => {
+    const fid = a.funcionario_id
+    if (!fid || !a.funcionarios || funcPresMap[fid]) return
+    funcPresMap[fid] = {
+      nome: a.funcionarios.nome_guerra || a.funcionarios.nome || '—',
+      cargo: a.funcionarios.cargo || '—',
+      datas: new Set(),
+    }
+  })
+  allPontoMarcs.forEach((m: any) => {
+    if (funcPresMap[m.funcionario_id]) funcPresMap[m.funcionario_id].datas.add(m.data)
+  })
+
+  // Simula "efetivo" pra compatibilidade com o grid abaixo
+  const efetivo = Object.entries(funcPresMap).flatMap(([fid, fp]) =>
+    Array.from(fp.datas).map(data => ({
+      funcionario_id: fid,
+      data,
+      tipo_dia: (() => { const dow = new Date(data + 'T12:00').getDay(); return dow === 0 ? 'domingo_feriado' : dow === 6 ? 'sabado' : 'util' })(),
+      funcionarios: { nome: fp.nome, nome_guerra: fp.nome, cargo: fp.cargo },
+    }))
+  )
 
   // Construir grid: função → data → count
   const datasArr: string[] = []
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     datasArr.push(d.toISOString().split('T')[0])
   }
-  const funcoesAll = Array.from(new Set((efetivo ?? []).map((e: any) => e.funcionarios?.cargo).filter(Boolean))).sort()
+  const funcoesAll = Array.from(new Set(efetivo.map(e => e.funcionarios?.cargo).filter(Boolean))).sort()
   const grid: Record<string, Record<string, number>> = {}
   funcoesAll.forEach(f => { grid[f] = {} })
-  ;(efetivo ?? []).forEach((e: any) => {
+  efetivo.forEach(e => {
     const c = e.funcionarios?.cargo
     if (!c) return
     grid[c][e.data] = (grid[c][e.data] ?? 0) + 1
   })
 
-  // Detectar feriados a partir de tipo_dia=domingo_feriado (qualquer dia marcado assim no período)
+  // Detectar domingos/feriados
   const feriadosSet = new Set<string>()
-  ;(efetivo ?? []).forEach((e: any) => {
+  efetivo.forEach(e => {
     if (e.tipo_dia === 'domingo_feriado') feriadosSet.add(e.data)
   })
 

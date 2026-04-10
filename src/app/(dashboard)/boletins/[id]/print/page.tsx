@@ -80,9 +80,93 @@ export default async function BMPrintPage({ params }: { params: { id: string } }
   const totHH70 = linhas.reduce((s, l) => s + l.hh_he70, 0)
   const totHH100 = linhas.reduce((s, l) => s + l.hh_he100, 0)
 
+  // === Presença: alocações + ponto_marcações (para Lançamentos e Calendário) ===
+  const { data: alocsPeriodo } = await supabase
+    .from('alocacoes')
+    .select('funcionario_id, data_inicio, data_fim, funcionarios(id, nome, nome_guerra, cargo)')
+    .eq('obra_id', bm.obras.id)
+    .lte('data_inicio', bm.data_fim)
+    .or(`data_fim.is.null,data_fim.gte.${bm.data_inicio}`)
+
+  const funcIdsObra = (alocsPeriodo ?? []).map((a: any) => a.funcionario_id).filter(Boolean)
+  let allPontoMarcs: any[] = []
+  if (funcIdsObra.length > 0) {
+    let off = 0
+    while (true) {
+      const { data: page } = await supabase
+        .from('ponto_marcacoes')
+        .select('funcionario_id, data')
+        .in('funcionario_id', funcIdsObra)
+        .gte('data', bm.data_inicio)
+        .lte('data', bm.data_fim)
+        .range(off, off + 999)
+      if (!page || page.length === 0) break
+      allPontoMarcs = allPontoMarcs.concat(page)
+      if (page.length < 1000) break
+      off += 1000
+    }
+  }
+
+  type FuncPresenca = { nome: string; cargo: string; datas: Set<string> }
+  const funcPresMap: Record<string, FuncPresenca> = {}
+  ;(alocsPeriodo ?? []).forEach((a: any) => {
+    const fid = a.funcionario_id
+    if (!fid || !a.funcionarios || funcPresMap[fid]) return
+    funcPresMap[fid] = {
+      nome: a.funcionarios.nome_guerra || a.funcionarios.nome || '—',
+      cargo: a.funcionarios.cargo || '—',
+      datas: new Set(),
+    }
+  })
+  allPontoMarcs.forEach((m: any) => {
+    if (funcPresMap[m.funcionario_id]) funcPresMap[m.funcionario_id].datas.add(m.data)
+  })
+
+  // Simulated efetivo array
+  const efetivoArr = Object.entries(funcPresMap).flatMap(([fid, fp]) =>
+    Array.from(fp.datas).map(data => ({
+      funcionario_id: fid,
+      data,
+      tipo_dia: (() => { const dow = new Date(data + 'T12:00').getDay(); return dow === 0 ? 'domingo_feriado' : dow === 6 ? 'sabado' : 'util' })(),
+      nome: fp.nome,
+      cargo: fp.cargo,
+    }))
+  )
+
+  // Dates array for grid
+  const datasArr: string[] = []
+  const startDate = new Date(bm.data_inicio + 'T12:00')
+  const endDate = new Date(bm.data_fim + 'T12:00')
+  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+    datasArr.push(d.toISOString().split('T')[0])
+  }
+
+  // Lancamentos grid: funcao → data → count
+  const funcoesAll = Array.from(new Set(efetivoArr.map(e => e.cargo).filter(Boolean))).sort()
+  const gridFuncao: Record<string, Record<string, number>> = {}
+  funcoesAll.forEach(f => { gridFuncao[f] = {} })
+  efetivoArr.forEach(e => {
+    const c = e.cargo
+    if (!c) return
+    gridFuncao[c][e.data] = (gridFuncao[c][e.data] ?? 0) + 1
+  })
+
+  // Calendario: per-employee presence
+  const calFuncMap: Record<string, { nome: string; cargo: string; datas: Set<string> }> = {}
+  efetivoArr.forEach(e => {
+    if (!calFuncMap[e.funcionario_id]) {
+      calFuncMap[e.funcionario_id] = { nome: e.nome, cargo: e.cargo, datas: new Set() }
+    }
+    calFuncMap[e.funcionario_id].datas.add(e.data)
+  })
+  const calFuncList = Object.values(calFuncMap).sort((a, b) => (a.cargo + a.nome).localeCompare(b.cargo + b.nome))
+
+  const feriadosSet = new Set(efetivoArr.filter(e => e.tipo_dia === 'domingo_feriado').map(e => e.data))
+
   const dias = Math.ceil((new Date(bm.data_fim).getTime() - new Date(bm.data_inicio).getTime()) / 86400000) + 1
   const periodo = `${new Date(bm.data_inicio + 'T12:00').toLocaleDateString('pt-BR')} a ${new Date(bm.data_fim + 'T12:00').toLocaleDateString('pt-BR')}`
   const numero = String(bm.numero).padStart(2, '0')
+  const diasSem = ['D','S','T','Q','Q','S','S']
 
   return (
     <>
@@ -207,8 +291,194 @@ export default async function BMPrintPage({ params }: { params: { id: string } }
         </div>
 
         {/* Rodapé */}
-        <div style={{ borderTop: '3px solid #C9A269', padding: '8px 20px', color: '#888', fontSize: 9, fontStyle: 'italic', textAlign: 'center' }}>
-          Emitido em {new Date().toLocaleDateString('pt-BR')} · Tecnomonte Softmonte
+        <div style={{ borderTop: '3px solid #C9A269', padding: '8px 20px', color: '#888', fontSize: 9, fontStyle: 'italic', display: 'flex', justifyContent: 'space-between' }}>
+          <span>Emitido em {new Date().toLocaleDateString('pt-BR')} · Tecnomonte Softmonte</span>
+          <span>Pagina 1 de 3</span>
+        </div>
+      </div>
+
+      {/* === PAGE 2: LANCAMENTOS POR FUNCAO === */}
+      <style>{`
+        @media print {
+          .bm-sheet-landscape { page-break-before: always; }
+          @page { size: A4 landscape; margin: 8mm; }
+        }
+        @media screen {
+          .bm-sheet-landscape { margin: 24px auto; box-shadow: 0 4px 24px rgba(0,0,0,.1); }
+        }
+        .bm-sheet-landscape {
+          background: white;
+          max-width: 297mm;
+          padding: 0;
+          color: #222;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+        }
+        .day-sat { background: #FFF3B0 !important; }
+        .day-dom { background: #FFC7C7 !important; }
+        .day-present { color: #155E2B; font-weight: 700; }
+      `}</style>
+
+      <div className="bm-sheet-landscape">
+        <div style={{ background: '#0F3757', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '3px solid #C9A269' }}>
+          <div style={{ color: 'white' }}>
+            <div style={{ fontSize: 14, fontWeight: 900 }}>LANCAMENTOS POR FUNCAO</div>
+            <div style={{ fontSize: 10, opacity: 0.8 }}>BM Nº {numero} — {bm.obras?.nome} — {periodo}</div>
+          </div>
+          <div style={{ fontSize: 9, color: '#C9A269', fontStyle: 'italic' }}>
+            Quantidade de pessoas por funcao em cada dia do periodo
+          </div>
+        </div>
+
+        <div style={{ padding: '12px 12px', overflowX: 'auto' }}>
+          {funcoesAll.length > 0 ? (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', background: '#0F3757', color: 'white', padding: '5px 8px', minWidth: 110, fontSize: 9, fontWeight: 700 }}>FUNCAO</th>
+                  {datasArr.map(d => {
+                    const dt = new Date(d + 'T12:00')
+                    const dow = dt.getDay()
+                    const isDom = dow === 0 || feriadosSet.has(d)
+                    const isSab = dow === 6
+                    const bg = isDom ? '#FFC7C7' : isSab ? '#FFF3B0' : '#0F3757'
+                    const clr = (isDom || isSab) ? '#0F3757' : 'white'
+                    return (
+                      <th key={d} style={{ textAlign: 'center', background: bg, color: clr, padding: '3px 2px', minWidth: 22, fontSize: 7, fontWeight: 700 }}>
+                        {dt.getDate()}/{dt.getMonth() + 1}
+                      </th>
+                    )
+                  })}
+                  <th style={{ textAlign: 'center', background: '#0F3757', color: '#C9A269', padding: '5px 6px', fontWeight: 900, fontSize: 9 }}>TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {funcoesAll.map((f, fi) => {
+                  let total = 0
+                  return (
+                    <tr key={fi} style={{ borderBottom: '1px solid #eee', background: fi % 2 === 1 ? '#FAF8F2' : 'white' }}>
+                      <td style={{ fontWeight: 700, fontSize: 9, padding: '4px 8px', color: '#0F3757' }}>{f}</td>
+                      {datasArr.map(d => {
+                        const v = gridFuncao[f]?.[d] ?? 0
+                        total += v
+                        const dow = new Date(d + 'T12:00').getDay()
+                        const isDom = dow === 0 || feriadosSet.has(d)
+                        const isSab = dow === 6
+                        return (
+                          <td key={d} className={isDom ? 'day-dom' : isSab ? 'day-sat' : ''} style={{ textAlign: 'center', fontSize: 9, padding: '3px 2px' }}>
+                            {v || ''}
+                          </td>
+                        )
+                      })}
+                      <td style={{ textAlign: 'center', fontWeight: 700, background: '#F4EDE0', padding: '3px 4px', color: '#0F3757' }}>{total}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ textAlign: 'center', padding: 40, color: '#999', fontSize: 11 }}>
+              Sem dados de presenca para este periodo.
+            </div>
+          )}
+        </div>
+
+        <div style={{ padding: '6px 12px', fontSize: 8, color: '#999' }}>
+          <span style={{ display: 'inline-block', width: 10, height: 8, background: '#FFF3B0', marginRight: 3, border: '1px solid #ddd' }} /> Sabado
+          <span style={{ display: 'inline-block', width: 10, height: 8, background: '#FFC7C7', marginRight: 3, marginLeft: 10, border: '1px solid #ddd' }} /> Domingo/Feriado
+        </div>
+
+        <div style={{ borderTop: '3px solid #C9A269', padding: '8px 20px', color: '#888', fontSize: 9, fontStyle: 'italic', display: 'flex', justifyContent: 'space-between' }}>
+          <span>Emitido em {new Date().toLocaleDateString('pt-BR')} · Tecnomonte Softmonte</span>
+          <span>Pagina 2 de 3</span>
+        </div>
+      </div>
+
+      {/* === PAGE 3: CALENDARIO DE PRESENCA === */}
+      <div className="bm-sheet-landscape">
+        <div style={{ background: '#0F3757', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '3px solid #C9A269' }}>
+          <div style={{ color: 'white' }}>
+            <div style={{ fontSize: 14, fontWeight: 900 }}>CALENDARIO DE PRESENCA</div>
+            <div style={{ fontSize: 10, opacity: 0.8 }}>BM Nº {numero} — {bm.obras?.nome} — {periodo}</div>
+          </div>
+          <div style={{ fontSize: 9, color: '#C9A269', fontStyle: 'italic' }}>
+            &quot;P&quot; = Presente
+          </div>
+        </div>
+
+        <div style={{ padding: '12px 12px', overflowX: 'auto' }}>
+          {calFuncList.length > 0 ? (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', background: '#0F3757', color: 'white', padding: '5px 8px', minWidth: 120, fontSize: 9, fontWeight: 700 }}>FUNCIONARIO</th>
+                  <th style={{ textAlign: 'left', background: '#0F3757', color: 'white', padding: '5px 6px', minWidth: 80, fontSize: 9, fontWeight: 700 }}>FUNCAO</th>
+                  {datasArr.map(d => {
+                    const dt = new Date(d + 'T12:00')
+                    const dow = dt.getDay()
+                    const isDom = dow === 0 || feriadosSet.has(d)
+                    const isSab = dow === 6
+                    const bg = isDom ? '#FFC7C7' : isSab ? '#FFF3B0' : '#0F3757'
+                    const clr = (isDom || isSab) ? '#0F3757' : 'white'
+                    return (
+                      <th key={d} style={{ textAlign: 'center', background: bg, color: clr, padding: '2px 2px', minWidth: 20, fontSize: 7, fontWeight: 700, lineHeight: 1.2 }}>
+                        {diasSem[dow]}<br/>{dt.getDate()}
+                      </th>
+                    )
+                  })}
+                  <th style={{ textAlign: 'center', background: '#0F3757', color: '#C9A269', padding: '5px 4px', fontWeight: 900, fontSize: 8 }}>TOTAL</th>
+                </tr>
+              </thead>
+              <tbody>
+                {calFuncList.map((f, fi) => {
+                  let total = 0
+                  return (
+                    <tr key={fi} style={{ borderBottom: '1px solid #eee', background: fi % 2 === 1 ? '#FAF8F2' : 'white' }}>
+                      <td style={{ fontWeight: 700, fontSize: 8, padding: '3px 8px', color: '#0F3757', whiteSpace: 'nowrap' }}>{f.nome}</td>
+                      <td style={{ fontSize: 7, color: '#666', padding: '3px 6px' }}>{f.cargo}</td>
+                      {datasArr.map(d => {
+                        const present = f.datas.has(d)
+                        if (present) total++
+                        const dow = new Date(d + 'T12:00').getDay()
+                        const isDom = dow === 0 || feriadosSet.has(d)
+                        const isSab = dow === 6
+                        return (
+                          <td key={d} className={isDom ? 'day-dom' : isSab ? 'day-sat' : ''} style={{ textAlign: 'center', fontSize: 8, padding: '2px 1px' }}>
+                            {present ? <span className="day-present">P</span> : ''}
+                          </td>
+                        )
+                      })}
+                      <td style={{ textAlign: 'center', fontWeight: 700, background: '#F4EDE0', padding: '2px 4px', fontSize: 8, color: '#0F3757' }}>{total}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <div style={{ textAlign: 'center', padding: 40, color: '#999', fontSize: 11 }}>
+              Sem dados de presenca para este periodo.
+            </div>
+          )}
+        </div>
+
+        <div style={{ padding: '6px 12px', fontSize: 8, color: '#999' }}>
+          <span style={{ display: 'inline-block', width: 10, height: 8, background: '#FFF3B0', marginRight: 3, border: '1px solid #ddd' }} /> Sabado
+          <span style={{ display: 'inline-block', width: 10, height: 8, background: '#FFC7C7', marginRight: 3, marginLeft: 10, border: '1px solid #ddd' }} /> Domingo/Feriado
+          <span style={{ display: 'inline-block', width: 10, height: 8, background: '#D1FAE5', marginRight: 3, marginLeft: 10, border: '1px solid #ddd' }} /> Presente
+        </div>
+
+        {/* Assinaturas */}
+        <div style={{ padding: '24px 20px 8px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60 }}>
+          <div style={{ borderTop: '1px solid #999', paddingTop: 8, textAlign: 'center', fontSize: 10, color: '#555' }}>
+            Responsavel Tecnomonte
+          </div>
+          <div style={{ borderTop: '1px solid #999', paddingTop: 8, textAlign: 'center', fontSize: 10, color: '#555' }}>
+            Responsavel {bm.obras?.cliente || 'Cliente'}
+          </div>
+        </div>
+
+        <div style={{ borderTop: '3px solid #C9A269', padding: '8px 20px', color: '#888', fontSize: 9, fontStyle: 'italic', display: 'flex', justifyContent: 'space-between' }}>
+          <span>Emitido em {new Date().toLocaleDateString('pt-BR')} · Tecnomonte Softmonte</span>
+          <span>Pagina 3 de 3</span>
         </div>
       </div>
     </>

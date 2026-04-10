@@ -64,9 +64,9 @@ const NAV_GROUPS: NavGroupDef[] = [
   {
     label: 'Financeiro',
     links: [
+      { href: '/financeiro/sumario', label: 'Sumário Executivo', icon: ic.report },
       { href: '/financeiro', label: 'Lançamentos', icon: ic.fin },
-      { href: '/financeiro/cashflow', label: 'Fluxo de Caixa', icon: ic.report },
-      { href: '/relatorios/margem', label: 'Margem DRE', icon: ic.fin },
+      { href: '/financeiro/dre', label: 'DRE & Resultado', icon: ic.fin },
       { href: '/forecast', label: 'Forecast', icon: ic.report },
     ],
   },
@@ -106,17 +106,13 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
     ],
   },
   {
-    // Módulo Financeiro
+    // Módulo Financeiro — 4 abas principais + sub-páginas acessíveis via links
     groupPaths: ['/financeiro', '/relatorios/margem', '/relatorios/bm-comparativo', '/forecast', '/executivo'],
     tabs: [
-      { href: '/financeiro', label: 'Lançamentos', match: ['/financeiro'] },
-      { href: '/financeiro/contas', label: 'Contas Correntes' },
-      { href: '/financeiro/cashflow', label: 'Fluxo de Caixa' },
-      { href: '/financeiro/ofx', label: 'Conciliação OFX' },
-      { href: '/relatorios/margem', label: 'Margem DRE' },
-      { href: '/relatorios/bm-comparativo', label: 'BM: Orçado × Real' },
+      { href: '/financeiro/sumario', label: 'Sumário', match: ['/financeiro/sumario', '/executivo'] },
+      { href: '/financeiro', label: 'Lançamentos', match: ['/financeiro', '/financeiro/novo', '/financeiro/contas', '/financeiro/cashflow', '/financeiro/ofx'] },
+      { href: '/financeiro/dre', label: 'DRE & Resultado', match: ['/financeiro/dre', '/relatorios/margem', '/relatorios/bm-comparativo'] },
       { href: '/forecast', label: 'Forecast' },
-      { href: '/executivo', label: 'Painel Executivo' },
     ],
   },
   {
