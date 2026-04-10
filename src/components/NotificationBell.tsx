@@ -131,8 +131,8 @@ export default function NotificationBell() {
   }
 
   function alertaHref(a: any): string {
-    if (a.funcionario_id) return `/funcionarios/${a.funcionario_id}`
-    if (a.obra_id) return `/obras/${a.obra_id}`
+    // vw_alertas tem: tipo, referencia_id, descricao, data_alerta, dias_restantes, tabela
+    if (a.tabela === 'funcionarios' && a.referencia_id) return `/funcionarios/${a.referencia_id}`
     return '/rh/vencimentos'
   }
 
@@ -183,7 +183,7 @@ export default function NotificationBell() {
                       <div className="min-w-0 flex-1">
                         <p className="text-xs leading-snug font-semibold text-gray-900">{a.descricao || a.tipo}</p>
                         <p className="text-[10px] text-gray-500 mt-0.5">
-                          {a.funcionario_nome || a.obra_nome || ''} · {Number(a.dias_restantes)} dias restantes
+                          {Number(a.dias_restantes)} dias restantes
                         </p>
                       </div>
                       <span className={`text-[10px] font-bold flex-shrink-0 ${Number(a.dias_restantes) <= 7 ? 'text-red-600' : Number(a.dias_restantes) <= 15 ? 'text-amber-600' : 'text-gray-500'}`}>

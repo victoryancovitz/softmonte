@@ -274,13 +274,13 @@ export default function SumarioExecutivoPage() {
             <ul className="space-y-2 mt-3">
               {alertas.slice(0, 6).map((a: any, i: number) => (
                 <li key={i}>
-                  <Link href={a.funcionario_id ? `/funcionarios/${a.funcionario_id}` : '/rh/vencimentos'}
+                  <Link href={a.tabela === 'funcionarios' && a.referencia_id ? `/funcionarios/${a.referencia_id}` : '/rh/vencimentos'}
                     className="flex items-start gap-2 text-xs py-1.5 border-b border-gray-50 last:border-0 hover:bg-gray-50/80 rounded px-1 cursor-pointer">
                     <span className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${Number(a.dias_restantes) <= 7 ? 'bg-red-500' : Number(a.dias_restantes) <= 15 ? 'bg-amber-500' : 'bg-gray-300'}`} />
                     <div className="flex-1">
                       <div className="font-semibold text-gray-700">{a.descricao || a.tipo}</div>
                       <div className="text-gray-400">
-                        {a.funcionario_nome || a.obra_nome || ''} · {Number(a.dias_restantes)} dias
+                        {Number(a.dias_restantes)} dias restantes
                       </div>
                     </div>
                   </Link>

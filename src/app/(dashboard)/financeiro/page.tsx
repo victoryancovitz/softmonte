@@ -132,7 +132,7 @@ function FinanceiroPage() {
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-xl font-semibold font-display">Lancamentos Financeiros</h1>
+          <h1 className="text-xl font-semibold font-display">Lançamentos Financeiros</h1>
           <p className="text-sm text-gray-500 mt-0.5">Receitas, despesas e fluxo de caixa por obra</p>
         </div>
         <div className="flex items-center gap-2">
