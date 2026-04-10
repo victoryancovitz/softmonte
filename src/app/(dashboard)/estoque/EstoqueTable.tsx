@@ -80,8 +80,10 @@ export default function EstoqueTable({ itens }: { itens: any[] }) {
                       ? <span className="text-xs bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-semibold">Critico</span>
                       : <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">OK</span>}
                   </td>
-                  <td className="px-4 py-3 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Link href={`/estoque/${i.id}`} className="text-xs text-brand hover:underline">Movimentar</Link>
+                  <td className="px-4 py-3 text-right opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 justify-end">
+                    <Link href={`/estoque/${i.id}?tipo=entrada`} className="text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded font-semibold hover:bg-green-200">+ Entrada</Link>
+                    <Link href={`/estoque/${i.id}?tipo=saida`} className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-700 rounded font-semibold hover:bg-amber-200">- Saída</Link>
+                    <Link href={`/estoque/${i.id}`} className="text-xs text-brand hover:underline">Detalhe</Link>
                   </td>
                 </tr>
               )
