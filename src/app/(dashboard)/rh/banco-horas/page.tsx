@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import SearchInput from '@/components/SearchInput'
-import { Clock, Users, TrendingUp, TrendingDown, Lock, AlertTriangle } from 'lucide-react'
+import { Clock, Users, TrendingUp, TrendingDown, Lock, AlertTriangle, Info } from 'lucide-react'
 
 interface BancoHorasRow {
   id: string
@@ -21,6 +21,18 @@ interface BancoHorasRow {
   saldo_acumulado_final: number
   fechado: boolean
   funcionarios: { nome: string; cargo: string } | null
+}
+
+interface SaldoViewRow {
+  funcionario_id: string
+  nome: string
+  funcao: string
+  obra_id: string
+  obra: string
+  saldo_atual_horas: number
+  mes_referencia: number
+  ano_referencia: number
+  status_saldo: string
 }
 
 interface Obra {
@@ -40,6 +52,23 @@ function saldoColor(val: number): string {
   return 'text-green-600 font-semibold'
 }
 
+function saldoBadge(status: string): { label: string; cls: string } {
+  switch (status) {
+    case 'positivo': return { label: 'Positivo', cls: 'bg-green-100 text-green-700' }
+    case 'negativo': return { label: 'Negativo', cls: 'bg-red-100 text-red-700' }
+    case 'zerado': return { label: 'Zerado', cls: 'bg-gray-100 text-gray-500' }
+    default: return { label: status, cls: 'bg-gray-100 text-gray-600' }
+  }
+}
+
+function saldoBadgeFromValue(val: number): { label: string; cls: string } {
+  if (val > 0) return { label: 'Positivo', cls: 'bg-green-100 text-green-700' }
+  if (val < 0) return { label: 'Negativo', cls: 'bg-red-100 text-red-700' }
+  return { label: 'Zerado', cls: 'bg-gray-100 text-gray-500' }
+}
+
+type SaldoFilter = '' | 'positivo' | 'negativo' | 'zerado'
+
 export default function BancoHorasPage() {
   const supabase = createClient()
   const [obras, setObras] = useState<Obra[]>([])
@@ -52,7 +81,12 @@ export default function BancoHorasPage() {
   const [editValue, setEditValue] = useState('')
   const [fechando, setFechando] = useState(false)
   const [busca, setBusca] = useState('')
+  const [saldoFilter, setSaldoFilter] = useState<SaldoFilter>('')
   const inputRef = useRef<HTMLInputElement>(null)
+
+  // Fallback state
+  const [useFallback, setUseFallback] = useState(false)
+  const [saldoRows, setSaldoRows] = useState<SaldoViewRow[]>([])
 
   useEffect(() => {
     supabase.from('obras').select('id, nome').is('deleted_at', null).order('nome').then(({ data }) => {
@@ -77,6 +111,9 @@ export default function BancoHorasPage() {
 
   async function loadData() {
     setLoading(true)
+    setUseFallback(false)
+
+    // Try banco_horas table first
     const { data } = await supabase
       .from('banco_horas')
       .select('*, funcionarios(nome, cargo)')
@@ -85,7 +122,34 @@ export default function BancoHorasPage() {
       .eq('ano', ano)
       .order('funcionarios(nome)')
 
-    setRows(data ?? [])
+    if (data && data.length > 0) {
+      setRows(data)
+      setSaldoRows([])
+      setLoading(false)
+      return
+    }
+
+    // Fallback: try vw_banco_horas_saldo view
+    try {
+      const { data: viewData, error } = await supabase
+        .from('vw_banco_horas_saldo')
+        .select('*')
+        .eq('obra_id', obraId)
+
+      if (!error && viewData && viewData.length > 0) {
+        setUseFallback(true)
+        setSaldoRows(viewData)
+        setRows([])
+        setLoading(false)
+        return
+      }
+    } catch {
+      // view does not exist or errored
+    }
+
+    // Nothing found
+    setRows([])
+    setSaldoRows([])
     setLoading(false)
   }
 
@@ -132,7 +196,7 @@ export default function BancoHorasPage() {
 
   async function fecharMes() {
     if (!obraId) return
-    const confirmed = window.confirm(`Fechar o mês de ${MESES[mes - 1]}/${ano} para esta obra? Esta acao nao pode ser desfeita.`)
+    const confirmed = window.confirm(`Fechar o mes de ${MESES[mes - 1]}/${ano} para esta obra? Esta acao nao pode ser desfeita.`)
     if (!confirmed) return
 
     setFechando(true)
@@ -147,10 +211,28 @@ export default function BancoHorasPage() {
     loadData()
   }
 
-  const totalFuncionarios = rows.length
+  // Filtered fallback rows
+  const filteredSaldoRows = useMemo(() => {
+    let result = saldoRows
+    if (busca.trim()) {
+      const q = busca.toLowerCase()
+      result = result.filter(r => r.nome?.toLowerCase().includes(q) || r.funcao?.toLowerCase().includes(q))
+    }
+    if (saldoFilter) {
+      result = result.filter(r => {
+        const s = r.status_saldo ?? (r.saldo_atual_horas > 0 ? 'positivo' : r.saldo_atual_horas < 0 ? 'negativo' : 'zerado')
+        return s === saldoFilter
+      })
+    }
+    return result
+  }, [saldoRows, busca, saldoFilter])
+
+  const totalFuncionarios = useFallback ? filteredSaldoRows.length : rows.length
   const totalExtras = rows.reduce((s, r) => s + (r.hh_extras || 0), 0)
   const totalFaltas = rows.reduce((s, r) => s + (r.hh_faltas || 0), 0)
-  const saldoGeral = rows.reduce((s, r) => s + (r.saldo_mes || 0), 0)
+  const saldoGeral = useFallback
+    ? filteredSaldoRows.reduce((s, r) => s + (r.saldo_atual_horas || 0), 0)
+    : rows.reduce((s, r) => s + (r.saldo_mes || 0), 0)
   const mesFechado = rows.length > 0 && rows.every(r => r.fechado)
 
   const editableFields = ['hh_contrato', 'hh_trabalhado', 'hh_extras', 'hh_faltas', 'hh_compensadas']
@@ -194,6 +276,19 @@ export default function BancoHorasPage() {
         <div>
           <h1 className="text-xl font-bold font-display text-brand">Banco de Horas</h1>
           <p className="text-sm text-gray-500 mt-0.5">Controle de horas por obra e periodo</p>
+        </div>
+      </div>
+
+      {/* Explainer */}
+      <div className="flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-6 text-sm text-blue-700">
+        <Info className="w-4 h-4 mt-0.5 shrink-0" />
+        <div>
+          <p className="font-semibold">O que e o Banco de Horas?</p>
+          <p className="text-blue-600 mt-0.5">
+            O banco de horas registra as horas extras e faltas de cada funcionario por obra e periodo.
+            Saldos positivos indicam horas a compensar; negativos indicam debito.
+            Use os filtros abaixo para navegar por obra, mes e ano.
+          </p>
         </div>
       </div>
 
@@ -245,43 +340,62 @@ export default function BancoHorasPage() {
               ))}
             </select>
           </div>
+          {!useFallback && (
+            <>
+              <div className="min-w-[140px]">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Mes</label>
+                <select
+                  value={mes}
+                  onChange={e => setMes(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+                >
+                  {MESES.map((m, i) => (
+                    <option key={i} value={i + 1}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="min-w-[100px]">
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Ano</label>
+                <select
+                  value={ano}
+                  onChange={e => setAno(Number(e.target.value))}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+                >
+                  {anos.map(y => (
+                    <option key={y} value={y}>{y}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
           <div className="min-w-[140px]">
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Mes</label>
+            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Saldo</label>
             <select
-              value={mes}
-              onChange={e => setMes(Number(e.target.value))}
+              value={saldoFilter}
+              onChange={e => setSaldoFilter(e.target.value as SaldoFilter)}
               className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
             >
-              {MESES.map((m, i) => (
-                <option key={i} value={i + 1}>{m}</option>
-              ))}
+              <option value="">Todos</option>
+              <option value="positivo">Positivo</option>
+              <option value="negativo">Negativo</option>
+              <option value="zerado">Zerado</option>
             </select>
           </div>
-          <div className="min-w-[100px]">
-            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Ano</label>
-            <select
-              value={ano}
-              onChange={e => setAno(Number(e.target.value))}
-              className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30"
+          {!useFallback && (
+            <button
+              onClick={fecharMes}
+              disabled={mesFechado || rows.length === 0 || fechando}
+              className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              {anos.map(y => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-          </div>
-          <button
-            onClick={fecharMes}
-            disabled={mesFechado || rows.length === 0 || fechando}
-            className="px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <Lock className="w-4 h-4" />
-            {mesFechado ? 'Mes Fechado' : fechando ? 'Fechando...' : 'Fechar Mes'}
-          </button>
+              <Lock className="w-4 h-4" />
+              {mesFechado ? 'Mes Fechado' : fechando ? 'Fechando...' : 'Fechar Mes'}
+            </button>
+          )}
         </div>
       </div>
 
       {/* Status banner */}
-      {mesFechado && (
+      {mesFechado && !useFallback && (
         <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-sm text-amber-700">
           <AlertTriangle className="w-4 h-4" />
           <span>Este mes esta fechado. Os valores nao podem ser editados.</span>
@@ -290,57 +404,134 @@ export default function BancoHorasPage() {
 
       {/* Search */}
       <div className="mb-4">
-        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar funcionário..." />
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar funcionario..." />
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-gray-100 bg-gray-50">
-              {['Funcionario', 'Cargo', 'HH Contrato', 'HH Trabalhado', 'HH Extras', 'HH Faltas', 'HH Compensadas', 'Saldo Mes', 'Saldo Acumulado'].map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={9} className="px-4 py-12 text-center text-gray-400">Carregando...</td>
+      {/* Fallback view */}
+      {useFallback ? (
+        <>
+          <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-sm text-amber-700">
+            <AlertTriangle className="w-4 h-4" />
+            <span>
+              Nao ha registros detalhados de banco de horas para este periodo. Exibindo saldo consolidado da view resumo.
+            </span>
+          </div>
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50">
+                  {['Funcionario', 'Funcao', 'Obra', 'Saldo Atual', 'Status'].map(h => (
+                    <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-12 text-center text-gray-400">Carregando...</td>
+                  </tr>
+                ) : filteredSaldoRows.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-12 text-center">
+                      <div className="space-y-2">
+                        <p className="text-gray-500 font-medium">Nenhum registro de banco de horas encontrado.</p>
+                        <p className="text-xs text-gray-400">
+                          Os registros sao gerados a partir dos lancamentos de efetivo diario.
+                          Verifique se ha lancamentos de ponto para esta obra e periodo.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredSaldoRows.map((row, i) => {
+                  const badge = row.status_saldo
+                    ? saldoBadge(row.status_saldo)
+                    : saldoBadgeFromValue(row.saldo_atual_horas)
+                  return (
+                    <tr key={row.funcionario_id + '-' + i} className="border-b border-gray-50 hover:bg-gray-50/80">
+                      <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{row.nome ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{row.funcao ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{row.obra ?? '—'}</td>
+                      <td className={`px-4 py-3 ${saldoColor(row.saldo_atual_horas)}`}>
+                        {(row.saldo_atual_horas >= 0 ? '+' : '')}{(row.saldo_atual_horas || 0).toFixed(1)}h
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badge.cls}`}>
+                          {badge.label}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        /* Main table */
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50">
+                {['Funcionario', 'Cargo', 'HH Contrato', 'HH Trabalhado', 'HH Extras', 'HH Faltas', 'HH Compensadas', 'Saldo Mes', 'Saldo Acumulado', 'Status'].map(h => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                ))}
               </tr>
-            ) : rows.length === 0 ? (
-              <tr>
-                <td colSpan={9} className="px-4 py-12 text-center">
-                  {obraId ? (
-                    <div className="space-y-2">
-                      <p className="text-gray-500 font-medium">Nenhum registro de banco de horas para {MESES[mes - 1]}/{ano}.</p>
-                      <p className="text-xs text-gray-400">Os registros sao gerados a partir dos lancamentos de efetivo diario. Verifique se ha lancamentos de ponto para esta obra e periodo.</p>
-                    </div>
-                  ) : (
-                    <p className="text-gray-400">Selecione uma obra para visualizar o banco de horas.</p>
-                  )}
-                </td>
-              </tr>
-            ) : rows.filter(row => !busca || row.funcionarios?.nome?.toLowerCase().includes(busca.toLowerCase())).map(row => (
-              <tr key={row.id} className="border-b border-gray-50 hover:bg-gray-50/80">
-                <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{row.funcionarios?.nome ?? '—'}</td>
-                <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{row.funcionarios?.cargo ?? '—'}</td>
-                <td className="px-4 py-3">{renderCell(row, 'hh_contrato', row.hh_contrato)}</td>
-                <td className="px-4 py-3">{renderCell(row, 'hh_trabalhado', row.hh_trabalhado)}</td>
-                <td className="px-4 py-3">{renderCell(row, 'hh_extras', row.hh_extras)}</td>
-                <td className="px-4 py-3">{renderCell(row, 'hh_faltas', row.hh_faltas)}</td>
-                <td className="px-4 py-3">{renderCell(row, 'hh_compensadas', row.hh_compensadas)}</td>
-                <td className={`px-4 py-3 ${saldoColor(row.saldo_mes)}`}>
-                  {(row.saldo_mes >= 0 ? '+' : '')}{(row.saldo_mes || 0).toFixed(1)}h
-                </td>
-                <td className={`px-4 py-3 ${saldoColor(row.saldo_acumulado_final)}`}>
-                  {(row.saldo_acumulado_final >= 0 ? '+' : '')}{(row.saldo_acumulado_final || 0).toFixed(1)}h
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={10} className="px-4 py-12 text-center text-gray-400">Carregando...</td>
+                </tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="px-4 py-12 text-center">
+                    {obraId ? (
+                      <div className="space-y-2">
+                        <p className="text-gray-500 font-medium">Nenhum registro de banco de horas para {MESES[mes - 1]}/{ano}.</p>
+                        <p className="text-xs text-gray-400">Os registros sao gerados a partir dos lancamentos de efetivo diario. Verifique se ha lancamentos de ponto para esta obra e periodo.</p>
+                      </div>
+                    ) : (
+                      <p className="text-gray-400">Selecione uma obra para visualizar o banco de horas.</p>
+                    )}
+                  </td>
+                </tr>
+              ) : rows.filter(row => {
+                const matchBusca = !busca || row.funcionarios?.nome?.toLowerCase().includes(busca.toLowerCase())
+                const matchSaldo = !saldoFilter || (
+                  saldoFilter === 'positivo' ? row.saldo_acumulado_final > 0 :
+                  saldoFilter === 'negativo' ? row.saldo_acumulado_final < 0 :
+                  row.saldo_acumulado_final === 0
+                )
+                return matchBusca && matchSaldo
+              }).map(row => {
+                const badge = saldoBadgeFromValue(row.saldo_acumulado_final)
+                return (
+                  <tr key={row.id} className="border-b border-gray-50 hover:bg-gray-50/80">
+                    <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{row.funcionarios?.nome ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{row.funcionarios?.cargo ?? '—'}</td>
+                    <td className="px-4 py-3">{renderCell(row, 'hh_contrato', row.hh_contrato)}</td>
+                    <td className="px-4 py-3">{renderCell(row, 'hh_trabalhado', row.hh_trabalhado)}</td>
+                    <td className="px-4 py-3">{renderCell(row, 'hh_extras', row.hh_extras)}</td>
+                    <td className="px-4 py-3">{renderCell(row, 'hh_faltas', row.hh_faltas)}</td>
+                    <td className="px-4 py-3">{renderCell(row, 'hh_compensadas', row.hh_compensadas)}</td>
+                    <td className={`px-4 py-3 ${saldoColor(row.saldo_mes)}`}>
+                      {(row.saldo_mes >= 0 ? '+' : '')}{(row.saldo_mes || 0).toFixed(1)}h
+                    </td>
+                    <td className={`px-4 py-3 ${saldoColor(row.saldo_acumulado_final)}`}>
+                      {(row.saldo_acumulado_final >= 0 ? '+' : '')}{(row.saldo_acumulado_final || 0).toFixed(1)}h
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${badge.cls}`}>
+                        {badge.label}
+                      </span>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
