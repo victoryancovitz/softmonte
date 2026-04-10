@@ -37,7 +37,7 @@ function FinanceiroPage() {
   const [obraId, setObraId] = useState<string>('all')
   const [lancamentos, setLancamentos] = useState<any[]>([])
   const [fluxo, setFluxo] = useState<any[]>([])
-  const [showProvisoes, setShowProvisoes] = useState(true)
+  const [showProvisões, setShowProvisões] = useState(true)
   const [loading, setLoading] = useState(true)
   const [tab, setTab] = useState<'fluxo' | 'lancamentos'>('fluxo')
   const [busca, setBusca] = useState('')
@@ -66,13 +66,13 @@ function FinanceiroPage() {
 
   useEffect(() => {
     loadData()
-  }, [obraId, showProvisoes])
+  }, [obraId, showProvisões])
 
   async function loadData() {
     setLoading(true)
     let q = supabase.from('financeiro_lancamentos').select('*').is('deleted_at', null).order('data_competencia').limit(5000)
     if (obraId && obraId !== 'all') q = q.eq('obra_id', obraId)
-    if (!showProvisoes) q = q.eq('is_provisao', false)
+    if (!showProvisões) q = q.eq('is_provisao', false)
     const { data } = await q
     setLancamentos(data ?? [])
 
@@ -142,12 +142,12 @@ function FinanceiroPage() {
             {obras.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
           </select>
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-            <input type="checkbox" checked={showProvisoes} onChange={e => setShowProvisoes(e.target.checked)}
+            <input type="checkbox" checked={showProvisões} onChange={e => setShowProvisões(e.target.checked)}
               className="rounded border-gray-300 text-brand" />
-            Provisoes
+            Provisões
           </label>
           <Link href="/financeiro/novo" className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark">
-            + Lancamento
+            + Lançamento
           </Link>
         </div>
       </div>
@@ -161,7 +161,7 @@ function FinanceiroPage() {
           Fluxo de Caixa
         </Link>
         <Link href="/financeiro/ofx" className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50">
-          Conciliacao OFX
+          Conciliação OFX
         </Link>
       </div>
 
@@ -439,7 +439,7 @@ function FinanceiroPage() {
       </div>
 
       {/* Alerta de provisões */}
-      {showProvisoes && provisoes > 0 && (
+      {showProvisões && provisoes > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0 mt-0.5 text-amber-500">
             <path d="M10 2l8 14H2L10 2z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinejoin="round"/>

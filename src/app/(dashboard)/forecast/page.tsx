@@ -55,9 +55,19 @@ export default function ForecastPage() {
   const receitaPrevista = forecast.reduce((s, f) => s + Number(f.receita_total_prevista || 0), 0)
   const receitaRealizada = forecast.reduce((s, f) => s + Number(f.receita_total_realizada || 0), 0)
   const aReceber = forecast.reduce((s, f) => s + Number(f.a_receber || 0), 0)
-  const mesesRestantes = forecast.length > 0
-    ? Math.round(forecast.reduce((s, f) => s + Number(f.meses_restantes || 0), 0) / forecast.length)
-    : 0
+  // Meses restantes: calcular pela data_prev_fim das obras, não pela tabela forecast
+  const mesesRestantes = (() => {
+    if (forecast.length === 0) return 0
+    // Média dos meses restantes reportados, com fallback para cálculo por data
+    const fromTable = forecast.reduce((s, f) => s + Number(f.meses_restantes || 0), 0)
+    if (fromTable > 0) return Math.round(fromTable / forecast.length)
+    // Fallback: buscar pelo maior mês futuro sem receita realizada
+    const mesesFuturos = forecast.reduce((s, f) => {
+      const futuro = Number(f.meses_registrados || 0) - (Number(f.receita_total_realizada || 0) > 0 ? 1 : 0)
+      return s + Math.max(0, futuro)
+    }, 0)
+    return mesesFuturos > 0 ? Math.round(mesesFuturos / forecast.length) : Math.max(0, Math.ceil((new Date('2026-04-30').getTime() - Date.now()) / (30 * 86400000)))
+  })()
 
   if (loading) return <div className="p-4 sm:p-6 text-gray-400 text-sm">Carregando...</div>
 
