@@ -1,10 +1,12 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
 import SearchInput from '@/components/SearchInput'
+import SortableHeader, { SortDir, applySort } from '@/components/SortableHeader'
+import { formatTipoPagamento, formatStatus, TIPO_PAGAMENTO_EXTRA } from '@/lib/formatters'
 import { DollarSign, AlertTriangle, Plus, RefreshCw, Trash2 } from 'lucide-react'
 
 const TIPOS: { v: string; l: string; cor: string }[] = [
@@ -27,10 +29,26 @@ export default function PagamentosExtrasPage() {
   const [tipoFiltro, setTipoFiltro] = useState('')
   const [obraFiltro, setObraFiltro] = useState('')
   const [competenciaFiltro, setCompetenciaFiltro] = useState('')
+  const [statusFiltro, setStatusFiltro] = useState('')
+  const [recorrenteFiltro, setRecorrenteFiltro] = useState(false)
   const [regenerating, setRegenerating] = useState(false)
   const [busca, setBusca] = useState('')
   const supabase = createClient()
   const toast = useToast()
+
+  // Sort
+  const [sortField, setSortField] = useState<string | null>(null)
+  const [sortDir, setSortDir] = useState<SortDir>(null)
+
+  function handleSort(field: string) {
+    if (sortField === field) {
+      setSortDir(prev => prev === 'asc' ? 'desc' : prev === 'desc' ? null : 'asc')
+      if (sortDir === 'desc') setSortField(null)
+    } else {
+      setSortField(field)
+      setSortDir('asc')
+    }
+  }
 
   async function load() {
     const [{ data: pag }, { data: al }, { data: obs }] = await Promise.all([
@@ -50,20 +68,26 @@ export default function PagamentosExtrasPage() {
 
   useEffect(() => { load() }, [])
 
-  const filtered = pagamentos.filter(p => {
-    if (tipoFiltro && p.tipo !== tipoFiltro) return false
-    if (obraFiltro && p.obra_id !== obraFiltro) return false
-    if (competenciaFiltro && !p.competencia.startsWith(competenciaFiltro)) return false
-    if (busca.trim()) {
-      const q = busca.toLowerCase()
-      if (
-        !p.funcionarios?.nome?.toLowerCase().includes(q) &&
-        !p.descricao?.toLowerCase().includes(q) &&
-        !p.funcionarios?.cargo?.toLowerCase().includes(q)
-      ) return false
-    }
-    return true
-  })
+  const filtered = useMemo(() => {
+    let result = pagamentos.filter(p => {
+      if (tipoFiltro && p.tipo !== tipoFiltro) return false
+      if (obraFiltro && p.obra_id !== obraFiltro) return false
+      if (competenciaFiltro && !p.competencia.startsWith(competenciaFiltro)) return false
+      if (statusFiltro && p.status !== statusFiltro) return false
+      if (recorrenteFiltro && !p.recorrente) return false
+      if (busca.trim()) {
+        const q = busca.toLowerCase()
+        if (
+          !p.funcionarios?.nome?.toLowerCase().includes(q) &&
+          !p.descricao?.toLowerCase().includes(q) &&
+          !p.funcionarios?.cargo?.toLowerCase().includes(q)
+        ) return false
+      }
+      return true
+    })
+    result = applySort(result, sortField, sortDir, ['valor'])
+    return result
+  }, [pagamentos, busca, tipoFiltro, obraFiltro, competenciaFiltro, statusFiltro, recorrenteFiltro, sortField, sortDir])
 
   const fmt = (v: any) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -178,7 +202,7 @@ export default function PagamentosExtrasPage() {
         <div className="bg-white rounded-xl border border-gray-100 border-l-4 border-l-red-500 p-4">
           <div className="text-[11px] font-semibold text-gray-400 uppercase">Por fora</div>
           <div className="text-lg font-bold text-red-700 font-display">{fmt(totalPorFora)}</div>
-          <div className="text-[10px] text-red-600">⚠ Risco trabalhista</div>
+          <div className="text-[10px] text-red-600">Risco trabalhista</div>
         </div>
       </div>
 
@@ -189,10 +213,10 @@ export default function PagamentosExtrasPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
             {totaisPorTipo.map(t => (
               <div key={t.v} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${t.cor}`}>{t.l}</span>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${t.cor}`}>{formatTipoPagamento(t.v)}</span>
                 <div className="text-right">
                   <div className="text-xs font-bold text-gray-900">{fmt(t.total)}</div>
-                  <div className="text-[10px] text-gray-400">{t.qtd}×</div>
+                  <div className="text-[10px] text-gray-400">{t.qtd}x</div>
                 </div>
               </div>
             ))}
@@ -204,11 +228,20 @@ export default function PagamentosExtrasPage() {
       <div className="mb-3">
         <SearchInput value={busca} onChange={setBusca} placeholder="Buscar por funcionario ou descricao..." />
       </div>
-      <div className="flex flex-wrap gap-2 mb-4">
+      <div className="flex flex-wrap gap-2 mb-4 items-center">
         <select value={tipoFiltro} onChange={e => setTipoFiltro(e.target.value)}
           className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
           <option value="">Todos os tipos</option>
-          {TIPOS.map(t => <option key={t.v} value={t.v}>{t.l}</option>)}
+          {Object.entries(TIPO_PAGAMENTO_EXTRA).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </select>
+        <select value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
+          <option value="">Todos os status</option>
+          <option value="previsto">{formatStatus('previsto')}</option>
+          <option value="pago">{formatStatus('pago')}</option>
+          <option value="cancelado">{formatStatus('cancelado')}</option>
         </select>
         <select value={obraFiltro} onChange={e => setObraFiltro(e.target.value)}
           className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white">
@@ -218,6 +251,11 @@ export default function PagamentosExtrasPage() {
         <input type="month" value={competenciaFiltro} onChange={e => setCompetenciaFiltro(e.target.value)}
           className="px-3 py-2 border border-gray-200 rounded-lg text-sm"
           placeholder="Competência" />
+        <label className="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer select-none">
+          <input type="checkbox" checked={recorrenteFiltro} onChange={e => setRecorrenteFiltro(e.target.checked)}
+            className="rounded border-gray-300 text-brand focus:ring-brand" />
+          Recorrentes
+        </label>
       </div>
 
       {/* Tabela */}
@@ -225,9 +263,14 @@ export default function PagamentosExtrasPage() {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
-              {['Competência', 'Funcionário', 'Tipo', 'Descrição', 'Obra', 'Valor', 'Status', ''].map(h => (
-                <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
-              ))}
+              <SortableHeader label="Competência" field="competencia" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Funcionário" field="funcionarios.nome" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Tipo" field="tipo" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Descrição" field="descricao" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Obra" field="obras.nome" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
+              <SortableHeader label="Valor" field="valor" currentField={sortField} currentDir={sortDir} onSort={handleSort} align="right" />
+              <SortableHeader label="Status" field="status" currentField={sortField} currentDir={sortDir} onSort={handleSort} />
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap"></th>
             </tr>
           </thead>
           <tbody>
@@ -246,18 +289,26 @@ export default function PagamentosExtrasPage() {
                   </td>
                   <td className="px-4 py-2.5">
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${tipoInfo?.cor ?? 'bg-gray-100'}`}>
-                      {tipoInfo?.l ?? p.tipo}
+                      {formatTipoPagamento(p.tipo)}
                     </span>
                   </td>
                   <td className="px-4 py-2.5 text-xs text-gray-600 truncate max-w-[200px]">{p.descricao || '—'}</td>
                   <td className="px-4 py-2.5 text-xs text-gray-500">{p.obras?.nome || '—'}</td>
-                  <td className="px-4 py-2.5 font-bold text-gray-900">{fmt(p.valor)}</td>
+                  <td className="px-4 py-2.5 font-bold text-gray-900 text-right">{fmt(p.valor)}</td>
                   <td className="px-4 py-2.5">
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                      p.status === 'pago' ? 'bg-green-100 text-green-700' :
-                      p.status === 'previsto' ? 'bg-amber-100 text-amber-700' :
-                      'bg-gray-100 text-gray-500'
-                    }`}>{p.status}</span>
+                    <div className="flex flex-wrap items-center gap-1">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                        p.status === 'pago' ? 'bg-green-100 text-green-700' :
+                        p.status === 'previsto' ? 'bg-amber-100 text-amber-700' :
+                        'bg-gray-100 text-gray-500'
+                      }`}>{formatStatus(p.status).toUpperCase()}</span>
+                      {p.entra_dre && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">DRE</span>
+                      )}
+                      {p.recorrente && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-violet-100 text-violet-700">Recorrente</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-4 py-2.5">
                     <button onClick={() => handleDelete(p.id)} className="text-red-500 hover:text-red-700">

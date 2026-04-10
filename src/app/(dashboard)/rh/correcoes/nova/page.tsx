@@ -6,16 +6,9 @@ import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
 import { Calculator, Save } from 'lucide-react'
+import { MOTIVO_CORRECAO, formatMotivoCorrecao } from '@/lib/formatters'
 
-const MOTIVOS = [
-  { v: 'acordo_coletivo', l: 'Acordo coletivo' },
-  { v: 'dissidio', l: 'Dissídio' },
-  { v: 'merito', l: 'Mérito' },
-  { v: 'promocao', l: 'Promoção' },
-  { v: 'correcao', l: 'Correção' },
-  { v: 'piso', l: 'Ajuste ao piso' },
-  { v: 'outro', l: 'Outro' },
-]
+const MOTIVOS = Object.entries(MOTIVO_CORRECAO).map(([v, l]) => ({ v, l }))
 
 export default function NovaCorrecaoPage() {
   const router = useRouter()
