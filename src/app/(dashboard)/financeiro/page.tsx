@@ -70,7 +70,7 @@ function FinanceiroPage() {
 
   async function loadData() {
     setLoading(true)
-    let q = supabase.from('financeiro_lancamentos').select('*').is('deleted_at', null).order('data_competencia').limit(5000)
+    let q = supabase.from('financeiro_lancamentos').select('*, obras(nome)').is('deleted_at', null).order('data_competencia').limit(5000)
     if (obraId && obraId !== 'all') q = q.eq('obra_id', obraId)
     if (!showProvisões) q = q.eq('is_provisao', false)
     const { data } = await q
@@ -341,7 +341,7 @@ function FinanceiroPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100">
-                {['Data','Descrição','Categoria','Tipo','Valor','Status',''].map(h => (
+                {['Data','Descrição','Obra','Tipo','Valor','Status',''].map(h => (
                   <th key={h} className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -357,10 +357,16 @@ function FinanceiroPage() {
                 <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                   <td className="px-4 py-2.5 text-gray-500 text-xs">{new Date(l.data_competencia+'T12:00:00').toLocaleDateString('pt-BR')}</td>
                   <td className="px-4 py-2.5 font-medium">
-                    {l.nome}
-                    {l.is_provisao && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-purple-100 text-purple-600 rounded">provisão</span>}
+                    <div className="flex items-center gap-1.5">
+                      {l.nome}
+                      {l.origem === 'bm_aprovado' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">BM</span>}
+                      {l.origem === 'folha_fechamento' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold">Folha</span>}
+                      {l.origem === 'cotacao' && <span className="text-[9px] px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 font-bold">Compras</span>}
+                      {(!l.origem || l.origem === 'manual') && <span className="text-[9px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 font-bold">Manual</span>}
+                      {l.is_provisao && <span className="text-[9px] px-1.5 py-0.5 rounded bg-purple-100 text-purple-600 font-bold">Provisão</span>}
+                    </div>
                   </td>
-                  <td className="px-4 py-2.5 text-gray-500 text-xs">{l.categoria || '—'}</td>
+                  <td className="px-4 py-2.5 text-gray-500 text-xs">{l.obras?.nome || '—'}</td>
                   <td className="px-4 py-2.5">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${l.tipo === 'receita' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {l.tipo === 'receita' ? 'Receita' : 'Despesa'}
