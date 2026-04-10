@@ -64,7 +64,6 @@ const NAV_GROUPS: NavGroupDef[] = [
   {
     label: 'Financeiro',
     links: [
-      { href: '/financeiro/sumario', label: 'Sumário Executivo', icon: ic.report },
       { href: '/financeiro', label: 'Lançamentos', icon: ic.fin },
       { href: '/financeiro/dre', label: 'DRE & Resultado', icon: ic.fin },
       { href: '/forecast', label: 'Forecast', icon: ic.report },
@@ -106,10 +105,9 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
     ],
   },
   {
-    // Módulo Financeiro — 4 abas principais + sub-páginas acessíveis via links
-    groupPaths: ['/financeiro', '/relatorios/margem', '/relatorios/bm-comparativo', '/forecast', '/executivo'],
+    // Módulo Financeiro — 3 abas (Sumário movido para /diretoria)
+    groupPaths: ['/financeiro', '/relatorios/margem', '/relatorios/bm-comparativo', '/forecast'],
     tabs: [
-      { href: '/financeiro/sumario', label: 'Sumário', match: ['/financeiro/sumario', '/executivo'] },
       { href: '/financeiro', label: 'Lançamentos', match: ['/financeiro', '/financeiro/novo', '/financeiro/contas', '/financeiro/cashflow', '/financeiro/ofx'] },
       { href: '/financeiro/dre', label: 'DRE & Resultado', match: ['/financeiro/dre', '/relatorios/margem', '/relatorios/bm-comparativo'] },
       { href: '/forecast', label: 'Forecast' },
@@ -153,7 +151,7 @@ MODULE_TABS.forEach(mod => {
   })
 })
 PATH_MAP['/dashboard'] = { group: '', label: 'Dashboard' }
-PATH_MAP['/financeiro/sumario'] = { group: 'Financeiro', label: 'Sumário Executivo' }
+PATH_MAP['/diretoria'] = { group: '', label: 'Diretoria' }
 PATH_MAP['/executivo'] = { group: '', label: 'Painel Executivo' }
 PATH_MAP['/portal'] = { group: '', label: 'Portal do Funcionário' }
 PATH_MAP['/configuracoes'] = { group: '', label: 'Configurações' }
@@ -237,7 +235,7 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
         {/* Main bar — 48px */}
         <div className="h-12 bg-[#0f1e2e] flex items-center px-4">
           {/* Logo */}
-          <Link href="/financeiro/sumario" className="flex items-center gap-2.5 mr-6 flex-shrink-0">
+          <Link href="/diretoria" className="flex items-center gap-2.5 mr-6 flex-shrink-0">
             <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
               <rect x="4" y="20" width="8" height="10" rx="1" fill="#c8960c"/>
               <rect x="13" y="12" width="8" height="18" rx="1" fill="#c8960c" opacity=".85"/>
@@ -248,6 +246,14 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
 
           {/* Nav groups */}
           <nav ref={navRef} className="flex items-center h-full gap-0.5 flex-1 min-w-0">
+            {/* Diretoria — link direto (sem dropdown) */}
+            <Link href="/diretoria"
+              className={`px-3 h-full text-[13px] font-medium transition-colors relative flex items-center ${
+                pathname === '/diretoria' ? 'text-white' : 'text-blue-200/70 hover:text-white'
+              }`}>
+              Diretoria
+              {pathname === '/diretoria' && <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#c8960c] rounded-t" />}
+            </Link>
             {NAV_GROUPS.map(g => {
               const isActive = activeGroup === g.label
               const isOpen = openGroup === g.label
@@ -413,7 +419,7 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
       <div className="lg:hidden">
         {/* Mobile top bar */}
         <div className="fixed top-0 left-0 right-0 z-40 bg-[#0f1e2e] flex items-center justify-between px-4 h-12">
-          <Link href="/financeiro/sumario" className="flex items-center gap-2">
+          <Link href="/diretoria" className="flex items-center gap-2">
             <svg width="24" height="24" viewBox="0 0 32 32" fill="none">
               <rect x="4" y="20" width="8" height="10" rx="1" fill="#c8960c"/>
               <rect x="13" y="12" width="8" height="18" rx="1" fill="#c8960c" opacity=".85"/>
