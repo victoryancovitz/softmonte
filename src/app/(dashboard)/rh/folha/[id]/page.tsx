@@ -102,11 +102,11 @@ export default function FolhaDetalhePage() {
               <div className="text-sm font-bold text-gray-900">{fmt(folha.valor_total_encargos)}</div>
             </div>
             <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="text-[10px] text-gray-400 font-semibold uppercase">Provisoes</div>
+              <div className="text-[10px] text-gray-400 font-semibold uppercase">Provisões</div>
               <div className="text-sm font-bold text-gray-900">{fmt(folha.valor_total_provisoes)}</div>
             </div>
             <div className="p-3 bg-gray-50 rounded-lg">
-              <div className="text-[10px] text-gray-400 font-semibold uppercase">Beneficios</div>
+              <div className="text-[10px] text-gray-400 font-semibold uppercase">Benefícios</div>
               <div className="text-sm font-bold text-gray-900">{fmt(folha.valor_total_beneficios)}</div>
             </div>
             <div className="p-3 bg-red-50 border border-red-100 rounded-lg">

@@ -269,14 +269,14 @@ export default function DesligamentosPage() {
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
             <option value="">Todos os status</option>
             <option value="em_andamento">Em Andamento</option>
-            <option value="concluido">Concluido</option>
+            <option value="concluido">Concluído</option>
           </select>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          <label className="text-xs text-gray-500">Periodo de:</label>
+          <label className="text-xs text-gray-500">Período de:</label>
           <input type="date" value={filtroDe} onChange={e => setFiltroDe(e.target.value)}
             className="px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand" />
-          <label className="text-xs text-gray-500">ate:</label>
+          <label className="text-xs text-gray-500">até:</label>
           <input type="date" value={filtroAte} onChange={e => setFiltroAte(e.target.value)}
             className="px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand" />
           {(busca || filtroTipo || filtroStatus || filtroDe || filtroAte) && (

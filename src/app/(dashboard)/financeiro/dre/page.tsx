@@ -256,7 +256,7 @@ export default function DrePage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {['Mes', 'Receita', 'Custo MO', 'Outras Despesas', 'Provisoes', 'Resultado', 'Margem %'].map(h => (
+                {['Mês', 'Receita', 'Custo MO', 'Outras Despesas', 'Provisões', 'Resultado', 'Margem %'].map(h => (
                   <th key={h} className="text-right first:text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>

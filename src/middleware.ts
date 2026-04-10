@@ -57,8 +57,8 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // Funcionário logado é isolado ao /portal
-    if (profile?.role === 'funcionario' && (pathname === '/' || pathname === '/dashboard') && !isPortalRoute) {
+    // Funcionário logado é isolado ao /portal — bloqueia TODAS as rotas admin
+    if (profile?.role === 'funcionario' && !isPortalRoute && !pathname.startsWith('/api/')) {
       return NextResponse.redirect(new URL('/portal', request.url))
     }
   }

@@ -381,7 +381,7 @@ export default function FeriasPage() {
                   <td className="px-4 py-3">
                     <div className="font-semibold text-gray-900 whitespace-nowrap">
                       {row.nome}
-                      {row.deleted_at && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-semibold">Desligado</span>}
+                      {row.deleted_at && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-semibold">Desligado em {new Date(row.deleted_at).toLocaleDateString('pt-BR')}</span>}
                     </div>
                     <div className="text-xs text-gray-400">{row.cargo}</div>
                   </td>

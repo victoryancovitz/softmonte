@@ -66,7 +66,10 @@ export default function ForecastPage() {
       const futuro = Number(f.meses_registrados || 0) - (Number(f.receita_total_realizada || 0) > 0 ? 1 : 0)
       return s + Math.max(0, futuro)
     }, 0)
-    return mesesFuturos > 0 ? Math.round(mesesFuturos / forecast.length) : Math.max(0, Math.ceil((new Date('2026-04-30').getTime() - Date.now()) / (30 * 86400000)))
+    if (mesesFuturos > 0) return Math.round(mesesFuturos / forecast.length)
+    // Fallback dinâmico: usa data_prev_fim da primeira obra com forecast
+    const dataPrevFim = forecast.find(f => f.data_prev_fim)?.data_prev_fim
+    return dataPrevFim ? Math.max(0, Math.ceil((new Date(dataPrevFim).getTime() - Date.now()) / (30 * 86400000))) : 0
   })()
 
   if (loading) return <div className="p-4 sm:p-6 text-gray-400 text-sm">Carregando...</div>
