@@ -18,8 +18,7 @@ const nextConfig = {
   async redirects() {
     return [
       { source: '/financeiro/fluxo', destination: '/financeiro/cashflow', permanent: true },
-      { source: '/financeiro/margem', destination: '/relatorios/margem', permanent: true },
-      { source: '/financeiro/dre', destination: '/relatorios/margem', permanent: true },
+      { source: '/financeiro/margem', destination: '/financeiro/dre', permanent: true },
       { source: '/cadastros/clientes', destination: '/clientes', permanent: true },
     ]
   },
