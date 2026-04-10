@@ -140,6 +140,7 @@ export default function ObrasView({ obras }: { obras: any[] }) {
               <SortableHeader label="Início" field="data_inicio" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
               <SortableHeader label="Prev. Fim" field="data_prev_fim" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
               <SortableHeader label="Status" field="status" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">Encerramento</th>
               <th className="px-4 py-3"></th>
             </tr>
           </thead>
@@ -156,6 +157,16 @@ export default function ObrasView({ obras }: { obras: any[] }) {
                 <td className="px-4 py-3"><Link href={`/obras/${o.id}`} className="block">
                   <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${STATUS_COLOR[o.status] ?? 'bg-gray-100 text-gray-600'}`}>{o.status ?? 'ativo'}</span>
                 </Link></td>
+                <td className="px-4 py-3 text-xs">
+                  {(() => {
+                    if (!o.data_prev_fim) return <span className="text-gray-300">—</span>
+                    const dias = Math.ceil((new Date(o.data_prev_fim).getTime() - Date.now()) / 86400000)
+                    if (dias < 0) return <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-bold">Vencido</span>
+                    if (dias <= 30) return <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-bold">{dias}d</span>
+                    if (dias <= 60) return <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold">{dias}d</span>
+                    return <span className="text-gray-500">{dias}d</span>
+                  })()}
+                </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
                     <Link href={`/obras/${o.id}`} className="text-xs text-brand hover:underline">Ver</Link>

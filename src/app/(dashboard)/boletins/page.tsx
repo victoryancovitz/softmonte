@@ -28,10 +28,21 @@ function BMCard({ bm }: { bm: any }) {
         </div>
       </Link>
       <div className="flex items-center gap-3 flex-shrink-0">
-        {bm.nfe_numero ? (
-          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-green-100 text-green-700">NF Emitida</span>
-        ) : bm.status === 'aprovado' && !bm.nfe_numero ? (
-          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Aguard. NF</span>
+        {/* Valor */}
+        {bm.valor_aprovado ? (
+          <div className="text-right mr-2">
+            <div className="text-sm font-bold text-green-700">R$ {Number(bm.valor_aprovado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+            {bm.nfe_numero ? (
+              <span className="text-[10px] text-green-600">NF-e emitida</span>
+            ) : (
+              <span className="text-[10px] text-amber-600">Aguard. NF-e</span>
+            )}
+          </div>
+        ) : bm.hh_total ? (
+          <div className="text-right mr-2">
+            <div className="text-xs font-medium text-gray-400">~R$ {Number(bm.hh_total * 20).toLocaleString('pt-BR', { maximumFractionDigits: 0 })}</div>
+            <span className="text-[10px] text-gray-400">estimado</span>
+          </div>
         ) : null}
         <BMStatusButton bmId={bm.id} currentStatus={bm.status} />
         <Link href={`/boletins/${bm.id}`}>
@@ -46,7 +57,7 @@ export default async function BoletinsPage() {
   const supabase = createClient()
   const { data: bms } = await supabase
     .from('boletins_medicao')
-    .select('*, obras(nome, cliente)')
+    .select('*, obras(nome, cliente), bm_itens(hh_total)')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
 

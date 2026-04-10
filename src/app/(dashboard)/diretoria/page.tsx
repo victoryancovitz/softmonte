@@ -27,6 +27,7 @@ export default async function DiretoriaPage() {
     { data: obrasAtivas }, { data: contasSaldo }, { data: lancamentos },
     { data: funcAtivos }, { data: pontoMes }, { data: bmsAprovados },
     { data: bmItensAll }, { data: funcoes }, { data: desligados90 },
+    { data: bmsSemNfe }, { data: receitasAbertas },
   ] = await Promise.all([
     supabase.from('vw_dre_obra_mes').select('*').limit(500),
     supabase.from('vw_dre_obra').select('*').limit(500),
@@ -44,6 +45,9 @@ export default async function DiretoriaPage() {
     supabase.from('bm_itens').select('boletim_id, hh_total, funcao_nome'),
     supabase.from('funcoes').select('id, nome, custo_hora, salario_base, jornada_horas_mes, ativo').eq('ativo', true),
     supabase.from('funcionarios').select('id').gte('deleted_at', ha90d),
+    // Extra queries for "Atenção Hoje"
+    supabase.from('boletins_medicao').select('id, numero, valor_aprovado, aprovado_em, nfe_numero, obra_id').eq('status', 'aprovado').is('nfe_numero', null).is('deleted_at', null),
+    supabase.from('financeiro_lancamentos').select('id, valor, data_vencimento').eq('tipo', 'receita').neq('status', 'pago').is('deleted_at', null),
   ])
 
   const funcs = funcAtivos ?? []
@@ -143,6 +147,27 @@ export default async function DiretoriaPage() {
   })
   margemFuncao.sort((a, b) => b.margem - a.margem)
 
+  // === ATENÇÃO HOJE ===
+  const bmSemNf = (bmsSemNfe ?? []).map((b: any) => ({
+    ...b,
+    diasSemNf: Math.ceil((Date.now() - new Date(b.aprovado_em).getTime()) / 86400000),
+  }))
+  const receitaVencida = (receitasAbertas ?? []).filter((r: any) => r.data_vencimento && r.data_vencimento < hojeStr)
+  const totalVencido = receitaVencida.reduce((s: number, r: any) => s + Number(r.valor || 0), 0)
+  const obraVencendo = (obrasAtivas ?? []).find((o: any) => o.data_prev_fim && Math.ceil((new Date(o.data_prev_fim).getTime() - Date.now()) / 86400000) <= 30)
+  const diasObraVencendo = obraVencendo ? Math.ceil((new Date(obraVencendo.data_prev_fim).getTime() - Date.now()) / 86400000) : null
+
+  // Receita em aberto com próximo vencimento
+  const receitasOrdenadas = (receitasAbertas ?? []).filter((r: any) => r.data_vencimento).sort((a: any, b: any) => a.data_vencimento.localeCompare(b.data_vencimento))
+  const proxVencimentoReceita = receitasOrdenadas[0]?.data_vencimento || null
+
+  // Alertas breakdown
+  const alertasPorTipo: Record<string, number> = {}
+  ;(alertas ?? []).forEach((a: any) => {
+    const t = (a.tipo || '').includes('experiencia') ? 'contratos' : (a.tipo || '').includes('aso') ? 'asos' : (a.tipo || '').includes('nr') ? 'nrs' : 'outros'
+    alertasPorTipo[t] = (alertasPorTipo[t] || 0) + 1
+  })
+
   // === HELPERS ===
   function colorPct(v: number, green: number, amber: number) {
     if (v >= green) return 'text-green-700'
@@ -157,7 +182,9 @@ export default async function DiretoriaPage() {
 
   const kpiCards = [
     { label: 'Receita recebida', value: receitaPaga, color: 'text-green-600', bg: 'bg-green-50', hover: 'hover:bg-green-100', href: '/financeiro?tab=lancamentos&tipo=receita&status=pago' },
-    { label: 'Receita em aberto', value: receitaAberto, color: 'text-emerald-600', bg: 'bg-emerald-50', hover: 'hover:bg-emerald-100', href: '/financeiro?tab=lancamentos&tipo=receita&status=em_aberto' },
+    { label: 'Receita em aberto', value: receitaAberto, color: 'text-emerald-600', bg: 'bg-emerald-50', hover: 'hover:bg-emerald-100', href: '/financeiro?tab=lancamentos&tipo=receita&status=em_aberto',
+      sub: proxVencimentoReceita ? (proxVencimentoReceita < hojeStr ? `Vencido em ${new Date(proxVencimentoReceita + 'T12:00').toLocaleDateString('pt-BR')}` : `Vence em ${new Date(proxVencimentoReceita + 'T12:00').toLocaleDateString('pt-BR')}`) : undefined,
+      subColor: proxVencimentoReceita && proxVencimentoReceita < hojeStr ? 'text-red-600' : 'text-gray-400' },
     { label: 'Despesa paga', value: despesaPaga, color: 'text-red-600', bg: 'bg-red-50', hover: 'hover:bg-red-100', href: '/financeiro?tab=lancamentos&tipo=despesa&status=pago' },
     { label: 'Despesa em aberto', value: despesaAberto, color: 'text-orange-600', bg: 'bg-orange-50', hover: 'hover:bg-orange-100', href: '/financeiro?tab=lancamentos&tipo=despesa&status=em_aberto' },
     { label: 'Provisões futuras', value: provisoes, color: 'text-purple-600', bg: 'bg-purple-50', hover: 'hover:bg-purple-100', href: '/financeiro?tab=lancamentos&is_provisao=true' },
@@ -171,6 +198,45 @@ export default async function DiretoriaPage() {
         <div />
         <RefreshButton />
       </div>
+
+      {/* ══════ ATENÇÃO HOJE ══════ */}
+      {(bmSemNf.length > 0 || totalVencido > 0 || obraVencendo) && (
+        <div className="mb-6 space-y-2">
+          {bmSemNf.map((b: any) => (
+            <Link key={b.id} href={`/boletins/${b.id}`}
+              className="flex items-center gap-3 bg-white border-l-4 border-l-red-500 rounded-lg px-4 py-3 hover:shadow-md transition-all">
+              <span className="text-red-500 text-lg flex-shrink-0">&#x1F534;</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-gray-900">BM-{String(b.numero).padStart(2, '0')} aprovado há {b.diasSemNf}d sem NF-e emitida</div>
+                <div className="text-xs text-gray-500">R$ {Number(b.valor_aprovado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} aguardando faturamento</div>
+              </div>
+              <span className="text-xs font-semibold text-brand flex-shrink-0">Emitir NF-e →</span>
+            </Link>
+          ))}
+          {totalVencido > 0 && (
+            <Link href="/financeiro?tab=lancamentos&tipo=receita&status=em_aberto"
+              className="flex items-center gap-3 bg-white border-l-4 border-l-red-500 rounded-lg px-4 py-3 hover:shadow-md transition-all">
+              <span className="text-red-500 text-lg flex-shrink-0">&#x1F534;</span>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-gray-900">{fmt(totalVencido)} em receita com vencimento em atraso</div>
+                <div className="text-xs text-gray-500">{receitaVencida.length} lançamento(s) vencido(s)</div>
+              </div>
+              <span className="text-xs font-semibold text-brand flex-shrink-0">Ver lançamentos →</span>
+            </Link>
+          )}
+          {obraVencendo && (
+            <Link href={`/obras/${obraVencendo.id}`}
+              className="flex items-center gap-3 bg-white border-l-4 border-l-amber-500 rounded-lg px-4 py-3 hover:shadow-md transition-all">
+              <span className="text-amber-500 text-lg flex-shrink-0">&#x26A0;&#xFE0F;</span>
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-gray-900">{obraVencendo.nome} vence em {diasObraVencendo} dias</div>
+                <div className="text-xs text-gray-500">Contrato encerra em {new Date(obraVencendo.data_prev_fim + 'T12:00').toLocaleDateString('pt-BR')}</div>
+              </div>
+              <span className="text-xs font-semibold text-brand flex-shrink-0">Ver contrato →</span>
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* ══════ SEÇÃO 1: SAÚDE FINANCEIRA ══════ */}
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Saúde Financeira</p>
@@ -215,10 +281,11 @@ export default async function DiretoriaPage() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-        {kpiCards.map(k => (
+        {kpiCards.map((k: any) => (
           <Link key={k.label} href={k.href} className={`${k.bg} ${k.hover} rounded-xl p-3 transition-all hover:shadow-md`}>
             <div className="text-xs text-gray-500 mb-1 leading-tight">{k.label}</div>
             <div className={`text-base font-bold ${k.color}`}>{fmt(k.value)}</div>
+            {k.sub && <div className={`text-[10px] mt-0.5 ${k.subColor || 'text-gray-400'}`}>{k.sub}</div>}
           </Link>
         ))}
       </div>
@@ -237,6 +304,14 @@ export default async function DiretoriaPage() {
         <Link href="/rh/vencimentos" className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md hover:border-brand/30 transition-all">
           <div className="flex items-center gap-2 mb-1"><AlertTriangle className="w-4 h-4 text-red-500" /><span className="text-[10px] font-bold text-gray-400 uppercase">Alertas críticos</span></div>
           <div className="text-2xl font-bold text-red-700 font-display">{alertasTotal}</div>
+          <div className="text-[10px] text-gray-500 mt-1">
+            {alertasPorTipo.contratos ? `${alertasPorTipo.contratos} contratos` : ''}
+            {alertasPorTipo.contratos && (alertasPorTipo.asos || alertasPorTipo.nrs) ? ' · ' : ''}
+            {alertasPorTipo.asos ? `${alertasPorTipo.asos} ASOs` : ''}
+            {alertasPorTipo.asos && alertasPorTipo.nrs ? ' · ' : ''}
+            {alertasPorTipo.nrs ? `${alertasPorTipo.nrs} NRs` : ''}
+            {alertasPorTipo.outros ? ` + ${alertasPorTipo.outros} outros` : ''}
+          </div>
         </Link>
       </div>
 
