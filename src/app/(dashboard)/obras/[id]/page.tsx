@@ -6,6 +6,9 @@ import { ObraStatusBtns } from '@/components/DeleteActions'
 import BackButton from '@/components/BackButton'
 import EntityDocumentos from '@/components/EntityDocumentos'
 import DocsAlocadosSection from './DocsAlocadosSection'
+import CronogramaTab from './CronogramaTab'
+import DiarioTab from './DiarioTab'
+import RncTab from './RncTab'
 
 const TIPOS_DOC_OBRA = [
   { value: 'contrato', label: 'Contrato' },
@@ -73,9 +76,6 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
     { data: lancamentos },
     { data: composicao },
     { data: aditivosData },
-    { data: cronograma },
-    { data: diario },
-    { data: rncData },
     { data: transferencias },
   ] = await Promise.all([
     supabase.from('obras').select('*').eq('id', params.id).is('deleted_at', null).maybeSingle(),
@@ -86,9 +86,6 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
     supabase.from('financeiro_lancamentos').select('*').eq('obra_id', params.id).is('deleted_at', null).order('data_competencia', { ascending: false }),
     supabase.from('contrato_composicao').select('*').eq('obra_id', params.id).order('funcao_nome'),
     supabase.from('aditivos').select('*').eq('obra_id', params.id).order('numero'),
-    supabase.from('cronograma_etapas').select('*').eq('obra_id', params.id).order('ordem'),
-    supabase.from('diario_obra').select('*').eq('obra_id', params.id).order('data', { ascending: false }).limit(30),
-    supabase.from('rnc').select('*').eq('obra_id', params.id).order('created_at', { ascending: false }),
     supabase.from('transferencias').select('*, funcionarios(nome)').eq('obra_origem_id', params.id).order('data_transferencia', { ascending: false }),
   ])
 
@@ -581,111 +578,13 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
       )}
 
       {/* ===== CRONOGRAMA ===== */}
-      {activeTab === 'cronograma' && (
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold text-gray-700">{cronograma?.length ?? 0} etapas</h2>
-          </div>
-          {cronograma && cronograma.length > 0 ? (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-50">
-              {cronograma.map((e: any) => (
-                <div key={e.id} className={`px-4 py-3 ${e.nivel > 0 ? 'pl-10' : ''}`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className={`text-sm ${e.nivel === 0 ? 'font-bold' : 'font-medium'} text-gray-900`}>{e.nome}</span>
-                      {e.milestone && <span className="ml-2 text-xs bg-brand/10 text-brand px-2 py-0.5 rounded">Marco</span>}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xs px-2 py-0.5 rounded-full ${
-                        e.status === 'concluido' ? 'bg-green-100 text-green-700' :
-                        e.status === 'em_andamento' ? 'bg-blue-100 text-blue-700' :
-                        e.status === 'atrasado' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'
-                      }`}>{fmtStatus(e.status)}</span>
-                      <span className="text-xs text-gray-400">{e.percentual_fisico}%</span>
-                    </div>
-                  </div>
-                  {(e.data_inicio_plan || e.data_fim_plan) && (
-                    <div className="text-xs text-gray-400 mt-1">
-                      Plan: {e.data_inicio_plan ? new Date(e.data_inicio_plan+'T12:00').toLocaleDateString('pt-BR') : '—'} → {e.data_fim_plan ? new Date(e.data_fim_plan+'T12:00').toLocaleDateString('pt-BR') : '—'}
-                    </div>
-                  )}
-                  <div className="mt-2 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-brand rounded-full" style={{ width: `${e.percentual_fisico}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-              <p className="text-gray-500 font-medium mb-1">Nenhuma etapa de cronograma cadastrada</p>
-              <p className="text-xs text-gray-400">Funcionalidade de gerenciamento de cronograma em desenvolvimento. Em breve sera possivel criar e acompanhar etapas diretamente por aqui.</p>
-            </div>
-          )}
-        </div>
-      )}
+      {activeTab === 'cronograma' && <CronogramaTab obraId={params.id} />}
 
       {/* ===== DIARIO ===== */}
-      {activeTab === 'diario' && (
-        <div>
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Diário da Obra</h2>
-          {diario && diario.length > 0 ? (
-            <div className="space-y-3">
-              {diario.map((d: any) => (
-                <div key={d.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">{new Date(d.data+'T12:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit' })}</span>
-                      {d.clima && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{d.clima}</span>}
-                    </div>
-                    <span className="text-xs text-gray-400">{d.efetivo_presente} presentes</span>
-                  </div>
-                  {d.servicos_executados && <p className="text-xs text-gray-600 mb-1">{d.servicos_executados}</p>}
-                  {d.ocorrencias && <p className="text-xs text-red-600">{d.ocorrencias}</p>}
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-              <p className="text-gray-500 font-medium mb-1">Nenhum registro no diario de obra</p>
-              <p className="text-xs text-gray-400">Funcionalidade de diario de obra em desenvolvimento. Em breve sera possivel registrar atividades diarias, clima e ocorrencias.</p>
-            </div>
-          )}
-        </div>
-      )}
+      {activeTab === 'diario' && <DiarioTab obraId={params.id} />}
 
       {/* ===== RNC ===== */}
-      {activeTab === 'rnc' && (
-        <div>
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Registros de Não Conformidade</h2>
-          {rncData && rncData.length > 0 ? (
-            <div className="space-y-3">
-              {rncData.map((r: any) => {
-                const impactColor: Record<string,string> = { critico:'bg-red-100 text-red-700', alto:'bg-orange-100 text-orange-700', medio:'bg-yellow-100 text-yellow-700', baixo:'bg-gray-100 text-gray-600' }
-                const statusColor: Record<string,string> = { aberta:'bg-blue-100 text-blue-700', em_tratamento:'bg-amber-100 text-amber-700', fechada:'bg-green-100 text-green-700' }
-                return (
-                  <div key={r.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold">RNC #{r.numero}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${impactColor[r.impacto] ?? 'bg-gray-100'}`}>{r.impacto?.toUpperCase()}</span>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${statusColor[r.status] ?? 'bg-gray-100'}`}>{fmtStatus(r.status)}</span>
-                      </div>
-                      <span className="text-xs text-gray-400">{r.responsavel_nome}</span>
-                    </div>
-                    <p className="text-xs text-gray-700">{r.descricao}</p>
-                    {r.acao_corretiva && <p className="text-xs text-gray-500 mt-1">Ação: {r.acao_corretiva}</p>}
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-              <p className="text-gray-500 font-medium mb-1">Nenhum registro de nao conformidade</p>
-              <p className="text-xs text-gray-400">Funcionalidade de RNC em desenvolvimento. Em breve sera possivel registrar e acompanhar nao conformidades da obra.</p>
-            </div>
-          )}
-        </div>
-      )}
+      {activeTab === 'rnc' && <RncTab obraId={params.id} />}
     </div>
   )
 }
