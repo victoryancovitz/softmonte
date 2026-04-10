@@ -159,6 +159,7 @@ PATH_MAP['/portal'] = { group: '', label: 'Portal do Funcionário' }
 PATH_MAP['/configuracoes'] = { group: '', label: 'Configurações' }
 PATH_MAP['/admin/usuarios'] = { group: '', label: 'Gerenciar Usuários' }
 PATH_MAP['/admin/usuarios/auditoria'] = { group: '', label: 'Auditoria' }
+PATH_MAP['/auditoria'] = { group: '', label: 'Auditoria do Sistema' }
 PATH_MAP['/admin/usuarios/convidar'] = { group: '', label: 'Convidar Usuário' }
 PATH_MAP['/manual'] = { group: '', label: 'Manual' }
 PATH_MAP['/importar'] = { group: '', label: 'Importar dados' }
@@ -356,7 +357,7 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
                           className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
                           <span className="text-gray-400">{ic.users}</span> Gerenciar usuários
                         </Link>
-                        <Link href="/admin/usuarios/auditoria" onClick={() => setAvatarOpen(false)}
+                        <Link href="/auditoria" onClick={() => setAvatarOpen(false)}
                           className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
                           <span className="text-gray-400">{ic.docs}</span> Auditoria do sistema
                         </Link>
