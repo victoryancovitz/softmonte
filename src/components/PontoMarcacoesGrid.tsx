@@ -328,6 +328,10 @@ export default function PontoMarcacoesGrid() {
     )
   }, [funcionarios, busca])
 
+  // Separar ativos e desligados
+  const ativos = useMemo(() => filtered.filter(f => !f.deleted_at), [filtered])
+  const desligados = useMemo(() => filtered.filter(f => !!f.deleted_at), [filtered])
+
   /**
    * Resolve a obra atribuida para (funcId, dateStr).
    * Prioridade:
@@ -644,7 +648,7 @@ export default function PontoMarcacoesGrid() {
         </div>
       )}
 
-      {!loading && filtered.length > 0 && (
+      {!loading && ativos.length > 0 && (
         <div className="overflow-x-auto">
           <table className="text-[10px] border-collapse min-w-full">
             <thead>
@@ -660,7 +664,7 @@ export default function PontoMarcacoesGrid() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(func => (
+              {ativos.map(func => (
                 <tr key={func.id} className="border-b border-gray-50 hover:bg-gray-50/30">
                   <td className="px-2 py-1 font-medium text-gray-800 sticky left-0 z-10 bg-white border-r border-gray-100">
                     <div className="truncate max-w-[170px]" title={func.nome}>{func.nome}</div>
@@ -695,6 +699,63 @@ export default function PontoMarcacoesGrid() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {!loading && desligados.length > 0 && (
+        <details className="mt-4">
+          <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+            Histórico — {desligados.length} funcionário(s) desligado(s) com marcações
+          </summary>
+          <div className="overflow-x-auto mt-2">
+            <table className="text-[10px] border-collapse min-w-full">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="text-left px-2 py-1.5 text-[10px] font-semibold text-gray-500 uppercase tracking-wide sticky left-0 bg-gray-50 z-10 min-w-[180px]">
+                    Funcionario
+                  </th>
+                  {days.map(d => (
+                    <th key={d} className={`px-0.5 py-1.5 text-center font-semibold min-w-[80px] ${isWeekend(ano, mes, d) ? 'text-gray-400 bg-gray-50' : 'text-gray-500'}`}>
+                      {d}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {desligados.map(func => (
+                  <tr key={func.id} className="border-b border-gray-50 hover:bg-gray-50/30 opacity-60">
+                    <td className="px-2 py-1 font-medium text-gray-800 sticky left-0 z-10 bg-white border-r border-gray-100">
+                      <div className="truncate max-w-[170px]" title={func.nome}>{func.nome}</div>
+                      {func.cargo && <div className="text-[9px] text-gray-400 truncate max-w-[170px]">{func.cargo}</div>}
+                    </td>
+                    {days.map(d => {
+                      const cell = getCellContent(func.id, d)
+                      const cellKey = `${func.id}|${d}`
+                      const isWk = isWeekend(ano, mes, d)
+                      const hasBatidas = (() => {
+                        const dateStr = `${ano}-${String(mes).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+                        const b = marcMap.get(func.id)?.get(dateStr)
+                        return b && b.length > 0
+                      })()
+                      return (
+                        <td key={d} className={`px-0.5 py-1 text-center whitespace-nowrap ${cell.cls} relative`} title={cell.title}>
+                          <div className="flex flex-col items-center">
+                            <span>{cell.display}</span>
+                            {(hasBatidas || (!isWk && cell.display !== '')) && (
+                              <div className="relative">
+                                {renderObraChip(func.id, d)}
+                                {renderObraDropdown(func.id, d)}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      )
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </details>
       )}
 
       {/* Legenda */}

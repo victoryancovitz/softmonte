@@ -275,11 +275,15 @@ export async function POST(req: NextRequest) {
   ])
   const pisList = Array.from(allPis)
   const pisToFuncId = new Map<string, string>()
+  const funcIdToDeletedAt = new Map<string, string>()
 
   if (pisList.length > 0) {
-    const { data } = await supabase.from('funcionarios').select('id, pis').in('pis', pisList)
+    const { data } = await supabase.from('funcionarios').select('id, pis, deleted_at').in('pis', pisList)
     ;(data || []).forEach((f: any) => {
-      if (f.pis) pisToFuncId.set(onlyDigits(f.pis), f.id)
+      if (f.pis) {
+        pisToFuncId.set(onlyDigits(f.pis), f.id)
+        if (f.deleted_at) funcIdToDeletedAt.set(f.id, f.deleted_at.split('T')[0])
+      }
     })
   }
 
@@ -298,12 +302,20 @@ export async function POST(req: NextRequest) {
   const rows: Row[] = []
   const semMatchSet = new Set<string>()
   let ignoradas = cartoesSemMarcacao // cartões sem nenhuma batida real (AFASTAM, FERIAS, etc)
+  let ignoradas_pos_desligamento = 0
 
   for (const m of allMarcacoes) {
     const funcId = (m.pis && pisToFuncId.get(m.pis)) || null
 
     if (!funcId) {
       semMatchSet.add(m.nome || m.pis || '(sem id)')
+      continue
+    }
+
+    // Ignorar marcações posteriores ao desligamento do funcionário
+    const deletedAt = funcIdToDeletedAt.get(funcId)
+    if (deletedAt && m.data > deletedAt) {
+      ignoradas_pos_desligamento++
       continue
     }
 
@@ -382,6 +394,7 @@ export async function POST(req: NextRequest) {
     novas: inseridas,
     status_dias: statusInseridos,
     ignoradas_sem_horario: ignoradas,
+    ignoradas_pos_desligamento,
     sem_match: semMatch.length,
     funcionarios_sem_match: semMatch.slice(0, 20),
     erros,
