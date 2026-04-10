@@ -11,6 +11,7 @@ import {
   UserMinus, CheckCircle2, Clock, ChevronDown, ChevronRight,
   Plus, CalendarCheck, FileText,
 } from 'lucide-react'
+import { formatTipoDesligamento } from '@/lib/formatters'
 
 const ETAPAS = [
   { key: 'etapa_aviso_previo', label: 'Aviso Prévio' },
@@ -37,10 +38,6 @@ const TIPO_LABELS: Record<string, { label: string; cls: string }> = {
   falecimento: { label: 'Falecimento', cls: 'bg-gray-200 text-gray-700' },
 }
 
-/** Fallback: converte snake_case para Title Case */
-function formatSnake(s: string): string {
-  return s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
 
 function formatDate(d: string | null): string {
   if (!d) return '—'
@@ -255,7 +252,7 @@ export default function DesligamentosPage() {
             const isOpen = expanded.has(desl.id)
             const progress = getProgress(desl)
             const allDone = progress.done === progress.total
-            const tipoInfo = TIPO_LABELS[desl.tipo_desligamento] ?? { label: formatSnake(desl.tipo_desligamento || ''), cls: 'bg-gray-100 text-gray-600' }
+            const tipoInfo = TIPO_LABELS[desl.tipo_desligamento] ?? { label: formatTipoDesligamento(desl.tipo_desligamento || ''), cls: 'bg-gray-100 text-gray-600' }
 
             return (
               <div key={desl.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -393,7 +390,7 @@ export default function DesligamentosPage() {
               </thead>
               <tbody>
                 {concluidos.map(desl => {
-                  const tipoInfo = TIPO_LABELS[desl.tipo_desligamento] ?? { label: formatSnake(desl.tipo_desligamento || ''), cls: 'bg-gray-100 text-gray-600' }
+                  const tipoInfo = TIPO_LABELS[desl.tipo_desligamento] ?? { label: formatTipoDesligamento(desl.tipo_desligamento || ''), cls: 'bg-gray-100 text-gray-600' }
                   return (
                     <tr key={desl.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                       <td className="px-4 py-3">

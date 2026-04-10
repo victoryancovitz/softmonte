@@ -28,6 +28,11 @@ function BMCard({ bm }: { bm: any }) {
         </div>
       </Link>
       <div className="flex items-center gap-3 flex-shrink-0">
+        {bm.nfe_numero ? (
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-green-100 text-green-700">NF Emitida</span>
+        ) : bm.status === 'aprovado' && !bm.nfe_numero ? (
+          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Aguard. NF</span>
+        ) : null}
         <BMStatusButton bmId={bm.id} currentStatus={bm.status} />
         <Link href={`/boletins/${bm.id}`}>
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-gray-400"><path d="M6 12l4-4-4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -118,6 +123,11 @@ export default async function BoletinsPage() {
                     </div>
                   </Link>
                   <div className="flex items-center gap-3 flex-shrink-0">
+                    {bm.nfe_numero ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-green-100 text-green-700">NF Emitida</span>
+                    ) : bm.status === 'aprovado' && !bm.nfe_numero ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Aguard. NF</span>
+                    ) : null}
                     <BMStatusButton bmId={bm.id} currentStatus={bm.status} />
                     <Link href={`/boletins/${bm.id}`}>
                       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" className="text-gray-400"><path d="M6 12l4-4-4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>

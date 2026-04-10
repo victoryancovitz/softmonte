@@ -1,14 +1,15 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import ConfirmButton from '@/components/ConfirmButton'
 import BackButton from '@/components/BackButton'
 
 export default function MovimentarEstoquePage({ params }: { params: { id: string } }) {
+  const searchParams = useSearchParams()
   const [item, setItem] = useState<any>(null)
-  const [form, setForm] = useState({ tipo: 'saida', quantidade: '', motivo: '', observacao: '' })
+  const [form, setForm] = useState({ tipo: searchParams.get('tipo') || 'saida', quantidade: '', motivo: '', observacao: '' })
   const [obras, setObras] = useState<any[]>([])
   const [obraId, setObraId] = useState('')
   const [loading, setLoading] = useState(false)

@@ -9,6 +9,7 @@ import DocsAlocadosSection from './DocsAlocadosSection'
 import CronogramaTab from './CronogramaTab'
 import DiarioTab from './DiarioTab'
 import RncTab from './RncTab'
+import { formatStatus } from '@/lib/formatters'
 
 const TIPOS_DOC_OBRA = [
   { value: 'contrato', label: 'Contrato' },
@@ -35,16 +36,6 @@ const STATUS_BADGE: Record<string, string> = {
   atrasado: 'bg-red-100 text-red-700',
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  ativo: 'Ativo', aberto: 'Aberto', fechado: 'Fechado', enviado: 'Enviado',
-  aprovado: 'Aprovado', pago: 'Pago', pendente: 'Pendente', em_aberto: 'Em Aberto',
-  cancelado: 'Cancelado', concluido: 'Concluído', em_andamento: 'Em Andamento',
-  pausado: 'Pausado', provisionado: 'Provisão', atrasado: 'Atrasado',
-}
-
-function fmtStatus(s: string): string {
-  return STATUS_LABEL[s] ?? s.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
-}
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -187,7 +178,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
           <p className="text-gray-500 mt-1">{obra.cliente} · {obra.local}</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${STATUS_BADGE[obra.status] ?? 'bg-gray-100 text-gray-600'}`}>{fmtStatus(obra.status)}</span>
+          <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${STATUS_BADGE[obra.status] ?? 'bg-gray-100 text-gray-600'}`}>{formatStatus(obra.status)}</span>
           <Link href={`/obras/${obra.id}/editar`} className="px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">Editar</Link>
           <ObraStatusBtns obraId={obra.id} status={obra.status} role={role} />
         </div>
@@ -245,7 +236,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               </div>
               <div>
                 <span className="text-gray-500">Status:</span>
-                <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[obra.status] ?? 'bg-gray-100 text-gray-600'}`}>{fmtStatus(obra.status)}</span>
+                <span className={`ml-2 text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[obra.status] ?? 'bg-gray-100 text-gray-600'}`}>{formatStatus(obra.status)}</span>
               </div>
               <div>
                 <span className="text-gray-500">Início:</span>
@@ -257,6 +248,17 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               </div>
             </div>
           </div>
+
+          {/* Banner: composição vazia em obra ativa */}
+          {(!composicao || composicao.length === 0) && obra.status === 'ativo' && (
+            <div className="mt-5 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+              <span className="text-amber-500 text-lg leading-none">⚠️</span>
+              <div className="text-sm text-amber-800">
+                Esta obra não possui composição contratual definida. Sem ela, o Forecast e o pré-preenchimento do BM não funcionam.
+                <Link href={`/obras/${obra.id}/editar`} className="ml-2 text-amber-700 font-semibold underline hover:text-amber-900">Definir Composição →</Link>
+              </div>
+            </div>
+          )}
 
           {/* Contrato HH */}
           <div className="mt-5 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
@@ -493,7 +495,14 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
                       {new Date(b.data_inicio + 'T12:00').toLocaleDateString('pt-BR')} — {new Date(b.data_fim + 'T12:00').toLocaleDateString('pt-BR')}
                     </div>
                   </div>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[b.status] ?? 'bg-gray-100 text-gray-600'}`}>{fmtStatus(b.status)}</span>
+                  <div className="flex items-center gap-2">
+                    {b.nfe_numero ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-green-100 text-green-700">NF Emitida</span>
+                    ) : b.status === 'aprovado' && !b.nfe_numero ? (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Aguard. NF</span>
+                    ) : null}
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[b.status] ?? 'bg-gray-100 text-gray-600'}`}>{formatStatus(b.status)}</span>
+                  </div>
                 </Link>
               ))}
             </div>
@@ -545,7 +554,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
                     <span className={`text-sm font-semibold ${l.tipo === 'receita' ? 'text-green-700' : 'text-red-700'}`}>
                       {l.tipo === 'receita' ? '+' : '-'}{fmt(Number(l.valor))}
                     </span>
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[l.status] ?? 'bg-gray-100 text-gray-600'}`}>{fmtStatus(l.status)}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_BADGE[l.status] ?? 'bg-gray-100 text-gray-600'}`}>{formatStatus(l.status)}</span>
                   </div>
                 </div>
               ))}
