@@ -338,7 +338,11 @@ export default function FuncionariosView({
                   </div>
                   <div className="font-semibold text-sm text-gray-900 group-hover:text-brand transition-colors">{f.nome_guerra ?? f.nome}</div>
                   {f.nome_guerra && <div className="text-[10px] text-gray-400 truncate">{f.nome}</div>}
-                  <div className="text-xs text-gray-500 mt-0.5">{f.cargo}{f.id_ponto ? ` · ID ${f.id_ponto}` : f.matricula ? ` · Mat ${f.matricula}` : ''}</div>
+                  <div className="text-xs text-gray-500 mt-0.5">
+                    {f.cargo}
+                    {f.id_ponto ? ` · ID ${f.id_ponto}` : f.matricula ? ` · Mat ${f.matricula}` : ''}
+                    {!f.id_ponto && !desligado && <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 font-semibold" title="Sem marcações importadas do Secullum">Sem ID Ponto</span>}
+                  </div>
                   {desligado && (
                     <div className="mt-2 pt-2 border-t border-gray-100 text-[10px] text-red-600 font-medium">
                       Desligado em {new Date(f.deleted_at).toLocaleDateString('pt-BR')}
@@ -407,7 +411,15 @@ export default function FuncionariosView({
                           />
                         )}
                       </td>
-                      <td className="px-4 py-3 text-gray-400 text-xs font-mono">{f.id_ponto ?? '—'}</td>
+                      <td className="px-4 py-3 text-xs font-mono">
+                        {f.id_ponto ? (
+                          <span className="text-gray-400">{f.id_ponto}</span>
+                        ) : !desligado ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 font-semibold" title="Sem marcações importadas do Secullum">Sem ID</span>
+                        ) : (
+                          <span className="text-gray-300">—</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 font-semibold">
                         <Link href={`/funcionarios/${f.id}`} className="hover:text-brand transition-colors">
                           {f.nome_guerra ?? f.nome}
