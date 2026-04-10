@@ -19,6 +19,7 @@ const STATUS_COLOR = (dias: number | null) => {
 
 export default function DocumentosTable({ docs, role }: { docs: any[]; role: string }) {
   const [busca, setBusca] = useState('')
+  const [filtroVencimento, setFiltroVencimento] = useState('')
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<SortDir>(null)
 
@@ -42,13 +43,37 @@ export default function DocumentosTable({ docs, role }: { docs: any[]; role: str
         d.funcionarios?.cargo?.toLowerCase().includes(q)
       )
     }
+    if (filtroVencimento === 'vencido') {
+      result = result.filter(d => d.dias !== null && d.dias < 0)
+    } else if (filtroVencimento === '30d') {
+      result = result.filter(d => d.dias !== null && d.dias >= 0 && d.dias <= 30)
+    } else if (filtroVencimento === '60d') {
+      result = result.filter(d => d.dias !== null && d.dias >= 0 && d.dias <= 60)
+    } else if (filtroVencimento === 'sem') {
+      result = result.filter(d => d.dias === null)
+    }
     return applySort(result, sortField, sortDir, ['dias'])
-  }, [docs, busca, sortField, sortDir])
+  }, [docs, busca, filtroVencimento, sortField, sortDir])
 
   return (
     <>
-      <div className="mb-4">
-        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar documento..." />
+      <div className="flex flex-wrap gap-2 items-center mb-4">
+        <div className="flex-1 min-w-[200px]">
+          <SearchInput value={busca} onChange={setBusca} placeholder="Buscar documento..." />
+        </div>
+        <select value={filtroVencimento} onChange={e => setFiltroVencimento(e.target.value)}
+          className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+          <option value="">Todos os vencimentos</option>
+          <option value="vencido">Vencidos</option>
+          <option value="30d">Vence em 30 dias</option>
+          <option value="60d">Vence em 60 dias</option>
+          <option value="sem">Sem vencimento</option>
+        </select>
+        {(busca || filtroVencimento) && (
+          <button onClick={() => { setBusca(''); setFiltroVencimento('') }}
+            className="text-xs text-red-600 hover:underline font-medium">Limpar filtros</button>
+        )}
+        <span className="text-xs text-gray-400">{filtered.length} resultado(s)</span>
       </div>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
         <table className="w-full text-sm">

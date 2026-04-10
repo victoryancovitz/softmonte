@@ -23,6 +23,22 @@ export default async function FuncionariosPage() {
 
   const cargosUnicos = Array.from(new Set(funcs.map(f => f.cargo).filter(Boolean))).sort()
 
+  // Busca alocações ativas pra filtro por obra
+  const { data: alocAtivas } = await supabase
+    .from('alocacoes')
+    .select('funcionario_id, obra_id, obras(id, nome)')
+    .eq('ativo', true)
+
+  const obraAtualMap: Record<string, { id: string; nome: string }> = {}
+  const obrasSet = new Map<string, string>()
+  ;(alocAtivas ?? []).forEach((a: any) => {
+    if (a.funcionario_id && a.obras?.id) {
+      obraAtualMap[a.funcionario_id] = { id: a.obras.id, nome: a.obras.nome }
+      obrasSet.set(a.obras.id, a.obras.nome)
+    }
+  })
+  const obrasUnicas = Array.from(obrasSet.entries()).sort((a, b) => a[1].localeCompare(b[1]))
+
   const { data: prazosLegais } = await supabase.from('vw_prazos_legais').select('funcionario_id,alerta_tipo').limit(1000)
   const alertaMap: Record<string, string> = {}
   ;(prazosLegais ?? []).forEach((p: any) => { if (p.alerta_tipo && p.alerta_tipo !== 'ok') alertaMap[p.funcionario_id] = p.alerta_tipo })
@@ -45,7 +61,7 @@ export default async function FuncionariosPage() {
         </div>
       )}
 
-      <FuncionariosView funcs={funcs} hoje={hojeStr} alertas={alertaMap} cargosUnicos={cargosUnicos} />
+      <FuncionariosView funcs={funcs} hoje={hojeStr} alertas={alertaMap} cargosUnicos={cargosUnicos} obraAtualMap={obraAtualMap} obrasUnicas={obrasUnicas} />
     </div>
   )
 }

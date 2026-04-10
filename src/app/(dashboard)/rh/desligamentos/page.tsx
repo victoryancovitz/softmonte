@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
@@ -66,6 +66,10 @@ export default function DesligamentosPage() {
   const [loading, setLoading] = useState(true)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [busca, setBusca] = useState('')
+  const [filtroTipo, setFiltroTipo] = useState('')
+  const [filtroStatus, setFiltroStatus] = useState('')
+  const [filtroDe, setFiltroDe] = useState('')
+  const [filtroAte, setFiltroAte] = useState('')
 
   useEffect(() => { loadData() }, [])
 
@@ -189,7 +193,26 @@ export default function DesligamentosPage() {
     loadData()
   }
 
-  const filtered = desligamentos.filter(d => !busca || d.funcionarios?.nome?.toLowerCase().includes(busca.toLowerCase()))
+  const tiposUnicos = useMemo(() => {
+    const set = new Set<string>()
+    desligamentos.forEach(d => { if (d.tipo_desligamento) set.add(d.tipo_desligamento) })
+    return Array.from(set).sort()
+  }, [desligamentos])
+
+  const filtered = desligamentos.filter(d => {
+    if (busca && !d.funcionarios?.nome?.toLowerCase().includes(busca.toLowerCase())) return false
+    if (filtroTipo && d.tipo_desligamento !== filtroTipo) return false
+    if (filtroStatus && d.status !== filtroStatus) return false
+    if (filtroDe) {
+      const dataSaida = d.data_real_saida ?? d.data_prevista_saida ?? d.created_at?.slice(0, 10)
+      if (!dataSaida || dataSaida < filtroDe) return false
+    }
+    if (filtroAte) {
+      const dataSaida = d.data_real_saida ?? d.data_prevista_saida ?? d.created_at?.slice(0, 10)
+      if (!dataSaida || dataSaida > filtroAte) return false
+    }
+    return true
+  })
   const emAndamento = filtered.filter(d => d.status === 'em_andamento')
   const concluidos = filtered.filter(d => d.status === 'concluido')
 
@@ -228,9 +251,40 @@ export default function DesligamentosPage() {
         </div>
       </div>
 
-      {/* Search */}
-      <div className="mb-4">
-        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar desligamento..." />
+      {/* Filtros */}
+      <div className="mb-4 space-y-2">
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex-1 min-w-[200px]">
+            <SearchInput value={busca} onChange={setBusca} placeholder="Buscar desligamento..." />
+          </div>
+          <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+            <option value="">Todos os tipos</option>
+            {tiposUnicos.map(t => {
+              const info = TIPO_LABELS[t]
+              return <option key={t} value={t}>{info?.label ?? formatTipoDesligamento(t)}</option>
+            })}
+          </select>
+          <select value={filtroStatus} onChange={e => setFiltroStatus(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+            <option value="">Todos os status</option>
+            <option value="em_andamento">Em Andamento</option>
+            <option value="concluido">Concluido</option>
+          </select>
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          <label className="text-xs text-gray-500">Periodo de:</label>
+          <input type="date" value={filtroDe} onChange={e => setFiltroDe(e.target.value)}
+            className="px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand" />
+          <label className="text-xs text-gray-500">ate:</label>
+          <input type="date" value={filtroAte} onChange={e => setFiltroAte(e.target.value)}
+            className="px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand" />
+          {(busca || filtroTipo || filtroStatus || filtroDe || filtroAte) && (
+            <button onClick={() => { setBusca(''); setFiltroTipo(''); setFiltroStatus(''); setFiltroDe(''); setFiltroAte('') }}
+              className="ml-auto text-xs text-red-600 hover:underline font-medium">Limpar filtros</button>
+          )}
+          <span className="text-xs text-gray-400">{filtered.length} resultado(s)</span>
+        </div>
       </div>
 
       {/* Cards */}

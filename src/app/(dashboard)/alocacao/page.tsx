@@ -7,12 +7,15 @@ export default async function AlocacaoPage() {
   const supabase = createClient()
   const { data: alocacoes } = await supabase
     .from('alocacoes')
-    .select('*, funcionarios(nome, cargo, matricula), obras(nome, cliente)')
+    .select('*, obras(id, nome, status, deleted_at, cliente), funcionarios(id, nome, cargo, status, deleted_at, matricula)')
+    .eq('ativo', true)
     .order('created_at', { ascending: false })
 
   const role = await getRole()
-  const ativas = alocacoes?.filter((a: any) => a.ativo) ?? []
-  const encerradas = alocacoes?.filter((a: any) => !a.ativo) ?? []
+  // Filtra no código: obras e funcionários não excluídos
+  const ativas = (alocacoes ?? []).filter((a: any) =>
+    a.obras?.deleted_at == null && a.funcionarios?.deleted_at == null
+  )
 
   // Sync: ensure all actively allocated workers have status 'alocado'
   const funcIdsAlocados = ativas.map((a: any) => a.funcionario_id).filter(Boolean)
@@ -30,7 +33,7 @@ export default async function AlocacaoPage() {
         <Link href="/alocacao/nova" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-dark">+ Nova alocação</Link>
       </div>
 
-      <AlocacaoView ativas={ativas} encerradas={encerradas} role={role} />
+      <AlocacaoView ativas={ativas} role={role} />
     </div>
   )
 }

@@ -122,20 +122,115 @@ export default function NovoBMPage() {
 
     setPreviewing(true)
 
-    // Fetch efetivo_diario for the obra + period (inclui horas reais pra modelo hora efetiva)
-    const { data: efetivo, error: efErr } = await supabase
-      .from('efetivo_diario')
-      .select('funcionario_id, data, tipo_dia, horas_normais, horas_extras_50, horas_extras_100, funcionarios(id, nome, cargo)')
-      .eq('obra_id', form.obra_id)
-      .gte('data', form.data_inicio)
-      .lte('data', form.data_fim)
+    const obraSel = obras.find(o => o.id === form.obra_id)
+    const modeloCobranca = obraSel?.modelo_cobranca || 'hh_diaria'
+    const diaUnico = obraSel?.bm_dia_unico === true
+    const escalaAlmoco = Number(obraSel?.escala_almoco_minutos ?? 60)
+    const cargaDia = Number(obraSel?.carga_horaria_dia ?? 8)
 
-    if (efErr) { setError(efErr.message); setPreviewing(false); return }
-    if (!efetivo || efetivo.length === 0) {
-      setError('Nenhum registro encontrado em efetivo_diario para esta obra no periodo. Importe e calcule o ponto primeiro (Ponto > Importar Secullum > Calcular Efetivo).')
+    // --- PASSO 1: Buscar alocações no período (inclui desligados que trabalharam) ---
+    const { data: alocRaw, error: alocErr } = await supabase
+      .from('alocacoes')
+      .select('id, funcionario_id, data_inicio, data_fim, cargo_na_obra, funcionarios(id, nome, cargo, admissao, deleted_at, funcao_id)')
+      .eq('obra_id', form.obra_id)
+      .lte('data_inicio', form.data_fim)
+      .or(`data_fim.is.null,data_fim.gte.${form.data_inicio}`)
+
+    if (alocErr) { setError(alocErr.message); setPreviewing(false); return }
+
+    // Filtra: inclui desligados que trabalharam no período
+    const alocacoes = (alocRaw ?? []).filter((a: any) => {
+      const func = a.funcionarios
+      if (!func) return false
+      return func.deleted_at == null || func.deleted_at >= form.data_inicio
+    })
+
+    if (alocacoes.length === 0) {
+      setError('Nenhum funcionario alocado nesta obra no periodo selecionado.')
       setPreview([])
       setPreviewing(false)
       return
+    }
+
+    // Deduplica funcionários (pode ter múltiplas alocações)
+    const funcMap = new Map<string, { func: any; periodoInicio: string; periodoFim: string; cargo: string }>()
+    for (const a of alocacoes as any[]) {
+      const f = a.funcionarios
+      if (!f) continue
+      const pInicio = a.data_inicio > form.data_inicio ? a.data_inicio : form.data_inicio
+      const alocFim = a.data_fim ?? form.data_fim
+      const funcFim = f.deleted_at ? f.deleted_at.split('T')[0] : form.data_fim
+      const pFim = [alocFim, funcFim, form.data_fim].sort()[0]
+      const existing = funcMap.get(f.id)
+      if (!existing || pInicio < existing.periodoInicio) {
+        funcMap.set(f.id, { func: f, periodoInicio: pInicio, periodoFim: pFim, cargo: a.cargo_na_obra || f.cargo || 'OUTROS' })
+      } else {
+        // Extend period
+        if (pFim > existing.periodoFim) existing.periodoFim = pFim
+      }
+    }
+
+    const funcIds = Array.from(funcMap.keys())
+
+    // --- PASSO 2: Buscar marcações de ponto paginadas ---
+    let allMarc: any[] = []
+    {
+      let offset = 0
+      const PAGE = 1000
+      while (true) {
+        const { data: page } = await supabase
+          .from('ponto_marcacoes')
+          .select('funcionario_id, data, hora')
+          .in('funcionario_id', funcIds)
+          .gte('data', form.data_inicio)
+          .lte('data', form.data_fim)
+          .order('hora')
+          .range(offset, offset + PAGE - 1)
+        if (!page || page.length === 0) break
+        allMarc = allMarc.concat(page)
+        if (page.length < PAGE) break
+        offset += PAGE
+      }
+    }
+
+    // Aviso: alocados mas sem ponto
+    let avisoSemPonto = false
+    if (allMarc.length === 0) {
+      avisoSemPonto = true
+    }
+
+    // Agrupa batidas por func+dia e calcula horas: (última - primeira) - almoço
+    const marcPorFuncDia = new Map<string, number>()
+    const marcGrouped = new Map<string, string[]>()
+    for (const m of allMarc) {
+      const key = `${m.funcionario_id}|${m.data}`
+      if (!marcGrouped.has(key)) marcGrouped.set(key, [])
+      marcGrouped.get(key)!.push(String(m.hora).slice(0, 5))
+    }
+    marcGrouped.forEach((horas, key) => {
+      if (horas.length < 2) return
+      const sorted = [...horas].sort()
+      const first = sorted[0].split(':').map(Number)
+      const last = sorted[sorted.length - 1].split(':').map(Number)
+      const entradaMin = first[0] * 60 + first[1]
+      const saidaMin = last[0] * 60 + last[1]
+      let intervalo = escalaAlmoco
+      if (sorted.length >= 4) {
+        const s2 = sorted[1].split(':').map(Number)
+        const e3 = sorted[2].split(':').map(Number)
+        intervalo = (e3[0] * 60 + e3[1]) - (s2[0] * 60 + s2[1])
+      } else if (saidaMin - entradaMin <= 360) {
+        intervalo = 0
+      }
+      const totalMin = Math.max(0, (saidaMin - entradaMin) - intervalo)
+      marcPorFuncDia.set(key, Math.round((totalMin / 60) * 100) / 100)
+    })
+
+    // Conjunto de datas com marcação por funcionário
+    const marcDates = new Map<string, Set<string>>()
+    for (const m of allMarc) {
+      if (!marcDates.has(m.funcionario_id)) marcDates.set(m.funcionario_id, new Set())
+      marcDates.get(m.funcionario_id)!.add(m.data)
     }
 
     // Fetch contrato_composicao for this obra
@@ -150,107 +245,57 @@ export default function NovoBMPage() {
       compMap[c.funcao_nome?.toUpperCase()] = c
     })
 
-    const obra = obras.find(o => o.id === form.obra_id)
-    const diaUnico = obra?.bm_dia_unico === true
+    // --- PASSO 3: Calcular horas por funcionário com base nas marcações ---
+    // Classifica dias: dom/feriado = HE100, sábado = HE50 (excedente), dia útil = normal + HE50
+    const perFunc: Record<string, { func: any; cargo: string; tipos: Record<string, Set<string>>; horas: { normais: number; he50: number; he100: number } }> = {}
 
-    // Identifica o modelo de cobrança da obra
-    const obraSel = obras.find(o => o.id === form.obra_id)
-    const modeloCobranca = obraSel?.modelo_cobranca || 'hh_diaria'
+    Array.from(funcMap.entries()).forEach(([fid, info]) => {
+      const dates = marcDates.get(fid)
+      if (!dates || dates.size === 0) return
 
-    // Para HH-Hora Efetiva: busca marcações BRUTAS pra calcular horas reais
-    // (não depende de calcular-efetivo ter rodado)
-    type MarcDia = { funcionario_id: string; data: string; horas: string[] }
-    const marcPorFuncDia = new Map<string, number>() // "funcId|data" -> horas trabalhadas
-    if (modeloCobranca === 'hh_hora_efetiva') {
-      const funcIds = Array.from(new Set((efetivo as any[]).map((e: any) => e.funcionarios?.id).filter(Boolean)))
-      if (funcIds.length > 0) {
-        // Busca paginada (Supabase limita a 1000 por default)
-        let allMarc: any[] = []
-        let offset = 0
-        const PAGE = 1000
-        while (true) {
-          const { data: page } = await supabase
-            .from('ponto_marcacoes')
-            .select('funcionario_id, data, hora')
-            .in('funcionario_id', funcIds)
-            .gte('data', form.data_inicio)
-            .lte('data', form.data_fim)
-            .order('hora')
-            .range(offset, offset + PAGE - 1)
-          if (!page || page.length === 0) break
-          allMarc = allMarc.concat(page)
-          if (page.length < PAGE) break
-          offset += PAGE
-        }
-        const marcData = allMarc
-
-        // Agrupa batidas por func+dia e calcula horas: (última - primeira) - almoço
-        const escalaAlmoco = Number(obraSel?.escala_almoco_minutos ?? 60)
-        const grouped = new Map<string, string[]>() // "funcId|data" -> [horas]
-        for (const m of (marcData ?? []) as any[]) {
-          const key = `${m.funcionario_id}|${m.data}`
-          if (!grouped.has(key)) grouped.set(key, [])
-          grouped.get(key)!.push(String(m.hora).slice(0, 5))
-        }
-        grouped.forEach((horas, key) => {
-          if (horas.length < 2) return
-          const sorted = [...horas].sort()
-          const first = sorted[0].split(':').map(Number)
-          const last = sorted[sorted.length - 1].split(':').map(Number)
-          const entradaMin = first[0] * 60 + first[1]
-          const saidaMin = last[0] * 60 + last[1]
-          let intervalo = escalaAlmoco
-          if (sorted.length >= 4) {
-            // Usa batidas 2 e 3 como intervalo real
-            const s2 = sorted[1].split(':').map(Number)
-            const e3 = sorted[2].split(':').map(Number)
-            intervalo = (e3[0] * 60 + e3[1]) - (s2[0] * 60 + s2[1])
-          } else if (saidaMin - entradaMin <= 360) {
-            intervalo = 0 // jornada <= 6h, sem almoço
-          }
-          const totalMin = Math.max(0, (saidaMin - entradaMin) - intervalo)
-          marcPorFuncDia.set(key, Math.round((totalMin / 60) * 100) / 100)
-        })
+      perFunc[fid] = {
+        func: info.func,
+        cargo: info.cargo,
+        tipos: { util: new Set(), sabado: new Set(), domingo_feriado: new Set() },
+        horas: { normais: 0, he50: 0, he100: 0 },
       }
-    }
 
-    // Step 1: aggregate by funcionario first (so we can list per function)
-    const perFunc: Record<string, { func: any; tipos: Record<string, Set<string>>; horas: { normais: number; he50: number; he100: number } }> = {}
-    efetivo.forEach((e: any) => {
-      const f = e.funcionarios
-      if (!f) return
-      if (!perFunc[f.id]) {
-        perFunc[f.id] = { func: f, tipos: { util: new Set(), sabado: new Set(), domingo_feriado: new Set() }, horas: { normais: 0, he50: 0, he100: 0 } }
-      }
-      ;(perFunc[f.id].tipos[e.tipo_dia] ?? perFunc[f.id].tipos.util).add(e.data)
+      Array.from(dates).forEach(dateStr => {
+        // Verifica se a data está dentro do período efetivo do funcionário
+        if (dateStr < info.periodoInicio || dateStr > info.periodoFim) return
 
-      // Acumula horas: se efetivo_diario já tem horas calculadas, usa. Senão usa marcações brutas.
-      const horasEfetivo = Number(e.horas_normais ?? 0)
-      const he50Efetivo = Number(e.horas_extras_50 ?? 0)
-      const he100Efetivo = Number(e.horas_extras_100 ?? 0)
+        const dt = new Date(dateStr + 'T12:00:00')
+        const dow = dt.getDay()
+        const isDom = dow === 0
+        const isSab = dow === 6
 
-      if (horasEfetivo > 0 || he50Efetivo > 0 || he100Efetivo > 0) {
-        perFunc[f.id].horas.normais += horasEfetivo
-        perFunc[f.id].horas.he50 += he50Efetivo
-        perFunc[f.id].horas.he100 += he100Efetivo
-      } else if (modeloCobranca === 'hh_hora_efetiva') {
-        // Fallback: calcula das marcações brutas
-        const key = `${f.id}|${e.data}`
+        const key = `${fid}|${dateStr}`
         const horasCalc = marcPorFuncDia.get(key) ?? 0
-        const carga = Number(obraSel?.carga_horaria_dia ?? 8)
-        if (e.tipo_dia === 'domingo_feriado') {
-          perFunc[f.id].horas.he100 += horasCalc
-        } else if (e.tipo_dia === 'sabado') {
-          const normais = Math.min(horasCalc, carga)
-          perFunc[f.id].horas.normais += normais
-          perFunc[f.id].horas.he50 += Math.max(0, horasCalc - carga)
+
+        if (isDom) {
+          perFunc[fid].tipos.domingo_feriado.add(dateStr)
+          perFunc[fid].horas.he100 += horasCalc
+        } else if (isSab) {
+          perFunc[fid].tipos.sabado.add(dateStr)
+          const normais = Math.min(horasCalc, cargaDia)
+          perFunc[fid].horas.normais += normais
+          perFunc[fid].horas.he50 += Math.max(0, horasCalc - cargaDia)
         } else {
-          const normais = Math.min(horasCalc, carga)
-          perFunc[f.id].horas.normais += normais
-          perFunc[f.id].horas.he50 += Math.max(0, horasCalc - carga)
+          perFunc[fid].tipos.util.add(dateStr)
+          const normais = Math.min(horasCalc, cargaDia)
+          perFunc[fid].horas.normais += normais
+          perFunc[fid].horas.he50 += Math.max(0, horasCalc - cargaDia)
         }
-      }
+      })
     })
+
+    // Se havia alocações mas nenhum funcionário teve marcações processáveis
+    if (Object.keys(perFunc).length === 0 && avisoSemPonto) {
+      setError('Funcionarios alocados nesta obra no periodo, mas sem marcacoes de ponto registradas.')
+      setPreview([])
+      setPreviewing(false)
+      return
+    }
 
     // Step 2: group funcionarios by função (cargo)
     const perFuncao: Record<string, {
@@ -260,7 +305,7 @@ export default function NovoBMPage() {
     }> = {}
 
     Object.values(perFunc).forEach(g => {
-      const cargo = g.func.cargo ?? 'OUTROS'
+      const cargo = g.cargo ?? g.func.cargo ?? 'OUTROS'
       const cargoKey = cargo.toUpperCase()
 
       let dias_normais: number, dias_he70: number, dias_he100: number
@@ -320,6 +365,11 @@ export default function NovoBMPage() {
         sem_contrato: !comp,
       }
     }).sort((a, b) => a.funcao_nome.localeCompare(b.funcao_nome))
+
+    // Adiciona flag de aviso se havia alocações mas poucas marcações
+    if (avisoSemPonto && rows.length > 0) {
+      setError('Funcionarios alocados mas com poucas ou nenhuma marcacao de ponto no periodo. Os valores podem estar incompletos.')
+    }
 
     setPreview(rows)
     setPreviewing(false)
@@ -520,10 +570,10 @@ export default function NovoBMPage() {
         preview.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-dashed border-gray-300 p-10 text-center">
             <div className="text-gray-400 text-3xl mb-3">📋</div>
-            <p className="text-gray-600 font-medium text-sm mb-1">Nenhum registro de efetivo diario encontrado para esta obra no periodo selecionado.</p>
-            <p className="text-gray-400 text-xs mb-4">Importe e calcule o ponto primeiro: Ponto &gt; Importar Secullum &gt; Calcular Efetivo.</p>
-            <Link href="/ponto" className="text-brand text-sm font-medium hover:underline">
-              Ir para Ponto para importar e calcular &rarr;
+            <p className="text-gray-600 font-medium text-sm mb-1">{error || 'Nenhum funcionario alocado nesta obra no periodo selecionado.'}</p>
+            <p className="text-gray-400 text-xs mb-4">Verifique se existem alocacoes ativas e marcacoes de ponto no periodo.</p>
+            <Link href="/alocacao" className="text-brand text-sm font-medium hover:underline">
+              Verificar alocacoes &rarr;
             </Link>
           </div>
         ) : (

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import SortableHeader, { applySort, type SortDir } from '@/components/SortableHeader'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { TIPO_VINCULO } from '@/lib/formatters'
 
 const STATUS_COLOR: Record<string, string> = {
   disponivel: 'bg-green-100 text-green-700',
@@ -27,11 +28,15 @@ export default function FuncionariosView({
   hoje,
   alertas = {},
   cargosUnicos = [],
+  obraAtualMap = {},
+  obrasUnicas = [],
 }: {
   funcs: any[]
   hoje: string
   alertas?: Record<string, string>
   cargosUnicos?: string[]
+  obraAtualMap?: Record<string, { id: string; nome: string }>
+  obrasUnicas?: [string, string][]
 }) {
   const router = useRouter()
   const sp = useSearchParams()
@@ -51,6 +56,8 @@ export default function FuncionariosView({
   const [cargo, setCargo] = useState(sp.get('cargo') ?? '')
   const [admDe, setAdmDe] = useState(sp.get('adm_de') ?? '')
   const [admAte, setAdmAte] = useState(sp.get('adm_ate') ?? '')
+  const [obraAtual, setObraAtual] = useState(sp.get('obra') ?? '')
+  const [tipoVinculo, setTipoVinculo] = useState(sp.get('vinculo') ?? '')
   const [sortField, setSortField] = useState<string | null>(sp.get('sort') ?? 'nome')
   const [sortDir, setSortDir] = useState<SortDir>((sp.get('dir') as SortDir) ?? 'asc')
 
@@ -69,6 +76,8 @@ export default function FuncionariosView({
         if (o.cargo) setCargo(o.cargo)
         if (o.admDe) setAdmDe(o.admDe)
         if (o.admAte) setAdmAte(o.admAte)
+        if (o.obraAtual) setObraAtual(o.obraAtual)
+        if (o.tipoVinculo) setTipoVinculo(o.tipoVinculo)
         if (o.sortField) setSortField(o.sortField)
         if (o.sortDir) setSortDir(o.sortDir)
       } catch {}
@@ -94,14 +103,16 @@ export default function FuncionariosView({
     if (cargo) params.set('cargo', cargo)
     if (admDe) params.set('adm_de', admDe)
     if (admAte) params.set('adm_ate', admAte)
+    if (obraAtual) params.set('obra', obraAtual)
+    if (tipoVinculo) params.set('vinculo', tipoVinculo)
     if (sortField && sortField !== 'nome') params.set('sort', sortField)
     if (sortDir && sortDir !== 'asc') params.set('dir', sortDir)
     const qs = params.toString()
     router.replace(qs ? `/funcionarios?${qs}` : '/funcionarios', { scroll: false })
     if (typeof window !== 'undefined') {
-      localStorage.setItem('funcionarios_filters', JSON.stringify({ q, status, cargo, admDe, admAte, sortField, sortDir }))
+      localStorage.setItem('funcionarios_filters', JSON.stringify({ q, status, cargo, admDe, admAte, obraAtual, tipoVinculo, sortField, sortDir }))
     }
-  }, [q, status, cargo, admDe, admAte, sortField, sortDir])
+  }, [q, status, cargo, admDe, admAte, obraAtual, tipoVinculo, sortField, sortDir])
 
   function toggleSort(field: string) {
     if (sortField === field) {
@@ -133,13 +144,15 @@ export default function FuncionariosView({
     if (cargo) result = result.filter(f => f.cargo === cargo)
     if (admDe) result = result.filter(f => f.admissao && f.admissao >= admDe)
     if (admAte) result = result.filter(f => f.admissao && f.admissao <= admAte)
+    if (obraAtual) result = result.filter(f => obraAtualMap[f.id]?.id === obraAtual)
+    if (tipoVinculo) result = result.filter(f => f.tipo_vinculo === tipoVinculo)
     return applySort(result, sortField, sortDir, ['matricula'])
-  }, [funcs, q, status, cargo, admDe, admAte, sortField, sortDir])
+  }, [funcs, q, status, cargo, admDe, admAte, obraAtual, tipoVinculo, sortField, sortDir, obraAtualMap])
 
-  const hasFilter = q || status || cargo || admDe || admAte
+  const hasFilter = q || status || cargo || admDe || admAte || obraAtual || tipoVinculo
 
   function clearFilters() {
-    setQ(''); setStatus(''); setCargo(''); setAdmDe(''); setAdmAte('')
+    setQ(''); setStatus(''); setCargo(''); setAdmDe(''); setAdmAte(''); setObraAtual(''); setTipoVinculo('')
   }
 
   // Selection helpers
@@ -217,6 +230,18 @@ export default function FuncionariosView({
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
             <option value="">Todos os cargos</option>
             {cargosUnicos.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          {obrasUnicas.length > 0 && (
+            <select value={obraAtual} onChange={e => setObraAtual(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+              <option value="">Todas as obras</option>
+              {obrasUnicas.map(([id, nome]) => <option key={id} value={id}>{nome}</option>)}
+            </select>
+          )}
+          <select value={tipoVinculo} onChange={e => setTipoVinculo(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+            <option value="">Todos os vinculos</option>
+            {Object.entries(TIPO_VINCULO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
           <div className="flex border border-gray-200 rounded-lg overflow-hidden flex-shrink-0">
             <button onClick={() => setView('cards')}
