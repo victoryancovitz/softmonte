@@ -15,11 +15,6 @@ export default async function FuncionariosPage() {
 
   const hoje = new Date()
   const hojeStr = `${hoje.getFullYear()}-${String(hoje.getMonth()+1).padStart(2,'0')}-${String(hoje.getDate()).padStart(2,'0')}`
-  const vencendo = funcs.filter(f => {
-    if (!f.prazo1) return false
-    const dias = Math.ceil((new Date(f.prazo1+'T12:00').getTime() - hoje.getTime()) / 86400000)
-    return dias <= 30 && dias >= -30
-  })
 
   const cargosUnicos = Array.from(new Set(funcs.map(f => f.cargo).filter(Boolean))).sort()
 
@@ -39,9 +34,22 @@ export default async function FuncionariosPage() {
   })
   const obrasUnicas = Array.from(obrasSet.entries()).sort((a, b) => a[1].localeCompare(b[1]))
 
-  const { data: prazosLegais } = await supabase.from('vw_prazos_legais').select('funcionario_id,alerta_tipo').limit(1000)
+  const { data: prazosLegais } = await supabase.from('vw_prazos_legais').select('funcionario_id,alerta_tipo,dias_restantes').limit(1000)
   const alertaMap: Record<string, string> = {}
   ;(prazosLegais ?? []).forEach((p: any) => { if (p.alerta_tipo && p.alerta_tipo !== 'ok') alertaMap[p.funcionario_id] = p.alerta_tipo })
+
+  // Banners separados por tipo de alerta
+  const prazo2Urgentes = (prazosLegais ?? [])
+    .filter((p: any) => p.alerta_tipo === 'experiencia_2_vencendo')
+    .map((p: any) => ({ ...p, func: funcs.find(f => f.id === p.funcionario_id) }))
+    .filter((p: any) => p.func)
+    .sort((a: any, b: any) => (a.dias_restantes ?? 999) - (b.dias_restantes ?? 999))
+
+  const prazo1Info = (prazosLegais ?? [])
+    .filter((p: any) => p.alerta_tipo === 'experiencia_1_vencendo')
+    .map((p: any) => ({ ...p, func: funcs.find(f => f.id === p.funcionario_id) }))
+    .filter((p: any) => p.func)
+    .sort((a: any, b: any) => (a.dias_restantes ?? 999) - (b.dias_restantes ?? 999))
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
@@ -55,9 +63,38 @@ export default async function FuncionariosPage() {
         </div>
       </div>
 
-      {vencendo.length > 0 && (
-        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-center gap-2">
-          <span>Contratos vencendo: <strong>{vencendo.map(f => f.nome.split(' ')[0]).join(', ')}</strong></span>
+      {prazo2Urgentes.length > 0 && (
+        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800">
+          <strong>⚠️ Decisão necessária:</strong>{' '}
+          {prazo2Urgentes.map((p: any, i: number) => (
+            <span key={p.funcionario_id}>
+              {i > 0 && ', '}
+              <a href={`/rh/vencimentos`} className="font-bold underline hover:text-red-900">
+                {p.func.nome.split(' ')[0]} ({p.dias_restantes}d)
+              </a>
+            </span>
+          ))}
+          <span className="block text-xs text-red-600 mt-1">
+            Período de experiência final vence em breve. Decida: Renovar para CLT ou Não Renovar.{' '}
+            <a href="/rh/vencimentos" className="underline font-semibold">Ver vencimentos →</a>
+          </span>
+        </div>
+      )}
+
+      {prazo1Info.length > 0 && (
+        <div className="mb-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800">
+          <strong>📋 Avalie o desempenho:</strong>{' '}
+          {prazo1Info.map((p: any, i: number) => (
+            <span key={p.funcionario_id}>
+              {i > 0 && ', '}
+              <a href={`/funcionarios/${p.funcionario_id}`} className="font-bold underline hover:text-amber-900">
+                {p.func.nome.split(' ')[0]} (prazo1 em {p.dias_restantes}d)
+              </a>
+            </span>
+          ))}
+          <span className="block text-xs text-amber-600 mt-1">
+            1º período de experiência vencendo. Avalie para confirmar o 2º período.
+          </span>
         </div>
       )}
 
