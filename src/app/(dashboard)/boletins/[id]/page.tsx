@@ -565,6 +565,11 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
         </div>
       </div>
 
+      {/* NF-e — visível após aprovação */}
+      {bm.status === 'aprovado' && (
+        <NfeSection bm={bm} bmId={params.id} onUpdate={() => loadBM()} />
+      )}
+
       {/* Revisão pendente banner */}
       {(() => {
         const revs = bm.revisoes_solicitadas || []
@@ -923,6 +928,116 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+/* Sub-component: NF-e após aprovação */
+function NfeSection({ bm, bmId, onUpdate }: { bm: any; bmId: string; onUpdate: () => void }) {
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [nfe, setNfe] = useState({
+    numero: bm.nfe_numero || '',
+    data: bm.nfe_data || '',
+    valor: bm.nfe_valor || '',
+    chave: bm.nfe_chave || '',
+    observacao: bm.nfe_observacao || '',
+  })
+  const supabase = createClient()
+  const toast = useToast()
+
+  const temNfe = !!bm.nfe_numero
+
+  async function handleSave() {
+    if (!nfe.numero.trim()) { toast.error('Número da NF-e é obrigatório'); return }
+    setSaving(true)
+    const { error } = await supabase.from('boletins_medicao').update({
+      nfe_numero: nfe.numero.trim(),
+      nfe_data: nfe.data || null,
+      nfe_valor: nfe.valor ? Number(nfe.valor) : null,
+      nfe_chave: nfe.chave.trim() || null,
+      nfe_observacao: nfe.observacao.trim() || null,
+    }).eq('id', bmId)
+    setSaving(false)
+    if (error) { toast.error('Erro: ' + error.message); return }
+    toast.success('NF-e registrada')
+    setEditing(false)
+    onUpdate()
+  }
+
+  if (!editing && !temNfe) {
+    return (
+      <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between">
+        <div>
+          <p className="text-sm font-bold text-amber-800">Nota Fiscal pendente</p>
+          <p className="text-xs text-amber-700">BM aprovado. Registre a NF-e emitida para este boletim.</p>
+        </div>
+        <button onClick={() => setEditing(true)}
+          className="px-4 py-2 bg-brand text-white rounded-lg text-xs font-bold hover:bg-brand-dark">
+          Registrar NF-e
+        </button>
+      </div>
+    )
+  }
+
+  if (!editing && temNfe) {
+    return (
+      <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-xl">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-bold text-green-800">Nota Fiscal Registrada</p>
+          <button onClick={() => setEditing(true)} className="text-xs text-brand hover:underline">Editar</button>
+        </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div><span className="text-gray-500">Número:</span> <strong>{bm.nfe_numero}</strong></div>
+          {bm.nfe_data && <div><span className="text-gray-500">Emissão:</span> <strong>{new Date(bm.nfe_data + 'T12:00').toLocaleDateString('pt-BR')}</strong></div>}
+          {bm.nfe_valor && <div><span className="text-gray-500">Valor:</span> <strong>R$ {Number(bm.nfe_valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></div>}
+          {bm.nfe_chave && <div className="col-span-2 sm:col-span-4"><span className="text-gray-500">Chave:</span> <span className="font-mono text-[10px]">{bm.nfe_chave}</span></div>}
+          {bm.nfe_observacao && <div className="col-span-2 sm:col-span-4"><span className="text-gray-500">Obs:</span> {bm.nfe_observacao}</div>}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="mb-4 p-4 bg-white border border-gray-200 rounded-xl">
+      <h3 className="text-sm font-bold text-brand mb-3">Registrar Nota Fiscal</h3>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Número da NF-e *</label>
+          <input type="text" value={nfe.numero} onChange={e => setNfe(n => ({ ...n, numero: e.target.value }))}
+            placeholder="Ex: 001234" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Data de emissão</label>
+          <input type="date" value={nfe.data} onChange={e => setNfe(n => ({ ...n, data: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Valor faturado (R$)</label>
+          <input type="number" step="0.01" value={nfe.valor} onChange={e => setNfe(n => ({ ...n, valor: e.target.value }))}
+            placeholder="0,00" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+        </div>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Chave de acesso (44 dígitos)</label>
+          <input type="text" value={nfe.chave} onChange={e => setNfe(n => ({ ...n, chave: e.target.value }))}
+            maxLength={44} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm font-mono" />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Observação</label>
+          <input type="text" value={nfe.observacao} onChange={e => setNfe(n => ({ ...n, observacao: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+        </div>
+      </div>
+      <div className="flex gap-2 mt-3">
+        <button onClick={handleSave} disabled={saving}
+          className="px-4 py-2 bg-brand text-white rounded-lg text-xs font-bold hover:bg-brand-dark disabled:opacity-50">
+          {saving ? 'Salvando...' : 'Salvar NF-e'}
+        </button>
+        <button onClick={() => setEditing(false)}
+          className="px-4 py-2 border border-gray-200 rounded-lg text-xs font-medium hover:bg-gray-50">
+          Cancelar
+        </button>
+      </div>
     </div>
   )
 }

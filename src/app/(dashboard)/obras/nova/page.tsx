@@ -67,6 +67,7 @@ export default function NovaObraWizardPage() {
     local: '',
     data_inicio: '',
     data_prev_fim: '',
+    valor_mensal_estimado: '',
     modelo_cobranca: 'hh_diaria' as 'hh_diaria' | 'hh_hora_efetiva' | 'hh_220',
     // Escala (com defaults)
     escala_entrada: '07:00',
@@ -165,6 +166,7 @@ export default function NovaObraWizardPage() {
         local: form.local.trim() || null,
         data_inicio: form.data_inicio || null,
         data_prev_fim: form.data_prev_fim || null,
+        valor_mensal_estimado: form.valor_mensal_estimado ? Number(form.valor_mensal_estimado) : null,
         status: 'ativo',
         tipo_contrato: 'hh',
         modelo_cobranca: form.modelo_cobranca,
@@ -371,7 +373,11 @@ export default function NovaObraWizardPage() {
                   placeholder="Cidade/UF"
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
               </div>
-              <div />
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Receita mensal estimada (R$)</label>
+                <input type="number" step="0.01" value={form.valor_mensal_estimado} onChange={e => set('valor_mensal_estimado', e.target.value)}
+                  placeholder="Ex: 120000" className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+              </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Data de início *</label>
                 <input type="date" value={form.data_inicio} onChange={e => set('data_inicio', e.target.value)}
