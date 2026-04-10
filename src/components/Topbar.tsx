@@ -86,7 +86,7 @@ export interface ModuleTab { href: string; label: string; match?: string[] }
 export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
   {
     // Módulo Administrativo — ativa quando em /funcionarios, /rh/*, /alocacao, /ponto, /faltas, /documentos, /rastreio, /relatorios/absenteismo
-    groupPaths: ['/funcionarios', '/rh/', '/alocacao', '/ponto', '/faltas', '/documentos', '/rastreio', '/relatorios/absenteismo'],
+    groupPaths: ['/funcionarios', '/rh/', '/alocacao', '/ponto', '/faltas', '/documentos', '/rastreio', '/rh/vencimentos', '/relatorios/absenteismo'],
     tabs: [
       { href: '/funcionarios', label: 'Funcionários', match: ['/funcionarios'] },
       { href: '/rh/admissoes', label: 'Admissões' },
@@ -102,7 +102,7 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/faltas', label: 'Faltas', match: ['/faltas', '/relatorios/absenteismo'] },
       { href: '/relatorios/absenteismo', label: 'Absenteísmo' },
       { href: '/documentos', label: 'Documentos' },
-      { href: '/rastreio', label: 'Vencimentos' },
+      { href: '/rh/vencimentos', label: 'Vencimentos', match: ['/rh/vencimentos', '/rastreio'] },
     ],
   },
   {
