@@ -58,7 +58,7 @@ export default function AlocacaoView({ ativas, role }: AlocacaoViewProps) {
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
         <div className="px-5 py-3 bg-gray-50 border-b border-gray-100">
-          <h2 className="text-sm font-semibold text-gray-700">Alocacoes ativas ({filteredAtivas.length})</h2>
+          <h2 className="text-sm font-semibold text-gray-700">Alocações ativas ({filteredAtivas.length})</h2>
         </div>
         <table className="w-full text-sm">
           <thead>

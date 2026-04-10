@@ -56,7 +56,7 @@ export default async function FuncionariosPage() {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h1 className="text-xl font-bold font-display text-brand">Funcionários</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{funcs.length} funcionário(s)</p>
+          <p className="text-sm text-gray-500 mt-0.5">{funcs.filter(f => !f.deleted_at).length} ativo(s) · {funcs.length} total</p>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/funcionarios/novo" className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark">+ Novo</Link>

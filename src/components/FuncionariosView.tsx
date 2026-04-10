@@ -328,7 +328,7 @@ export default function FuncionariosView({
                     </div>
                     {desligado ? (
                       <span className="text-[10px] px-2 py-0.5 rounded-full font-semibold bg-red-100 text-red-700">
-                        Desligado
+                        Desligado em {new Date(f.deleted_at).toLocaleDateString('pt-BR')}
                       </span>
                     ) : (
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>
@@ -435,8 +435,8 @@ export default function FuncionariosView({
                       </td>
                       <td className="px-4 py-3">
                         {desligado ? (
-                          <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-red-100 text-red-700" title={`Desligado em ${new Date(f.deleted_at).toLocaleDateString('pt-BR')}`}>
-                            Desligado
+                          <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-red-100 text-red-700">
+                            Desligado em {new Date(f.deleted_at).toLocaleDateString('pt-BR')}
                           </span>
                         ) : (
                           <span className={`text-xs px-2.5 py-1 rounded-full font-semibold capitalize ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>

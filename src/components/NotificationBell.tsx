@@ -31,28 +31,51 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
-  async function loadCount() {
+  async function syncAndLoad() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
 
-    // Notificações persistidas
-    const { count: c } = await supabase
-      .from('notificacoes')
-      .select('id', { count: 'exact', head: true })
-      .eq('destinatario_id', user.id)
-      .eq('lida', false)
-    const notifCount = c ?? 0
-
-    // Alertas de vw_alertas (sempre "ao vivo")
+    // 1. Buscar alertas ao vivo
     const { data: alData } = await supabase
       .from('vw_alertas')
       .select('*')
       .order('dias_restantes')
       .limit(20)
-    const alertCount = alData?.length ?? 0
     setAlertas(alData ?? [])
 
-    setCount(notifCount + alertCount)
+    // 2. Persistir alertas novos na tabela notificacoes (dedup por tipo+ref_id)
+    if (alData && alData.length > 0) {
+      const { data: existing } = await supabase
+        .from('notificacoes')
+        .select('tipo, ref_id')
+        .eq('destinatario_id', user.id)
+      const existingKeys = new Set((existing ?? []).map(e => `${e.tipo}::${e.ref_id}`))
+
+      const novos = alData
+        .filter(a => !existingKeys.has(`${a.tipo}::${a.referencia_id}`))
+        .map(a => ({
+          destinatario_id: user.id,
+          tipo: a.tipo,
+          titulo: a.descricao?.split(' — ')[0] || a.tipo,
+          mensagem: a.descricao || `${a.tipo} — ${a.dias_restantes} dias restantes`,
+          ref_tabela: a.tabela || 'funcionarios',
+          ref_id: a.referencia_id,
+          lida: false,
+        }))
+
+      if (novos.length > 0) {
+        await supabase.from('notificacoes').insert(novos)
+      }
+    }
+
+    // 3. Contar não lidas
+    const { count: c } = await supabase
+      .from('notificacoes')
+      .select('id', { count: 'exact', head: true })
+      .eq('destinatario_id', user.id)
+      .eq('lida', false)
+
+    setCount(c ?? 0)
   }
 
   async function loadNotifs() {
@@ -68,8 +91,8 @@ export default function NotificationBell() {
   }
 
   useEffect(() => {
-    const initialTimeout = setTimeout(loadCount, 2000)
-    const interval = setInterval(loadCount, 60 * 1000)
+    const initialTimeout = setTimeout(syncAndLoad, 2000)
+    const interval = setInterval(syncAndLoad, 60 * 1000)
     return () => { clearTimeout(initialTimeout); clearInterval(interval) }
   }, [])
 
@@ -85,11 +108,16 @@ export default function NotificationBell() {
     return () => document.removeEventListener('mousedown', handleClick)
   }, [])
 
-  async function markRead(notifId: string) {
-    await supabase.from('notificacoes').update({ lida: true, lida_em: new Date().toISOString() }).eq('id', notifId)
+  async function markRead(notif: any) {
+    await supabase.from('notificacoes').update({ lida: true, lida_em: new Date().toISOString() }).eq('id', notif.id)
     setCount(c => Math.max(0, c - 1))
-    setNotifs(n => n.map(x => x.id === notifId ? { ...x, lida: true } : x))
-    router.push('/rh/vencimentos')
+    setNotifs(n => n.map(x => x.id === notif.id ? { ...x, lida: true } : x))
+    // Navegar para o contexto do alerta
+    if (notif.ref_tabela === 'funcionarios' && notif.ref_id) {
+      router.push(`/funcionarios/${notif.ref_id}`)
+    } else {
+      router.push('/rh/vencimentos')
+    }
     setOpen(false)
   }
 
@@ -98,7 +126,7 @@ export default function NotificationBell() {
     if (!user) return
     await supabase.from('notificacoes').update({ lida: true, lida_em: new Date().toISOString() })
       .eq('destinatario_id', user.id).eq('lida', false)
-    setCount(alertas.length)
+    setCount(0)
     setNotifs(n => n.map(x => ({ ...x, lida: true })))
   }
 
@@ -182,7 +210,7 @@ export default function NotificationBell() {
                   </div>
                 )}
                 {notifs.map(n => (
-                  <button key={n.id} onClick={() => markRead(n.id)}
+                  <button key={n.id} onClick={() => markRead(n)}
                     className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors ${!n.lida ? 'bg-blue-50/50' : ''}`}>
                     <div className="flex items-start gap-2">
                       <span className="text-sm flex-shrink-0">{TIPO_ICON[n.tipo] ?? '🔔'}</span>

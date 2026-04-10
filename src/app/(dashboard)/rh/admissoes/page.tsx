@@ -61,11 +61,27 @@ export default function AdmissoesPage() {
 
   async function loadData() {
     setLoading(true)
-    const { data } = await supabase
-      .from('admissoes_workflow')
-      .select('*, funcionarios(id, nome, cargo), obras(nome)')
-      .order('created_at', { ascending: false })
-    setAdmissoes(data ?? [])
+    const [{ data }, { data: alocs }] = await Promise.all([
+      supabase.from('admissoes_workflow')
+        .select('*, funcionarios(id, nome, cargo), obras(nome)')
+        .order('created_at', { ascending: false }),
+      supabase.from('alocacoes')
+        .select('funcionario_id, obra_id, obras(nome)')
+        .order('data_inicio', { ascending: false }),
+    ])
+    // Mapa: última alocação por funcionário (para preencher obra quando NULL)
+    const ultimaAloc: Record<string, string> = {}
+    ;(alocs ?? []).forEach((a: any) => {
+      if (a.funcionario_id && a.obras?.nome && !ultimaAloc[a.funcionario_id]) {
+        ultimaAloc[a.funcionario_id] = a.obras.nome
+      }
+    })
+    // Enriquecer admissões sem obra com a última alocação conhecida
+    const enriched = (data ?? []).map((a: any) => ({
+      ...a,
+      _obraNome: a.obras?.nome || (a.funcionarios?.id ? ultimaAloc[a.funcionarios.id] : null) || null,
+    }))
+    setAdmissoes(enriched)
     setLoading(false)
   }
 
@@ -96,14 +112,14 @@ export default function AdmissoesPage() {
 
   const obrasUnicas = useMemo(() => {
     const map = new Map<string, string>()
-    admissoes.forEach(a => { if (a.obras?.nome) map.set(a.obra_id ?? a.obras?.nome, a.obras.nome) })
+    admissoes.forEach(a => { if (a._obraNome) map.set(a.obra_id ?? a._obraNome, a._obraNome) })
     return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]))
   }, [admissoes])
 
   const filtered = admissoes.filter(a => {
     if (busca && !a.funcionarios?.nome?.toLowerCase().includes(busca.toLowerCase())) return false
     if (filtroStatus && a.status !== filtroStatus) return false
-    if (filtroObra && a.obras?.nome !== filtroObra) return false
+    if (filtroObra && a._obraNome !== filtroObra) return false
     if (filtroDe && (!a.created_at || a.created_at.slice(0, 10) < filtroDe)) return false
     if (filtroAte && (!a.created_at || a.created_at.slice(0, 10) > filtroAte)) return false
     return true
@@ -174,7 +190,7 @@ export default function AdmissoesPage() {
           )}
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          <label className="text-xs text-gray-500">Periodo de:</label>
+          <label className="text-xs text-gray-500">Período de:</label>
           <input type="date" value={filtroDe} onChange={e => setFiltroDe(e.target.value)}
             className="px-2 py-1 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand" />
           <label className="text-xs text-gray-500">ate:</label>
@@ -226,7 +242,7 @@ export default function AdmissoesPage() {
                         </Link>
                       </div>
                       <p className="text-xs text-gray-500">
-                        {adm.funcionarios?.cargo ?? ''} &middot; {adm.obras?.nome ?? '—'} &middot; Prevista: {formatDate(adm.data_prevista_inicio)}
+                        {adm.funcionarios?.cargo ?? ''} &middot; {adm._obraNome ?? '—'} &middot; Prevista: {formatDate(adm.data_prevista_inicio)}
                       </p>
                     </div>
                   </div>
@@ -320,7 +336,7 @@ export default function AdmissoesPage() {
                       </Link>
                     </td>
                     <td className="px-4 py-3 text-gray-600">{adm.funcionarios?.cargo ?? '—'}</td>
-                    <td className="px-4 py-3 text-gray-600">{adm.obras?.nome ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">{adm._obraNome ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{formatDate(adm.data_prevista_inicio)}</td>
                     <td className="px-4 py-3">
                       <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700">

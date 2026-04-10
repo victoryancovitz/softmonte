@@ -260,7 +260,7 @@ export default function VencimentosPage() {
       {/* Header */}
       <div className="mb-5">
         <h1 className="text-xl font-bold font-display text-brand">Central de Vencimentos</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Lista unificada de tudo que esta vencendo ou vencido</p>
+        <p className="text-sm text-gray-500 mt-0.5">Lista unificada de tudo que está vencendo ou vencido</p>
       </div>
 
       {/* KPI Cards */}
@@ -391,7 +391,7 @@ export default function VencimentosPage() {
                         </button>
                         <button onClick={() => handleNaoRenovar(item.funcionario_id, item.key)} disabled={isLoading}
                           className="px-2.5 py-1.5 text-[11px] font-semibold rounded-lg bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50 transition-colors">
-                          Nao Renovar
+                          Não Renovar
                         </button>
                       </div>
                     ) : item.categoria === 'ASO' ? (
