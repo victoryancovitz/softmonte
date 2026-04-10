@@ -65,8 +65,8 @@ export default function DrePage() {
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
-        <BackButton fallback="/financeiro/sumario" />
-        <Link href="/financeiro/sumario" className="text-gray-400 hover:text-gray-600">Financeiro</Link>
+        <BackButton fallback="/financeiro" />
+        <Link href="/financeiro" className="text-gray-400 hover:text-gray-600">Financeiro</Link>
         <span className="text-gray-300">/</span>
         <span className="font-medium text-gray-700">DRE & Resultado</span>
       </div>
