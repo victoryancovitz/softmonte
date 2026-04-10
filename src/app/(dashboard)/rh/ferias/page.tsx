@@ -15,6 +15,7 @@ interface Funcionario {
   cargo: string
   admissao: string
   status: string
+  deleted_at?: string | null
 }
 
 interface Ferias {
@@ -130,8 +131,7 @@ export default function FeriasPage() {
         .order('created_at', { ascending: false }),
       supabase
         .from('funcionarios')
-        .select('id, nome, cargo, admissao, status')
-        .in('status', ['alocado', 'disponivel', 'afastado'])
+        .select('id, nome, cargo, admissao, status, deleted_at')
         .order('nome'),
       supabase
         .from('obras')
@@ -377,9 +377,12 @@ export default function FeriasPage() {
             ) : filtered.map(row => {
               const badge = STATUS_BADGE[row.derivedStatus] ?? { label: formatStatus(row.derivedStatus), cls: 'bg-gray-100 text-gray-600' }
               return (
-                <tr key={row.id} className={`border-b border-gray-50 hover:bg-gray-50/80 ${row.isVencida ? 'bg-red-50' : ''}`}>
+                <tr key={row.id} className={`border-b border-gray-50 hover:bg-gray-50/80 ${row.isVencida ? 'bg-red-50' : ''} ${row.deleted_at ? 'opacity-60' : ''}`}>
                   <td className="px-4 py-3">
-                    <div className="font-semibold text-gray-900 whitespace-nowrap">{row.nome}</div>
+                    <div className="font-semibold text-gray-900 whitespace-nowrap">
+                      {row.nome}
+                      {row.deleted_at && <span className="ml-1.5 text-[10px] px-1.5 py-0.5 rounded bg-red-100 text-red-600 font-semibold">Desligado</span>}
+                    </div>
                     <div className="text-xs text-gray-400">{row.cargo}</div>
                   </td>
                   <td className="px-4 py-3 text-gray-600 text-xs">{formatDate(row.admissao)}</td>
