@@ -10,6 +10,7 @@ import CronogramaTab from './CronogramaTab'
 import DiarioTab from './DiarioTab'
 import RncTab from './RncTab'
 import { formatStatus } from '@/lib/formatters'
+import ContasBancariasObra from './ContasBancariasObra'
 
 const TIPOS_DOC_OBRA = [
   { value: 'contrato', label: 'Contrato' },
@@ -68,6 +69,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
     { data: composicao },
     { data: aditivosData },
     { data: transferencias },
+    { data: contasCorrentes },
   ] = await Promise.all([
     supabase.from('obras').select('*').eq('id', params.id).is('deleted_at', null).maybeSingle(),
     supabase.from('alocacoes').select('*, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao)').eq('obra_id', params.id).eq('ativo', true),
@@ -78,6 +80,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
     supabase.from('contrato_composicao').select('*').eq('obra_id', params.id).order('funcao_nome'),
     supabase.from('aditivos').select('*').eq('obra_id', params.id).order('numero'),
     supabase.from('transferencias').select('*, funcionarios(nome)').eq('obra_origem_id', params.id).order('data_transferencia', { ascending: false }),
+    supabase.from('contas_correntes').select('id, nome, banco').eq('ativo', true).is('deleted_at', null).order('is_padrao', { ascending: false }).order('nome'),
   ])
 
   if (!obra) notFound()
@@ -305,6 +308,9 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               </div>
             </div>
           )}
+
+          {/* Contas Bancárias do Contrato */}
+          <ContasBancariasObra obraId={obra.id} contaRecebimentoId={obra.conta_recebimento_id} contaPagamentoId={obra.conta_pagamento_id} contas={contasCorrentes ?? []} />
         </>
       )}
 
