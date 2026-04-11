@@ -4,7 +4,34 @@ import RefreshButton from './RefreshButton'
 import { Target, DollarSign, AlertTriangle, Users, Calendar, ArrowRight } from 'lucide-react'
 
 const fmt = (v: any) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const fmtK = (v: any) => fmt(v) // valores completos, sem abreviação
+const fmtK = (v: any) => fmt(v)
+
+function corMargem(pct: number | null): string {
+  if (pct === null) return 'text-gray-400'
+  if (pct < 0) return 'text-red-700'
+  if (pct < 15) return 'text-orange-600'
+  if (pct < 25) return 'text-amber-600'
+  return 'text-green-700'
+}
+function bgMargem(pct: number | null): string {
+  if (pct === null) return 'bg-gray-200'
+  if (pct < 0) return 'bg-red-500'
+  if (pct < 15) return 'bg-orange-400'
+  if (pct < 25) return 'bg-amber-400'
+  return 'bg-green-500'
+}
+function bgCardMargem(pct: number | null): string {
+  if (pct === null) return 'bg-gray-50 border-gray-200'
+  if (pct < 0) return 'bg-gradient-to-br from-red-50 to-white border-red-200'
+  if (pct < 25) return 'bg-gradient-to-br from-amber-50 to-white border-amber-200'
+  return 'bg-gradient-to-br from-green-50 to-white border-green-200'
+}
+function corPill(pct: number | null): string {
+  if (pct === null) return 'bg-gray-100 text-gray-500'
+  if (pct < 0) return 'bg-red-100 text-red-700'
+  if (pct < 25) return 'bg-amber-100 text-amber-700'
+  return 'bg-green-100 text-green-700'
+}
 
 export default async function DiretoriaPage() {
   const supabase = createClient()
@@ -22,7 +49,7 @@ export default async function DiretoriaPage() {
     { data: obrasAtivas }, { data: contasSaldo }, { data: lancamentos },
     { data: funcAtivos }, { data: pontoMes }, { data: bmsAprovados },
     { data: bmItensAll }, { data: funcoes }, { data: desligados90 },
-    { data: receitasAbertas }, { data: prazosLegais }, { data: bmsMesAtual }, { data: billingRates }, { data: folhasFechadas },
+    { data: receitasAbertas }, { data: prazosLegais }, { data: bmsMesAtual }, { data: billingRates }, { data: folhasFechadas }, { data: custoFunc },
   ] = await Promise.all([
     supabase.from('vw_dre_obra_mes').select('*').limit(500),
     supabase.from('vw_dre_obra').select('*').limit(500),
@@ -46,6 +73,7 @@ export default async function DiretoriaPage() {
     supabase.from('boletins_medicao').select('id').gte('data_inicio', mesInicio).is('deleted_at', null),
     supabase.from('contrato_composicao').select('funcao_nome, custo_hora_contratado').eq('ativo', true),
     supabase.from('folha_fechamentos').select('valor_total_bruto, valor_total_encargos, valor_total_beneficios, valor_total').is('deleted_at', null),
+    supabase.from('vw_custo_funcionario').select('margem_pct'),
   ])
 
   const funcs = funcAtivos ?? []
@@ -67,8 +95,9 @@ export default async function DiretoriaPage() {
   const custoFolhaComProv = (folhasFechadas ?? []).reduce((s: number, f: any) => s + Number(f.valor_total || 0), 0)
   const margemRealDir = totReceita > 0 ? ((totReceita - custoFolhaSemProv) / totReceita * 100) : null
   const margemRealProvDir = totReceita > 0 ? ((totReceita - custoFolhaComProv) / totReceita * 100) : null
-  // Margem teórica: da view breakeven
-  const margemTeoricaDir = (dre ?? []).length > 0 ? Number((dre ?? [])[0]?.margem_pct || 0) : null
+  // Margem teórica: AVG de vw_custo_funcionario (mesma fonte da Rentabilidade)
+  const cfValid = (custoFunc ?? []).filter((f: any) => f.margem_pct != null)
+  const margemTeoricaDir = cfValid.length > 0 ? cfValid.reduce((s: number, f: any) => s + Number(f.margem_pct), 0) / cfValid.length : null
 
   const cf30 = (cashflow ?? []).filter((e: any) => e.data >= hojeStr && e.data <= em30)
   // Separar dados REAIS (lançamentos) de PROJEÇÕES (forecast/folha estimada)
@@ -208,17 +237,17 @@ export default async function DiretoriaPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
         <Link href="/rh/rentabilidade" title="Ver análise de margem"
-          className={`block rounded-2xl shadow-sm border p-5 transition-shadow hover:shadow-md ${margemOk ? 'bg-gradient-to-br from-green-50 to-white border-green-200' : 'bg-gradient-to-br from-red-50 to-white border-red-200'}`}>
+          className={`block rounded-2xl shadow-sm border p-5 transition-shadow hover:shadow-md ${bgCardMargem(totReceita > 0 ? margemPct : null)}`}>
           <div className="flex items-start justify-between mb-3">
             <div>
               <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Margem Real Acumulada</div>
-              <div className={`text-4xl font-bold font-display mt-1 ${totReceita === 0 ? 'text-gray-300' : margemOk ? 'text-green-700' : 'text-red-700'}`}>{totReceita > 0 ? `${margemPct.toFixed(1)}%` : '—'}</div>
+              <div className={`text-4xl font-bold font-display mt-1 ${totReceita > 0 ? corMargem(margemPct) : 'text-gray-300'}`}>{totReceita > 0 ? `${margemPct.toFixed(1)}%` : '—'}</div>
               <div className="text-xs text-gray-500 mt-1">{totReceita > 0 ? `Alvo: ${alvoMedio.toFixed(0)}% · Resultado: ${fmt(margemBruta)}` : 'Nenhum faturamento registrado ainda'}</div>
             </div>
-            <Target className={`w-8 h-8 ${margemOk ? 'text-green-500' : 'text-red-500'}`} />
+            <Target className={`w-8 h-8 ${margemPct < 0 ? 'text-red-500' : margemPct < 25 ? 'text-amber-500' : 'text-green-500'}`} />
           </div>
           <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div className={`h-full rounded-full ${margemOk ? 'bg-green-500' : 'bg-red-500'}`} style={{ width: `${Math.min(margemPct / alvoMedio * 100, 100)}%` }} />
+            <div className={`h-full rounded-full ${bgMargem(margemPct)}`} style={{ width: `${Math.min(Math.abs(margemPct) / alvoMedio * 100, 100)}%` }} />
           </div>
           <div className="mt-3 text-xs text-gray-500 flex justify-between">
             <span>Receita: <strong>{fmtK(totReceita)}</strong></span>
@@ -226,9 +255,9 @@ export default async function DiretoriaPage() {
           </div>
           {/* 3 Margens pills */}
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {margemTeoricaDir != null && <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold" title="Billing rate vs custo projetado">Teórica {margemTeoricaDir.toFixed(0)}%</span>}
-            {margemRealDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${margemRealDir >= 20 ? 'bg-green-50 text-green-700' : margemRealDir >= 10 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`} title="Receita BMs − folha sem provisões">Real {margemRealDir.toFixed(1)}%</span>}
-            {margemRealProvDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${margemRealProvDir >= 20 ? 'bg-green-50 text-green-700' : margemRealProvDir >= 10 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`} title="Receita BMs − folha completa c/ provisões">C/Prov {margemRealProvDir.toFixed(1)}%</span>}
+            {margemTeoricaDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${corPill(margemTeoricaDir)}`} title="Calculada sobre preço contratado por HH vs custo projetado. Potencial máximo.">Teórica {margemTeoricaDir.toFixed(1)}%</span>}
+            {margemRealDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${corPill(margemRealDir)}`} title="Receita dos BMs aprovados menos folha sem provisões (salário+encargos+benefícios).">Real {margemRealDir.toFixed(1)}%</span>}
+            {margemRealProvDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${corPill(margemRealProvDir)}`} title="Inclui 13°, férias e FGTS provisionados. Margem mais conservadora.">C/Prov {margemRealProvDir.toFixed(1)}%</span>}
           </div>
           <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand">Ver análise de margem <ArrowRight className="w-3 h-3" /></span>
         </Link>
@@ -353,7 +382,7 @@ export default async function DiretoriaPage() {
                         <td className="py-1 text-center text-gray-500">{mf.hc}</td>
                         <td className="py-1 text-right text-gray-500">{mf.venda.toFixed(0)}</td>
                         <td className="py-1 text-right text-gray-500">{mf.custo.toFixed(0)}</td>
-                        <td className={`py-1 text-right font-bold ${mf.margem >= 20 ? 'text-green-700' : mf.margem >= 0 ? 'text-amber-700' : 'text-red-700'}`}>{mf.margem.toFixed(0)}%</td>
+                        <td className={`py-1 text-right font-bold ${mf.margem >= 25 ? 'text-green-700' : mf.margem >= 0 ? 'text-amber-600' : 'text-red-700'}`}>{mf.margem.toFixed(0)}%</td>
                       </tr>
                     ))}
                   </tbody>

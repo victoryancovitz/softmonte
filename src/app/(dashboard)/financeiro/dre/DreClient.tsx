@@ -188,7 +188,7 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
                   <td className="px-4 py-2.5 text-right text-orange-600">{m.outrasDesp > 0 ? fmt(m.outrasDesp) : '—'}</td>
                   <td className="px-4 py-2.5 text-right text-purple-600">{m.provisoes > 0 ? fmt(m.provisoes) : '—'}</td>
                   <td className={`px-4 py-2.5 text-right font-bold ${res >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(res)}</td>
-                  <td className={`px-4 py-2.5 text-right font-bold ${mp >= 15 ? 'text-green-700' : 'text-red-700'}`}>{mp.toFixed(1)}%</td>
+                  <td className={`px-4 py-2.5 text-right font-bold ${mp >= 25 ? 'text-green-700' : mp >= 0 ? 'text-amber-600' : 'text-red-700'}`}>{mp.toFixed(1)}%</td>
                 </tr>
               )
             }) : <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">Sem lançamentos.</td></tr>}</tbody>

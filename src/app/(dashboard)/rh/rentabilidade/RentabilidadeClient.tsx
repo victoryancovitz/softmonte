@@ -12,7 +12,7 @@ const BE_BADGE: Record<string, { label: string; icon: string; cls: string }> = {
 }
 
 const MARGEM_CLS = (pct: number) =>
-  pct >= 30 ? 'text-green-700' : pct >= 15 ? 'text-amber-700' : 'text-red-700'
+  pct >= 25 ? 'text-green-700' : pct >= 0 ? 'text-amber-600' : 'text-red-700'
 
 export default function RentabilidadeClient({ data, ciclo, receitaReal, margemReal, margemRealProv }: {
   data: any[]; ciclo: any; receitaReal: number; margemReal: number | null; margemRealProv: number | null
