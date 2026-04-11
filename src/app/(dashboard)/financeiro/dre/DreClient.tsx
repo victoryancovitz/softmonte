@@ -142,7 +142,7 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
                               {['Mês', 'Funcs', 'Receita', 'Custo MO', 'Margem', '%'].map(h => <th key={h} className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase">{h}</th>)}
                             </tr></thead>
                             <tbody>{mesesObra.map((m: any) => {
-                              const rec = Number(m.receita_realizada || m.receita_prevista || 0)
+                              const rec = Number(m.receita_realizada || 0) // APENAS realizada, nunca prevista
                               const cst = Number(m.custo_mo_real || 0)
                               const mg = rec - cst
                               return (

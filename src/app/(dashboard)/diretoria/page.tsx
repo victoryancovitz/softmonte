@@ -56,7 +56,8 @@ export default async function DiretoriaPage() {
   const MESES = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
   // === SEÇÃO 1: SAÚDE FINANCEIRA ===
-  const totReceita = (dreMes ?? []).reduce((s: number, m: any) => s + Number(m.receita_realizada || m.receita_prevista || 0), 0)
+  // IMPORTANTE: usar APENAS receita_realizada (BMs aprovados), NUNCA receita_prevista (projeção)
+  const totReceita = (dreMes ?? []).reduce((s: number, m: any) => s + Number(m.receita_realizada || 0), 0)
   const totCusto = (dreMes ?? []).reduce((s: number, m: any) => s + Number(m.custo_mo_real || 0), 0)
   const margemBruta = totReceita - totCusto
   const margemPct = totReceita > 0 ? (margemBruta / totReceita * 100) : 0
@@ -64,11 +65,17 @@ export default async function DiretoriaPage() {
   const margemOk = margemPct >= alvoMedio
 
   const cf30 = (cashflow ?? []).filter((e: any) => e.data >= hojeStr && e.data <= em30)
-  const entrada30 = cf30.filter((e: any) => Number(e.valor) > 0).reduce((s: number, e: any) => s + Number(e.valor), 0)
-  const saida30 = cf30.filter((e: any) => Number(e.valor) < 0).reduce((s: number, e: any) => s + Number(e.valor), 0)
+  // Separar dados REAIS (lançamentos) de PROJEÇÕES (forecast/folha estimada)
+  const cf30Reais = cf30.filter((e: any) => e.origem === 'lancamento')
+  const cf30Projetados = cf30.filter((e: any) => e.origem !== 'lancamento')
+  const entrada30 = cf30Reais.filter((e: any) => Number(e.valor) > 0).reduce((s: number, e: any) => s + Number(e.valor), 0)
+  const saida30 = cf30Reais.filter((e: any) => Number(e.valor) < 0).reduce((s: number, e: any) => s + Number(e.valor), 0)
+  const entradaProj = cf30Projetados.filter((e: any) => Number(e.valor) > 0).reduce((s: number, e: any) => s + Number(e.valor), 0)
+  const saidaProj = cf30Projetados.filter((e: any) => Number(e.valor) < 0).reduce((s: number, e: any) => s + Number(e.valor), 0)
   const saldoContas = (contasSaldo ?? []).reduce((s: number, c: any) => s + Number(c.saldo || 0), 0)
-  const saldo30 = saldoContas + entrada30 + saida30
+  const saldo30 = saldoContas + entrada30 + saida30 + entradaProj + saidaProj
   const saldo30Ok = saldo30 >= 0
+  const temDadosReais = entrada30 !== 0 || saida30 !== 0
 
   const receitaPaga = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita' && l.status === 'pago').reduce((s: number, l: any) => s + Number(l.valor), 0)
   const receitaAberto = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita' && l.status === 'em_aberto').reduce((s: number, l: any) => s + Number(l.valor), 0)
@@ -183,8 +190,8 @@ export default async function DiretoriaPage() {
           <div className="flex items-start justify-between mb-3">
             <div>
               <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Margem Real Acumulada</div>
-              <div className={`text-4xl font-bold font-display mt-1 ${margemOk ? 'text-green-700' : 'text-red-700'}`}>{margemPct.toFixed(1)}%</div>
-              <div className="text-xs text-gray-500 mt-1">Alvo: {alvoMedio.toFixed(0)}% · Resultado: {fmtK(margemBruta)}</div>
+              <div className={`text-4xl font-bold font-display mt-1 ${totReceita === 0 ? 'text-gray-300' : margemOk ? 'text-green-700' : 'text-red-700'}`}>{totReceita === 0 ? '—' : `${margemPct.toFixed(1)}%`}</div>
+              <div className="text-xs text-gray-500 mt-1">{totReceita === 0 ? 'Sem BMs aprovados — margem calculada após primeiro faturamento' : `Alvo: ${alvoMedio.toFixed(0)}% · Resultado: ${fmtK(margemBruta)}`}</div>
             </div>
             <Target className={`w-8 h-8 ${margemOk ? 'text-green-500' : 'text-red-500'}`} />
           </div>
@@ -209,9 +216,20 @@ export default async function DiretoriaPage() {
             <DollarSign className={`w-8 h-8 ${saldo30Ok ? 'text-blue-500' : 'text-red-500'}`} />
           </div>
           <div className="grid grid-cols-2 gap-3 mt-3">
-            <div className="p-2 bg-white/60 rounded-lg"><div className="text-[10px] text-gray-400 font-semibold uppercase">Entradas</div><div className="text-sm font-bold text-green-700">{fmtK(entrada30)}</div></div>
-            <div className="p-2 bg-white/60 rounded-lg"><div className="text-[10px] text-gray-400 font-semibold uppercase">Saídas</div><div className="text-sm font-bold text-red-700">{fmtK(Math.abs(saida30))}</div></div>
+            <div className="p-2 bg-white/60 rounded-lg">
+              <div className="text-[10px] text-gray-400 font-semibold uppercase">Entradas</div>
+              <div className="text-sm font-bold text-green-700">{fmtK(entrada30)}</div>
+              {entradaProj > 0 && <div className="text-[9px] text-gray-400">+{fmtK(entradaProj)} projetado</div>}
+            </div>
+            <div className="p-2 bg-white/60 rounded-lg">
+              <div className="text-[10px] text-gray-400 font-semibold uppercase">Saídas</div>
+              <div className="text-sm font-bold text-red-700">{fmtK(Math.abs(saida30))}</div>
+              {saidaProj < 0 && <div className="text-[9px] text-gray-400">+{fmtK(Math.abs(saidaProj))} estimado</div>}
+            </div>
           </div>
+          {!temDadosReais && (cf30Projetados.length > 0) && (
+            <div className="text-[9px] text-amber-600 mt-2">Valores baseados em projeções (folha estimada). Dados reais aparecem com lançamentos.</div>
+          )}
           <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand">Ver fluxo completo <ArrowRight className="w-3 h-3" /></span>
         </Link>
       </div>
