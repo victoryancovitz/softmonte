@@ -14,7 +14,9 @@ const BE_BADGE: Record<string, { label: string; icon: string; cls: string }> = {
 const MARGEM_CLS = (pct: number) =>
   pct >= 30 ? 'text-green-700' : pct >= 15 ? 'text-amber-700' : 'text-red-700'
 
-export default function RentabilidadeClient({ data, ciclo }: { data: any[]; ciclo: any }) {
+export default function RentabilidadeClient({ data, ciclo, receitaReal, margemReal, margemRealProv }: {
+  data: any[]; ciclo: any; receitaReal: number; margemReal: number | null; margemRealProv: number | null
+}) {
   const [expandido, setExpandido] = useState<string | null>(null)
 
   const totalFuncs = data.length
@@ -26,26 +28,39 @@ export default function RentabilidadeClient({ data, ciclo }: { data: any[]; cicl
   return (
     <>
       {/* Cards resumo */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <div className="flex items-center gap-2 mb-1"><TrendingUp className="w-4 h-4 text-brand" /><span className="text-[10px] font-bold text-gray-400 uppercase">Margem Média (teórica)</span></div>
+      {/* 3 Margens */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4" title="Calculada sobre preço contratado por HH vs custo projetado. Não reflete faturamento real.">
+          <div className="text-[10px] font-bold text-gray-400 uppercase">Margem Teórica</div>
           <div className={`text-2xl font-bold font-display ${MARGEM_CLS(margemMedia)}`}>{margemMedia.toFixed(1)}%</div>
-          <div className="text-[10px] text-gray-400 mt-0.5">{margemMedia >= 30 ? 'Excelente' : margemMedia >= 20 ? 'Bom' : margemMedia >= 10 ? 'Atenção' : 'Crítico'}</div>
+          <div className="text-[10px] text-gray-400">Billing rate vs custo/hora projetado</div>
         </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4" title="Receita BMs aprovados menos folha (salário + encargos + benefícios). Exclui provisões de 13°, férias e FGTS.">
+          <div className="text-[10px] font-bold text-gray-400 uppercase">Margem Real</div>
+          <div className={`text-2xl font-bold font-display ${margemReal != null ? MARGEM_CLS(margemReal) : 'text-gray-300'}`}>{margemReal != null ? `${margemReal.toFixed(1)}%` : '—'}</div>
+          <div className="text-[10px] text-gray-400">{receitaReal > 0 ? 'Receita BMs − folha (sem provisões)' : 'Sem BMs aprovados'}</div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4" title="Inclui provisões de 13°, férias e FGTS. Margem mais conservadora e mais próxima do resultado definitivo.">
+          <div className="text-[10px] font-bold text-gray-400 uppercase">Margem Real c/ Provisões</div>
+          <div className={`text-2xl font-bold font-display ${margemRealProv != null ? MARGEM_CLS(margemRealProv) : 'text-gray-300'}`}>{margemRealProv != null ? `${margemRealProv.toFixed(1)}%` : '—'}</div>
+          <div className="text-[10px] text-gray-400">{receitaReal > 0 ? 'Receita BMs − folha completa' : 'Sem BMs aprovados'}</div>
+        </div>
+      </div>
+
+      {/* Status cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center gap-2 mb-1"><DollarSign className="w-4 h-4 text-green-500" /><span className="text-[10px] font-bold text-gray-400 uppercase">No Lucro</span></div>
           <div className="text-2xl font-bold text-green-700 font-display">{noLucro}</div>
-          <div className="text-[10px] text-gray-400 mt-0.5">resultado acumulado positivo</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">de {totalFuncs}</div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center gap-2 mb-1"><Clock className="w-4 h-4 text-amber-500" /><span className="text-[10px] font-bold text-gray-400 uppercase">Em Amortização</span></div>
           <div className="text-2xl font-bold text-amber-700 font-display">{emAmort}</div>
-          <div className="text-[10px] text-gray-400 mt-0.5">custo acumulado {'>'} receita</div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-gray-400" /><span className="text-[10px] font-bold text-gray-400 uppercase">Sem Histórico</span></div>
           <div className="text-2xl font-bold text-gray-400 font-display">{semDados}</div>
-          <div className="text-[10px] text-gray-400 mt-0.5">sem BMs ou folha registrados</div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center gap-2 mb-1"><DollarSign className="w-4 h-4 text-violet-500" /><span className="text-[10px] font-bold text-gray-400 uppercase">Capital em Giro</span></div>

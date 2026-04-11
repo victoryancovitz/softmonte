@@ -38,6 +38,13 @@ interface NavGroupDef {
 
 const NAV_GROUPS: NavGroupDef[] = [
   {
+    label: 'Diretoria',
+    links: [
+      { href: '/diretoria', label: 'Painel Executivo', icon: ic.home },
+      { href: '/rh/rentabilidade', label: 'Rentabilidade', icon: ic.report },
+    ],
+  },
+  {
     label: 'Engenharia',
     links: [
       { href: '/obras', label: 'Obras', icon: ic.obras },
@@ -84,7 +91,15 @@ const NAV_GROUPS: NavGroupDef[] = [
 export interface ModuleTab { href: string; label: string; match?: string[] }
 export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
   {
-    // Módulo Administrativo — ativa quando em /funcionarios, /rh/*, /alocacao, /ponto, /faltas, /documentos, /rastreio, /relatorios/absenteismo
+    // Módulo Diretoria
+    groupPaths: ['/diretoria', '/rh/rentabilidade'],
+    tabs: [
+      { href: '/diretoria', label: 'Painel Executivo', match: ['/diretoria'] },
+      { href: '/rh/rentabilidade', label: 'Rentabilidade', match: ['/rh/rentabilidade'] },
+    ],
+  },
+  {
+    // Módulo Administrativo
     groupPaths: ['/funcionarios', '/rh/', '/alocacao', '/ponto', '/faltas', '/documentos', '/rastreio', '/rh/vencimentos', '/relatorios/absenteismo'],
     tabs: [
       { href: '/funcionarios', label: 'Funcionários', match: ['/funcionarios'] },
@@ -102,7 +117,6 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/relatorios/absenteismo', label: 'Absenteísmo' },
       { href: '/documentos', label: 'Documentos' },
       { href: '/rh/vencimentos', label: 'Vencimentos', match: ['/rh/vencimentos', '/rastreio'] },
-      { href: '/rh/rentabilidade', label: 'Rentabilidade' },
     ],
   },
   {
@@ -247,14 +261,6 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
 
           {/* Nav groups */}
           <nav ref={navRef} className="flex items-center h-full gap-0.5 flex-1 min-w-0">
-            {/* Diretoria — link direto (sem dropdown) */}
-            <Link href="/diretoria"
-              className={`px-3 h-full text-[13px] font-medium transition-colors relative flex items-center ${
-                pathname === '/diretoria' ? 'text-white' : 'text-blue-200/70 hover:text-white'
-              }`}>
-              Diretoria
-              {pathname === '/diretoria' && <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#c8960c] rounded-t" />}
-            </Link>
             {NAV_GROUPS.map(g => {
               const isActive = activeGroup === g.label
               const isOpen = openGroup === g.label

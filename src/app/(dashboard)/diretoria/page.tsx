@@ -22,7 +22,7 @@ export default async function DiretoriaPage() {
     { data: obrasAtivas }, { data: contasSaldo }, { data: lancamentos },
     { data: funcAtivos }, { data: pontoMes }, { data: bmsAprovados },
     { data: bmItensAll }, { data: funcoes }, { data: desligados90 },
-    { data: receitasAbertas }, { data: prazosLegais }, { data: bmsMesAtual }, { data: billingRates },
+    { data: receitasAbertas }, { data: prazosLegais }, { data: bmsMesAtual }, { data: billingRates }, { data: folhasFechadas },
   ] = await Promise.all([
     supabase.from('vw_dre_obra_mes').select('*').limit(500),
     supabase.from('vw_dre_obra').select('*').limit(500),
@@ -45,6 +45,7 @@ export default async function DiretoriaPage() {
     supabase.from('vw_prazos_legais').select('funcionario_id, nome, alerta_tipo, prazo_experiencia_2').limit(100),
     supabase.from('boletins_medicao').select('id').gte('data_inicio', mesInicio).is('deleted_at', null),
     supabase.from('contrato_composicao').select('funcao_nome, custo_hora_contratado').eq('ativo', true),
+    supabase.from('folha_fechamentos').select('valor_total_bruto, valor_total_encargos, valor_total_beneficios, valor_total').is('deleted_at', null),
   ])
 
   const funcs = funcAtivos ?? []
@@ -60,6 +61,14 @@ export default async function DiretoriaPage() {
   const margemPct = totReceita > 0 ? (margemBruta / totReceita * 100) : 0
   const alvoMedio = (dre ?? []).length > 0 ? (dre ?? []).reduce((s: number, o: any) => s + Number(o.margem_alvo_pct || 0), 0) / (dre ?? []).length : 25
   const margemOk = margemPct >= alvoMedio
+
+  // 3 Margens para o card
+  const custoFolhaSemProv = (folhasFechadas ?? []).reduce((s: number, f: any) => s + Number(f.valor_total_bruto || 0) + Number(f.valor_total_encargos || 0) + Number(f.valor_total_beneficios || 0), 0)
+  const custoFolhaComProv = (folhasFechadas ?? []).reduce((s: number, f: any) => s + Number(f.valor_total || 0), 0)
+  const margemRealDir = totReceita > 0 ? ((totReceita - custoFolhaSemProv) / totReceita * 100) : null
+  const margemRealProvDir = totReceita > 0 ? ((totReceita - custoFolhaComProv) / totReceita * 100) : null
+  // Margem teórica: da view breakeven
+  const margemTeoricaDir = (dre ?? []).length > 0 ? Number((dre ?? [])[0]?.margem_pct || 0) : null
 
   const cf30 = (cashflow ?? []).filter((e: any) => e.data >= hojeStr && e.data <= em30)
   // Separar dados REAIS (lançamentos) de PROJEÇÕES (forecast/folha estimada)
@@ -198,7 +207,7 @@ export default async function DiretoriaPage() {
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Saúde Financeira</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
-        <Link href="/financeiro/dre" title="Ver DRE & Resultado"
+        <Link href="/rh/rentabilidade" title="Ver análise de margem"
           className={`block rounded-2xl shadow-sm border p-5 transition-shadow hover:shadow-md ${margemOk ? 'bg-gradient-to-br from-green-50 to-white border-green-200' : 'bg-gradient-to-br from-red-50 to-white border-red-200'}`}>
           <div className="flex items-start justify-between mb-3">
             <div>
@@ -215,7 +224,13 @@ export default async function DiretoriaPage() {
             <span>Receita: <strong>{fmtK(totReceita)}</strong></span>
             <span>Custo MO: <strong>{fmtK(totCusto)}</strong></span>
           </div>
-          <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand">Ver DRE completo <ArrowRight className="w-3 h-3" /></span>
+          {/* 3 Margens pills */}
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {margemTeoricaDir != null && <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold" title="Billing rate vs custo projetado">Teórica {margemTeoricaDir.toFixed(0)}%</span>}
+            {margemRealDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${margemRealDir >= 20 ? 'bg-green-50 text-green-700' : margemRealDir >= 10 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`} title="Receita BMs − folha sem provisões">Real {margemRealDir.toFixed(1)}%</span>}
+            {margemRealProvDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${margemRealProvDir >= 20 ? 'bg-green-50 text-green-700' : margemRealProvDir >= 10 ? 'bg-amber-50 text-amber-700' : 'bg-red-50 text-red-700'}`} title="Receita BMs − folha completa c/ provisões">C/Prov {margemRealProvDir.toFixed(1)}%</span>}
+          </div>
+          <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand">Ver análise de margem <ArrowRight className="w-3 h-3" /></span>
         </Link>
 
         <Link href="/financeiro/cashflow" title="Ver Fluxo de Caixa"
