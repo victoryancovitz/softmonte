@@ -56,7 +56,7 @@ export default async function DiretoriaPage() {
   // Receita real: dos lançamentos financeiros (BMs aprovados geram lançamentos)
   const totReceita = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita').reduce((s: number, l: any) => s + Number(l.valor), 0)
   // Custo MO: da view DRE (baseada em ponto/faltas reais)
-  const totCusto = (dreMes ?? []).reduce((s: number, m: any) => s + Number(m.custo_mo_real || 0), 0)
+  const totCusto = (folhasFechadas ?? []).reduce((s: number, f: any) => s + Number(f.valor_total || 0), 0)
   const margemBruta = totReceita - totCusto
   const margemPct = totReceita > 0 ? (margemBruta / totReceita * 100) : 0
   const alvoMedio = (dre ?? []).length > 0 ? (dre ?? []).reduce((s: number, o: any) => s + Number(o.margem_alvo_pct || 0), 0) / (dre ?? []).length : 25
