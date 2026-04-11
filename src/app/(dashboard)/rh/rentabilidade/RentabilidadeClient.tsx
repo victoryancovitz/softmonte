@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { ChevronDown, ChevronUp, TrendingUp, Clock, DollarSign, Users } from 'lucide-react'
 
 const fmt = (v: any) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -70,8 +70,8 @@ export default function RentabilidadeClient({ data, ciclo }: { data: any[]; cicl
               const isOpen = expandido === f.funcionario_id
               const be = BE_BADGE[f.status_breakeven] || BE_BADGE.nunca_rentavel
               return (
-                <tr key={f.funcionario_id}
-                  onClick={() => setExpandido(isOpen ? null : f.funcionario_id)}
+                <Fragment key={f.funcionario_id}>
+                <tr onClick={() => setExpandido(isOpen ? null : f.funcionario_id)}
                   className={`border-b border-gray-50 cursor-pointer transition-colors ${isOpen ? 'bg-brand/5' : 'hover:bg-gray-50'}`}>
                   <td className="px-2 py-3 text-center text-gray-400">
                     {isOpen ? <ChevronUp className="w-3.5 h-3.5 inline" /> : <ChevronDown className="w-3.5 h-3.5 inline" />}
@@ -94,6 +94,58 @@ export default function RentabilidadeClient({ data, ciclo }: { data: any[]; cicl
                     {fmt(f.resultado_acumulado)}
                   </td>
                 </tr>
+                {isOpen && (
+                  <tr><td colSpan={9} className="bg-gray-50/80 border-b border-gray-200 px-4 py-5">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                      {/* Composição do custo */}
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Composição do Custo Mensal</h4>
+                        <div className="space-y-1.5 text-sm">
+                          <div className="flex justify-between"><span className="text-gray-500">Salário base</span><span className="font-medium">{fmt(f.salario_base)}</span></div>
+                          {Number(f.insalubridade_pct) > 0 && (
+                            <div className="flex justify-between text-xs"><span className="text-gray-400 pl-3">+ Insalubridade ({f.insalubridade_pct}%)</span><span className="text-gray-600">{fmt(Number(f.salario_base) * Number(f.insalubridade_pct) / 100)}</span></div>
+                          )}
+                          <div className="flex justify-between pt-1 border-t border-gray-100"><span className="text-gray-500">Encargos (INSS+FGTS+RAT+S.S.)</span><span className="text-red-600 font-medium">+ {fmt(f.encargos_valor)}</span></div>
+                          <div className="flex justify-between"><span className="text-gray-500">Provisões (13°+Férias+FGTS)</span><span className="text-violet-600 font-medium">+ {fmt(f.provisoes_valor)}</span></div>
+                          <div className="flex justify-between"><span className="text-gray-500">Benefícios (VT+VR+VA+Plano)</span><span className="text-blue-600 font-medium">+ {fmt(f.beneficios_valor)}</span></div>
+                          <div className="flex justify-between pt-2 border-t-2 border-gray-200 font-bold"><span>Custo total/mês</span><span className="text-red-700">{fmt(f.custo_total_mensal)}</span></div>
+                          <div className="flex justify-between text-xs text-gray-400 mt-1"><span>Custo por hora</span><span>{fmt(f.custo_hora_real)}/h</span></div>
+                          <div className="flex justify-between text-xs text-gray-400"><span>Billing rate</span><span className="text-green-600">{fmt(f.billing_rate)}/h</span></div>
+                          <div className="flex justify-between text-xs font-semibold"><span>Margem por hora</span><span className={Number(f.margem_hh) >= 0 ? 'text-green-700' : 'text-red-700'}>{fmt(f.margem_hh)}/h ({Number(f.margem_pct).toFixed(1)}%)</span></div>
+                          {Number(f.custo_mobilizacao_total) > 0 && (
+                            <div className="mt-2 p-2 bg-amber-50 rounded-lg text-xs">
+                              <div className="font-semibold text-amber-700 mb-1">Custo de mobilização</div>
+                              <div className="flex justify-between text-amber-600"><span>ASO + EPI + Uniforme</span><span>{fmt(f.custo_mobilizacao_total)}</span></div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      {/* Jornada financeira */}
+                      <div>
+                        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Jornada Financeira Acumulada</h4>
+                        <div className="grid grid-cols-3 gap-2 text-center mb-3">
+                          <div className="bg-red-50 rounded-lg p-2"><div className="text-[10px] text-red-400 font-bold mb-0.5">Custo acumulado</div><div className="text-sm font-bold text-red-700">{fmt(f.custo_total_acumulado)}</div></div>
+                          <div className="bg-green-50 rounded-lg p-2"><div className="text-[10px] text-green-400 font-bold mb-0.5">Receita acumulada</div><div className="text-sm font-bold text-green-700">{fmt(f.receita_acumulada)}</div></div>
+                          <div className={`rounded-lg p-2 ${Number(f.resultado_acumulado) >= 0 ? 'bg-green-50' : 'bg-red-50'}`}><div className="text-[10px] font-bold mb-0.5 text-gray-400">Resultado</div><div className={`text-sm font-bold ${Number(f.resultado_acumulado) >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(f.resultado_acumulado)}</div></div>
+                        </div>
+                        <div className="flex gap-2 flex-wrap">
+                          {f.meses_para_breakeven != null && (
+                            <div className="text-[10px] bg-amber-50 text-amber-700 px-2 py-1 rounded-full">
+                              Break-even: mês {f.meses_para_breakeven} {f.meses_na_empresa >= (f.meses_para_breakeven || 0) ? '✅ atingido' : `(faltam ${(f.meses_para_breakeven || 0) - f.meses_na_empresa}m)`}
+                            </div>
+                          )}
+                          {f.meses_periodo_otimo != null && (
+                            <div className="text-[10px] bg-blue-50 text-blue-700 px-2 py-1 rounded-full">Período ótimo: até mês {f.meses_periodo_otimo}</div>
+                          )}
+                        </div>
+                        <div className="mt-3 text-[10px] text-gray-400">
+                          {f.meses_na_empresa}m na empresa · {Number(f.hh_faturadas_total).toLocaleString('pt-BR')} HH faturadas · Admissão: {f.admissao ? new Date(f.admissao + 'T12:00').toLocaleDateString('pt-BR') : '—'}
+                        </div>
+                      </div>
+                    </div>
+                  </td></tr>
+                )}
+                </Fragment>
               )
             })}
           </tbody>
