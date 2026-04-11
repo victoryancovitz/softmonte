@@ -7,6 +7,7 @@ import BackButton from '@/components/BackButton'
 import FuncionarioDocumentos from '@/components/FuncionarioDocumentos'
 import FuncionarioHistoricoSalarial from '@/components/FuncionarioHistoricoSalarial'
 import PagamentosExtrasFuncionario from '@/components/PagamentosExtrasFuncionario'
+import MobilizacaoCustos from '@/components/MobilizacaoCustos'
 import FuncionarioTabs, { Tab } from '@/components/FuncionarioTabs'
 import { User, Briefcase, DollarSign, Clock, FileText, History } from 'lucide-react'
 
@@ -408,6 +409,11 @@ export default async function FuncionarioPage({ params }: { params: { id: string
             <Link href="/rh/pagamentos-extras" className="text-[11px] text-brand hover:underline">Visão global →</Link>
           </div>
           <PagamentosExtrasFuncionario funcionarioId={f.id} />
+
+          {/* Custos de Mobilização */}
+          <MobilizacaoCustos funcionarioId={f.id} admissao={f.admissao}
+            initial={{ aso: Number(f.custo_aso_admissional || 0), epi: Number(f.custo_epi || 0), uniforme: Number(f.custo_uniforme || 0), outros: Number(f.custo_outros_admissao || 0) }}
+            obraId={alocacaoAtiva?.obra_id ?? null} />
         </div>
       </div>
     ),

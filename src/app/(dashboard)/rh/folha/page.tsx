@@ -103,27 +103,69 @@ export default function FolhaPage() {
       const { error: itensErr } = await supabase.from('folha_itens').insert(itens)
       if (itensErr) throw new Error('Falha ao salvar itens da folha: ' + itensErr.message)
 
-      // 6) Lançamento no financeiro (1 agregado)
+      // 6) Lançamentos por funcionário (adiantamento + saldo) + provisão agregada
       const obraNome = obras.find(o => o.id === form.obra_id)?.nome || 'Obra'
-      const { data: lanc, error: lancErr } = await supabase.from('financeiro_lancamentos').insert({
-        obra_id: form.obra_id,
-        tipo: 'despesa',
-        nome: `Folha ${String(form.mes).padStart(2,'0')}/${form.ano} — ${obraNome}`,
-        categoria: 'Folha de Pagamento',
-        valor: tot,
-        status: 'em_aberto',
-        data_competencia: `${form.ano}-${String(form.mes).padStart(2,'0')}-01`,
-        data_vencimento: data_pg,
-        origem: 'folha_fechamento',
-        observacao: `Gerado automaticamente pelo fechamento de folha ${ff.id}`,
-        created_by: user?.id ?? null,
-      }).select().single()
-      if (lancErr) throw new Error('Falha ao gerar lançamento financeiro da folha: ' + lancErr.message)
+      const compBase = `${form.ano}-${String(form.mes).padStart(2,'0')}-01`
+      const dtAdiantamento = `${form.ano}-${String(form.mes).padStart(2,'0')}-20`
 
-      if (lanc) {
-        const { error: updFFErr } = await supabase.from('folha_fechamentos').update({ lancamentos_gerados: 1 }).eq('id', ff.id)
-        if (updFFErr) throw new Error('Falha ao marcar folha como lançada: ' + updFFErr.message)
+      // Buscar adiantamento_pct
+      const funcIds = custos.map((c: any) => c.funcionario_id)
+      const { data: funcsAdiant } = await supabase.from('funcionarios').select('id, adiantamento_pct').in('id', funcIds)
+      const adiantMap: Record<string, number> = {}
+      ;(funcsAdiant ?? []).forEach((f: any) => { adiantMap[f.id] = Number(f.adiantamento_pct ?? 40) / 100 })
+
+      const lancamentosParaInserir: any[] = []
+      for (const c of custos) {
+        const adiantPct = adiantMap[c.funcionario_id] ?? 0.4
+        const salLiquido = Number(c.salario_liquido_empresa || 0)
+        const vlAdiant = Math.round(salLiquido * adiantPct * 100) / 100
+        const vlSaldo = Math.round((Number(c.custo_real_mes || 0) - vlAdiant) * 100) / 100
+
+        lancamentosParaInserir.push({
+          obra_id: form.obra_id, funcionario_id: c.funcionario_id,
+          tipo: 'despesa', nome: `Adiantamento — ${c.nome} ${String(form.mes).padStart(2,'0')}/${form.ano}`,
+          categoria: 'Folha de Pagamento', tipo_folha: 'adiantamento',
+          valor: vlAdiant, status: 'em_aberto', data_competencia: compBase,
+          data_vencimento: dtAdiantamento, origem: 'folha_fechamento', is_provisao: false,
+          created_by: user?.id ?? null,
+        })
+        lancamentosParaInserir.push({
+          obra_id: form.obra_id, funcionario_id: c.funcionario_id,
+          tipo: 'despesa', nome: `Saldo Salário — ${c.nome} ${String(form.mes).padStart(2,'0')}/${form.ano}`,
+          categoria: 'Folha de Pagamento', tipo_folha: 'saldo_salario',
+          valor: vlSaldo, status: 'em_aberto', data_competencia: compBase,
+          data_vencimento: data_pg, origem: 'folha_fechamento', is_provisao: false,
+          created_by: user?.id ?? null,
+        })
       }
+      // Provisão agregada
+      if (tot_prov > 0) {
+        lancamentosParaInserir.push({
+          obra_id: form.obra_id, tipo: 'despesa',
+          nome: `Provisão 13°/Férias/FGTS — ${String(form.mes).padStart(2,'0')}/${form.ano} — ${obraNome}`,
+          categoria: 'Folha de Pagamento', valor: tot_prov,
+          status: 'em_aberto', data_competencia: compBase,
+          origem: 'folha_fechamento', is_provisao: true,
+          created_by: user?.id ?? null,
+        })
+      }
+      const { error: lancErr } = await supabase.from('financeiro_lancamentos').insert(lancamentosParaInserir)
+      if (lancErr) throw new Error('Falha ao gerar lançamentos da folha: ' + lancErr.message)
+
+      // 7) Provisões por funcionário
+      const provisoesRows = custos.map((c: any) => ({
+        funcionario_id: c.funcionario_id, obra_id: form.obra_id,
+        ano: form.ano, mes: form.mes,
+        provisao_decimo_mes: Math.round(Number(c.provisoes_valor || 0) * 0.397 * 100) / 100,
+        provisao_ferias_mes: Math.round(Number(c.provisoes_valor || 0) * 0.529 * 100) / 100,
+        provisao_fgts_mes: Math.round(Number(c.provisoes_valor || 0) * 0.074 * 100) / 100,
+        total_provisionado_mes: Number(c.provisoes_valor || 0),
+        saldo_anterior: 0, decimo_pago: 0, ferias_pagas: 0, fgts_rescisao_pago: 0,
+      }))
+      await supabase.from('provisoes_funcionario').upsert(provisoesRows, { onConflict: 'funcionario_id,ano,mes' })
+
+      const { error: updFFErr } = await supabase.from('folha_fechamentos').update({ lancamentos_gerados: lancamentosParaInserir.length }).eq('id', ff.id)
+      if (updFFErr) throw new Error('Falha ao marcar folha como lançada: ' + updFFErr.message)
 
       toast.success(`Folha ${String(form.mes).padStart(2,'0')}/${form.ano} fechada: R$ ${tot.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`)
       // recarrega
