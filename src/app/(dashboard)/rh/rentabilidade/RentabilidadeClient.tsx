@@ -8,6 +8,7 @@ const BE_BADGE: Record<string, { label: string; icon: string; cls: string }> = {
   no_lucro: { label: 'No lucro', icon: '✅', cls: 'bg-green-100 text-green-700' },
   em_amortizacao: { label: 'Amortizando', icon: '⏳', cls: 'bg-amber-100 text-amber-700' },
   nunca_rentavel: { label: 'Margem negativa', icon: '❌', cls: 'bg-red-100 text-red-700' },
+  sem_dados: { label: 'Sem histórico', icon: '○', cls: 'bg-gray-100 text-gray-500' },
 }
 
 const MARGEM_CLS = (pct: number) =>
@@ -19,31 +20,37 @@ export default function RentabilidadeClient({ data, ciclo }: { data: any[]; cicl
   const totalFuncs = data.length
   const noLucro = data.filter(d => d.status_breakeven === 'no_lucro').length
   const emAmort = data.filter(d => d.status_breakeven === 'em_amortizacao').length
+  const semDados = data.filter(d => d.status_breakeven === 'sem_dados').length
   const margemMedia = totalFuncs > 0 ? data.reduce((s, d) => s + Number(d.margem_pct || 0), 0) / totalFuncs : 0
 
   return (
     <>
       {/* Cards resumo */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <div className="flex items-center gap-2 mb-1"><TrendingUp className="w-4 h-4 text-brand" /><span className="text-[10px] font-bold text-gray-400 uppercase">Margem Média</span></div>
+          <div className="flex items-center gap-2 mb-1"><TrendingUp className="w-4 h-4 text-brand" /><span className="text-[10px] font-bold text-gray-400 uppercase">Margem Média (teórica)</span></div>
           <div className={`text-2xl font-bold font-display ${MARGEM_CLS(margemMedia)}`}>{margemMedia.toFixed(1)}%</div>
           <div className="text-[10px] text-gray-400 mt-0.5">{margemMedia >= 30 ? 'Excelente' : margemMedia >= 20 ? 'Bom' : margemMedia >= 10 ? 'Atenção' : 'Crítico'}</div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center gap-2 mb-1"><DollarSign className="w-4 h-4 text-green-500" /><span className="text-[10px] font-bold text-gray-400 uppercase">No Lucro</span></div>
           <div className="text-2xl font-bold text-green-700 font-display">{noLucro}</div>
-          <div className="text-[10px] text-gray-400 mt-0.5">de {totalFuncs} funcionários</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">resultado acumulado positivo</div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center gap-2 mb-1"><Clock className="w-4 h-4 text-amber-500" /><span className="text-[10px] font-bold text-gray-400 uppercase">Em Amortização</span></div>
           <div className="text-2xl font-bold text-amber-700 font-display">{emAmort}</div>
-          <div className="text-[10px] text-gray-400 mt-0.5">recuperando custo de entrada</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">custo acumulado {'>'} receita</div>
         </div>
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-          <div className="flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-violet-500" /><span className="text-[10px] font-bold text-gray-400 uppercase">Capital em Giro</span></div>
+          <div className="flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-gray-400" /><span className="text-[10px] font-bold text-gray-400 uppercase">Sem Histórico</span></div>
+          <div className="text-2xl font-bold text-gray-400 font-display">{semDados}</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">sem BMs ou folha registrados</div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
+          <div className="flex items-center gap-2 mb-1"><DollarSign className="w-4 h-4 text-violet-500" /><span className="text-[10px] font-bold text-gray-400 uppercase">Capital em Giro</span></div>
           <div className="text-lg font-bold text-gray-900 font-display">{ciclo ? fmt(ciclo.capital_giro_necessario) : '—'}</div>
-          <div className="text-[10px] text-gray-400 mt-0.5">{ciclo ? `Ciclo: ${ciclo.ciclo_financeiro_dias}d · Custo/dia: ${fmt(ciclo.custo_diario_mo)}` : 'Sem obra ativa'}</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">{ciclo ? `Ciclo: ${ciclo.ciclo_financeiro_dias}d` : 'Sem obra ativa'}</div>
         </div>
       </div>
 
@@ -58,9 +65,9 @@ export default function RentabilidadeClient({ data, ciclo }: { data: any[]; cicl
               <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Billing/HH</th>
               <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Custo/HH</th>
               <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Margem/HH</th>
-              <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Margem %</th>
+              <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase" title="Margem calculada sobre preço contratado por HH. Não reflete faturamento real.">Margem % (teórica)</th>
               <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Break-even</th>
-              <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Resultado</th>
+              <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase" title="Receita real de BMs aprovados menos custo real acumulado">Resultado real</th>
             </tr>
           </thead>
           <tbody>
@@ -90,8 +97,9 @@ export default function RentabilidadeClient({ data, ciclo }: { data: any[]; cicl
                       {be.icon} {be.label}{f.status_breakeven === 'em_amortizacao' && f.meses_para_breakeven ? ` (${f.meses_para_breakeven}m)` : ''}
                     </span>
                   </td>
-                  <td className={`px-3 py-3 text-right font-bold ${Number(f.resultado_acumulado) >= 0 ? 'text-green-700' : 'text-red-600'}`}>
-                    {fmt(f.resultado_acumulado)}
+                  <td className={`px-3 py-3 text-right font-bold ${f.status_breakeven === 'sem_dados' ? 'text-gray-300' : Number(f.resultado_acumulado) >= 0 ? 'text-green-700' : 'text-red-600'}`}
+                    title={f.status_breakeven === 'sem_dados' ? 'Sem dados de faturamento real. Crie BMs e feche folhas.' : ''}>
+                    {f.status_breakeven === 'sem_dados' ? '—' : fmt(f.resultado_acumulado)}
                   </td>
                 </tr>
                 {isOpen && (
