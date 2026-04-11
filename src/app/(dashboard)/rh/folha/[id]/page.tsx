@@ -148,13 +148,12 @@ export default function FolhaDetalhePage() {
                           <div className="px-4 py-3 text-red-600 text-xs">{totalDescontos > 0 ? fmt(totalDescontos) : '--'}</div>
                           <div className="px-4 py-3 font-bold text-green-700">{fmt(it.valor_liquido)}</div>
                           <div className="px-4 py-3 flex items-center gap-2 justify-end">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handlePrint(it.id) }}
+                            <a href={`/rh/folha/${id}/holerite/${it.funcionario_id}`} target="_blank"
+                              onClick={e => e.stopPropagation()}
                               className="text-gray-400 hover:text-brand p-1"
-                              title="Imprimir holerite"
-                            >
+                              title="Abrir holerite individual">
                               <Printer className="w-4 h-4" />
-                            </button>
+                            </a>
                             <button className="text-gray-400 hover:text-brand p-1" title="Ver holerite">
                               {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </button>
