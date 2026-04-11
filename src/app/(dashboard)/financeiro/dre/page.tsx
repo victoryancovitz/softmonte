@@ -6,12 +6,15 @@ import DreClient from './DreClient'
 export default async function DrePage() {
   const supabase = createClient()
 
-  const [{ data: dre }, { data: dreMes }, { data: custos }, { data: lancamentos }] = await Promise.all([
+  const [{ data: dre }, { data: dreMes }, { data: custos }, { data: lancamentos }, { data: empresaArr }, { data: contasSaldo }] = await Promise.all([
     supabase.from('vw_dre_obra').select('*').limit(500),
     supabase.from('vw_dre_obra_mes').select('*').limit(500),
     supabase.from('vw_custo_funcionario').select('*'),
     supabase.from('financeiro_lancamentos').select('*').is('deleted_at', null).order('data_competencia').limit(5000),
+    supabase.from('empresa_config').select('aliquota_simples_efetiva, capital_social').limit(1),
+    supabase.from('vw_contas_saldo').select('*'),
   ])
+  const empresa = (empresaArr ?? [])[0] ?? { aliquota_simples_efetiva: 0.06, capital_social: 100000 }
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
@@ -38,6 +41,8 @@ export default async function DrePage() {
         dreMes={dreMes ?? []}
         custos={custos ?? []}
         lancamentos={lancamentos ?? []}
+        empresa={empresa}
+        contasSaldo={contasSaldo ?? []}
       />
     </div>
   )
