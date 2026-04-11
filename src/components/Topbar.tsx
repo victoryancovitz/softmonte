@@ -102,6 +102,7 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/relatorios/absenteismo', label: 'Absenteísmo' },
       { href: '/documentos', label: 'Documentos' },
       { href: '/rh/vencimentos', label: 'Vencimentos', match: ['/rh/vencimentos', '/rastreio'] },
+      { href: '/rh/rentabilidade', label: 'Rentabilidade' },
     ],
   },
   {
