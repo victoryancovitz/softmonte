@@ -4,12 +4,7 @@ import RefreshButton from './RefreshButton'
 import { Target, DollarSign, AlertTriangle, Users, Calendar, ArrowRight } from 'lucide-react'
 
 const fmt = (v: any) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const fmtK = (v: any) => {
-  const n = Number(v || 0)
-  if (Math.abs(n) >= 1000000) return `R$ ${(n / 1000000).toFixed(2)}M`
-  if (Math.abs(n) >= 1000) return `R$ ${(n / 1000).toFixed(0)}k`
-  return fmt(n)
-}
+const fmtK = (v: any) => fmt(v) // valores completos, sem abreviação
 
 export default async function DiretoriaPage() {
   const supabase = createClient()
@@ -27,7 +22,7 @@ export default async function DiretoriaPage() {
     { data: obrasAtivas }, { data: contasSaldo }, { data: lancamentos },
     { data: funcAtivos }, { data: pontoMes }, { data: bmsAprovados },
     { data: bmItensAll }, { data: funcoes }, { data: desligados90 },
-    { data: receitasAbertas }, { data: prazosLegais }, { data: bmsMesAtual },
+    { data: receitasAbertas }, { data: prazosLegais }, { data: bmsMesAtual }, { data: billingRates },
   ] = await Promise.all([
     supabase.from('vw_dre_obra_mes').select('*').limit(500),
     supabase.from('vw_dre_obra').select('*').limit(500),
@@ -38,7 +33,7 @@ export default async function DiretoriaPage() {
     supabase.from('vw_rescisoes_previstas').select('*').limit(100),
     supabase.from('obras').select('*').eq('status', 'ativo').is('deleted_at', null),
     supabase.from('vw_contas_saldo').select('*'),
-    supabase.from('financeiro_lancamentos').select('id, tipo, valor, status, is_provisao').is('deleted_at', null).limit(5000),
+    supabase.from('financeiro_lancamentos').select('id, tipo, valor, status, is_provisao, data_vencimento').is('deleted_at', null).limit(5000),
     supabase.from('funcionarios').select('id, nome, cargo, status, salario_base, vt_mensal, vr_diario, va_mensal, funcao_id, deleted_at').is('deleted_at', null),
     supabase.from('ponto_marcacoes').select('funcionario_id, data').gte('data', mesInicio).lte('data', hojeStr),
     supabase.from('boletins_medicao').select('id, numero, valor_aprovado, created_at, aprovado_em, obra_id, data_inicio, data_fim').eq('status', 'aprovado').is('deleted_at', null),
@@ -49,6 +44,7 @@ export default async function DiretoriaPage() {
     supabase.from('financeiro_lancamentos').select('id, valor, data_vencimento').eq('tipo', 'receita').neq('status', 'pago').is('deleted_at', null),
     supabase.from('vw_prazos_legais').select('funcionario_id, nome, alerta_tipo, prazo_experiencia_2').limit(100),
     supabase.from('boletins_medicao').select('id').gte('data_inicio', mesInicio).is('deleted_at', null),
+    supabase.from('contrato_composicao').select('funcao_nome, custo_hora_contratado').eq('ativo', true),
   ])
 
   const funcs = funcAtivos ?? []
@@ -56,8 +52,9 @@ export default async function DiretoriaPage() {
   const MESES = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
   // === SEÇÃO 1: SAÚDE FINANCEIRA ===
-  // IMPORTANTE: usar APENAS receita_realizada (BMs aprovados), NUNCA receita_prevista (projeção)
-  const totReceita = (dreMes ?? []).reduce((s: number, m: any) => s + Number(m.receita_realizada || 0), 0)
+  // Receita real: dos lançamentos financeiros (BMs aprovados geram lançamentos)
+  const totReceita = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita').reduce((s: number, l: any) => s + Number(l.valor), 0)
+  // Custo MO: da view DRE (baseada em ponto/faltas reais)
   const totCusto = (dreMes ?? []).reduce((s: number, m: any) => s + Number(m.custo_mo_real || 0), 0)
   const margemBruta = totReceita - totCusto
   const margemPct = totReceita > 0 ? (margemBruta / totReceita * 100) : 0
@@ -73,9 +70,11 @@ export default async function DiretoriaPage() {
   const entradaProj = cf30Projetados.filter((e: any) => Number(e.valor) > 0).reduce((s: number, e: any) => s + Number(e.valor), 0)
   const saidaProj = cf30Projetados.filter((e: any) => Number(e.valor) < 0).reduce((s: number, e: any) => s + Number(e.valor), 0)
   const saldoContas = (contasSaldo ?? []).reduce((s: number, c: any) => s + Number(c.saldo || 0), 0)
-  const saldo30 = saldoContas + entrada30 + saida30 + entradaProj + saidaProj
+  // BMs a receber nos próximos 30 dias
+  const receitaProx30 = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita' && l.status !== 'pago' && l.data_vencimento && l.data_vencimento >= hojeStr && l.data_vencimento <= em30).reduce((s: number, l: any) => s + Number(l.valor), 0)
+  const saldo30 = saldoContas + entrada30 + saida30 + entradaProj + saidaProj + receitaProx30
   const saldo30Ok = saldo30 >= 0
-  const temDadosReais = entrada30 !== 0 || saida30 !== 0
+  const temDadosReais = entrada30 !== 0 || saida30 !== 0 || receitaProx30 > 0
 
   const receitaPaga = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita' && l.status === 'pago').reduce((s: number, l: any) => s + Number(l.valor), 0)
   const receitaAberto = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita' && l.status === 'em_aberto').reduce((s: number, l: any) => s + Number(l.valor), 0)
@@ -108,18 +107,32 @@ export default async function DiretoriaPage() {
   const valorContrato = Number(obra?.valor_contrato || 0)
   const pctReceita = valorContrato > 0 ? (receitaRealizada / valorContrato * 100) : 0
 
-  // Margem por função
+  // Margem por função — usar billing rate do contrato (não funcoes.custo_hora)
   const funcMap = new Map((funcoes ?? []).map((fn: any) => [fn.id, fn]))
+  const billingMap: Record<string, number[]> = {}
+  ;(billingRates ?? []).forEach((b: any) => {
+    const nome = (b.funcao_nome || '').toUpperCase().trim()
+    if (!billingMap[nome]) billingMap[nome] = []
+    billingMap[nome].push(Number(b.custo_hora_contratado || 0))
+  })
+  const billingMediaMap: Record<string, number> = {}
+  Object.entries(billingMap).forEach(([k, vals]) => {
+    billingMediaMap[k] = vals.reduce((a, b) => a + b, 0) / vals.length
+  })
+
   const margemFuncao: { nome: string; hc: number; venda: number; custo: number; margem: number }[] = []
   const byFuncao: Record<string, any[]> = {}
   funcs.forEach((f: any) => { if (f.funcao_id) { if (!byFuncao[f.funcao_id]) byFuncao[f.funcao_id] = []; byFuncao[f.funcao_id].push(f) } })
   Object.entries(byFuncao).forEach(([fid, fs]) => {
     const fn = funcMap.get(fid)
-    if (!fn || !fn.custo_hora) return
+    if (!fn) return
+    const nomeFn = (fn.nome || '').toUpperCase().trim()
+    const billingHH = billingMediaMap[nomeFn] || 0
+    if (!billingHH) return
     const avgSal = fs.reduce((s: number, f: any) => s + Number(f.salario_base || 0), 0) / fs.length
     const custoR = (avgSal * 1.72) / (fn.jornada_horas_mes || 220)
-    const marg = fn.custo_hora > 0 ? ((fn.custo_hora - custoR) / fn.custo_hora * 100) : 0
-    margemFuncao.push({ nome: fn.nome, hc: fs.length, venda: Number(fn.custo_hora), custo: Math.round(custoR * 100) / 100, margem: Math.round(marg * 10) / 10 })
+    const marg = billingHH > 0 ? ((billingHH - custoR) / billingHH * 100) : 0
+    margemFuncao.push({ nome: fn.nome, hc: fs.length, venda: Math.round(billingHH * 100) / 100, custo: Math.round(custoR * 100) / 100, margem: Math.round(marg * 10) / 10 })
   })
   margemFuncao.sort((a, b) => b.margem - a.margem)
 
@@ -190,8 +203,8 @@ export default async function DiretoriaPage() {
           <div className="flex items-start justify-between mb-3">
             <div>
               <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Margem Real Acumulada</div>
-              <div className={`text-4xl font-bold font-display mt-1 ${totReceita === 0 ? 'text-gray-300' : margemOk ? 'text-green-700' : 'text-red-700'}`}>{totReceita === 0 ? '—' : `${margemPct.toFixed(1)}%`}</div>
-              <div className="text-xs text-gray-500 mt-1">{totReceita === 0 ? 'Sem BMs aprovados — margem calculada após primeiro faturamento' : `Alvo: ${alvoMedio.toFixed(0)}% · Resultado: ${fmtK(margemBruta)}`}</div>
+              <div className={`text-4xl font-bold font-display mt-1 ${totReceita === 0 ? 'text-gray-300' : margemOk ? 'text-green-700' : 'text-red-700'}`}>{totReceita > 0 ? `${margemPct.toFixed(1)}%` : '—'}</div>
+              <div className="text-xs text-gray-500 mt-1">{totReceita > 0 ? `Alvo: ${alvoMedio.toFixed(0)}% · Resultado: ${fmt(margemBruta)}` : 'Nenhum faturamento registrado ainda'}</div>
             </div>
             <Target className={`w-8 h-8 ${margemOk ? 'text-green-500' : 'text-red-500'}`} />
           </div>
@@ -219,7 +232,8 @@ export default async function DiretoriaPage() {
             <div className="p-2 bg-white/60 rounded-lg">
               <div className="text-[10px] text-gray-400 font-semibold uppercase">Entradas</div>
               <div className="text-sm font-bold text-green-700">{fmtK(entrada30)}</div>
-              {entradaProj > 0 && <div className="text-[9px] text-gray-400">+{fmtK(entradaProj)} projetado</div>}
+              {receitaProx30 > 0 && <div className="text-[9px] text-green-600">+{fmt(receitaProx30)} a receber</div>}
+              {entradaProj > 0 && <div className="text-[9px] text-gray-400">+{fmt(entradaProj)} projetado</div>}
             </div>
             <div className="p-2 bg-white/60 rounded-lg">
               <div className="text-[10px] text-gray-400 font-semibold uppercase">Saídas</div>
