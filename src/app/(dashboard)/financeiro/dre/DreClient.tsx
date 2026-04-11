@@ -35,16 +35,27 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
 
   // === DRE OFICIAL: classificar lançamentos ===
   const receitaBruta = lancamentos.filter((l: any) => l.tipo === 'receita' && !l.is_provisao).reduce((s: number, l: any) => s + Number(l.valor), 0)
-  const aliquotaSimples = Number(empresa?.aliquota_simples_efetiva || 0.06)
-  const deducoes = receitaBruta * aliquotaSimples
+  const isSimples = empresa?.regime_tributario === 'simples_nacional'
+
+  // Deduções da Receita Bruta
+  const issVal = receitaBruta * Number(empresa?.aliquota_iss || 0.02)
+  const pisVal = receitaBruta * Number(empresa?.aliquota_pis || 0.0065)
+  const cofinsVal = receitaBruta * Number(empresa?.aliquota_cofins || 0.03)
+  const simplesVal = isSimples ? receitaBruta * Number(empresa?.aliquota_simples_efetiva || 0.06) : 0
+  const deducoes = isSimples ? simplesVal : (issVal + pisVal + cofinsVal)
   const receitaLiquida = receitaBruta - deducoes
+
+  // IRPJ e CSLL (Lucro Presumido — aparecem depois do LAIR)
+  const irpjVal = !isSimples ? receitaBruta * Number(empresa?.aliquota_ir || 0.048) : 0
+  const csllVal = !isSimples ? receitaBruta * Number(empresa?.aliquota_csll || 0.0288) : 0
 
   const csp = lancamentos.filter((l: any) => l.tipo === 'despesa' && !l.is_provisao && (l.origem === 'folha_fechamento' || l.categoria?.toLowerCase().includes('folha') || l.categoria?.toLowerCase().includes('salário') || l.categoria?.toLowerCase().includes('encargo') || l.categoria?.toLowerCase().includes('fgts') || l.categoria?.toLowerCase().includes('benefício') || l.categoria?.toLowerCase().includes('rescis'))).reduce((s: number, l: any) => s + Number(l.valor), 0)
   const lucroBruto = receitaLiquida - csp
 
   const despOp = lancamentos.filter((l: any) => l.tipo === 'despesa' && !l.is_provisao && l.origem !== 'folha_fechamento' && !l.categoria?.toLowerCase().includes('folha') && !l.categoria?.toLowerCase().includes('salário')).reduce((s: number, l: any) => s + Number(l.valor), 0)
   const ebitda = lucroBruto - despOp
-  const lucroLiquido = ebitda // no Simples, IR já está nas deduções
+  const lair = ebitda // sem resultado financeiro por enquanto
+  const lucroLiquido = lair - irpjVal - csllVal
 
   // === BP: dados ===
   const caixaBancos = (contasSaldo ?? []).reduce((s: number, c: any) => s + Number(c.saldo_atual || c.saldo || 0), 0)
@@ -199,7 +210,13 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
               <DreLine label="Receita HH — Mão de Obra" valor={receitaBruta} base={receitaBruta} indent />
               <DreLine label="(=) RECEITA BRUTA" valor={receitaBruta} base={receitaBruta} bold />
               <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Deduções da Receita Bruta</td></tr>
-              <DreLine label={`Simples Nacional (${(aliquotaSimples * 100).toFixed(0)}%)`} valor={deducoes} base={receitaBruta} indent negative />
+              {isSimples ? (
+                <DreLine label={`Simples Nacional (${(Number(empresa?.aliquota_simples_efetiva || 0.06) * 100).toFixed(0)}%)`} valor={simplesVal} base={receitaBruta} indent negative />
+              ) : (<>
+                <DreLine label={`ISS (${(Number(empresa?.aliquota_iss || 0.02) * 100).toFixed(1)}%)`} valor={issVal} base={receitaBruta} indent negative />
+                <DreLine label={`PIS (${(Number(empresa?.aliquota_pis || 0.0065) * 100).toFixed(2)}%)`} valor={pisVal} base={receitaBruta} indent negative />
+                <DreLine label={`COFINS (${(Number(empresa?.aliquota_cofins || 0.03) * 100).toFixed(1)}%)`} valor={cofinsVal} base={receitaBruta} indent negative />
+              </>)}
               <DreLine label="(=) RECEITA LÍQUIDA" valor={receitaLiquida} base={receitaBruta} bold />
               <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Custo dos Serviços Prestados (CSP)</td></tr>
               <DreLine label="Salários e Encargos (MO Direta)" valor={csp} base={receitaBruta} indent negative />
@@ -207,6 +224,12 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
               <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Despesas Operacionais</td></tr>
               <DreLine label="Despesas Administrativas e Comerciais" valor={despOp} base={receitaBruta} indent negative />
               <DreLine label="(=) EBITDA" valor={ebitda} base={receitaBruta} bold />
+              <DreLine label="(=) LAIR (Antes do IR)" valor={lair} base={receitaBruta} bold />
+              {!isSimples && (<>
+                <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Imposto de Renda e Contribuição Social</td></tr>
+                <DreLine label="IRPJ (base presumida 32%)" valor={irpjVal} base={receitaBruta} indent negative />
+                <DreLine label="CSLL (base presumida 32%)" valor={csllVal} base={receitaBruta} indent negative />
+              </>)}
               <DreLine label="(=) LUCRO LÍQUIDO" valor={lucroLiquido} base={receitaBruta} bold />
             </tbody>
           </table>

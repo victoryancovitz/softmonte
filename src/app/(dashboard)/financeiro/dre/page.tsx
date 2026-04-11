@@ -11,10 +11,10 @@ export default async function DrePage() {
     supabase.from('vw_dre_obra_mes').select('*').limit(500),
     supabase.from('vw_custo_funcionario').select('*'),
     supabase.from('financeiro_lancamentos').select('*').is('deleted_at', null).order('data_competencia').limit(5000),
-    supabase.from('empresa_config').select('aliquota_simples_efetiva, capital_social').limit(1),
+    supabase.from('empresa_config').select('regime_tributario, aliquota_simples_efetiva, aliquota_iss, aliquota_pis, aliquota_cofins, aliquota_ir, aliquota_csll, capital_social').limit(1),
     supabase.from('vw_contas_saldo').select('*'),
   ])
-  const empresa = (empresaArr ?? [])[0] ?? { aliquota_simples_efetiva: 0.06, capital_social: 100000 }
+  const empresa = (empresaArr ?? [])[0] ?? { regime_tributario: 'lucro_presumido', capital_social: 100000, aliquota_iss: 0.02, aliquota_pis: 0.0065, aliquota_cofins: 0.03, aliquota_ir: 0.048, aliquota_csll: 0.0288 }
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
