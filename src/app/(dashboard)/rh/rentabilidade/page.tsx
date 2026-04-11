@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase-server'
+import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import RentabilidadeClient from './RentabilidadeClient'
 
@@ -32,6 +33,9 @@ export default async function RentabilidadePage() {
           <h1 className="text-xl font-bold font-display text-brand mb-1">Rentabilidade por Funcionário</h1>
           <p className="text-sm text-gray-500">Break-even, margem por HH, custo de mobilização e ciclo financeiro.</p>
         </div>
+        <Link href="/diretoria/indicadores" className="flex items-center gap-2 px-4 py-2 bg-brand text-white rounded-lg text-sm font-semibold hover:bg-brand-dark transition-colors">
+          Ver Indicadores
+        </Link>
       </div>
 
       <RentabilidadeClient
