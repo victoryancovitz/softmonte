@@ -74,6 +74,7 @@ const NAV_GROUPS: NavGroupDef[] = [
       { href: '/financeiro', label: 'Lançamentos', icon: ic.fin },
       { href: '/financeiro/dre', label: 'DRE & Resultado', icon: ic.fin },
       { href: '/forecast', label: 'Forecast', icon: ic.report },
+      { href: '/financeiro/societario', label: 'Societário', icon: ic.fin },
     ],
   },
   {
@@ -126,6 +127,7 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/financeiro', label: 'Lançamentos', match: ['/financeiro', '/financeiro/novo', '/financeiro/contas', '/financeiro/cashflow', '/financeiro/ofx'] },
       { href: '/financeiro/dre', label: 'DRE & Resultado', match: ['/financeiro/dre', '/relatorios/margem', '/relatorios/bm-comparativo'] },
       { href: '/forecast', label: 'Forecast' },
+      { href: '/financeiro/societario', label: 'Societário' },
     ],
   },
   {

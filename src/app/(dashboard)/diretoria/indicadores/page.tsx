@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import SimuladorDistribuicao from './SimuladorDistribuicao'
+import SimulacaoTributaria from '@/components/SimulacaoTributaria'
 
 const fmt = (v: any) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const n = (v: any) => Number(v || 0)
@@ -15,7 +16,10 @@ function Badge({ valor, green, amber }: { valor: number | null; green: number; a
 
 export default async function IndicadoresPage() {
   const supabase = createClient()
-  const { data: ind } = await supabase.from('vw_indicadores_empresa').select('*').maybeSingle()
+  const [{ data: ind }, { data: simTrib }] = await Promise.all([
+    supabase.from('vw_indicadores_empresa').select('*').maybeSingle(),
+    supabase.from('vw_simulacao_tributaria').select('*').maybeSingle(),
+  ])
 
   if (!ind) return <div className="p-6 text-gray-400">Sem dados suficientes para calcular indicadores.</div>
 
@@ -206,6 +210,10 @@ export default async function IndicadoresPage() {
       </div>
 
       {/* Notas */}
+      {/* Simulação tributária */}
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3 mt-6">Simulação Tributária: Presumido vs Real</p>
+      <SimulacaoTributaria data={simTrib} />
+
       <div className="text-[9px] text-gray-400 space-y-1 mt-6">
         <p>1. Anualização: {ind.meses_com_dados} meses × {n(ind.fator_anual).toFixed(0)}. Mais histórico = mais precisão.</p>
         <p>2. P/L 1× é conservador. Empresas saudáveis do setor negociam entre 5× e 15× P/L.</p>
