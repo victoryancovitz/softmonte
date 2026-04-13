@@ -72,6 +72,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
     { data: docsGerados }, { data: prazosArr }, { data: admissaoArr }, { data: desligamentoArr },
     { count: faltasCount }, { count: docsCount }, { data: rescisao },
     { data: vinculosHistorico }, { data: arquivadosHistorico },
+    { data: holeriteItens }, { data: holeriteAssinaturas }, { data: holeriteEnvios },
   ] = await Promise.all([
     supabase.from('alocacoes').select('*, obras!inner(nome, status, deleted_at)').eq('funcionario_id', params.id).is('obras.deleted_at', null).order('data_inicio', { ascending: false }),
     supabase.from('faltas').select('*').eq('funcionario_id', params.id).order('data', { ascending: false }).limit(20),
@@ -91,10 +92,22 @@ export default async function FuncionarioPage({ params }: { params: { id: string
     f.cpf
       ? supabase.from('funcionarios').select('id, nome, cargo, admissao, deleted_at, matricula, id_ponto').eq('cpf', f.cpf).not('deleted_at', 'is', null).order('admissao', { ascending: false })
       : Promise.resolve({ data: [] }),
+    // Holerites do funcionário
+    supabase.from('folha_itens').select('id, folha_id, salario_base, valor_bruto, valor_liquido, dias_trabalhados, dias_descontados, desconto_inss, desconto_irrf, outros_descontos, created_at, folha_fechamentos(ano, mes, obras(nome))').eq('funcionario_id', params.id).order('created_at', { ascending: false }).limit(24),
+    supabase.from('holerite_assinaturas').select('folha_item_id, status, assinado_em').eq('funcionario_id', params.id),
+    supabase.from('holerite_envios').select('folha_item_id, enviado_em').eq('funcionario_id', params.id).eq('status', 'enviado'),
   ])
   const prazos = prazosArr?.[0] ?? null
   const admissao = admissaoArr?.[0] ?? null
   const desligamento = desligamentoArr?.[0] ?? null
+
+  // Processar holerites
+  const holerites = (holeriteItens ?? []) as any[]
+  const sigMap = new Map((holeriteAssinaturas ?? []).map((s: any) => [s.folha_item_id, s]))
+  const envMap = new Map((holeriteEnvios ?? []).map((s: any) => [s.folha_item_id, s]))
+  const ultimoHolerite: any = holerites[0] ?? null
+  const MESES_HOLERITE = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+  const holeriteAssinados = holerites.filter((h: any) => sigMap.has(h.id)).length
 
   function prazoBadge(date: string | null) {
     if (!date) return null
@@ -393,6 +406,37 @@ export default async function FuncionarioPage({ params }: { params: { id: string
           </div>
         )}
 
+        {/* Último holerite */}
+        {ultimoHolerite && (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Último holerite</h2>
+              <span className="text-[10px] text-gray-400">{holerites.length} holerites no total · {holeriteAssinados} assinados</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-bold text-gray-900">{MESES_HOLERITE[ultimoHolerite.folha_fechamentos?.mes]}/{ultimoHolerite.folha_fechamentos?.ano}</div>
+                <div className="text-xs text-gray-500">{ultimoHolerite.folha_fechamentos?.obras?.nome} · {Number(ultimoHolerite.dias_trabalhados)} dias</div>
+              </div>
+              <div className="flex items-center gap-3">
+                {sigMap.has(ultimoHolerite.id) ? (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-bold">Assinado</span>
+                ) : (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold">Não assinado</span>
+                )}
+                {envMap.has(ultimoHolerite.id) && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-bold">Enviado</span>
+                )}
+                <div className="text-right">
+                  <div className="text-xs text-gray-400">Líquido</div>
+                  <div className="text-lg font-bold text-green-700">{fmtR(Number(ultimoHolerite.valor_liquido))}</div>
+                </div>
+                <a href={`/rh/folha/${ultimoHolerite.folha_id}/holerite/${f.id}`} target="_blank" className="text-brand hover:underline text-xs font-semibold">Ver →</a>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Histórico salarial */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <div className="flex items-center justify-between mb-3">
@@ -575,7 +619,80 @@ export default async function FuncionarioPage({ params }: { params: { id: string
     ),
   }
 
-  const tabs: Tab[] = [tabVisaoGeral, tabContrato, tabRemuneracao, tabPonto, tabDocs, tabHistorico]
+  const tabHolerites: Tab = {
+    id: 'holerites', label: 'Holerites', icon: <FileText className="w-3.5 h-3.5" />,
+    badge: holerites.length > 0 ? holerites.length : undefined,
+    content: (
+      <div className="space-y-4">
+        {/* Resumo */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="text-[10px] font-bold text-gray-400 uppercase">Total holerites</div>
+            <div className="text-xl font-bold text-gray-900">{holerites.length}</div>
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="text-[10px] font-bold text-gray-400 uppercase">Assinados</div>
+            <div className="text-xl font-bold text-green-700">{holeriteAssinados}</div>
+            {holerites.length > 0 && <div className="text-[10px] text-gray-400">{Math.round(holeriteAssinados / holerites.length * 100)}%</div>}
+          </div>
+          <div className="bg-white rounded-xl border border-gray-100 p-4">
+            <div className="text-[10px] font-bold text-gray-400 uppercase">Último líquido</div>
+            <div className="text-xl font-bold text-green-700">{ultimoHolerite ? fmtR(Number(ultimoHolerite.valor_liquido)) : '—'}</div>
+          </div>
+        </div>
+
+        {/* Lista completa */}
+        {holerites.length > 0 ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-gray-100 bg-gray-50">
+                {['Período', 'Obra', 'Dias', 'Bruto', 'Descontos', 'Líquido', 'Status', ''].map(h => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {holerites.map((h: any) => {
+                  const totalDesc = Number(h.desconto_inss || 0) + Number(h.desconto_irrf || 0) + Number(h.outros_descontos || 0)
+                  const assinado = sigMap.has(h.id)
+                  const enviado = envMap.has(h.id)
+                  return (
+                    <tr key={h.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="px-4 py-3 font-medium">{MESES_HOLERITE[h.folha_fechamentos?.mes]}/{h.folha_fechamentos?.ano}</td>
+                      <td className="px-4 py-3 text-xs text-gray-500">{h.folha_fechamentos?.obras?.nome || '—'}</td>
+                      <td className="px-4 py-3 text-gray-600">{Number(h.dias_trabalhados)}{Number(h.dias_descontados) > 0 ? <span className="text-red-500 text-xs"> (-{Number(h.dias_descontados).toFixed(1)})</span> : ''}</td>
+                      <td className="px-4 py-3">{fmtR(Number(h.valor_bruto || h.salario_base || 0))}</td>
+                      <td className="px-4 py-3 text-red-600 text-xs">{totalDesc > 0 ? fmtR(totalDesc) : '—'}</td>
+                      <td className="px-4 py-3 font-bold text-green-700">{fmtR(Number(h.valor_liquido))}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1">
+                          {assinado ? (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold">Assinado</span>
+                          ) : (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">Pendente</span>
+                          )}
+                          {enviado && <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold">Enviado</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <a href={`/rh/folha/${h.folha_id}/holerite/${f.id}`} target="_blank" className="text-brand hover:underline text-xs font-semibold">Ver →</a>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-100 p-10 text-center">
+            <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <p className="text-sm text-gray-400">Nenhum holerite disponível para este funcionário.</p>
+          </div>
+        )}
+      </div>
+    ),
+  }
+
+  const tabs: Tab[] = [tabVisaoGeral, tabContrato, tabRemuneracao, tabHolerites, tabPonto, tabDocs, tabHistorico]
 
   // ========= LAYOUT =========
   return (
