@@ -64,7 +64,8 @@ const NAV_GROUPS: NavGroupDef[] = [
   {
     label: 'Compras',
     links: [
-      { href: '/estoque', label: 'Almoxarifado', icon: ic.stock },
+      { href: '/almoxarifado', label: 'Almoxarifado', icon: ic.stock },
+      { href: '/almoxarifado/patrimonio', label: 'Patrimônio', icon: ic.docs },
       { href: '/compras/fornecedores', label: 'Fornecedores', icon: ic.client },
       { href: '/compras/pedidos', label: 'Pedidos', icon: ic.stock },
     ],
@@ -142,9 +143,11 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
   },
   {
     // Módulo Compras
-    groupPaths: ['/estoque', '/compras'],
+    groupPaths: ['/estoque', '/compras', '/almoxarifado'],
     tabs: [
-      { href: '/estoque', label: 'Almoxarifado' },
+      { href: '/almoxarifado', label: 'Almoxarifado', match: ['/almoxarifado'] },
+      { href: '/almoxarifado/patrimonio', label: 'Patrimônio', match: ['/almoxarifado/patrimonio'] },
+      { href: '/almoxarifado/consumidos', label: 'Consumidos', match: ['/almoxarifado/consumidos'] },
       { href: '/compras/fornecedores', label: 'Fornecedores' },
       { href: '/compras/cotacoes', label: 'Cotações' },
       { href: '/compras/pedidos', label: 'Pedidos' },
