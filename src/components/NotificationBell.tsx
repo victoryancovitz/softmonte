@@ -20,6 +20,7 @@ const TIPO_ICON: Record<string, string> = {
   contrato_vencendo: '📋',
   aso_vencendo: '🩺',
   alerta: '⚠️',
+  divida_vencendo: '💳',
 }
 
 export default function NotificationBell() {
@@ -28,6 +29,7 @@ export default function NotificationBell() {
   const [count, setCount] = useState(0)
   const [notifs, setNotifs] = useState<any[]>([])
   const [alertas, setAlertas] = useState<any[]>([])
+  const [dividaAlertas, setDividaAlertas] = useState<any[]>([])
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -42,6 +44,16 @@ export default function NotificationBell() {
       .order('dias_restantes')
       .limit(20)
     setAlertas(alData ?? [])
+
+    // 1b. Buscar parcelas de dívidas próximas/atrasadas
+    const { data: dividaData } = await supabase
+      .from('divida_parcelas')
+      .select('id, numero, valor_amortizacao, valor_juros, valor_outros, data_vencimento, status, divida_id, passivos_nao_circulantes(descricao, credor)')
+      .in('status', ['pendente', 'aberta', 'atrasada'])
+      .lte('data_vencimento', new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10))
+      .order('data_vencimento')
+      .limit(10)
+    setDividaAlertas(dividaData ?? [])
 
     // 2. Persistir alertas novos na tabela notificacoes (dedup por tipo+ref_id)
     if (alData && alData.length > 0) {
@@ -75,7 +87,7 @@ export default function NotificationBell() {
       .eq('destinatario_id', user.id)
       .eq('lida', false)
 
-    setCount(c ?? 0)
+    setCount((c ?? 0) + (dividaData?.length ?? 0))
   }
 
   async function loadNotifs() {
@@ -201,6 +213,41 @@ export default function NotificationBell() {
               </div>
             )}
 
+            {/* Dívidas próximas/atrasadas */}
+            {dividaAlertas.length > 0 && (
+              <div>
+                <div className="px-4 py-1.5 bg-purple-50 text-[10px] font-bold text-purple-600 uppercase tracking-wider">
+                  Dívidas ({dividaAlertas.length})
+                </div>
+                {dividaAlertas.map((p: any) => {
+                  const hoje = new Date().toISOString().slice(0, 10)
+                  const atrasada = p.data_vencimento < hoje
+                  const diasDiff = Math.abs(Math.round((new Date(p.data_vencimento).getTime() - Date.now()) / 86400000))
+                  const divida = p.passivos_nao_circulantes as any
+                  const valorParcela = Number(p.valor_amortizacao || 0) + Number(p.valor_juros || 0) + Number(p.valor_outros || 0)
+                  return (
+                    <button key={`divida-${p.id}`} onClick={() => { router.push('/financeiro/dividas'); setOpen(false) }}
+                      className={`w-full text-left px-4 py-2.5 hover:bg-gray-50 transition-colors ${atrasada ? 'bg-red-50/30' : 'bg-purple-50/30'}`}>
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm flex-shrink-0">💳</span>
+                        <div className="min-w-0 flex-1">
+                          <p className={`text-xs leading-snug font-semibold ${atrasada ? 'text-red-700' : 'text-gray-900'}`}>
+                            {divida?.descricao || divida?.credor || 'Dívida'} — Parcela {p.numero}
+                          </p>
+                          <p className={`text-[10px] mt-0.5 ${atrasada ? 'text-red-500' : 'text-gray-500'}`}>
+                            {atrasada ? `Atrasada ${diasDiff}d` : `Vence em ${diasDiff}d`}
+                          </p>
+                        </div>
+                        <span className={`text-[10px] font-bold flex-shrink-0 ${atrasada ? 'text-red-600' : 'text-gray-600'}`}>
+                          {valorParcela.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </span>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
             {/* Notificações persistidas */}
             {notifs.length > 0 && (
               <div>
@@ -226,7 +273,7 @@ export default function NotificationBell() {
               </div>
             )}
 
-            {notifs.length === 0 && alertas.length === 0 && (
+            {notifs.length === 0 && alertas.length === 0 && dividaAlertas.length === 0 && (
               <div className="px-4 py-8 text-center text-xs text-gray-400">Nenhuma notificação</div>
             )}
           </div>

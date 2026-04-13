@@ -3,8 +3,7 @@ import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import SimuladorDistribuicao from './SimuladorDistribuicao'
 import SimulacaoTributaria from '@/components/SimulacaoTributaria'
-
-const fmt = (v: any) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+import { fmt } from '@/lib/cores'
 const n = (v: any) => Number(v || 0)
 
 function Badge({ valor, green, amber }: { valor: number | null; green: number; amber: number }) {

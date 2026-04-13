@@ -43,6 +43,10 @@ function FinanceiroPage() {
   const [filtroStatus, setFiltroStatus] = useState('')
   const [filtroProvisao, setFiltroProvisao] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [statusTab, setStatusTab] = useState<'todos' | 'em_aberto' | 'vence_hoje' | 'vencidos' | 'pago'>('todos')
+  const [payPopover, setPayPopover] = useState<string | null>(null)
+  const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10))
+  const [payConta, setPayConta] = useState('')
   const [contas, setContas] = useState<any[]>([])
   const [modalForm, setModalForm] = useState({
     tipo: 'despesa', nome: '', valor: '', categoria: '', obra_id: '',
@@ -50,6 +54,7 @@ function FinanceiroPage() {
     data_vencimento: '', observacao: '', is_provisao: false, status: 'em_aberto',
     conta_id: '', forma_pagamento: '', data_pagamento: '',
     is_parcelado: false, parcelas: 1, intervalo_dias: 30,
+    is_recorrente: false, frequencia_dias: 30, limite_recorrencias: 12,
   })
   const supabase = createClient()
   const toast = useToast()
@@ -68,7 +73,7 @@ function FinanceiroPage() {
 
   useEffect(() => {
     supabase.from('obras').select('id,nome,conta_recebimento_id,conta_pagamento_id').is('deleted_at', null).order('nome').then(({ data }) => setObras(data ?? []))
-    supabase.from('contas_correntes').select('id,nome,banco,is_padrao,proprietario').eq('ativo', true).is('deleted_at', null).order('is_padrao', { ascending: false }).order('nome').then(({ data }) => setContas((data ?? []).filter((c: any) => c.proprietario !== 'socio')))
+    supabase.from('contas_correntes').select('id,nome,banco,is_padrao,proprietario,saldo_atual').eq('ativo', true).is('deleted_at', null).order('is_padrao', { ascending: false }).order('nome').then(({ data }) => setContas((data ?? []).filter((c: any) => c.proprietario !== 'socio')))
   }, [])
 
   useEffect(() => {
@@ -84,10 +89,11 @@ function FinanceiroPage() {
     setLancamentos(data ?? [])
 
     // Build monthly cash flow
-    const byMes: Record<string, { mes: string; receita_pago: number; receita_aberto: number; despesa_pago: number; despesa_aberto: number; provisao: number }> = {}
+    const hojeLocal = new Date().toISOString().slice(0, 10)
+    const byMes: Record<string, { mes: string; receita_pago: number; receita_aberto: number; despesa_pago: number; despesa_aberto: number; despesa_vencido: number; provisao: number }> = {}
     ;(data ?? []).forEach((l: any) => {
       const mes = l.data_competencia?.slice(0, 7) ?? 'sem-data'
-      if (!byMes[mes]) byMes[mes] = { mes, receita_pago: 0, receita_aberto: 0, despesa_pago: 0, despesa_aberto: 0, provisao: 0 }
+      if (!byMes[mes]) byMes[mes] = { mes, receita_pago: 0, receita_aberto: 0, despesa_pago: 0, despesa_aberto: 0, despesa_vencido: 0, provisao: 0 }
       const v = Number(l.valor)
       if (l.tipo === 'receita') {
         if (l.status === 'pago') byMes[mes].receita_pago += v
@@ -95,6 +101,7 @@ function FinanceiroPage() {
       } else {
         if (l.is_provisao) byMes[mes].provisao += v
         else if (l.status === 'pago') byMes[mes].despesa_pago += v
+        else if (l.data_vencimento && l.data_vencimento < hojeLocal) byMes[mes].despesa_vencido += v
         else byMes[mes].despesa_aberto += v
       }
     })
@@ -153,7 +160,7 @@ function FinanceiroPage() {
               className="rounded border-gray-300 text-brand" />
             Provisões
           </label>
-          <button onClick={() => { setModalForm(f => ({ ...f, tipo: 'despesa', nome: '', valor: '', categoria: '', obra_id: '', data_vencimento: '', observacao: '', is_provisao: false, status: 'em_aberto', conta_id: '', forma_pagamento: '', data_pagamento: '', is_parcelado: false, parcelas: 1 })); setShowModal(true) }}
+          <button onClick={() => { setModalForm(f => ({ ...f, tipo: 'despesa', nome: '', valor: '', categoria: '', obra_id: '', data_vencimento: '', observacao: '', is_provisao: false, status: 'em_aberto', conta_id: '', forma_pagamento: '', data_pagamento: '', is_parcelado: false, parcelas: 1, is_recorrente: false, frequencia_dias: 30, limite_recorrencias: 12 })); setShowModal(true) }}
             className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark">
             + Lançamento
           </button>
@@ -172,6 +179,50 @@ function FinanceiroPage() {
           Conciliação OFX
         </Link>
       </div>
+
+      {/* Cards por conta bancária */}
+      {contas.length > 0 && (
+        <div className="flex gap-3 mb-4 overflow-x-auto pb-1">
+          {contas.map(c => {
+            const saldo = Number(c.saldo_atual || 0)
+            const bancoColor: Record<string, string> = { 'BTG': 'border-blue-400 bg-blue-50', 'Santander': 'border-red-400 bg-red-50', 'Itaú': 'border-orange-400 bg-orange-50', 'Bradesco': 'border-pink-400 bg-pink-50', 'Banco do Brasil': 'border-yellow-400 bg-yellow-50', 'Caixa': 'border-cyan-400 bg-cyan-50', 'Sicoob': 'border-green-400 bg-green-50' }
+            const bc = Object.entries(bancoColor).find(([k]) => (c.banco || '').toLowerCase().includes(k.toLowerCase()))?.[1] || 'border-gray-200 bg-gray-50'
+            return (
+              <Link key={c.id} href="/financeiro/contas" className={`flex-shrink-0 rounded-xl border-l-4 p-3 min-w-[160px] hover:shadow-md transition-all ${bc}`}>
+                <div className="text-[10px] font-bold text-gray-500 uppercase truncate">{c.banco ? `${c.banco} — ` : ''}{c.nome}{c.is_padrao ? ' ★' : ''}</div>
+                <div className={`text-lg font-bold mt-0.5 ${saldo >= 0 ? 'text-gray-900' : 'text-red-700'}`}>{fmt(saldo)}</div>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Status tabs */}
+      {(() => {
+        const hoje = new Date().toISOString().slice(0, 10)
+        const abertos = lancamentos.filter(l => l.status === 'em_aberto' && !l.is_provisao).length
+        const venceHoje = lancamentos.filter(l => l.status === 'em_aberto' && l.data_vencimento === hoje).length
+        const vencidos = lancamentos.filter(l => l.status === 'em_aberto' && l.data_vencimento && l.data_vencimento < hoje).length
+        const pagos = lancamentos.filter(l => l.status === 'pago').length
+        const tabs = [
+          { key: 'todos' as const, label: 'Todos', count: lancamentos.length, color: 'text-gray-600' },
+          { key: 'em_aberto' as const, label: 'Em aberto', count: abertos, color: 'text-amber-600' },
+          { key: 'vence_hoje' as const, label: 'Vence hoje', count: venceHoje, color: 'text-orange-600' },
+          { key: 'vencidos' as const, label: 'Vencidos', count: vencidos, color: 'text-red-600' },
+          { key: 'pago' as const, label: 'Pagos', count: pagos, color: 'text-green-600' },
+        ]
+        return (
+          <div className="flex gap-1 mb-4 bg-gray-50 p-1 rounded-lg overflow-x-auto">
+            {tabs.map(t => (
+              <button key={t.key} onClick={() => setStatusTab(t.key)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap flex items-center gap-1.5 ${statusTab === t.key ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
+                {t.label}
+                {t.count > 0 && <span className={`text-[10px] font-bold ${statusTab === t.key ? t.color : 'text-gray-400'}`}>{t.count}</span>}
+              </button>
+            ))}
+          </div>
+        )
+      })()}
 
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
@@ -199,7 +250,9 @@ function FinanceiroPage() {
             <h2 className="text-sm font-semibold">Fluxo de Caixa Mensal</h2>
             <div className="flex items-center gap-3 text-xs text-gray-400">
               <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-400 inline-block"/>&nbsp;Receita</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-400 inline-block"/>&nbsp;Despesa</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-400 inline-block"/>&nbsp;Pago</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-400 inline-block"/>&nbsp;A vencer</span>
+              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-rose-600 inline-block"/>&nbsp;Vencido</span>
               <span className="flex items-center gap-1"><span className="w-3 h-1 border-t-2 border-dashed border-brand inline-block"/>&nbsp;Acumulado</span>
             </div>
           </div>
@@ -229,9 +282,20 @@ function FinanceiroPage() {
                     {/* Receita bar */}
                     <rect x={x - barW - 2} y={chartH - recH + 10} width={barW} height={recH}
                       fill="#34d399" rx="2" opacity="0.85"/>
-                    {/* Despesa bar */}
-                    <rect x={x + 2} y={chartH - despH + 10} width={barW} height={despH}
-                      fill="#f87171" rx="2" opacity="0.85"/>
+                    {/* Despesa stacked: pago + a vencer + vencido */}
+                    {(() => {
+                      const pagoH = Math.min((m.despesa_pago / maxVal) * chartH, chartH)
+                      const aVencerH = Math.min((m.despesa_aberto / maxVal) * chartH, chartH)
+                      const vencidoH = Math.min(((m.despesa_vencido || 0) / maxVal) * chartH, chartH)
+                      return <>
+                        <rect x={x + 2} y={chartH - pagoH - aVencerH - vencidoH + 10} width={barW} height={vencidoH}
+                          fill="#e11d48" rx="0" opacity="0.9"/>
+                        <rect x={x + 2} y={chartH - pagoH - aVencerH + 10} width={barW} height={aVencerH}
+                          fill="#fbbf24" rx="0" opacity="0.85"/>
+                        <rect x={x + 2} y={chartH - pagoH + 10} width={barW} height={pagoH}
+                          fill="#f87171" rx="2" opacity="0.85"/>
+                      </>
+                    })()}
                     {/* Month label */}
                     <text x={x} y={chartH + 26} textAnchor="middle" fontSize="8" fill="#6b7280">{mes}</text>
                   </g>
@@ -360,6 +424,12 @@ function FinanceiroPage() {
                 if (filtroTipo && l.tipo !== filtroTipo) return false
                 if (filtroStatus && l.status !== filtroStatus) return false
                 if (filtroProvisao && !l.is_provisao) return false
+                // Status tab filter
+                const hoje = new Date().toISOString().slice(0, 10)
+                if (statusTab === 'em_aberto' && (l.status !== 'em_aberto' || l.is_provisao)) return false
+                if (statusTab === 'vence_hoje' && !(l.status === 'em_aberto' && l.data_vencimento === hoje)) return false
+                if (statusTab === 'vencidos' && !(l.status === 'em_aberto' && l.data_vencimento && l.data_vencimento < hoje)) return false
+                if (statusTab === 'pago' && l.status !== 'pago') return false
                 return true
               }).map(l => (
                 <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50/80">
@@ -391,28 +461,52 @@ function FinanceiroPage() {
                   <td className="px-4 py-2.5 text-right">
                     <div className="flex gap-2 justify-end items-center">
                       {l.status === 'em_aberto' && !l.is_provisao && (
-                        <button
-                          onClick={async () => {
-                            const hoje = new Date().toISOString().slice(0, 10)
-                            const { data: { user } } = await supabase.auth.getUser()
-                            const { error } = await supabase.from('financeiro_lancamentos').update({
-                              status: 'pago',
-                              data_pagamento: hoje,
-                              updated_by: user?.id ?? null,
-                            }).eq('id', l.id)
-                            if (error) { toast.error('Erro: ' + error.message); return }
-                            setLancamentos(prev => prev.map(x => x.id === l.id ? { ...x, status: 'pago', data_pagamento: hoje } : x))
-                            toast.success(l.tipo === 'receita' ? 'Receita marcada como recebida' : 'Despesa marcada como paga')
-                          }}
-                          className={`text-[11px] font-semibold px-2.5 py-1 rounded-md border transition-colors ${
-                            l.tipo === 'receita'
-                              ? 'border-green-200 text-green-700 hover:bg-green-50'
-                              : 'border-red-200 text-red-700 hover:bg-red-50'
-                          }`}
-                          title={l.tipo === 'receita' ? 'Marcar como recebida' : 'Marcar como paga'}
-                        >
-                          {l.tipo === 'receita' ? '✓ Receber' : '✓ Pagar'}
-                        </button>
+                        <div className="relative">
+                          <button
+                            onClick={() => { setPayPopover(payPopover === l.id ? null : l.id); setPayDate(new Date().toISOString().slice(0, 10)); setPayConta(l.conta_id || contas.find(c => c.is_padrao)?.id || '') }}
+                            className={`text-[11px] font-semibold px-2.5 py-1 rounded-md border transition-colors ${
+                              l.tipo === 'receita'
+                                ? 'border-green-200 text-green-700 hover:bg-green-50'
+                                : 'border-red-200 text-red-700 hover:bg-red-50'
+                            }`}
+                            title={l.tipo === 'receita' ? 'Marcar como recebida' : 'Marcar como paga'}
+                          >
+                            {l.tipo === 'receita' ? '✓ Receber' : '✓ Pagar'}
+                          </button>
+                          {payPopover === l.id && (
+                            <div className="absolute right-0 top-full mt-1 z-50 bg-white rounded-lg shadow-xl border border-gray-200 p-3 w-56">
+                              <div className="text-xs font-semibold text-gray-700 mb-2">{l.tipo === 'receita' ? 'Registrar recebimento' : 'Registrar pagamento'}</div>
+                              <div className="space-y-2">
+                                <div>
+                                  <label className="block text-[10px] text-gray-400 mb-0.5">Data</label>
+                                  <input type="date" value={payDate} onChange={e => setPayDate(e.target.value)} className="w-full px-2 py-1 border border-gray-200 rounded text-xs" />
+                                </div>
+                                <div>
+                                  <label className="block text-[10px] text-gray-400 mb-0.5">Conta</label>
+                                  <select value={payConta} onChange={e => setPayConta(e.target.value)} className="w-full px-2 py-1 border border-gray-200 rounded text-xs">
+                                    <option value="">—</option>
+                                    {contas.map(c => <option key={c.id} value={c.id}>{c.is_padrao ? '★ ' : ''}{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}
+                                  </select>
+                                </div>
+                                <div className="flex gap-1.5 pt-1">
+                                  <button onClick={() => setPayPopover(null)} className="flex-1 px-2 py-1 text-[10px] border border-gray-200 rounded hover:bg-gray-50">Cancelar</button>
+                                  <button onClick={async () => {
+                                    const { data: { user } } = await supabase.auth.getUser()
+                                    const upd: any = { status: 'pago', data_pagamento: payDate, updated_by: user?.id ?? null }
+                                    if (payConta) upd.conta_id = payConta
+                                    const { error } = await supabase.from('financeiro_lancamentos').update(upd).eq('id', l.id)
+                                    if (error) { toast.error('Erro: ' + error.message); return }
+                                    setLancamentos(prev => prev.map(x => x.id === l.id ? { ...x, status: 'pago', data_pagamento: payDate, conta_id: payConta || x.conta_id } : x))
+                                    toast.success(l.tipo === 'receita' ? 'Receita marcada como recebida' : 'Despesa marcada como paga')
+                                    setPayPopover(null)
+                                  }} className={`flex-1 px-2 py-1 text-[10px] text-white rounded font-semibold ${l.tipo === 'receita' ? 'bg-green-600' : 'bg-red-600'}`}>
+                                    Confirmar
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       )}
                       {l.status === 'pago' && (
                         <button
@@ -443,6 +537,18 @@ function FinanceiroPage() {
                         setLancamentos(prev => prev.filter(x => x.id !== l.id))
                         toast.success('Lançamento excluído')
                       }} />
+                      {l.parcela_grupo_id && (
+                        <ConfirmButton label="Excluir série" onConfirm={async () => {
+                          const { data: { user } } = await supabase.auth.getUser()
+                          const { error } = await supabase.from('financeiro_lancamentos').update({
+                            deleted_at: new Date().toISOString(),
+                            deleted_by: user?.id ?? null,
+                          }).eq('parcela_grupo_id', l.parcela_grupo_id).eq('status', 'em_aberto')
+                          if (error) { toast.error('Erro: ' + error.message); return }
+                          setLancamentos(prev => prev.filter(x => !(x.parcela_grupo_id === l.parcela_grupo_id && x.status === 'em_aberto')))
+                          toast.success('Parcelas em aberto da série excluídas')
+                        }} />
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -537,7 +643,7 @@ function FinanceiroPage() {
                     <option value="">Selecionar...</option>
                     {modalForm.tipo === 'receita'
                       ? ['Faturamento HH', 'Serviços', 'Outras receitas'].map(c => <option key={c} value={c}>{c}</option>)
-                      : ['Folha de Pagamento', 'Encargos', 'Aluguel', 'Materiais', 'Compras', 'Impostos', 'Honorários', 'Outras despesas'].map(c => <option key={c} value={c}>{c}</option>)
+                      : ['Folha de Pagamento', 'Encargos', 'Aluguel', 'Materiais', 'Compras', 'Impostos', 'Honorários', 'Despesas Financeiras', 'Amortização de Empréstimos', 'Depreciação', 'Custo dos Serviços Prestados', 'Outras despesas'].map(c => <option key={c} value={c}>{c}</option>)
                     }
                   </select>
                 </div>
@@ -620,6 +726,38 @@ function FinanceiroPage() {
                     </div>
                   )}
                 </div>
+                {/* Recorrência */}
+                <div className="col-span-2 border-t border-gray-100 pt-3">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer mb-2">
+                    <input type="checkbox" checked={modalForm.is_recorrente} onChange={e => setModalForm(f => ({ ...f, is_recorrente: e.target.checked, is_parcelado: false }))}
+                      className="rounded border-gray-300 text-brand" />
+                    Recorrente (gera automaticamente)
+                  </label>
+                  {modalForm.is_recorrente && (
+                    <div className="flex gap-3">
+                      <div>
+                        <label className="block text-[10px] text-gray-400 mb-0.5">Frequência</label>
+                        <select value={modalForm.frequencia_dias} onChange={e => setModalForm(f => ({ ...f, frequencia_dias: Number(e.target.value) }))}
+                          className="px-2 py-1 border border-gray-200 rounded text-sm">
+                          <option value={7}>Semanal</option>
+                          <option value={15}>Quinzenal</option>
+                          <option value={30}>Mensal</option>
+                          <option value={60}>Bimestral</option>
+                          <option value={90}>Trimestral</option>
+                          <option value={180}>Semestral</option>
+                          <option value={365}>Anual</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] text-gray-400 mb-0.5">Limite (repetições)</label>
+                        <select value={modalForm.limite_recorrencias} onChange={e => setModalForm(f => ({ ...f, limite_recorrencias: Number(e.target.value) }))}
+                          className="px-2 py-1 border border-gray-200 rounded text-sm">
+                          {[3,6,12,24,36,48,60].map(n => <option key={n} value={n}>{n}x</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex gap-2 pt-2">
                 <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50">
@@ -630,7 +768,30 @@ function FinanceiroPage() {
                   const valorNum = Number(modalForm.valor)
                   if (!valorNum || valorNum <= 0) { toast.error('Valor inválido'); return }
 
-                  if (modalForm.is_parcelado && modalForm.parcelas > 1) {
+                  if (modalForm.is_recorrente) {
+                    const grupoId = crypto.randomUUID()
+                    const baseVenc = modalForm.data_vencimento || new Date().toISOString().slice(0, 10)
+                    const rows = Array.from({ length: modalForm.limite_recorrencias }, (_, i) => {
+                      const venc = new Date(baseVenc + 'T12:00')
+                      venc.setDate(venc.getDate() + i * modalForm.frequencia_dias)
+                      const comp = new Date(venc)
+                      return {
+                        tipo: modalForm.tipo, nome: modalForm.nome,
+                        valor: valorNum, categoria: modalForm.categoria || null,
+                        obra_id: modalForm.obra_id || null, conta_id: modalForm.conta_id || null,
+                        data_competencia: comp.toISOString().slice(0, 10),
+                        data_vencimento: venc.toISOString().slice(0, 10),
+                        observacao: modalForm.observacao || null, is_provisao: modalForm.is_provisao,
+                        origem: 'manual', status: 'em_aberto', created_by: user?.id ?? null,
+                        is_parcelado: true, parcela_numero: i + 1, parcela_total: modalForm.limite_recorrencias,
+                        parcela_grupo_id: grupoId, intervalo_parcelas_dias: modalForm.frequencia_dias,
+                        numero_documento: (modalForm as any).numero_documento || null,
+                      }
+                    })
+                    const { error } = await supabase.from('financeiro_lancamentos').insert(rows)
+                    if (error) { toast.error('Erro: ' + error.message); return }
+                    toast.success(`${modalForm.limite_recorrencias} lançamentos recorrentes criados`)
+                  } else if (modalForm.is_parcelado && modalForm.parcelas > 1) {
                     const grupoId = crypto.randomUUID()
                     const valorParcela = Math.round(valorNum / modalForm.parcelas * 100) / 100
                     const baseVenc = modalForm.data_vencimento || new Date().toISOString().slice(0, 10)

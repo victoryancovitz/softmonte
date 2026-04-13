@@ -4,8 +4,7 @@ import { useState, useMemo } from 'react'
 import SearchInput from '@/components/SearchInput'
 import SortableHeader, { SortDir, applySort } from '@/components/SortableHeader'
 import { ExcluirHHBtn } from '@/components/DeleteActions'
-
-const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+import { fmt } from '@/lib/cores'
 
 export default function HHTable({ lancamentos, role }: { lancamentos: any[]; role: string }) {
   const [busca, setBusca] = useState('')

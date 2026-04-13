@@ -1,8 +1,7 @@
 'use client'
 import { useState, Fragment } from 'react'
 import { ChevronDown, ChevronUp, TrendingUp, Clock, DollarSign, Users } from 'lucide-react'
-
-const fmt = (v: any) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+import { fmt } from '@/lib/cores'
 
 const BE_BADGE: Record<string, { label: string; icon: string; cls: string }> = {
   no_lucro: { label: 'No lucro', icon: '✅', cls: 'bg-green-100 text-green-700' },

@@ -5,8 +5,7 @@ import { useToast } from '@/components/Toast'
 import { gerarTabelaAmortizacao } from '@/lib/dividas'
 import EmptyState from '@/components/ui/EmptyState'
 import { Landmark, AlertTriangle } from 'lucide-react'
-
-const fmt = (v: any) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+import { fmt } from '@/lib/cores'
 const n = (v: any) => Number(v || 0)
 
 const TIPO_LABEL: Record<string, string> = {

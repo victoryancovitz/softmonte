@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
-
-const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+import { fmt } from '@/lib/cores'
 
 export default function SimuladorDistribuicao({ lucroAnual, lucroCaixa }: { lucroAnual: number; lucroCaixa: number }) {
   const [valor, setValor] = useState(0)

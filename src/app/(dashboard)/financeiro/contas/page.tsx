@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
+import { fmt } from '@/lib/cores'
 
 interface Conta {
   id: string
@@ -53,8 +54,6 @@ function BancoIcon({ banco }: { banco: string | null }) {
     </div>
   )
 }
-
-const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 export default function ContasCorrentesPage() {
   const supabase = createClient()

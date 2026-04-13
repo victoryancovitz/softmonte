@@ -21,14 +21,15 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
   const [tab, setTab] = useState<Tab>('margem')
 
   // DRE consolidado por mês (aba "DRE Consolidado")
-  const dreByMes: Record<string, { mes: string; receita: number; custoMO: number; outrasDesp: number; provisoes: number }> = {}
+  const dreByMes: Record<string, { mes: string; receita: number; custoMO: number; outrasDesp: number; despFin: number; provisoes: number }> = {}
   lancamentos.forEach((l: any) => {
     const mes = l.data_competencia?.slice(0, 7) ?? 'sem-data'
-    if (!dreByMes[mes]) dreByMes[mes] = { mes, receita: 0, custoMO: 0, outrasDesp: 0, provisoes: 0 }
+    if (!dreByMes[mes]) dreByMes[mes] = { mes, receita: 0, custoMO: 0, outrasDesp: 0, provisoes: 0, despFin: 0 }
     const v = Number(l.valor || 0)
     if (l.tipo === 'receita') dreByMes[mes].receita += v
     else if (l.is_provisao) dreByMes[mes].provisoes += v
     else if (l.categoria === 'Folha de Pagamento' || l.origem === 'folha_fechamento') dreByMes[mes].custoMO += v
+    else if (l.categoria === 'Despesas Financeiras' || l.categoria === 'Amortização de Empréstimos') dreByMes[mes].despFin += v
     else dreByMes[mes].outrasDesp += v
   })
   const dreMeses = Object.values(dreByMes).sort((a, b) => a.mes.localeCompare(b.mes))
@@ -52,9 +53,11 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
   const csp = lancamentos.filter((l: any) => l.tipo === 'despesa' && !l.is_provisao && (l.origem === 'folha_fechamento' || l.categoria?.toLowerCase().includes('folha') || l.categoria?.toLowerCase().includes('salário') || l.categoria?.toLowerCase().includes('encargo') || l.categoria?.toLowerCase().includes('fgts') || l.categoria?.toLowerCase().includes('benefício') || l.categoria?.toLowerCase().includes('rescis'))).reduce((s: number, l: any) => s + Number(l.valor), 0)
   const lucroBruto = receitaLiquida - csp
 
-  const despOp = lancamentos.filter((l: any) => l.tipo === 'despesa' && !l.is_provisao && l.origem !== 'folha_fechamento' && !l.categoria?.toLowerCase().includes('folha') && !l.categoria?.toLowerCase().includes('salário')).reduce((s: number, l: any) => s + Number(l.valor), 0)
+  const isDespFin = (l: any) => l.categoria === 'Despesas Financeiras' || l.categoria === 'Amortização de Empréstimos'
+  const despOp = lancamentos.filter((l: any) => l.tipo === 'despesa' && !l.is_provisao && l.origem !== 'folha_fechamento' && !l.categoria?.toLowerCase().includes('folha') && !l.categoria?.toLowerCase().includes('salário') && !isDespFin(l)).reduce((s: number, l: any) => s + Number(l.valor), 0)
+  const despFinOficial = lancamentos.filter((l: any) => l.tipo === 'despesa' && !l.is_provisao && isDespFin(l)).reduce((s: number, l: any) => s + Number(l.valor), 0)
   const ebitda = lucroBruto - despOp
-  const lair = ebitda // sem resultado financeiro por enquanto
+  const lair = ebitda - despFinOficial
   const lucroLiquido = lair - irpjVal - csllVal
 
   // === BP: dados ===
@@ -173,12 +176,12 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b border-gray-100 bg-gray-50">
-              {['Mês', 'Receita', 'Custo MO', 'Outras Desp.', 'Provisões', 'Resultado', 'Margem %'].map(h => (
+              {['Mês', 'Receita', 'Custo MO', 'Outras Desp.', 'Desp. Financ.', 'Provisões', 'Resultado', 'Margem %'].map(h => (
                 <th key={h} className="text-right first:text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
               ))}
             </tr></thead>
             <tbody>{dreMeses.length > 0 ? dreMeses.map(m => {
-              const res = m.receita - m.custoMO - m.outrasDesp - m.provisoes
+              const res = m.receita - m.custoMO - m.outrasDesp - (m.despFin || 0) - m.provisoes
               const mp = m.receita > 0 ? res / m.receita * 100 : 0
               return (
                 <tr key={m.mes} className="border-b border-gray-50 hover:bg-gray-50/80">
@@ -186,12 +189,13 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
                   <td className="px-4 py-2.5 text-right text-green-600">{m.receita > 0 ? fmt(m.receita) : '—'}</td>
                   <td className="px-4 py-2.5 text-right text-red-600">{m.custoMO > 0 ? fmt(m.custoMO) : '—'}</td>
                   <td className="px-4 py-2.5 text-right text-orange-600">{m.outrasDesp > 0 ? fmt(m.outrasDesp) : '—'}</td>
+                  <td className="px-4 py-2.5 text-right text-rose-600">{(m.despFin || 0) > 0 ? fmt(m.despFin) : '—'}</td>
                   <td className="px-4 py-2.5 text-right text-purple-600">{m.provisoes > 0 ? fmt(m.provisoes) : '—'}</td>
                   <td className={`px-4 py-2.5 text-right font-bold ${res >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(res)}</td>
                   <td className={`px-4 py-2.5 text-right font-bold ${mp >= 25 ? 'text-green-700' : mp >= 0 ? 'text-amber-600' : 'text-red-700'}`}>{mp.toFixed(1)}%</td>
                 </tr>
               )
-            }) : <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">Sem lançamentos.</td></tr>}</tbody>
+            }) : <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">Sem lançamentos.</td></tr>}</tbody>
           </table>
         </div>
       )}
@@ -224,6 +228,10 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
               <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Despesas Operacionais</td></tr>
               <DreLine label="Despesas Administrativas e Comerciais" valor={despOp} base={receitaBruta} indent negative />
               <DreLine label="(=) EBITDA" valor={ebitda} base={receitaBruta} bold />
+              {despFinOficial > 0 && (<>
+                <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Resultado Financeiro</td></tr>
+                <DreLine label="Despesas Financeiras e Amortizações" valor={despFinOficial} base={receitaBruta} indent negative />
+              </>)}
               <DreLine label="(=) LAIR (Antes do IR)" valor={lair} base={receitaBruta} bold />
               {!isSimples && (<>
                 <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Imposto de Renda e Contribuição Social</td></tr>

@@ -2,8 +2,7 @@ import { createClient } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import Image from 'next/image'
 import PrintTrigger from './PrintTrigger'
-
-const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+import { fmt } from '@/lib/cores'
 const fmtN = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 0 })
 
 const TIPO_VINCULO_LABEL: Record<string, string> = {

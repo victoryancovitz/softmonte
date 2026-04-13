@@ -49,7 +49,7 @@ export default async function DiretoriaPage() {
     { data: obrasAtivas }, { data: contasSaldo }, { data: lancamentos },
     { data: funcAtivos }, { data: pontoMes }, { data: bmsAprovados },
     { data: bmItensAll }, { data: funcoes }, { data: desligados90 },
-    { data: receitasAbertas }, { data: prazosLegais }, { data: bmsMesAtual }, { data: billingRates }, { data: folhasFechadas }, { data: custoFunc },
+    { data: receitasAbertas }, { data: prazosLegais }, { data: bmsMesAtual }, { data: billingRates }, { data: folhasFechadas }, { data: custoFunc }, { data: tirContratos },
   ] = await Promise.all([
     supabase.from('vw_dre_obra_mes').select('*').limit(500),
     supabase.from('vw_dre_obra').select('*').limit(500),
@@ -74,6 +74,7 @@ export default async function DiretoriaPage() {
     supabase.from('contrato_composicao').select('funcao_nome, custo_hora_contratado').eq('ativo', true),
     supabase.from('folha_fechamentos').select('valor_total_bruto, valor_total_encargos, valor_total_beneficios, valor_total').is('deleted_at', null),
     supabase.from('vw_custo_funcionario').select('margem_pct'),
+    supabase.from('vw_tir_contrato').select('*').limit(10),
   ])
 
   const funcs = funcAtivos ?? []
@@ -394,6 +395,29 @@ export default async function DiretoriaPage() {
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center text-gray-400 text-sm mb-5">
           Nenhum contrato ativo.
+        </div>
+      )}
+
+      {/* TIR por contrato */}
+      {(tirContratos ?? []).length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+          {(tirContratos ?? []).map((t: any) => {
+            const tirMensal = t.tir_mensal != null ? Number(t.tir_mensal) : null
+            const tirAnual = tirMensal != null ? (Math.pow(1 + tirMensal, 12) - 1) : null
+            const tirPct = tirAnual != null ? (tirAnual * 100) : null
+            const cor = tirPct === null ? 'text-gray-400' : tirPct < 0 ? 'text-red-700' : tirPct < 10.5 ? 'text-orange-600' : tirPct < 30 ? 'text-amber-600' : 'text-green-700'
+            const bg = tirPct === null ? 'bg-gray-50 border-gray-200' : tirPct < 0 ? 'bg-red-50 border-red-200' : tirPct < 10.5 ? 'bg-orange-50 border-orange-200' : tirPct < 30 ? 'bg-amber-50 border-amber-200' : 'bg-green-50 border-green-200'
+            return (
+              <Link key={t.obra_id || t.obra} href="/diretoria/indicadores" className={`block rounded-xl border p-4 hover:shadow-md transition-all ${bg}`}>
+                <div className="text-[10px] font-bold text-gray-400 uppercase">TIR — {t.obra || 'Contrato'}</div>
+                <div className={`text-2xl font-bold font-display mt-1 ${cor}`}>{tirPct != null ? `${tirPct.toFixed(1)}% a.a.` : '—'}</div>
+                <div className="text-[10px] text-gray-500 mt-1">
+                  {tirPct != null ? (tirPct >= 10.5 ? 'Acima do CDI' : tirPct >= 0 ? 'Abaixo do CDI' : 'Destruindo valor') : 'Sem dados'}
+                  {t.meses_dados ? ` · ${t.meses_dados} meses de dados` : ''}
+                </div>
+              </Link>
+            )
+          })}
         </div>
       )}
 

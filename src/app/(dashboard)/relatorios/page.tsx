@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { Building, DollarSign, Clock, Shield, BarChart, ArrowLeft, Download, Printer } from 'lucide-react'
+import { fmt } from '@/lib/cores'
 
 type ReportId = 1 | 2 | 3 | 4 | 5
 
@@ -26,7 +27,6 @@ function downloadCSV(filename: string, headers: string[], rows: string[][]) {
   URL.revokeObjectURL(url)
 }
 
-const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const fmtNum = (v: number) => v.toLocaleString('pt-BR', { maximumFractionDigits: 1 })
 
 export default function RelatoriosPage() {

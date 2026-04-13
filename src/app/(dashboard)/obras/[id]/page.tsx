@@ -11,6 +11,7 @@ import DiarioTab from './DiarioTab'
 import RncTab from './RncTab'
 import { formatStatus } from '@/lib/formatters'
 import ContasBancariasObra from './ContasBancariasObra'
+import { fmt } from '@/lib/cores'
 
 const TIPOS_DOC_OBRA = [
   { value: 'contrato', label: 'Contrato' },
@@ -38,7 +39,6 @@ const STATUS_BADGE: Record<string, string> = {
 }
 
 
-const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 const tabs = [
   { key: 'geral', label: 'Geral' },
