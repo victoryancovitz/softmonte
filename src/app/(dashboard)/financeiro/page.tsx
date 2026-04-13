@@ -62,6 +62,8 @@ function FinanceiroPage() {
   const [modalLote, setModalLote] = useState(false)
   const [dataLote, setDataLote] = useState(new Date().toISOString().slice(0, 10))
   const [contaLote, setContaLote] = useState('')
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
+  const [excluindoLote, setExcluindoLote] = useState(false)
 
   const toggleSelect = (id: string) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleTodos = (ids: string[]) => setSelected(prev => prev.size === ids.length ? new Set() : new Set(ids))
@@ -146,6 +148,25 @@ function FinanceiroPage() {
       toast.error('Erro ao processar: ' + (err.message || 'Tente novamente'))
     } finally {
       setPagandoLote(false)
+    }
+  }
+
+  // Exclusão em lote
+  async function confirmarExclusaoLote() {
+    if (selected.size === 0) return
+    setExcluindoLote(true)
+    try {
+      const { error } = await supabase.from('financeiro_lancamentos').update({ deleted_at: new Date().toISOString() }).in('id', Array.from(selected))
+      if (error) throw error
+      const n = selected.size
+      toast.success(`${n} lançamento${n > 1 ? 's' : ''} excluído${n > 1 ? 's' : ''}`)
+      setSelected(new Set())
+      setConfirmandoExclusao(false)
+      loadData()
+    } catch (err: any) {
+      toast.error('Erro ao excluir: ' + (err.message || 'Tente novamente'))
+    } finally {
+      setExcluindoLote(false)
     }
   }
 
@@ -690,6 +711,12 @@ function FinanceiroPage() {
             const cls = temR && !temD ? 'bg-green-600 hover:bg-green-700' : 'bg-brand hover:bg-brand-dark'
             return <button onClick={() => { setDataLote(new Date().toISOString().slice(0, 10)); setContaLote(''); setModalLote(true) }} className={`${cls} text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors`}>{label}</button>
           })()}
+          <div className="w-px h-6 bg-white/20" />
+          <button onClick={() => setConfirmandoExclusao(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-red-400 hover:text-white hover:bg-red-600/80 transition-colors border border-red-500/30 hover:border-red-500">
+            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10"/></svg>
+            Excluir ({selected.size})
+          </button>
         </div>
       )}
 
@@ -728,6 +755,36 @@ function FinanceiroPage() {
             <div className="flex gap-3">
               <button onClick={() => setModalLote(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancelar</button>
               <button onClick={confirmarPagamentoLote} disabled={pagandoLote} className="flex-1 px-4 py-2 bg-brand text-white rounded-lg text-sm font-semibold hover:bg-brand-dark disabled:opacity-50">{pagandoLote ? 'Processando...' : `Confirmar (${selected.size})`}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmação exclusão em lote */}
+      {confirmandoExclusao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            </div>
+            <h3 className="text-center text-lg font-bold text-gray-900 mb-1">Excluir {selected.size} lançamento{selected.size > 1 ? 's' : ''}?</h3>
+            <p className="text-center text-sm text-gray-500 mb-2">Esta ação não pode ser desfeita.</p>
+            {(() => {
+              const sel = lancamentos.filter(l => selected.has(l.id))
+              const despesas = sel.filter(l => l.tipo === 'despesa')
+              const receitas = sel.filter(l => l.tipo === 'receita')
+              const pagos = sel.filter(l => l.status === 'pago')
+              return (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-5 text-sm space-y-1">
+                  {despesas.length > 0 && <div className="flex justify-between text-gray-700"><span>{despesas.length} despesa{despesas.length > 1 ? 's' : ''}</span><span className="font-medium text-red-700">{fmt(despesas.reduce((s, l) => s + Number(l.valor), 0))}</span></div>}
+                  {receitas.length > 0 && <div className="flex justify-between text-gray-700"><span>{receitas.length} receita{receitas.length > 1 ? 's' : ''}</span><span className="font-medium text-green-700">{fmt(receitas.reduce((s, l) => s + Number(l.valor), 0))}</span></div>}
+                  {pagos.length > 0 && <p className="text-xs text-red-600 font-medium pt-1 border-t border-red-200 mt-1">⚠️ {pagos.length} já pago{pagos.length > 1 ? 's' : ''} — excluir afetará o resultado financeiro</p>}
+                </div>
+              )
+            })()}
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmandoExclusao(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancelar</button>
+              <button onClick={confirmarExclusaoLote} disabled={excluindoLote} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-50">{excluindoLote ? 'Excluindo...' : `Excluir (${selected.size})`}</button>
             </div>
           </div>
         </div>
