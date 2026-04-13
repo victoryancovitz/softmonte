@@ -68,6 +68,8 @@ function FinanceiroPage() {
   const toggleSelect = (id: string) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleTodos = (ids: string[]) => setSelected(prev => prev.size === ids.length ? new Set() : new Set(ids))
 
+  const [hoveredBar, setHoveredBar] = useState<{ mes: string; receita: number; pago: number; aVencer: number; vencido: number; acumulado: number; x: number } | null>(null)
+
   const supabase = createClient()
   const toast = useToast()
 
@@ -276,21 +278,20 @@ function FinanceiroPage() {
         )
       })()}
 
-      {/* KPIs */}
+      {/* KPIs with tooltips */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
         {[
-          { label: 'Receita recebida', value: receitaPaga, color: 'text-green-600', bg: 'bg-green-50' },
-          { label: 'Receita em aberto', value: receitaAberto, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Despesa paga', value: despesaPaga, color: 'text-red-600', bg: 'bg-red-50' },
-          { label: 'Despesa em aberto', value: despesaAberto, color: 'text-orange-600', bg: 'bg-orange-50' },
-          { label: 'Provisões futuras', value: provisoes, color: 'text-purple-600', bg: 'bg-purple-50' },
-          { label: 'Resultado total', value: resultadoTotal, color: resultadoTotal >= 0 ? 'text-green-700' : 'text-red-700', bg: resultadoTotal >= 0 ? 'bg-green-50' : 'bg-red-50' },
+          { label: 'Receita recebida', value: receitaPaga, color: 'text-green-600', bg: 'bg-green-50', tip: `${lancamentos.filter(l => l.tipo === 'receita' && l.status === 'pago').length} lançamentos pagos\nBMs aprovados e recebidos` },
+          { label: 'Receita em aberto', value: receitaAberto, color: 'text-emerald-600', bg: 'bg-emerald-50', tip: `${lancamentos.filter(l => l.tipo === 'receita' && l.status !== 'pago').length} BMs ainda não recebidos` },
+          { label: 'Despesa paga', value: despesaPaga, color: 'text-red-600', bg: 'bg-red-50', tip: `Folha + outras despesas já liquidadas` },
+          { label: 'Despesa em aberto', value: despesaAberto, color: 'text-orange-600', bg: 'bg-orange-50', tip: `${lancamentos.filter(l => l.tipo === 'despesa' && l.status === 'em_aberto' && !l.is_provisao).length} lançamentos pendentes` },
+          { label: 'Provisões futuras', value: provisoes, color: 'text-purple-600', bg: 'bg-purple-50', tip: `13°, férias e FGTS acumulados\nNão saiu do caixa — reserva contábil` },
+          { label: 'Resultado total', value: resultadoTotal, color: resultadoTotal >= 0 ? 'text-green-700' : 'text-red-700', bg: resultadoTotal >= 0 ? 'bg-green-50' : 'bg-red-50', tip: `Receita − Despesa − Provisões\n${resultadoTotal >= 0 ? 'Empresa gerando valor' : 'Resultado negativo no período'}` },
         ].map(k => (
-          <div key={k.label} className={`${k.bg} rounded-xl p-3`}>
+          <div key={k.label} className={`${k.bg} rounded-xl p-3 relative group cursor-default`}>
             <div className="text-xs text-gray-500 mb-1 leading-tight">{k.label}</div>
-            <div className={`text-base font-bold ${k.color}`}>
-              {fmt(k.value)}
-            </div>
+            <div className={`text-base font-bold ${k.color}`}>{fmt(k.value)}</div>
+            <div className="absolute bottom-full left-0 mb-2 z-30 bg-[#0f1e2e] text-white text-[11px] rounded-lg px-3 py-2 shadow-xl border border-white/10 min-w-[200px] pointer-events-none whitespace-pre-line opacity-0 group-hover:opacity-100 transition-opacity">{k.tip}</div>
           </div>
         ))}
       </div>
@@ -309,6 +310,7 @@ function FinanceiroPage() {
             </div>
           </div>
           {fluxo.length > 0 ? (
+            <div className="relative">
             <svg width="100%" viewBox={`0 0 600 ${chartH + 60}`} className="overflow-visible">
               {/* Grid lines */}
               {[0, 0.25, 0.5, 0.75, 1].map(p => (
@@ -331,9 +333,13 @@ function FinanceiroPage() {
                 const mes = m.mes.slice(5, 7) + '/' + m.mes.slice(2, 4)
                 return (
                   <g key={m.mes}>
+                    {/* Hit area for tooltip */}
+                    <rect x={x - barW - 6} y={0} width={barW * 2 + 12} height={chartH + 30} fill="transparent"
+                      onMouseEnter={() => setHoveredBar({ mes, receita: m.totalRec, pago: m.despesa_pago, aVencer: m.despesa_aberto, vencido: m.despesa_vencido || 0, acumulado: m.acum, x })}
+                      onMouseLeave={() => setHoveredBar(null)} style={{ cursor: 'pointer' }} />
                     {/* Receita bar */}
                     <rect x={x - barW - 2} y={chartH - recH + 10} width={barW} height={recH}
-                      fill="#34d399" rx="2" opacity="0.85"/>
+                      fill="#34d399" rx="2" opacity="0.85" style={{ pointerEvents: 'none' }}/>
                     {/* Despesa stacked: pago + a vencer + vencido */}
                     {(() => {
                       const pagoH = Math.min((m.despesa_pago / maxVal) * chartH, chartH)
@@ -370,6 +376,22 @@ function FinanceiroPage() {
                 )
               })()}
             </svg>
+            {hoveredBar && (
+              <div className="absolute z-20 pointer-events-none bg-[#0f1e2e] text-white rounded-xl shadow-2xl border border-white/10 p-3 text-xs min-w-[180px]" style={{ left: Math.min(hoveredBar.x * 100 / 600, 65) + '%', top: 20 }}>
+                <p className="font-bold text-brand mb-2 text-sm">{hoveredBar.mes}</p>
+                <div className="space-y-1.5">
+                  <div className="flex justify-between gap-4"><span className="text-green-400">Receita</span><span className="font-semibold">{fmt(hoveredBar.receita)}</span></div>
+                  <div className="flex justify-between gap-4"><span className="text-red-400">Pago</span><span className="font-semibold">{fmt(hoveredBar.pago)}</span></div>
+                  {hoveredBar.aVencer > 0 && <div className="flex justify-between gap-4"><span className="text-amber-400">A vencer</span><span>{fmt(hoveredBar.aVencer)}</span></div>}
+                  {hoveredBar.vencido > 0 && <div className="flex justify-between gap-4"><span className="text-rose-400">Vencido</span><span>{fmt(hoveredBar.vencido)}</span></div>}
+                  <div className="border-t border-white/10 pt-1.5 mt-1">
+                    <div className="flex justify-between gap-4"><span className="text-gray-400">Saldo mês</span><span className={`font-bold ${hoveredBar.receita - hoveredBar.pago >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmt(hoveredBar.receita - hoveredBar.pago)}</span></div>
+                    <div className="flex justify-between gap-4"><span className="text-gray-400">Acumulado</span><span className={`font-semibold ${hoveredBar.acumulado >= 0 ? 'text-green-300' : 'text-red-300'}`}>{fmt(hoveredBar.acumulado)}</span></div>
+                  </div>
+                </div>
+              </div>
+            )}
+            </div>
           ) : (
             <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Sem dados</div>
           )}
