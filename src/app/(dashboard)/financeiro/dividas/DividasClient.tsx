@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, Fragment } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { gerarTabelaAmortizacao } from '@/lib/dividas'
@@ -33,6 +33,12 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
   const [showNova, setShowNova] = useState(false)
   const [saving, setSaving] = useState(false)
   const [filtroCredor, setFiltroCredor] = useState('')
+  const [expandId, setExpandId] = useState<string | null>(null)
+  const [showPagar, setShowPagar] = useState<any>(null) // parcela selecionada
+  const [showReneg, setShowReneg] = useState<any>(null) // dívida para renegociar
+  const [parcelas, setParcelas] = useState<any[]>([])
+  const [renegs, setRenegs] = useState<any[]>([])
+  const [pagForm, setPagForm] = useState({ data_pagamento: new Date().toISOString().slice(0, 10), conta_id: '' })
   const [form, setForm] = useState({
     descricao: '', tipo_divida: 'emprestimo_capital_giro', credor_tipo: 'banco',
     banco_credor: '', numero_contrato: '',
@@ -117,6 +123,103 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
 
     toast.success(`Dívida cadastrada. ${previewParcelas.length} parcelas geradas.`)
     setShowNova(false); setSaving(false)
+  }
+
+  async function toggleExpand(dividaId: string) {
+    if (expandId === dividaId) { setExpandId(null); return }
+    setExpandId(dividaId)
+    const [{ data: p }, { data: r }] = await Promise.all([
+      supabase.from('divida_parcelas').select('*').eq('divida_id', dividaId).order('numero'),
+      supabase.from('divida_renegociacoes').select('*').eq('divida_id', dividaId).order('numero_renegociacao'),
+    ])
+    setParcelas(p ?? [])
+    setRenegs(r ?? [])
+  }
+
+  async function pagarParcela() {
+    if (!showPagar) return
+    setSaving(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    const p = showPagar
+    // Lançamento juros (despesa DRE)
+    if (n(p.valor_juros) > 0) {
+      await supabase.from('financeiro_lancamentos').insert({
+        tipo: 'despesa', nome: `Juros parcela ${p.numero} — dívida`, categoria: 'Despesas Financeiras',
+        valor: n(p.valor_juros), status: 'pago', data_competencia: pagForm.data_pagamento,
+        data_pagamento: pagForm.data_pagamento, conta_id: pagForm.conta_id || null,
+        origem: 'manual', is_provisao: false, natureza: 'financiamento', created_by: user?.id,
+      })
+    }
+    // Lançamento amortização (reduz passivo, não DRE)
+    if (n(p.valor_amortizacao) > 0) {
+      await supabase.from('financeiro_lancamentos').insert({
+        tipo: 'despesa', nome: `Amortização parcela ${p.numero} — dívida`, categoria: 'Amortização de Empréstimos',
+        valor: n(p.valor_amortizacao), status: 'pago', data_competencia: pagForm.data_pagamento,
+        data_pagamento: pagForm.data_pagamento, conta_id: pagForm.conta_id || null,
+        origem: 'manual', is_provisao: false, natureza: 'financiamento', created_by: user?.id,
+      })
+    }
+    // Atualizar parcela
+    await supabase.from('divida_parcelas').update({
+      status: 'paga', data_pagamento: pagForm.data_pagamento, valor_pago: n(p.valor_amortizacao) + n(p.valor_juros),
+    }).eq('id', p.id)
+    // Atualizar dívida
+    await supabase.from('passivos_nao_circulantes').update({
+      saldo_devedor_atual: Math.max(0, n(p.saldo_antes) - n(p.valor_amortizacao)),
+      n_parcelas_pagas: (showPagar._divida_pagas || 0) + 1,
+    }).eq('id', p.divida_id)
+    toast.success(`Parcela ${p.numero} paga. 2 lançamentos registrados (juros + amortização).`)
+    setShowPagar(null); setSaving(false)
+  }
+
+  async function confirmarRenegociacao() {
+    if (!showReneg) return
+    setSaving(true)
+    const d = showReneg
+    const { data: { user } } = await supabase.auth.getUser()
+    const countReneg = (d.total_renegociacoes || 0) + 1
+    // Snapshot
+    await supabase.from('divida_renegociacoes').insert({
+      divida_id: d.id, numero_renegociacao: countReneg,
+      motivo: 'novos_termos_credor', motivo_descricao: d._reneg_motivo || '',
+      valor_anterior: n(d.valor_principal), saldo_anterior: n(d.saldo_devedor_atual),
+      n_parcelas_anterior: d.n_parcelas_total, taxa_anterior_am: n(d.taxa_juros_am),
+      valor_novo: n(d._reneg_novo_saldo), saldo_novo: n(d._reneg_novo_saldo),
+      n_parcelas_novo: Number(d._reneg_parcelas || d.n_parcelas_total),
+      taxa_nova_am: n(d._reneg_taxa || d.taxa_juros_am),
+      desconto_obtido: Math.max(0, n(d.saldo_devedor_atual) - n(d._reneg_novo_saldo)),
+      data_acordo: new Date().toISOString().slice(0, 10),
+      responsavel_acordo: d._reneg_responsavel || null,
+      numero_protocolo: d._reneg_protocolo || null,
+      status: 'ativa', created_by: user?.id,
+    })
+    // Deletar parcelas abertas antigas
+    await supabase.from('divida_parcelas').delete().eq('divida_id', d.id).eq('status', 'aberta')
+    // Gerar novas parcelas
+    if (n(d._reneg_novo_saldo) > 0 && Number(d._reneg_parcelas) > 0) {
+      const novas = gerarTabelaAmortizacao({
+        valor: n(d._reneg_novo_saldo), taxaMensal: n(d._reneg_taxa || d.taxa_juros_am),
+        nParcelas: Number(d._reneg_parcelas), dataInicio: new Date().toISOString().slice(0, 10),
+        sistema: (d.sistema || 'price') as any,
+      })
+      await supabase.from('divida_parcelas').insert(novas.map(p => ({
+        divida_id: d.id, numero: p.numero + (d.n_parcelas_pagas || 0),
+        data_vencimento: p.data_vencimento, valor_amortizacao: p.valor_amortizacao,
+        valor_juros: p.valor_juros, saldo_antes: p.saldo_antes, saldo_depois: p.saldo_depois, status: 'aberta',
+      })))
+    }
+    // Atualizar dívida
+    await supabase.from('passivos_nao_circulantes').update({
+      saldo_devedor_atual: n(d._reneg_novo_saldo),
+      n_parcelas_total: (d.n_parcelas_pagas || 0) + Number(d._reneg_parcelas || 0),
+      negociado: true, data_negociacao: new Date().toISOString().slice(0, 10),
+      desconto_obtido_valor: Math.max(0, n(d.saldo_devedor_atual) - n(d._reneg_novo_saldo)),
+      desconto_obtido_pct: n(d.saldo_devedor_atual) > 0 ? Math.round((1 - n(d._reneg_novo_saldo) / n(d.saldo_devedor_atual)) * 100) : 0,
+      condicoes_especiais: d._reneg_condicoes || null,
+      responsavel_negociacao: d._reneg_responsavel || null,
+    }).eq('id', d.id)
+    toast.success(`Renegociação #${countReneg} registrada. ${d._reneg_parcelas || 0} novas parcelas geradas.`)
+    setShowReneg(null); setSaving(false)
   }
 
   return (
@@ -250,8 +353,10 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
             <tbody>
               {dividasFiltradas.map(d => {
                 const cb = CREDOR_BADGE[d.credor_tipo] || CREDOR_BADGE.outro
+                const isOpen = expandId === d.id
                 return (
-                <tr key={d.id} className="border-b border-gray-50 hover:bg-gray-50">
+                <Fragment key={d.id}>
+                <tr onClick={() => toggleExpand(d.id)} className={`border-b border-gray-50 cursor-pointer transition-colors ${isOpen ? 'bg-brand/5' : 'hover:bg-gray-50'}`}>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className={`text-[10px] px-1.5 py-0.5 rounded ${cb.cls}`}>{cb.icon}</span>
@@ -267,9 +372,110 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
                   <td className="px-4 py-3 text-center">{d.negociado ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold" title={d.condicoes_especiais || ''}>🤝 {d.desconto_obtido_pct ? `-${d.desconto_obtido_pct}%` : 'Sim'}</span> : <span className="text-gray-300">—</span>}</td>
                   <td className="px-4 py-3"><span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${d.status === 'ativa' ? 'bg-blue-100 text-blue-700' : d.status === 'quitada' ? 'bg-green-100 text-green-700' : d.status === 'em_atraso' ? 'bg-red-100 text-red-700' : d.status === 'renegociada' ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-500'}`}>{d.status}{Number(d.total_renegociacoes) > 0 ? ` (${d.total_renegociacoes}×)` : ''}</span></td>
                 </tr>
+                {/* Expand */}
+                {isOpen && (
+                  <tr><td colSpan={9} className="bg-gray-50/80 border-b border-gray-200 px-4 py-4">
+                    <div className="flex gap-2 mb-4">
+                      <button onClick={e => { e.stopPropagation(); const prox = parcelas.find(p => p.status === 'aberta'); if (prox) { setShowPagar({ ...prox, _divida_pagas: d.n_parcelas_pagas }); setPagForm(f => ({ ...f, data_pagamento: new Date().toISOString().slice(0, 10) })) } else toast.error('Sem parcelas abertas') }}
+                        className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium">💰 Registrar Pagamento</button>
+                      <button onClick={e => { e.stopPropagation(); setShowReneg({ ...d, _reneg_novo_saldo: '', _reneg_parcelas: '', _reneg_taxa: '', _reneg_motivo: '', _reneg_responsavel: '', _reneg_protocolo: '', _reneg_condicoes: '' }) }}
+                        className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-medium">🔄 Renegociar</button>
+                    </div>
+                    {/* Cronograma */}
+                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Cronograma de Parcelas</h4>
+                    {parcelas.length > 0 ? (
+                      <table className="w-full text-xs mb-4">
+                        <thead><tr className="text-gray-400"><th className="text-left pb-1">Nº</th><th className="text-left pb-1">Vencimento</th><th className="text-right pb-1">Amort.</th><th className="text-right pb-1">Juros</th><th className="text-right pb-1">Total</th><th className="text-right pb-1">Saldo</th><th className="text-left pb-1">Status</th></tr></thead>
+                        <tbody>{parcelas.slice(0, 12).map(p => (
+                          <tr key={p.id} className={`border-t border-gray-100 ${p.status === 'paga' ? 'bg-green-50/50' : p.status === 'aberta' && p.data_vencimento < new Date().toISOString().slice(0, 10) ? 'bg-red-50/50' : ''}`}>
+                            <td className="py-1">{p.numero}</td>
+                            <td className="py-1">{new Date(p.data_vencimento + 'T12:00').toLocaleDateString('pt-BR')}</td>
+                            <td className="py-1 text-right">{fmt(p.valor_amortizacao)}</td>
+                            <td className="py-1 text-right text-red-600">{fmt(p.valor_juros)}</td>
+                            <td className="py-1 text-right font-semibold">{fmt(n(p.valor_amortizacao) + n(p.valor_juros))}</td>
+                            <td className="py-1 text-right text-gray-400">{fmt(p.saldo_depois)}</td>
+                            <td className="py-1"><span className={`text-[9px] px-1.5 py-0.5 rounded ${p.status === 'paga' ? 'bg-green-100 text-green-700' : p.data_vencimento < new Date().toISOString().slice(0, 10) ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>{p.status === 'paga' ? '✅ Pago' : p.data_vencimento < new Date().toISOString().slice(0, 10) ? '⚠️ Atrasado' : 'Aberta'}</span></td>
+                          </tr>
+                        ))}{parcelas.length > 12 && <tr><td colSpan={7} className="text-center text-gray-400 py-1">+ {parcelas.length - 12} parcelas...</td></tr>}</tbody>
+                      </table>
+                    ) : <p className="text-xs text-gray-400 mb-4">Sem parcelas cadastradas.</p>}
+                    {/* Histórico renegociações */}
+                    <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Histórico de Renegociações</h4>
+                    {renegs.length > 0 ? (
+                      <div className="space-y-2">
+                        {renegs.map(r => (
+                          <div key={r.id} className="bg-white rounded-lg border border-gray-100 p-3 text-xs">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="font-bold text-violet-700">#{r.numero_renegociacao}ª Renegociação — {r.data_acordo ? new Date(r.data_acordo + 'T12:00').toLocaleDateString('pt-BR') : '—'}</span>
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded ${r.status === 'ativa' ? 'bg-blue-100 text-blue-700' : r.status === 'cumprida' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{r.status}</span>
+                            </div>
+                            <div className="text-gray-500">Motivo: {r.motivo_descricao || r.motivo}</div>
+                            <div className="flex gap-4 mt-1">
+                              <span>Antes: {fmt(r.saldo_anterior)} em {r.n_parcelas_anterior}×</span>
+                              <span className="text-green-700 font-semibold">Depois: {fmt(r.saldo_novo)} em {r.n_parcelas_novo}×</span>
+                              {n(r.desconto_obtido) > 0 && <span className="text-green-600">Desconto: {fmt(r.desconto_obtido)}</span>}
+                            </div>
+                            {r.responsavel_acordo && <div className="text-gray-400 mt-0.5">Responsável: {r.responsavel_acordo} · Proto: {r.numero_protocolo || '—'}</div>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : <p className="text-xs text-gray-400">Nenhuma renegociação registrada.</p>}
+                  </td></tr>
+                )}
+                </Fragment>
               )})}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Modal Pagar Parcela */}
+      {showPagar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowPagar(null)}>
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-brand mb-4">Registrar Pagamento — Parcela {showPagar.numero}</h3>
+            <div className="space-y-3 text-sm mb-4">
+              <div className="flex justify-between bg-gray-50 rounded-lg p-2"><span>Amortização</span><span className="font-semibold">{fmt(showPagar.valor_amortizacao)}</span></div>
+              <div className="flex justify-between bg-gray-50 rounded-lg p-2"><span>Juros</span><span className="font-semibold text-red-600">{fmt(showPagar.valor_juros)}</span></div>
+              <div className="flex justify-between bg-brand/5 rounded-lg p-2 font-bold"><span>Total</span><span>{fmt(n(showPagar.valor_amortizacao) + n(showPagar.valor_juros))}</span></div>
+              <div><label className="block text-xs font-semibold text-gray-500 mb-1">Data pagamento</label><input type="date" value={pagForm.data_pagamento} onChange={e => setPagForm(f => ({ ...f, data_pagamento: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+              <div><label className="block text-xs font-semibold text-gray-500 mb-1">Conta</label><select value={pagForm.conta_id} onChange={e => setPagForm(f => ({ ...f, conta_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"><option value="">Selecionar...</option>{contas.map((c: any) => <option key={c.id} value={c.id}>{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}</select></div>
+              <div className="text-[10px] text-amber-600 bg-amber-50 p-2 rounded">Gera 2 lançamentos: juros (despesa DRE) + amortização (reduz passivo, não é despesa).</div>
+            </div>
+            <div className="flex gap-2"><button onClick={() => setShowPagar(null)} className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm">Cancelar</button><button onClick={pagarParcela} disabled={saving} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium disabled:opacity-50">{saving ? 'Salvando...' : 'Confirmar Pagamento'}</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Renegociar */}
+      {showReneg && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowReneg(null)}>
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-brand mb-1">Renegociar Dívida</h3>
+            <p className="text-xs text-gray-400 mb-4">{showReneg.descricao} · Saldo: {fmt(showReneg.saldo_devedor_atual)}</p>
+            <div className="bg-gray-50 rounded-lg p-3 mb-4 text-xs">
+              <div className="font-bold text-gray-500 mb-1">Termos Anteriores</div>
+              <div>Saldo: {fmt(showReneg.saldo_devedor_atual)} · Parcelas restantes: {showReneg.n_parcelas_abertas} · Taxa: {showReneg.taxa_juros_am ? `${(n(showReneg.taxa_juros_am)*100).toFixed(2)}% a.m.` : '—'}</div>
+            </div>
+            <div className="space-y-3 mb-4">
+              <div><label className="block text-xs font-semibold text-gray-500 mb-1">Motivo</label><input value={showReneg._reneg_motivo || ''} onChange={e => setShowReneg((s: any) => ({ ...s, _reneg_motivo: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Ex: Dificuldade financeira" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs font-semibold text-gray-500 mb-1">Novo saldo (R$)</label><input type="number" step="0.01" value={showReneg._reneg_novo_saldo || ''} onChange={e => setShowReneg((s: any) => ({ ...s, _reneg_novo_saldo: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 mb-1">Novas parcelas</label><input type="number" value={showReneg._reneg_parcelas || ''} onChange={e => setShowReneg((s: any) => ({ ...s, _reneg_parcelas: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs font-semibold text-gray-500 mb-1">Nova taxa (% a.m.)</label><input type="number" step="0.01" value={showReneg._reneg_taxa || ''} onChange={e => setShowReneg((s: any) => ({ ...s, _reneg_taxa: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder={showReneg.taxa_juros_am ? `${(n(showReneg.taxa_juros_am)*100).toFixed(2)}` : ''} /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 mb-1">Responsável no credor</label><input value={showReneg._reneg_responsavel || ''} onChange={e => setShowReneg((s: any) => ({ ...s, _reneg_responsavel: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+              </div>
+              <div><label className="block text-xs font-semibold text-gray-500 mb-1">Condições especiais</label><textarea value={showReneg._reneg_condicoes || ''} onChange={e => setShowReneg((s: any) => ({ ...s, _reneg_condicoes: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" rows={2} placeholder="Ex: Multa reduzida de 10% para 2%..." /></div>
+              {showReneg._reneg_novo_saldo && n(showReneg._reneg_novo_saldo) < n(showReneg.saldo_devedor_atual) && (
+                <div className="bg-green-50 rounded-lg p-2 text-xs text-green-700">
+                  Desconto: {fmt(n(showReneg.saldo_devedor_atual) - n(showReneg._reneg_novo_saldo))} ({Math.round((1 - n(showReneg._reneg_novo_saldo) / n(showReneg.saldo_devedor_atual)) * 100)}%)
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2"><button onClick={() => setShowReneg(null)} className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm">Cancelar</button><button onClick={confirmarRenegociacao} disabled={saving || !showReneg._reneg_novo_saldo} className="flex-1 px-4 py-2 bg-violet-600 text-white rounded-lg text-sm font-medium disabled:opacity-50">{saving ? 'Salvando...' : 'Confirmar Renegociação'}</button></div>
+          </div>
         </div>
       )}
 
