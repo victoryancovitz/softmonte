@@ -12,7 +12,19 @@ const n = (v: any) => Number(v || 0)
 const TIPO_LABEL: Record<string, string> = {
   emprestimo_capital_giro: 'Capital de Giro', financiamento_equipamento: 'Financiamento',
   antecipacao_recebiveis: 'Antecipação', cartao_empresarial: 'Cartão', mutuo_socio: 'Mútuo Sócio',
-  leasing: 'Leasing', debenture: 'Debênture', outros: 'Outros',
+  leasing: 'Leasing', debenture: 'Debênture', debito_cartorio: 'Cartório',
+  fornecedor: 'Fornecedor', imposto_parcelado: 'Imposto Parcelado',
+  cheque_especial: 'Cheque Especial', cartao_credito: 'Cartão de Crédito',
+  condominio_aluguel: 'Aluguel/Condomínio', outros: 'Outros',
+}
+
+const CREDOR_BADGE: Record<string, { icon: string; cls: string }> = {
+  banco: { icon: '🏦', cls: 'bg-blue-100 text-blue-700' },
+  cartorio: { icon: '📜', cls: 'bg-amber-100 text-amber-700' },
+  fornecedor: { icon: '🏢', cls: 'bg-green-100 text-green-700' },
+  fisco: { icon: '🏛️', cls: 'bg-violet-100 text-violet-700' },
+  socio: { icon: '👤', cls: 'bg-gray-100 text-gray-600' },
+  outro: { icon: '📋', cls: 'bg-gray-100 text-gray-600' },
 }
 
 export default function DividasClient({ dividas, indicadores, contas }: { dividas: any[]; indicadores: any; contas: any[] }) {
@@ -20,12 +32,20 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
   const toast = useToast()
   const [showNova, setShowNova] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [filtroCredor, setFiltroCredor] = useState('')
   const [form, setForm] = useState({
-    descricao: '', tipo_divida: 'emprestimo_capital_giro', banco_credor: '', numero_contrato: '',
+    descricao: '', tipo_divida: 'emprestimo_capital_giro', credor_tipo: 'banco',
+    banco_credor: '', numero_contrato: '',
     valor_principal: '', taxa_juros_am: '', sistema: 'price' as 'price' | 'sac' | 'bullet',
     n_parcelas: '12', data_primeiro_venc: '', dia_vencimento: '', finalidade: '', garantia: '',
     conta_credito_id: '', valor_desembolsado: '',
+    // Cartório
+    cartorio_nome: '', numero_protesto: '', data_protesto: '', credor_original: '',
+    valor_emolumentos: '', valor_acrescimos: '',
+    // Negociação
+    negociado: false, desconto_obtido_valor: '', condicoes_especiais: '', responsavel_negociacao: '',
   })
+  const dividasFiltradas = filtroCredor ? dividas.filter(d => d.credor_tipo === filtroCredor) : dividas
 
   const totalBruta = dividas.reduce((s, d) => s + n(d.saldo_devedor_atual), 0)
   const totalAtrasadas = dividas.reduce((s, d) => s + n(d.parcelas_atrasadas), 0)
@@ -52,8 +72,14 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
 
     // Inserir dívida
     const { data: divida, error: err1 } = await supabase.from('passivos_nao_circulantes').insert({
-      descricao: form.descricao, tipo_divida: form.tipo_divida, banco_credor: form.banco_credor,
-      numero_contrato: form.numero_contrato, sistema: form.sistema, status: 'ativa',
+      descricao: form.descricao, tipo_divida: form.tipo_divida, credor_tipo: form.credor_tipo,
+      banco_credor: form.banco_credor, numero_contrato: form.numero_contrato, sistema: form.sistema, status: 'ativa',
+      cartorio_nome: form.cartorio_nome || null, numero_protesto: form.numero_protesto || null,
+      data_protesto: form.data_protesto || null, credor_original: form.credor_original || null,
+      valor_emolumentos: form.valor_emolumentos ? Number(form.valor_emolumentos) : null,
+      valor_acrescimos: form.valor_acrescimos ? Number(form.valor_acrescimos) : null,
+      negociado: form.negociado, desconto_obtido_valor: form.desconto_obtido_valor ? Number(form.desconto_obtido_valor) : null,
+      condicoes_especiais: form.condicoes_especiais || null, responsavel_negociacao: form.responsavel_negociacao || null,
       valor_principal: Number(form.valor_principal), valor_total: Number(form.valor_principal),
       saldo_devedor: Number(form.valor_principal), saldo_devedor_atual: Number(form.valor_principal),
       valor_desembolsado: Number(form.valor_desembolsado || form.valor_principal),
@@ -132,8 +158,22 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
         </div>
       )}
 
-      {/* Botão nova dívida */}
-      <div className="flex justify-end mb-4">
+      {/* Filtros + botão */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-lg overflow-x-auto">
+          {[
+            { key: '', label: 'Todos' },
+            { key: 'banco', label: '🏦 Bancos' },
+            { key: 'cartorio', label: '📜 Cartórios' },
+            { key: 'fornecedor', label: '🏢 Fornecedores' },
+            { key: 'fisco', label: '🏛️ Fisco' },
+          ].map(f => (
+            <button key={f.key} onClick={() => setFiltroCredor(f.key)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium whitespace-nowrap transition-colors ${filtroCredor === f.key ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
         <button onClick={() => setShowNova(true)} className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark">+ Nova Dívida</button>
       </div>
 
@@ -144,6 +184,10 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
             <div className="col-span-2"><label className="block text-xs font-semibold text-gray-500 mb-1">Descrição *</label>
               <input value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Ex: Capital de giro — BV Financeira" /></div>
+            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Credor</label>
+              <select value={form.credor_tipo} onChange={e => setForm(f => ({ ...f, credor_tipo: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                <option value="banco">🏦 Banco</option><option value="cartorio">📜 Cartório</option><option value="fornecedor">🏢 Fornecedor</option><option value="fisco">🏛️ Fisco/Imposto</option><option value="socio">👤 Sócio</option><option value="outro">Outro</option>
+              </select></div>
             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Tipo</label>
               <select value={form.tipo_divida} onChange={e => setForm(f => ({ ...f, tipo_divida: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
                 {Object.entries(TIPO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
@@ -193,29 +237,37 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
       )}
 
       {/* Lista de dívidas */}
-      {dividas.length === 0 ? (
-        <EmptyState titulo="Nenhuma dívida cadastrada" descricao="Cadastre empréstimos e financiamentos para controlar parcelas e juros." icone={<Landmark className="w-10 h-10" />} />
+      {dividasFiltradas.length === 0 ? (
+        <EmptyState titulo={filtroCredor ? 'Nenhuma dívida deste tipo' : 'Nenhuma dívida cadastrada'} descricao="Cadastre empréstimos, protestos e débitos com fornecedores." icone={<Landmark className="w-10 h-10" />} />
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="bg-gray-50 border-b border-gray-100">
-              {['Credor', 'Tipo', 'Sistema', 'Saldo Devedor', 'Taxa', 'Próx. Parcela', 'Parcelas', 'Status'].map(h => (
+              {['Credor', 'Tipo', 'Sistema', 'Saldo Devedor', 'Taxa', 'Próx. Parcela', 'Parcelas', 'Neg.', 'Status'].map(h => (
                 <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
               ))}
             </tr></thead>
             <tbody>
-              {dividas.map(d => (
+              {dividasFiltradas.map(d => {
+                const cb = CREDOR_BADGE[d.credor_tipo] || CREDOR_BADGE.outro
+                return (
                 <tr key={d.id} className="border-b border-gray-50 hover:bg-gray-50">
-                  <td className="px-4 py-3"><div className="font-medium">{d.banco_credor || d.descricao}</div><div className="text-[10px] text-gray-400">{d.descricao}</div></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded ${cb.cls}`}>{cb.icon}</span>
+                      <div><div className="font-medium">{d.credor_display || d.descricao}</div><div className="text-[10px] text-gray-400">{d.descricao}</div></div>
+                    </div>
+                  </td>
                   <td className="px-4 py-3 text-xs">{TIPO_LABEL[d.tipo_divida] || d.tipo_divida || '—'}</td>
                   <td className="px-4 py-3 text-xs uppercase">{d.sistema || '—'}</td>
                   <td className="px-4 py-3 font-semibold text-red-700">{fmt(d.saldo_devedor_atual)}</td>
                   <td className="px-4 py-3 text-xs">{d.taxa_juros_am ? `${(n(d.taxa_juros_am) * 100).toFixed(2)}% a.m.` : d.taxa_juros_aa ? `${(n(d.taxa_juros_aa) * 100).toFixed(2)}% a.a.` : '—'}</td>
                   <td className="px-4 py-3 text-xs">{d.prox_vencimento ? `${fmt(d.prox_valor_parcela)} em ${new Date(d.prox_vencimento + 'T12:00').toLocaleDateString('pt-BR')}` : '—'}</td>
                   <td className="px-4 py-3 text-xs">{d.n_parcelas_pagas || 0}/{d.n_parcelas_total || '—'} {n(d.parcelas_atrasadas) > 0 && <span className="text-red-600 font-bold">({d.parcelas_atrasadas} atrasada)</span>}</td>
-                  <td className="px-4 py-3"><span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${d.status === 'ativa' ? 'bg-blue-100 text-blue-700' : d.status === 'quitada' ? 'bg-green-100 text-green-700' : d.status === 'em_atraso' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>{d.status}</span></td>
+                  <td className="px-4 py-3 text-center">{d.negociado ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold" title={d.condicoes_especiais || ''}>🤝 {d.desconto_obtido_pct ? `-${d.desconto_obtido_pct}%` : 'Sim'}</span> : <span className="text-gray-300">—</span>}</td>
+                  <td className="px-4 py-3"><span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${d.status === 'ativa' ? 'bg-blue-100 text-blue-700' : d.status === 'quitada' ? 'bg-green-100 text-green-700' : d.status === 'em_atraso' ? 'bg-red-100 text-red-700' : d.status === 'renegociada' ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-500'}`}>{d.status}{Number(d.total_renegociacoes) > 0 ? ` (${d.total_renegociacoes}×)` : ''}</span></td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         </div>
