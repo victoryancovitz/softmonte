@@ -15,8 +15,10 @@ export default function SocietarioClient({ socios, movimentacoes, indicadores, c
   const [valor, setValor] = useState('')
   const [tipo, setTipo] = useState('dividendos')
   const [socioId, setSocioId] = useState('')
-  const [contaId, setContaId] = useState('')
+  const [contaEmpresaId, setContaEmpresaId] = useState('')
   const [saving, setSaving] = useState(false)
+  const contasEmpresa = contas.filter((c: any) => c.proprietario !== 'socio')
+  const contasPorSocio = (sid: string) => contas.filter((c: any) => c.socio_id === sid)
 
   const lucroDisp = Number(indicadores?.lucro_liquido_caixa || 0)
   const capitalSocial = Number(config?.capital_social || 100000)
@@ -33,6 +35,7 @@ export default function SocietarioClient({ socios, movimentacoes, indicadores, c
 
     for (const s of socios) {
       const proporcional = Math.round(v * Number(s.participacao_pct) / 100 * 100) / 100
+      const contaSocio = contasPorSocio(s.id)[0]?.id || null
       // Movimentação societária
       await supabase.from('movimentacoes_societarias').insert({
         socio_id: s.id, tipo, valor_total: proporcional,
@@ -40,6 +43,8 @@ export default function SocietarioClient({ socios, movimentacoes, indicadores, c
         data_deliberacao: hoje.toISOString().slice(0, 10),
         participacao_pct: Number(s.participacao_pct),
         lucro_base_distribuicao: lucroDisp,
+        conta_id: contaEmpresaId || null,
+        conta_destino_id: contaSocio,
         status: 'pendente', created_by: user?.id,
       })
       // Lançamento financeiro
@@ -49,7 +54,8 @@ export default function SocietarioClient({ socios, movimentacoes, indicadores, c
         valor: proporcional, status: 'em_aberto', socio_id: s.id,
         data_competencia: `${ano}-${String(mes).padStart(2, '0')}-01`,
         origem: 'manual', is_provisao: false, created_by: user?.id,
-        conta_id: contaId || null,
+        conta_id: contaEmpresaId || null, conta_destino_id: contaSocio,
+        natureza: 'societario',
       })
     }
     toast.success(`${tipo === 'dividendos' ? 'Distribuição' : 'Pró-labore'} de ${fmt(v)} registrado para ${socios.length} sócios`)
@@ -128,7 +134,7 @@ export default function SocietarioClient({ socios, movimentacoes, indicadores, c
       {showDist && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
           <h3 className="text-sm font-bold text-brand mb-3">Distribuição de Lucros</h3>
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          <div className="grid grid-cols-3 gap-3 mb-3">
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Tipo</label>
               <select value={tipo} onChange={e => setTipo(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
@@ -139,6 +145,13 @@ export default function SocietarioClient({ socios, movimentacoes, indicadores, c
             <div>
               <label className="block text-xs font-semibold text-gray-500 mb-1">Valor Total</label>
               <input type="number" step="0.01" value={valor} onChange={e => setValor(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="0,00" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-500 mb-1">Conta Empresa (origem)</label>
+              <select value={contaEmpresaId} onChange={e => setContaEmpresaId(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                <option value="">Selecionar...</option>
+                {contasEmpresa.map((c: any) => <option key={c.id} value={c.id}>{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}
+              </select>
             </div>
           </div>
           {Number(valor) > 0 && (
