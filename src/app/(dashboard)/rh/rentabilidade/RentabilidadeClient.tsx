@@ -2,7 +2,6 @@
 import { useState, useMemo, Fragment } from 'react'
 import { ChevronDown, ChevronUp, TrendingUp, Clock, DollarSign, Users } from 'lucide-react'
 import { fmt, corMargem } from '@/lib/cores'
-import { calcularTIR, anualizarTaxa } from '@/lib/tir'
 
 const BE_BADGE: Record<string, { label: string; icon: string; cls: string }> = {
   no_lucro: { label: 'No lucro', icon: '✅', cls: 'bg-green-100 text-green-700' },
@@ -21,36 +20,21 @@ export default function RentabilidadeClient({ data, ciclo, receitaReal, margemRe
 
   const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
 
-  const tirMap = useMemo<Record<string, number | null>>(() => {
-    const map: Record<string, number | null> = {}
+  const roiMap = useMemo<Record<string, { roi_pct: number | null; resultado_prov: number | null; margem_prov_pct: number | null }>>(() => {
+    const map: Record<string, any> = {}
     for (const row of data) {
-      try {
-        const fluxos: { ano: number; mes: number; receita: number; custo: number; margem: number }[] =
-          typeof row.fluxo_caixa_mensal === 'string' ? JSON.parse(row.fluxo_caixa_mensal || '[]') : (row.fluxo_caixa_mensal || [])
-        if (fluxos.length === 0) { map[row.funcionario_id] = null; continue }
-        const investimentoInicial = Number(row.custo_mobilizacao_total) > 0
-          ? -Number(row.custo_mobilizacao_total)
-          : -Number(row.custo_total_mensal)
-        const cashflows = [investimentoInicial, ...fluxos.map(f => f.margem)]
-        const tirMensal = calcularTIR(cashflows)
-        if (tirMensal === null) { map[row.funcionario_id] = null; continue }
-        map[row.funcionario_id] = anualizarTaxa(tirMensal) * 100
-      } catch {
-        map[row.funcionario_id] = null
-      }
+      const resultado = Number(row.resultado_acumulado || 0)
+      const custo = Number(row.custo_total_acumulado || 0)
+      const receita = Number(row.receita_acumulada || 0)
+      const provisaoMes = Number(row.provisoes_valor || 0)
+      const meses = Number(row.meses_na_empresa || 0)
+      const roi_pct = custo > 0 ? Math.round(resultado / custo * 1000) / 10 : null
+      const resultado_prov = resultado - (provisaoMes * meses)
+      const margem_prov_pct = receita > 0 ? Math.round(resultado_prov / receita * 1000) / 10 : null
+      map[row.funcionario_id] = { roi_pct, resultado_prov, margem_prov_pct }
     }
     return map
   }, [data])
-
-  const corTIR = (tir: number | null) => {
-    if (tir === null) return 'text-gray-400'
-    if (tir < 0) return 'text-gray-400'
-    if (tir < 20) return 'text-red-600'
-    if (tir < 50) return 'text-orange-600'
-    if (tir < 100) return 'text-amber-600'
-    if (tir < 200) return 'text-green-600'
-    return 'text-green-700'
-  }
 
   const totalFuncs = data.length
   const noLucro = data.filter(d => d.status_breakeven === 'no_lucro').length
@@ -102,6 +86,13 @@ export default function RentabilidadeClient({ data, ciclo, receitaReal, margemRe
         </div>
       </div>
 
+      {/* Legenda */}
+      <div className="text-[11px] text-gray-400 flex gap-4 mb-4 px-1">
+        <span><strong className="text-gray-500">ROI Período</strong> = Margem acumulada ÷ Custo total empregado</span>
+        <span>·</span>
+        <span><strong className="text-gray-500">Margem c/Prov</strong> = Descontando 13°, férias e FGTS já acumulados</span>
+      </div>
+
       {/* Tabela */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto mb-6">
         <table className="w-full text-sm">
@@ -115,14 +106,15 @@ export default function RentabilidadeClient({ data, ciclo, receitaReal, margemRe
               <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Margem/HH</th>
               <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase" title="Margem calculada sobre preço contratado por HH. Não reflete faturamento real.">Margem % (teórica)</th>
               <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase" title="Margem real: receita BMs aprovados menos custo efetivo">Margem Real %</th>
-              <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase" title="Taxa Interna de Retorno anualizada do investimento neste funcionário">TIR (a.a.)</th>
+              <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase" title="Retorno sobre o custo total empregado neste funcionário">ROI Período</th>
+              <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase" title="Margem real descontando 13°, férias e FGTS provisionados">Margem c/Prov</th>
               <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Break-even</th>
               <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase" title="Receita real de BMs aprovados menos custo real acumulado">Resultado real</th>
             </tr>
           </thead>
           <tbody>
             {data.length === 0 ? (
-              <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-400">Sem dados de rentabilidade.</td></tr>
+              <tr><td colSpan={12} className="px-4 py-10 text-center text-gray-400">Sem dados de rentabilidade.</td></tr>
             ) : data.sort((a, b) => Number(b.margem_pct || 0) - Number(a.margem_pct || 0)).map(f => {
               const isOpen = expandido === f.funcionario_id
               const be = BE_BADGE[f.status_breakeven] || BE_BADGE.nunca_rentavel
@@ -143,7 +135,8 @@ export default function RentabilidadeClient({ data, ciclo, receitaReal, margemRe
                   <td className={`px-3 py-3 text-right font-semibold ${Number(f.margem_hh) >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(f.margem_hh)}/h</td>
                   <td className={`px-3 py-3 text-right font-bold ${MARGEM_CLS(Number(f.margem_pct))}`}>{Number(f.margem_pct).toFixed(1)}%</td>
                   <td className={`px-3 py-3 text-right font-bold ${corMargem(f.margem_real_pct != null ? Number(f.margem_real_pct) : null)}`}>{f.margem_real_pct != null ? `${Number(f.margem_real_pct).toFixed(1)}%` : '—'}</td>
-                  <td className={`px-3 py-3 text-right font-bold ${corTIR(tirMap[f.funcionario_id])}`}>{tirMap[f.funcionario_id] != null ? (tirMap[f.funcionario_id]! < 0 ? 'Amortizando' : `${tirMap[f.funcionario_id]!.toFixed(1)}%`) : '—'}</td>
+                  <td className="px-3 py-3 text-right text-sm">{roiMap[f.funcionario_id]?.roi_pct != null ? <span className={roiMap[f.funcionario_id].roi_pct! >= 50 ? 'font-bold text-green-700' : roiMap[f.funcionario_id].roi_pct! >= 25 ? 'font-semibold text-green-600' : roiMap[f.funcionario_id].roi_pct! >= 0 ? 'text-amber-600' : 'text-red-600'}>{roiMap[f.funcionario_id].roi_pct!.toFixed(1)}%</span> : <span className="text-gray-300">—</span>}</td>
+                  <td className="px-3 py-3 text-right text-sm">{roiMap[f.funcionario_id]?.margem_prov_pct != null ? <div><span className={roiMap[f.funcionario_id].margem_prov_pct! >= 25 ? 'font-bold text-green-700' : roiMap[f.funcionario_id].margem_prov_pct! >= 10 ? 'font-semibold text-amber-600' : roiMap[f.funcionario_id].margem_prov_pct! >= 0 ? 'text-orange-600' : 'text-red-600'}>{roiMap[f.funcionario_id].margem_prov_pct!.toFixed(1)}%</span><div className={`text-[10px] mt-0.5 ${(roiMap[f.funcionario_id].resultado_prov ?? 0) >= 0 ? 'text-gray-400' : 'text-red-400'}`}>{fmt(roiMap[f.funcionario_id].resultado_prov ?? 0)}</div></div> : <span className="text-gray-300">—</span>}</td>
                   <td className="px-3 py-3">
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${be.cls}`}>
                       {be.icon} {be.label}{f.status_breakeven === 'em_amortizacao' && f.meses_para_breakeven ? ` (${f.meses_para_breakeven}m)` : ''}
@@ -155,7 +148,7 @@ export default function RentabilidadeClient({ data, ciclo, receitaReal, margemRe
                   </td>
                 </tr>
                 {isOpen && (
-                  <tr><td colSpan={11} className="bg-gray-50/80 border-b border-gray-200 px-4 py-5">
+                  <tr><td colSpan={12} className="bg-gray-50/80 border-b border-gray-200 px-4 py-5">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Composição do custo */}
                       <div>
@@ -203,6 +196,29 @@ export default function RentabilidadeClient({ data, ciclo, receitaReal, margemRe
                         </div>
                       </div>
                     </div>
+                    {/* ROI + Provisões cards */}
+                    {(() => {
+                      const roi = roiMap[f.funcionario_id]
+                      return roi ? (
+                        <div className="grid grid-cols-3 gap-3 mb-4 mt-4">
+                          <div className="bg-white rounded-lg border p-3 text-center">
+                            <div className="text-[10px] text-gray-400 uppercase mb-1">ROI do Período</div>
+                            <div className={`text-xl font-bold ${(roi.roi_pct ?? 0) >= 25 ? 'text-green-700' : 'text-amber-600'}`}>{roi.roi_pct?.toFixed(1) ?? '—'}%</div>
+                            <div className="text-[10px] text-gray-400 mt-0.5">margem ÷ custo total</div>
+                          </div>
+                          <div className="bg-white rounded-lg border p-3 text-center">
+                            <div className="text-[10px] text-gray-400 uppercase mb-1">Resultado c/ Provisões</div>
+                            <div className={`text-xl font-bold ${(roi.resultado_prov ?? 0) >= 0 ? 'text-green-700' : 'text-red-600'}`}>{fmt(roi.resultado_prov ?? 0)}</div>
+                            <div className="text-[10px] text-gray-400 mt-0.5">inclui 13°, férias e FGTS</div>
+                          </div>
+                          <div className="bg-white rounded-lg border p-3 text-center">
+                            <div className="text-[10px] text-gray-400 uppercase mb-1">Margem c/ Provisões</div>
+                            <div className={`text-xl font-bold ${(roi.margem_prov_pct ?? 0) >= 25 ? 'text-green-700' : (roi.margem_prov_pct ?? 0) >= 0 ? 'text-amber-600' : 'text-red-600'}`}>{roi.margem_prov_pct?.toFixed(1) ?? '—'}%</div>
+                            <div className="text-[10px] text-gray-400 mt-0.5">da receita faturada</div>
+                          </div>
+                        </div>
+                      ) : null
+                    })()}
                     {/* Fluxo de Caixa Acumulado */}
                     {(() => {
                       try {
