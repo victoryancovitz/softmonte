@@ -8,10 +8,7 @@ import SearchInput from '@/components/SearchInput'
 import { useToast } from '@/components/Toast'
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const fmtK = (v: number) => {
-  if (Math.abs(v) >= 1000) return (v / 1000).toFixed(0) + 'k'
-  return v.toFixed(0)
-}
+const fmtK = (v: number) => fmt(v)
 
 const CAT_COLORS: Record<string, string> = {
   'Salário Base': '#6366f1',

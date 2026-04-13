@@ -47,7 +47,7 @@ export default function ForecastPage() {
   }
 
   const fmt = (v: number | null) => v != null ? Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'
-  const fmtK = (v: number | null) => v != null ? `R$ ${(Number(v) / 1000).toFixed(0)}k` : '—'
+  const fmtK = (v: number | null) => v != null ? Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'
 
   const MESES = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
