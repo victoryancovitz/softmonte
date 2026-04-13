@@ -17,6 +17,13 @@ interface Conta {
   entradas?: number
   saidas?: number
   saldo_atual?: number
+  proprietario?: string
+  socio_id?: string | null
+  socio_nome?: string | null
+  titular?: string | null
+  pix_chave?: string | null
+  pix_tipo?: string | null
+  is_padrao?: boolean
 }
 
 const TIPO_LABEL: Record<string, string> = {
@@ -175,7 +182,7 @@ export default function ContasCorrentesPage() {
     loadContas()
   }
 
-  const saldoTotal = contas.reduce((s, c) => s + Number(c.saldo_atual ?? 0), 0)
+  const saldoTotal = contas.filter(c => c.proprietario !== 'socio').reduce((s, c) => s + Number(c.saldo_atual ?? 0), 0)
 
   const inp = 'w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand'
   const lbl = 'block text-xs font-semibold text-gray-600 mb-1'
@@ -206,24 +213,25 @@ export default function ContasCorrentesPage() {
         </div>
       </div>
 
-      {/* Saldo total */}
+      {/* Saldo total empresa */}
       <div className="bg-gradient-to-br from-brand to-brand-dark text-white rounded-xl p-5 mb-5">
-        <p className="text-xs uppercase tracking-wide opacity-80">Saldo total</p>
-        <p className="text-3xl font-bold font-display mt-1">{fmt(saldoTotal)}</p>
-        <p className="text-xs opacity-60 mt-1">Soma dos saldos atuais de todas as contas ativas</p>
+        <p className="text-xs uppercase tracking-wide opacity-80">Caixa da Empresa</p>
+        <p className="text-3xl font-bold font-display mt-1">{fmt(contas.filter(c => (c as any).proprietario !== 'socio').reduce((s, c) => s + Number((c as any).saldo_atual ?? 0), 0))}</p>
+        <p className="text-xs opacity-60 mt-1">{contas.filter(c => (c as any).proprietario !== 'socio').length} conta(s) da empresa</p>
       </div>
 
-      {/* Lista de contas */}
+      {/* Contas da empresa */}
+      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Contas da Empresa</p>
       {loading ? (
         <div className="text-sm text-gray-400">Carregando...</div>
-      ) : contas.length === 0 ? (
-        <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center">
+      ) : contas.filter(c => (c as any).proprietario !== 'socio').length === 0 ? (
+        <div className="bg-white rounded-xl border border-dashed border-gray-300 p-10 text-center mb-5">
           <p className="text-gray-500 mb-3">Nenhuma conta cadastrada.</p>
           <button onClick={abrirNovo} className="text-brand font-semibold hover:underline">+ Cadastrar primeira conta</button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {contas.map(c => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          {contas.filter(c => (c as any).proprietario !== 'socio').map(c => (
             <div key={c.id} className={`bg-white rounded-xl shadow-sm border p-5 hover:shadow-md transition-all ${(c as any).is_padrao ? 'border-amber-300' : 'border-gray-100'}`}>
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -315,6 +323,36 @@ export default function ContasCorrentesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Contas dos sócios */}
+      {contas.filter(c => (c as any).proprietario === 'socio').length > 0 && (
+        <>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Contas dos Sócios</p>
+          <p className="text-[10px] text-gray-400 mb-3">Contas pessoais vinculadas para recebimento de dividendos e pró-labore. Saldos pessoais não compõem o caixa da empresa.</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            {contas.filter(c => (c as any).proprietario === 'socio').map(c => (
+              <div key={c.id} className="bg-white rounded-xl shadow-sm border border-violet-200 p-5">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="w-8 h-8 rounded-full bg-violet-100 flex items-center justify-center text-violet-700 text-xs font-bold">{((c as any).titular || c.nome)?.charAt(0)}</div>
+                  <div>
+                    <div className="font-bold text-gray-900 text-sm">{(c as any).titular || c.nome}</div>
+                    <div className="text-[10px] text-gray-400">{(c as any).socio_nome || 'Sócio'}</div>
+                  </div>
+                </div>
+                <div className="text-xs text-gray-500 space-y-0.5">
+                  <div>Banco: {c.banco || <span className="text-amber-600 font-semibold">A definir</span>}</div>
+                  <div>Ag: {c.agencia || '—'} · Conta: {c.conta || '—'}</div>
+                  <div>PIX: {(c as any).pix_chave || '—'}</div>
+                </div>
+                {(!c.banco || c.banco === 'A definir') && (
+                  <div className="mt-2 text-[10px] text-amber-600 bg-amber-50 px-2 py-1 rounded">Dados bancários incompletos — preencha para transferências</div>
+                )}
+                <button onClick={() => abrirEditar(c)} className="mt-2 text-xs text-brand hover:underline">Editar dados bancários</button>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       {/* Modal Transferência */}
