@@ -56,6 +56,16 @@ function FinanceiroPage() {
     is_parcelado: false, parcelas: 1, intervalo_dias: 30,
     is_recorrente: false, frequencia_dias: 30, limite_recorrencias: 12,
   })
+  // Pagamento em lote
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+  const [pagandoLote, setPagandoLote] = useState(false)
+  const [modalLote, setModalLote] = useState(false)
+  const [dataLote, setDataLote] = useState(new Date().toISOString().slice(0, 10))
+  const [contaLote, setContaLote] = useState('')
+
+  const toggleSelect = (id: string) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
+  const toggleTodos = (ids: string[]) => setSelected(prev => prev.size === ids.length ? new Set() : new Set(ids))
+
   const supabase = createClient()
   const toast = useToast()
 
@@ -116,6 +126,27 @@ function FinanceiroPage() {
     })
     setFluxo(fluxoMes)
     setLoading(false)
+  }
+
+  // Pagamento em lote
+  async function confirmarPagamentoLote() {
+    if (!dataLote || selected.size === 0) return
+    setPagandoLote(true)
+    try {
+      const upd: Record<string, unknown> = { status: 'pago', data_pagamento: dataLote }
+      if (contaLote) upd.conta_id = contaLote
+      const { error } = await supabase.from('financeiro_lancamentos').update(upd).in('id', Array.from(selected)).eq('status', 'em_aberto')
+      if (error) throw error
+      const n = selected.size
+      toast.success(`${n} lançamento${n > 1 ? 's' : ''} confirmado${n > 1 ? 's' : ''}`)
+      setSelected(new Set())
+      setModalLote(false)
+      loadData()
+    } catch (err: any) {
+      toast.error('Erro ao processar: ' + (err.message || 'Tente novamente'))
+    } finally {
+      setPagandoLote(false)
+    }
   }
 
   // KPIs
@@ -356,7 +387,23 @@ function FinanceiroPage() {
 
         {tab === 'lancamentos' && (
           <div className="px-5 pt-3 space-y-2">
-            <SearchInput value={busca} onChange={setBusca} placeholder="Buscar lançamento..." />
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex-1 min-w-[200px]"><SearchInput value={busca} onChange={setBusca} placeholder="Buscar lançamento..." /></div>
+              {/* Seleção rápida por folha */}
+              {(() => {
+                const mesesFolha = new Map<string, string[]>()
+                lancamentos.filter(l => l.status === 'em_aberto' && l.origem === 'folha_fechamento').forEach(l => {
+                  const match = l.nome?.match(/(\d{2}\/\d{4})/)
+                  if (match) { const k = match[1]; if (!mesesFolha.has(k)) mesesFolha.set(k, []); mesesFolha.get(k)!.push(l.id) }
+                })
+                return Array.from(mesesFolha.entries()).map(([mes, ids]) => (
+                  <button key={mes} onClick={() => setSelected(new Set(ids))}
+                    className="text-xs px-2 py-1 rounded border border-gray-200 text-gray-600 hover:border-brand hover:text-brand transition-colors whitespace-nowrap">
+                    Folha {mes} ({ids.length})
+                  </button>
+                ))
+              })()}
+            </div>
             {(filtroTipo || filtroStatus || filtroProvisao) && (
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-xs text-gray-500">Filtros ativos:</span>
@@ -413,6 +460,23 @@ function FinanceiroPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100">
+                <th className="w-8 px-2">
+                  {(() => {
+                    const idsVisiveis = lancamentos.filter(l => {
+                      if (busca && !l.nome?.toLowerCase().includes(busca.toLowerCase()) && !l.categoria?.toLowerCase().includes(busca.toLowerCase())) return false
+                      if (filtroTipo && l.tipo !== filtroTipo) return false
+                      if (filtroStatus && l.status !== filtroStatus) return false
+                      if (filtroProvisao && !l.is_provisao) return false
+                      const hj = new Date().toISOString().slice(0, 10)
+                      if (statusTab === 'em_aberto' && (l.status !== 'em_aberto' || l.is_provisao)) return false
+                      if (statusTab === 'vence_hoje' && !(l.status === 'em_aberto' && l.data_vencimento === hj)) return false
+                      if (statusTab === 'vencidos' && !(l.status === 'em_aberto' && l.data_vencimento && l.data_vencimento < hj)) return false
+                      if (statusTab === 'pago' && l.status !== 'pago') return false
+                      return l.status === 'em_aberto'
+                    }).map(l => l.id)
+                    return <input type="checkbox" checked={selected.size > 0 && selected.size === idsVisiveis.length && idsVisiveis.length > 0} onChange={() => toggleTodos(idsVisiveis)} className="rounded border-gray-300 text-brand focus:ring-brand cursor-pointer" />
+                  })()}
+                </th>
                 {['Data','Descrição','Obra','Tipo','Valor','Status',''].map(h => (
                   <th key={h} className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
                 ))}
@@ -432,7 +496,10 @@ function FinanceiroPage() {
                 if (statusTab === 'pago' && l.status !== 'pago') return false
                 return true
               }).map(l => (
-                <tr key={l.id} className="border-b border-gray-50 hover:bg-gray-50/80">
+                <tr key={l.id} className={`border-b border-gray-50 hover:bg-gray-50/80 ${selected.has(l.id) ? 'bg-brand/5' : ''}`}>
+                  <td className="w-8 px-2">
+                    {l.status === 'em_aberto' && <input type="checkbox" checked={selected.has(l.id)} onChange={() => toggleSelect(l.id)} className="rounded border-gray-300 text-brand focus:ring-brand cursor-pointer" />}
+                  </td>
                   <td className="px-4 py-2.5 text-gray-500 text-xs">{new Date(l.data_competencia+'T12:00:00').toLocaleDateString('pt-BR')}</td>
                   <td className="px-4 py-2.5 font-medium">
                     <div className="flex items-center gap-1.5">
@@ -459,7 +526,7 @@ function FinanceiroPage() {
                     </span>
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <div className="flex gap-2 justify-end items-center">
+                    <div className={`flex gap-2 justify-end items-center ${selected.size > 0 ? 'opacity-30 pointer-events-none' : ''}`}>
                       {l.status === 'em_aberto' && !l.is_provisao && (
                         <div className="relative">
                           <button
@@ -605,6 +672,66 @@ function FinanceiroPage() {
           </div>
         )
       })()}
+
+      {/* Barra flutuante de seleção em lote */}
+      {selected.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-5 py-3 bg-[#0f1e2e] rounded-xl shadow-2xl border border-brand/30">
+          <div className="text-white text-sm">
+            <span className="font-bold text-brand">{selected.size}</span>{' '}lançamento{selected.size > 1 ? 's' : ''}
+            <span className="ml-2 text-gray-400">= {lancamentos.filter(l => selected.has(l.id)).reduce((s, l) => s + Number(l.valor), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+          </div>
+          <div className="w-px h-6 bg-white/20" />
+          <button onClick={() => setSelected(new Set())} className="text-gray-400 hover:text-white text-sm transition-colors">Limpar</button>
+          {(() => {
+            const sel = lancamentos.filter(l => selected.has(l.id))
+            const temR = sel.some(l => l.tipo === 'receita')
+            const temD = sel.some(l => l.tipo === 'despesa')
+            const label = temR && temD ? 'Confirmar liquidação' : temR ? `Confirmar recebimento (${selected.size})` : `Confirmar pagamento (${selected.size})`
+            const cls = temR && !temD ? 'bg-green-600 hover:bg-green-700' : 'bg-brand hover:bg-brand-dark'
+            return <button onClick={() => { setDataLote(new Date().toISOString().slice(0, 10)); setContaLote(''); setModalLote(true) }} className={`${cls} text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors`}>{label}</button>
+          })()}
+        </div>
+      )}
+
+      {/* Modal confirmação lote */}
+      {modalLote && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-1">
+              {(() => { const sel = lancamentos.filter(l => selected.has(l.id)); const temR = sel.some(l => l.tipo === 'receita'); const temD = sel.some(l => l.tipo === 'despesa'); return temR && temD ? 'Liquidar lançamentos' : temR ? 'Confirmar recebimentos' : 'Confirmar pagamentos' })()}
+            </h3>
+            <div className="bg-gray-50 rounded-lg p-3 mb-4 text-sm space-y-1">
+              {(() => {
+                const sel = lancamentos.filter(l => selected.has(l.id))
+                const despesas = sel.filter(l => l.tipo === 'despesa')
+                const receitas = sel.filter(l => l.tipo === 'receita')
+                const sumD = despesas.reduce((s, l) => s + Number(l.valor), 0)
+                const sumR = receitas.reduce((s, l) => s + Number(l.valor), 0)
+                return <>
+                  {despesas.length > 0 && <div className="flex justify-between"><span className="text-gray-500">{despesas.length} despesa{despesas.length > 1 ? 's' : ''}</span><span className="font-semibold text-red-600">−{fmt(sumD)}</span></div>}
+                  {receitas.length > 0 && <div className="flex justify-between"><span className="text-gray-500">{receitas.length} receita{receitas.length > 1 ? 's' : ''}</span><span className="font-semibold text-green-600">+{fmt(sumR)}</span></div>}
+                  <div className="border-t pt-1 flex justify-between font-bold"><span>Total</span><span>{fmt(sumD + sumR)}</span></div>
+                </>
+              })()}
+            </div>
+            <div className="mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Data de pagamento / recebimento</label>
+              <input type="date" value={dataLote} onChange={e => setDataLote(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+            </div>
+            <div className="mb-5">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Conta bancária <span className="text-gray-400 font-normal">(opcional)</span></label>
+              <select value={contaLote} onChange={e => setContaLote(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
+                <option value="">— Manter conta atual —</option>
+                {contas.map(c => <option key={c.id} value={c.id}>{c.is_padrao ? '★ ' : ''}{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}
+              </select>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => setModalLote(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancelar</button>
+              <button onClick={confirmarPagamentoLote} disabled={pagandoLote} className="flex-1 px-4 py-2 bg-brand text-white rounded-lg text-sm font-semibold hover:bg-brand-dark disabled:opacity-50">{pagandoLote ? 'Processando...' : `Confirmar (${selected.size})`}</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal Novo Lançamento */}
       {showModal && (
