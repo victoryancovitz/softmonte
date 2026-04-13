@@ -37,7 +37,7 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
   const [showReneg, setShowReneg] = useState<any>(null) // dívida para renegociar
   const [parcelas, setParcelas] = useState<any[]>([])
   const [renegs, setRenegs] = useState<any[]>([])
-  const [pagForm, setPagForm] = useState({ data_pagamento: new Date().toISOString().slice(0, 10), conta_id: '' })
+  const [pagForm, setPagForm] = useState({ data_pagamento: new Date().toISOString().slice(0, 10), conta_id: '', valor_juros_real: '' as string, valor_mora_real: '' as string, valor_multa_real: '' as string })
   const [form, setForm] = useState({
     descricao: '', tipo_divida: 'emprestimo_capital_giro', credor_tipo: 'banco',
     banco_credor: '', numero_contrato: '',
@@ -140,35 +140,74 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
     const p = showPagar
+    const jurosReal = pagForm.valor_juros_real !== '' ? Number(pagForm.valor_juros_real) : n(p.valor_juros)
+    const moraReal = pagForm.valor_mora_real !== '' ? Number(pagForm.valor_mora_real) : n(p.juros_mora)
+    const multaReal = pagForm.valor_multa_real !== '' ? Number(pagForm.valor_multa_real) : n(p.multa)
+    const totalPago = n(p.valor_amortizacao) + jurosReal + moraReal + multaReal
+
     // Lançamento juros (despesa DRE)
-    if (n(p.valor_juros) > 0) {
-      await supabase.from('financeiro_lancamentos').insert({
+    let lancJurosId: string | null = null
+    if (jurosReal > 0) {
+      const { data: lj } = await supabase.from('financeiro_lancamentos').insert({
         tipo: 'despesa', nome: `Juros parcela ${p.numero} — dívida`, categoria: 'Despesas Financeiras',
-        valor: n(p.valor_juros), status: 'pago', data_competencia: pagForm.data_pagamento,
+        valor: jurosReal + moraReal + multaReal, status: 'pago', data_competencia: pagForm.data_pagamento,
         data_pagamento: pagForm.data_pagamento, conta_id: pagForm.conta_id || null,
         origem: 'manual', is_provisao: false, natureza: 'financiamento', created_by: user?.id,
-      })
+      }).select('id').single()
+      lancJurosId = lj?.id ?? null
     }
-    // Lançamento amortização (reduz passivo, não DRE)
+    // Lançamento amortização (reduz passivo)
+    let lancAmortId: string | null = null
     if (n(p.valor_amortizacao) > 0) {
-      await supabase.from('financeiro_lancamentos').insert({
+      const { data: la } = await supabase.from('financeiro_lancamentos').insert({
         tipo: 'despesa', nome: `Amortização parcela ${p.numero} — dívida`, categoria: 'Amortização de Empréstimos',
         valor: n(p.valor_amortizacao), status: 'pago', data_competencia: pagForm.data_pagamento,
         data_pagamento: pagForm.data_pagamento, conta_id: pagForm.conta_id || null,
         origem: 'manual', is_provisao: false, natureza: 'financiamento', created_by: user?.id,
-      })
+      }).select('id').single()
+      lancAmortId = la?.id ?? null
     }
-    // Atualizar parcela
+    // Atualizar parcela com valores reais
     await supabase.from('divida_parcelas').update({
-      status: 'paga', data_pagamento: pagForm.data_pagamento, valor_pago: n(p.valor_amortizacao) + n(p.valor_juros),
+      status: 'paga', data_pagamento: pagForm.data_pagamento, valor_pago: totalPago,
+      valor_juros: jurosReal, juros_mora: moraReal, multa: multaReal,
+      lancamento_id: lancAmortId,
     }).eq('id', p.id)
     // Atualizar dívida
     await supabase.from('passivos_nao_circulantes').update({
       saldo_devedor_atual: Math.max(0, n(p.saldo_antes) - n(p.valor_amortizacao)),
       n_parcelas_pagas: (showPagar._divida_pagas || 0) + 1,
     }).eq('id', p.divida_id)
-    toast.success(`Parcela ${p.numero} paga. 2 lançamentos registrados (juros + amortização).`)
+    toast.success(`Parcela ${p.numero} paga — ${fmt(totalPago)}`)
     setShowPagar(null); setSaving(false)
+    if (expandId) { toggleExpand(expandId); setTimeout(() => toggleExpand(p.divida_id), 100) }
+  }
+
+  async function estornarParcela(p: any) {
+    if (!confirm(`Reverter pagamento da parcela ${p.numero}?\nIsso desfaz os lançamentos e marca como não paga.`)) return
+    setSaving(true)
+    const hoje = new Date().toISOString().slice(0, 10)
+    await supabase.from('divida_parcelas').update({
+      status: p.data_vencimento < hoje ? 'atrasada' : 'aberta',
+      data_pagamento: null, valor_pago: null,
+    }).eq('id', p.id)
+    if (p.lancamento_id) {
+      await supabase.from('financeiro_lancamentos').update({ deleted_at: new Date().toISOString() }).eq('id', p.lancamento_id)
+    }
+    // Soft-delete lançamentos de juros da mesma parcela
+    await supabase.from('financeiro_lancamentos').update({ deleted_at: new Date().toISOString() })
+      .eq('natureza', 'financiamento').eq('data_pagamento', p.data_pagamento).ilike('nome', `%parcela ${p.numero}%`)
+    // Recalcular saldo
+    const divida = dividas.find(d => d.id === p.divida_id)
+    if (divida) {
+      await supabase.from('passivos_nao_circulantes').update({
+        saldo_devedor_atual: n(divida.saldo_devedor_atual) + n(p.valor_amortizacao),
+        n_parcelas_pagas: Math.max(0, (divida.n_parcelas_pagas || 0) - 1),
+      }).eq('id', p.divida_id)
+    }
+    toast.success(`Pagamento da parcela ${p.numero} revertido.`)
+    setSaving(false)
+    if (expandId) { toggleExpand(expandId); setTimeout(() => toggleExpand(p.divida_id), 100) }
   }
 
   async function confirmarRenegociacao() {
@@ -375,7 +414,7 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
                 {isOpen && (
                   <tr><td colSpan={9} className="bg-gray-50/80 border-b border-gray-200 px-4 py-4">
                     <div className="flex gap-2 mb-4">
-                      <button onClick={e => { e.stopPropagation(); const prox = parcelas.find(p => p.status === 'aberta'); if (prox) { setShowPagar({ ...prox, _divida_pagas: d.n_parcelas_pagas }); setPagForm(f => ({ ...f, data_pagamento: new Date().toISOString().slice(0, 10) })) } else toast.error('Sem parcelas abertas') }}
+                      <button onClick={e => { e.stopPropagation(); const prox = parcelas.find(p => p.status === 'atrasada') || parcelas.find(p => p.status === 'aberta'); if (prox) { setShowPagar({ ...prox, _divida_pagas: d.n_parcelas_pagas }); setPagForm(f => ({ ...f, data_pagamento: new Date().toISOString().slice(0, 10), valor_juros_real: '', valor_mora_real: '', valor_multa_real: '' })) } else toast.error('Sem parcelas abertas') }}
                         className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium">💰 Registrar Pagamento</button>
                       <button onClick={e => { e.stopPropagation(); setShowReneg({ ...d, _reneg_novo_saldo: '', _reneg_parcelas: '', _reneg_taxa: '', _reneg_motivo: '', _reneg_responsavel: '', _reneg_protocolo: '', _reneg_condicoes: '' }) }}
                         className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-medium">🔄 Renegociar</button>
@@ -393,7 +432,10 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
                             <td className="py-1 text-right text-red-600">{fmt(p.valor_juros)}</td>
                             <td className="py-1 text-right font-semibold">{fmt(n(p.valor_amortizacao) + n(p.valor_juros))}</td>
                             <td className="py-1 text-right text-gray-400">{fmt(p.saldo_depois)}</td>
-                            <td className="py-1"><span className={`text-[9px] px-1.5 py-0.5 rounded ${p.status === 'paga' ? 'bg-green-100 text-green-700' : p.data_vencimento < new Date().toISOString().slice(0, 10) ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>{p.status === 'paga' ? '✅ Pago' : p.data_vencimento < new Date().toISOString().slice(0, 10) ? '⚠️ Atrasado' : 'Aberta'}</span></td>
+                            <td className="py-1">
+                              <span className={`text-[9px] px-1.5 py-0.5 rounded ${p.status === 'paga' ? 'bg-green-100 text-green-700' : p.data_vencimento < new Date().toISOString().slice(0, 10) ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-500'}`}>{p.status === 'paga' ? '✅ Pago' : p.data_vencimento < new Date().toISOString().slice(0, 10) ? '⚠️ Atrasado' : 'Aberta'}</span>
+                              {p.status === 'paga' && <button onClick={() => estornarParcela(p)} className="text-[10px] text-gray-400 hover:text-red-500 underline ml-2" title="Reverter pagamento">↩ Estornar</button>}
+                            </td>
                           </tr>
                         ))}{parcelas.length > 12 && <tr><td colSpan={7} className="text-center text-gray-400 py-1">+ {parcelas.length - 12} parcelas...</td></tr>}</tbody>
                       </table>
@@ -431,15 +473,35 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
       {/* Modal Pagar Parcela */}
       {showPagar && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowPagar(null)}>
-          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-xl shadow-2xl p-6 max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <h3 className="text-sm font-bold text-brand mb-4">Registrar Pagamento — Parcela {showPagar.numero}</h3>
             <div className="space-y-3 text-sm mb-4">
-              <div className="flex justify-between bg-gray-50 rounded-lg p-2"><span>Amortização</span><span className="font-semibold">{fmt(showPagar.valor_amortizacao)}</span></div>
-              <div className="flex justify-between bg-gray-50 rounded-lg p-2"><span>Juros</span><span className="font-semibold text-red-600">{fmt(showPagar.valor_juros)}</span></div>
-              <div className="flex justify-between bg-brand/5 rounded-lg p-2 font-bold"><span>Total</span><span>{fmt(n(showPagar.valor_amortizacao) + n(showPagar.valor_juros))}</span></div>
+              {/* Seletor de parcela */}
+              <div><label className="block text-xs font-semibold text-gray-500 mb-1">Parcela a pagar *</label>
+                <select value={showPagar?.id || ''} onChange={e => { const p = parcelas.find((x: any) => x.id === e.target.value); if (p) setShowPagar({ ...p, _divida_pagas: showPagar._divida_pagas }) }} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white">
+                  {parcelas.filter((p: any) => p.status !== 'paga').sort((a: any, b: any) => a.numero - b.numero).map((p: any) => (
+                    <option key={p.id} value={p.id}>Parcela {p.numero} — {new Date(p.data_vencimento + 'T12:00').toLocaleDateString('pt-BR')} — {fmt(n(p.valor_amortizacao) + n(p.valor_juros))}{p.status === 'atrasada' || (p.data_vencimento < new Date().toISOString().slice(0, 10) && p.status !== 'paga') ? ' ⚠️ ATRASADA' : ''}</option>
+                  ))}
+                </select>
+                {showPagar.data_vencimento < new Date().toISOString().slice(0, 10) && showPagar.status !== 'paga' && <p className="text-xs text-amber-600 mt-1">⚠️ Parcela em atraso — confirme valores com o credor.</p>}
+              </div>
+              {/* Valores editáveis */}
+              <div className="grid grid-cols-3 gap-2">
+                <div><label className="block text-xs font-semibold text-gray-500 mb-1">Juros CDI (R$)</label><input type="number" step="0.01" value={pagForm.valor_juros_real !== '' ? pagForm.valor_juros_real : n(showPagar.valor_juros)} onChange={e => setPagForm(f => ({ ...f, valor_juros_real: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /><p className="text-[10px] text-gray-400 mt-0.5">CDI real do período</p></div>
+                <div><label className="block text-xs font-semibold text-gray-500 mb-1">Mora (R$)</label><input type="number" step="0.01" value={pagForm.valor_mora_real !== '' ? pagForm.valor_mora_real : n(showPagar.juros_mora)} onChange={e => setPagForm(f => ({ ...f, valor_mora_real: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 mb-1">Multa (R$)</label><input type="number" step="0.01" value={pagForm.valor_multa_real !== '' ? pagForm.valor_multa_real : n(showPagar.multa)} onChange={e => setPagForm(f => ({ ...f, valor_multa_real: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+              </div>
+              {/* Total dinâmico */}
+              <div className="bg-gray-50 rounded-lg p-3">
+                <div className="flex justify-between text-sm"><span className="text-gray-600">Amortização</span><span>{fmt(showPagar.valor_amortizacao)}</span></div>
+                <div className="flex justify-between text-sm"><span className="text-gray-600">Juros CDI</span><span className="text-red-600">{fmt(pagForm.valor_juros_real !== '' ? Number(pagForm.valor_juros_real) : n(showPagar.valor_juros))}</span></div>
+                {(pagForm.valor_mora_real !== '' ? Number(pagForm.valor_mora_real) : n(showPagar.juros_mora)) > 0 && <div className="flex justify-between text-sm"><span className="text-gray-600">Mora</span><span>{fmt(pagForm.valor_mora_real !== '' ? Number(pagForm.valor_mora_real) : n(showPagar.juros_mora))}</span></div>}
+                {(pagForm.valor_multa_real !== '' ? Number(pagForm.valor_multa_real) : n(showPagar.multa)) > 0 && <div className="flex justify-between text-sm"><span className="text-gray-600">Multa</span><span>{fmt(pagForm.valor_multa_real !== '' ? Number(pagForm.valor_multa_real) : n(showPagar.multa))}</span></div>}
+                <div className="flex justify-between font-bold text-sm border-t pt-2 mt-2"><span>Total a pagar</span><span className="text-brand">{fmt(n(showPagar.valor_amortizacao) + (pagForm.valor_juros_real !== '' ? Number(pagForm.valor_juros_real) : n(showPagar.valor_juros)) + (pagForm.valor_mora_real !== '' ? Number(pagForm.valor_mora_real) : n(showPagar.juros_mora)) + (pagForm.valor_multa_real !== '' ? Number(pagForm.valor_multa_real) : n(showPagar.multa)))}</span></div>
+              </div>
               <div><label className="block text-xs font-semibold text-gray-500 mb-1">Data pagamento</label><input type="date" value={pagForm.data_pagamento} onChange={e => setPagForm(f => ({ ...f, data_pagamento: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
               <div><label className="block text-xs font-semibold text-gray-500 mb-1">Conta</label><select value={pagForm.conta_id} onChange={e => setPagForm(f => ({ ...f, conta_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"><option value="">Selecionar...</option>{contas.map((c: any) => <option key={c.id} value={c.id}>{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}</select></div>
-              <div className="text-[10px] text-amber-600 bg-amber-50 p-2 rounded">Gera 2 lançamentos: juros (despesa DRE) + amortização (reduz passivo, não é despesa).</div>
+              <div className="text-[10px] text-amber-600 bg-amber-50 p-2 rounded">Gera 2 lançamentos: juros (despesa DRE) + amortização (reduz passivo).</div>
             </div>
             <div className="flex gap-2"><button onClick={() => setShowPagar(null)} className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm">Cancelar</button><button onClick={pagarParcela} disabled={saving} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium disabled:opacity-50">{saving ? 'Salvando...' : 'Confirmar Pagamento'}</button></div>
           </div>
