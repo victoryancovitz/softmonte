@@ -42,6 +42,7 @@ const NAV_GROUPS: NavGroupDef[] = [
     links: [
       { href: '/diretoria', label: 'Painel Executivo', icon: ic.home },
       { href: '/rh/rentabilidade', label: 'Rentabilidade', icon: ic.report },
+      { href: '/diretoria/societario', label: 'Societário', icon: ic.fin },
     ],
   },
   {
@@ -74,7 +75,6 @@ const NAV_GROUPS: NavGroupDef[] = [
       { href: '/financeiro', label: 'Lançamentos', icon: ic.fin },
       { href: '/financeiro/dre', label: 'DRE & Resultado', icon: ic.fin },
       { href: '/forecast', label: 'Forecast', icon: ic.report },
-      { href: '/financeiro/societario', label: 'Societário', icon: ic.fin },
     ],
   },
   {
@@ -93,10 +93,11 @@ export interface ModuleTab { href: string; label: string; match?: string[] }
 export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
   {
     // Módulo Diretoria
-    groupPaths: ['/diretoria', '/rh/rentabilidade'],
+    groupPaths: ['/diretoria', '/rh/rentabilidade', '/diretoria/societario'],
     tabs: [
       { href: '/diretoria', label: 'Painel Executivo', match: ['/diretoria'] },
       { href: '/rh/rentabilidade', label: 'Rentabilidade', match: ['/rh/rentabilidade'] },
+      { href: '/diretoria/societario', label: 'Societário', match: ['/diretoria/societario'] },
     ],
   },
   {
@@ -127,7 +128,6 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/financeiro', label: 'Lançamentos', match: ['/financeiro', '/financeiro/novo', '/financeiro/contas', '/financeiro/cashflow', '/financeiro/ofx'] },
       { href: '/financeiro/dre', label: 'DRE & Resultado', match: ['/financeiro/dre', '/relatorios/margem', '/relatorios/bm-comparativo'] },
       { href: '/forecast', label: 'Forecast' },
-      { href: '/financeiro/societario', label: 'Societário' },
     ],
   },
   {
