@@ -16,9 +16,10 @@ function Badge({ valor, green, amber }: { valor: number | null; green: number; a
 
 export default async function IndicadoresPage() {
   const supabase = createClient()
-  const [{ data: ind }, { data: simTrib }] = await Promise.all([
+  const [{ data: ind }, { data: simTrib }, { data: tirData }] = await Promise.all([
     supabase.from('vw_indicadores_empresa').select('*').maybeSingle(),
     supabase.from('vw_simulacao_tributaria').select('*').maybeSingle(),
+    supabase.from('vw_tir_contrato').select('*').maybeSingle(),
   ])
 
   if (!ind) return <div className="p-6 text-gray-400">Sem dados suficientes para calcular indicadores.</div>
@@ -67,6 +68,41 @@ export default async function IndicadoresPage() {
       </div>
 
       {/* Indicadores de retorno */}
+      {/* TIR */}
+      {tirData && (
+        <>
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">TIR — Taxa Interna de Retorno</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+              <div className="text-[10px] font-bold text-gray-400 uppercase">TIR do Contrato (base folha)</div>
+              {(() => {
+                const meses = n(tirData.meses_operacao) || 1
+                const lucroMensal = (n(tirData.receita_acumulada) - n(tirData.custo_folha_acumulado)) / meses
+                const capital = n(ind?.capital_social || 100000)
+                const tirMensal = capital > 0 ? lucroMensal / capital : 0
+                const tirAnual = Math.pow(1 + tirMensal, 12) - 1
+                return (
+                  <>
+                    <div className={`text-2xl font-bold font-display ${tirAnual >= 0.3 ? 'text-green-700' : tirAnual >= 0.105 ? 'text-amber-600' : 'text-red-700'}`}>{(tirAnual * 100).toFixed(1)}% a.a.</div>
+                    <div className="text-[10px] text-gray-400 mt-1">{(tirMensal * 100).toFixed(2)}% a.m. · Base: {meses} meses</div>
+                    <div className="text-[10px] text-gray-400">Benchmark: CDI ~10,5% a.a. | {tirAnual > 0.105 ? '✅ Acima do CDI' : '⚠️ Abaixo do CDI'}</div>
+                  </>
+                )
+              })()}
+            </div>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+              <div className="text-[10px] font-bold text-gray-400 uppercase">Dados do Contrato</div>
+              <div className="text-sm space-y-1 mt-2">
+                <div className="flex justify-between"><span className="text-gray-500">Receita acumulada</span><span className="font-semibold text-green-700">{fmt(tirData.receita_acumulada)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Custo folha acumulado</span><span className="font-semibold text-red-600">{fmt(tirData.custo_folha_acumulado)}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Meses de operação</span><span>{tirData.meses_operacao}</span></div>
+                <div className="flex justify-between"><span className="text-gray-500">Capital investido</span><span>{fmt(ind?.capital_social)}</span></div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Retorno sobre Capital</p>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
