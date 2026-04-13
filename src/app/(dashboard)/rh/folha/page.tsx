@@ -86,8 +86,14 @@ export default function FolhaPage() {
       }).select().single()
       if (ffErr) throw ffErr
 
-      // 5) Itens por funcionário — com cálculos CLT
-      const itens = custos.map(c => {
+      // 5) Buscar dados individuais dos funcionários (ANTES dos itens)
+      const funcIds = custos.map((c: any) => c.funcionario_id)
+      const { data: funcsData } = await supabase.from('funcionarios').select('id, salario_base, adiantamento_pct, insalubridade_pct, periculosidade_pct, vt_mensal, dependentes_ir').in('id', funcIds)
+      const funcMap: Record<string, any> = {}
+      ;(funcsData ?? []).forEach((f: any) => { funcMap[f.id] = f })
+
+      // 6) Itens por funcionário — com cálculos CLT
+      const itens = custos.map((c: any) => {
         const func = funcMap[c.funcionario_id] || {}
         const salBase = Number(func.salario_base || c.salario_total_bruto || 0)
         const diasTrab = Number(c.dias_trab || 0)
@@ -124,16 +130,10 @@ export default function FolhaPage() {
       const { error: itensErr } = await supabase.from('folha_itens').insert(itens)
       if (itensErr) throw new Error('Falha ao salvar itens da folha: ' + itensErr.message)
 
-      // 6) Lançamentos por funcionário (adiantamento + saldo) + provisão agregada
-      const obraNome = obras.find(o => o.id === form.obra_id)?.nome || 'Obra'
+      // 7) Lançamentos por funcionário (adiantamento + saldo) + provisão agregada
+      const obraNome = obras.find((o: any) => o.id === form.obra_id)?.nome || 'Obra'
       const compBase = `${form.ano}-${String(form.mes).padStart(2,'0')}-01`
       const dtAdiantamento = `${form.ano}-${String(form.mes).padStart(2,'0')}-20`
-
-      // Buscar dados dos funcionários para cálculos CLT
-      const funcIds = custos.map((c: any) => c.funcionario_id)
-      const { data: funcsData } = await supabase.from('funcionarios').select('id, salario_base, adiantamento_pct, insalubridade_pct, periculosidade_pct, vt_mensal, dependentes_ir').in('id', funcIds)
-      const funcMap: Record<string, any> = {}
-      ;(funcsData ?? []).forEach((f: any) => { funcMap[f.id] = f })
 
       const lancamentosParaInserir: any[] = []
       for (const c of custos) {
@@ -173,7 +173,7 @@ export default function FolhaPage() {
       const { error: lancErr } = await supabase.from('financeiro_lancamentos').insert(lancamentosParaInserir)
       if (lancErr) throw new Error('Falha ao gerar lançamentos da folha: ' + lancErr.message)
 
-      // 7) Provisões por funcionário
+      // 8) Provisões por funcionário
       const provisoesRows = custos.map((c: any) => ({
         funcionario_id: c.funcionario_id, obra_id: form.obra_id,
         ano: form.ano, mes: form.mes,
