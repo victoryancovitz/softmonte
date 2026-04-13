@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { TrendingUp, Users, ChevronDown, ChevronUp } from 'lucide-react'
 
 const MESES = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -13,26 +13,92 @@ const statusColor: Record<string, string> = {
 }
 
 type Tab = 'margem' | 'dre' | 'oficial' | 'bp' | 'dfc'
+type Granularidade = 'mensal' | 'trimestral' | 'semestral' | 'anual' | 'acumulado'
 
 export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, contasSaldo }: {
   dre: any[]; dreMes: any[]; custos: any[]; lancamentos: any[]; empresa: any; contasSaldo: any[]
 }) {
   const [expandido, setExpandido] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('margem')
+  const [granularidade, setGranularidade] = useState<Granularidade>('mensal')
+  const [filtroObra, setFiltroObra] = useState<string>('todas')
+  const [anoFiltro, setAnoFiltro] = useState<number>(2026)
+  const [showAcumulado, setShowAcumulado] = useState(false)
 
-  // DRE consolidado por mês (aba "DRE Consolidado")
-  const dreByMes: Record<string, { mes: string; receita: number; custoMO: number; outrasDesp: number; despFin: number; provisoes: number }> = {}
-  lancamentos.forEach((l: any) => {
-    const mes = l.data_competencia?.slice(0, 7) ?? 'sem-data'
-    if (!dreByMes[mes]) dreByMes[mes] = { mes, receita: 0, custoMO: 0, outrasDesp: 0, provisoes: 0, despFin: 0 }
-    const v = Number(l.valor || 0)
-    if (l.tipo === 'receita') dreByMes[mes].receita += v
-    else if (l.is_provisao) dreByMes[mes].provisoes += v
-    else if (l.categoria === 'Folha de Pagamento' || l.origem === 'folha_fechamento') dreByMes[mes].custoMO += v
-    else if (l.categoria === 'Despesas Financeiras' || l.categoria === 'Amortização de Empréstimos') dreByMes[mes].despFin += v
-    else dreByMes[mes].outrasDesp += v
-  })
-  const dreMeses = Object.values(dreByMes).sort((a, b) => a.mes.localeCompare(b.mes))
+  // Unique obras from lancamentos
+  const obrasUnicas = useMemo(() => {
+    const map = new Map<string, string>()
+    lancamentos.forEach((l: any) => {
+      if (l.obra_id && l.obra_nome) map.set(l.obra_id, l.obra_nome)
+      else if (l.obra_id && l.obra) map.set(l.obra_id, l.obra)
+    })
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]))
+  }, [lancamentos])
+
+  // Available years from lancamentos
+  const anosDisponiveis = useMemo(() => {
+    const years = new Set<number>()
+    lancamentos.forEach((l: any) => {
+      const d = l.data_competencia?.slice(0, 4)
+      if (d) years.add(Number(d))
+    })
+    const sorted = Array.from(years).sort()
+    return sorted.length > 0 ? sorted : [2026]
+  }, [lancamentos])
+
+  // DRE consolidado com filtros e granularidade
+  const dreMesesFiltered = useMemo(() => {
+    // Filter by year and obra
+    let filtered = lancamentos.filter((l: any) => {
+      const year = l.data_competencia?.slice(0, 4)
+      if (!year || Number(year) !== anoFiltro) return false
+      if (filtroObra !== 'todas' && l.obra_id !== filtroObra) return false
+      return true
+    })
+
+    type DreRow = { key: string; label: string; receita: number; custoMO: number; outrasDesp: number; despFin: number; provisoes: number }
+    const grouped: Record<string, DreRow> = {}
+
+    const getGroupKey = (l: any): { key: string; label: string } => {
+      const dc = l.data_competencia ?? ''
+      const year = dc.slice(0, 4)
+      const month = Number(dc.slice(5, 7))
+      const yy = year.slice(2)
+
+      switch (granularidade) {
+        case 'mensal': {
+          const mesKey = dc.slice(0, 7) || 'sem-data'
+          const label = mesKey === 'sem-data' ? 'Sem data' : `${MESES[month]}/${yy}`
+          return { key: mesKey, label }
+        }
+        case 'trimestral': {
+          const q = Math.ceil(month / 3)
+          return { key: `${year}-Q${q}`, label: `${q}T/${yy}` }
+        }
+        case 'semestral': {
+          const s = month <= 6 ? 1 : 2
+          return { key: `${year}-S${s}`, label: `${s}S/${yy}` }
+        }
+        case 'anual':
+          return { key: year, label: year }
+        case 'acumulado':
+          return { key: 'acumulado', label: 'Acumulado' }
+      }
+    }
+
+    filtered.forEach((l: any) => {
+      const { key, label } = getGroupKey(l)
+      if (!grouped[key]) grouped[key] = { key, label, receita: 0, custoMO: 0, outrasDesp: 0, provisoes: 0, despFin: 0 }
+      const v = Number(l.valor || 0)
+      if (l.tipo === 'receita') grouped[key].receita += v
+      else if (l.is_provisao) grouped[key].provisoes += v
+      else if (l.categoria === 'Folha de Pagamento' || l.origem === 'folha_fechamento') grouped[key].custoMO += v
+      else if (l.categoria === 'Despesas Financeiras' || l.categoria === 'Amortização de Empréstimos') grouped[key].despFin += v
+      else grouped[key].outrasDesp += v
+    })
+
+    return Object.values(grouped).sort((a, b) => a.key.localeCompare(b.key))
+  }, [lancamentos, granularidade, filtroObra, anoFiltro])
 
   // === DRE OFICIAL: classificar lançamentos ===
   const receitaBruta = lancamentos.filter((l: any) => l.tipo === 'receita' && !l.is_provisao).reduce((s: number, l: any) => s + Number(l.valor), 0)
@@ -95,8 +161,57 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
     { key: 'dfc', label: 'Fluxo de Caixa' },
   ]
 
+  const granularidades: { key: Granularidade; label: string }[] = [
+    { key: 'mensal', label: 'Mensal' },
+    { key: 'trimestral', label: 'Trimestral' },
+    { key: 'semestral', label: 'Semestral' },
+    { key: 'anual', label: 'Anual' },
+    { key: 'acumulado', label: 'Acumulado' },
+  ]
+
   return (
     <>
+      {/* ══ CONTROL BAR (for DRE Consolidado) ══ */}
+      {tab === 'dre' && (
+        <div className="flex items-center gap-3 mb-3 flex-wrap">
+          {/* Granularity pills */}
+          <div className="flex gap-1 bg-gray-100 p-0.5 rounded-lg">
+            {granularidades.map(g => (
+              <button key={g.key} onClick={() => setGranularidade(g.key)}
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${granularidade === g.key ? 'bg-brand text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>
+                {g.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Obra dropdown */}
+          <select value={filtroObra} onChange={e => setFiltroObra(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-brand">
+            <option value="todas">Todas as Obras</option>
+            {obrasUnicas.map(([id, nome]) => (
+              <option key={id} value={id}>{nome}</option>
+            ))}
+          </select>
+
+          {/* Year dropdown */}
+          <select value={anoFiltro} onChange={e => setAnoFiltro(Number(e.target.value))}
+            className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-brand">
+            {anosDisponiveis.map(y => (
+              <option key={y} value={y}>{y}</option>
+            ))}
+          </select>
+
+          {/* Acumulado YTD toggle */}
+          <button onClick={() => setShowAcumulado(!showAcumulado)}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium transition-colors border ${showAcumulado ? 'bg-brand text-white border-brand' : 'bg-white text-gray-500 border-gray-200 hover:text-gray-700'}`}>
+            <span className={`inline-block w-3 h-3 rounded border-2 ${showAcumulado ? 'bg-white border-white' : 'border-gray-300'}`}>
+              {showAcumulado && <svg viewBox="0 0 12 12" className="w-full h-full text-brand"><path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /></svg>}
+            </span>
+            Acumulado YTD
+          </button>
+        </div>
+      )}
+
       <div className="flex gap-1 mb-5 bg-gray-100 p-1 rounded-lg overflow-x-auto">
         {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
@@ -176,26 +291,43 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b border-gray-100 bg-gray-50">
-              {['Mês', 'Receita', 'Custo MO', 'Outras Desp.', 'Desp. Financ.', 'Provisões', 'Resultado', 'Margem %'].map(h => (
+              {['Período', 'Receita', 'Custo MO', 'Outras Desp.', 'Desp. Financ.', 'Provisões', 'Resultado', 'Margem %'].map(h => (
                 <th key={h} className="text-right first:text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
               ))}
+              {showAcumulado && <>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-brand/70 uppercase border-l border-gray-200">Acum. Receita</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-brand/70 uppercase">Acum. Resultado</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-brand/70 uppercase">Margem Acum.</th>
+              </>}
             </tr></thead>
-            <tbody>{dreMeses.length > 0 ? dreMeses.map(m => {
-              const res = m.receita - m.custoMO - m.outrasDesp - (m.despFin || 0) - m.provisoes
-              const mp = m.receita > 0 ? res / m.receita * 100 : 0
-              return (
-                <tr key={m.mes} className="border-b border-gray-50 hover:bg-gray-50/80">
-                  <td className="px-4 py-2.5 font-medium">{m.mes === 'sem-data' ? 'Sem data' : new Date(m.mes + '-01').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })}</td>
-                  <td className="px-4 py-2.5 text-right text-green-600">{m.receita > 0 ? fmt(m.receita) : '—'}</td>
-                  <td className="px-4 py-2.5 text-right text-red-600">{m.custoMO > 0 ? fmt(m.custoMO) : '—'}</td>
-                  <td className="px-4 py-2.5 text-right text-orange-600">{m.outrasDesp > 0 ? fmt(m.outrasDesp) : '—'}</td>
-                  <td className="px-4 py-2.5 text-right text-rose-600">{(m.despFin || 0) > 0 ? fmt(m.despFin) : '—'}</td>
-                  <td className="px-4 py-2.5 text-right text-purple-600">{m.provisoes > 0 ? fmt(m.provisoes) : '—'}</td>
-                  <td className={`px-4 py-2.5 text-right font-bold ${res >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(res)}</td>
-                  <td className={`px-4 py-2.5 text-right font-bold ${mp >= 25 ? 'text-green-700' : mp >= 0 ? 'text-amber-600' : 'text-red-700'}`}>{mp.toFixed(1)}%</td>
-                </tr>
-              )
-            }) : <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">Sem lançamentos.</td></tr>}</tbody>
+            <tbody>{dreMesesFiltered.length > 0 ? (() => {
+              let acumReceita = 0
+              let acumResultado = 0
+              return dreMesesFiltered.map(m => {
+                const res = m.receita - m.custoMO - m.outrasDesp - (m.despFin || 0) - m.provisoes
+                const mp = m.receita > 0 ? res / m.receita * 100 : 0
+                acumReceita += m.receita
+                acumResultado += res
+                const margemAcum = acumReceita > 0 ? acumResultado / acumReceita * 100 : 0
+                return (
+                  <tr key={m.key} className="border-b border-gray-50 hover:bg-gray-50/80">
+                    <td className="px-4 py-2.5 font-medium">{m.label}</td>
+                    <td className="px-4 py-2.5 text-right text-green-600">{m.receita > 0 ? fmt(m.receita) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right text-red-600">{m.custoMO > 0 ? fmt(m.custoMO) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right text-orange-600">{m.outrasDesp > 0 ? fmt(m.outrasDesp) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right text-rose-600">{(m.despFin || 0) > 0 ? fmt(m.despFin) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right text-purple-600">{m.provisoes > 0 ? fmt(m.provisoes) : '—'}</td>
+                    <td className={`px-4 py-2.5 text-right font-bold ${res >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(res)}</td>
+                    <td className={`px-4 py-2.5 text-right font-bold ${mp >= 25 ? 'text-green-700' : mp >= 0 ? 'text-amber-600' : 'text-red-700'}`}>{mp.toFixed(1)}%</td>
+                    {showAcumulado && <>
+                      <td className="px-4 py-2.5 text-right text-green-600 border-l border-gray-100">{acumReceita > 0 ? fmt(acumReceita) : '—'}</td>
+                      <td className={`px-4 py-2.5 text-right font-bold ${acumResultado >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(acumResultado)}</td>
+                      <td className={`px-4 py-2.5 text-right font-bold ${margemAcum >= 25 ? 'text-green-700' : margemAcum >= 0 ? 'text-amber-600' : 'text-red-700'}`}>{margemAcum.toFixed(1)}%</td>
+                    </>}
+                  </tr>
+                )
+              })
+            })() : <tr><td colSpan={showAcumulado ? 11 : 8} className="px-4 py-10 text-center text-gray-400">Sem lançamentos para o período selecionado.</td></tr>}</tbody>
           </table>
         </div>
       )}

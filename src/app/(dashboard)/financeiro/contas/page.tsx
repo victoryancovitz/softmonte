@@ -66,7 +66,12 @@ export default function ContasCorrentesPage() {
   const [form, setForm] = useState({
     nome: '', banco: '', agencia: '', conta: '', tipo: 'corrente',
     saldo_inicial: '0', data_saldo_inicial: '',
+    pix_chave: '', pix_tipo: '',
   })
+
+  const [extratoContaId, setExtratoContaId] = useState<string | null>(null)
+  const [extratoData, setExtratoData] = useState<any[]>([])
+  const [extratoLoading, setExtratoLoading] = useState(false)
 
   const [showTransferir, setShowTransferir] = useState(false)
   const [transferir, setTransferir] = useState({
@@ -85,7 +90,7 @@ export default function ContasCorrentesPage() {
 
   function abrirNovo() {
     setEditing(null)
-    setForm({ nome: '', banco: '', agencia: '', conta: '', tipo: 'corrente', saldo_inicial: '0', data_saldo_inicial: '' })
+    setForm({ nome: '', banco: '', agencia: '', conta: '', tipo: 'corrente', saldo_inicial: '0', data_saldo_inicial: '', pix_chave: '', pix_tipo: '' })
     setShowForm(true)
   }
 
@@ -99,12 +104,29 @@ export default function ContasCorrentesPage() {
       tipo: c.tipo,
       saldo_inicial: String(c.saldo_inicial),
       data_saldo_inicial: '',
+      pix_chave: c.pix_chave ?? '',
+      pix_tipo: c.pix_tipo ?? '',
     })
     setShowForm(true)
   }
 
+  async function carregarExtrato(contaId: string) {
+    setExtratoContaId(contaId)
+    setExtratoLoading(true)
+    const { data, error } = await supabase.from('financeiro_lancamentos')
+      .select('id, nome, tipo, categoria, valor, status, data_competencia, data_pagamento, origem')
+      .eq('conta_id', contaId)
+      .eq('status', 'pago')
+      .is('deleted_at', null)
+      .order('data_pagamento', { ascending: true })
+      .limit(200)
+    if (error) toast.error('Erro ao carregar extrato: ' + error.message)
+    setExtratoData(data ?? [])
+    setExtratoLoading(false)
+  }
+
   async function salvar() {
-    const payload = {
+    const payload: any = {
       nome: form.nome.trim(),
       banco: form.banco.trim() || null,
       agencia: form.agencia.trim() || null,
@@ -112,6 +134,8 @@ export default function ContasCorrentesPage() {
       tipo: form.tipo,
       saldo_inicial: parseFloat(form.saldo_inicial) || 0,
       data_saldo_inicial: form.data_saldo_inicial || null,
+      pix_chave: form.pix_chave.trim() || null,
+      pix_tipo: form.pix_tipo || null,
     }
     if (!payload.nome) { toast.error('Informe o nome da conta'); return }
     if (editing) {
@@ -258,6 +282,8 @@ export default function ContasCorrentesPage() {
                       loadContas()
                     }} className="text-xs text-amber-600 hover:text-amber-800 px-2 py-1" title="Definir como padrão">★</button>
                   )}
+                  <button onClick={() => carregarExtrato(c.id)}
+                    className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1">Extrato</button>
                   <button onClick={() => abrirEditar(c)}
                     className="text-xs text-gray-500 hover:text-brand px-2 py-1">Editar</button>
                   <button onClick={() => apagar(c)}
@@ -313,6 +339,19 @@ export default function ContasCorrentesPage() {
                 <div><label className={lbl}>Data do saldo inicial</label>
                   <input type="date" value={form.data_saldo_inicial} onChange={e => setForm(f => ({ ...f, data_saldo_inicial: e.target.value }))} className={inp}/></div>
               </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className={lbl}>Chave PIX</label>
+                  <input type="text" value={form.pix_chave} onChange={e => setForm(f => ({ ...f, pix_chave: e.target.value }))} className={inp} placeholder="Ex: 12345678900"/></div>
+                <div><label className={lbl}>Tipo PIX</label>
+                  <select value={form.pix_tipo} onChange={e => setForm(f => ({ ...f, pix_tipo: e.target.value }))} className={inp + ' bg-white'}>
+                    <option value="">Selecione...</option>
+                    <option value="CPF">CPF</option>
+                    <option value="CNPJ">CNPJ</option>
+                    <option value="Email">Email</option>
+                    <option value="Celular">Celular</option>
+                    <option value="Aleatória">Aleatória</option>
+                  </select></div>
+              </div>
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={salvar} className="px-5 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark">
@@ -342,17 +381,93 @@ export default function ContasCorrentesPage() {
                 <div className="text-xs text-gray-500 space-y-0.5">
                   <div>Banco: {c.banco || <span className="text-amber-600 font-semibold">A definir</span>}</div>
                   <div>Ag: {c.agencia || '—'} · Conta: {c.conta || '—'}</div>
-                  <div>PIX: {(c as any).pix_chave || '—'}</div>
+                  {c.pix_chave ? (
+                    <div className="text-green-700">PIX: {c.pix_chave} ({c.pix_tipo || '—'})</div>
+                  ) : (
+                    <div><span className="inline-block mt-0.5 text-[10px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded">PIX não cadastrado</span></div>
+                  )}
                 </div>
                 {(!c.banco || c.banco === 'A definir') && (
                   <div className="mt-2 text-[10px] text-amber-600 bg-amber-50 px-2 py-1 rounded">Dados bancários incompletos — preencha para transferências</div>
                 )}
-                <button onClick={() => abrirEditar(c)} className="mt-2 text-xs text-brand hover:underline">Editar dados bancários</button>
+                <div className="flex gap-3 mt-2">
+                  <button onClick={() => carregarExtrato(c.id)} className="text-xs text-blue-600 hover:underline">Ver extrato</button>
+                  <button onClick={() => abrirEditar(c)} className="text-xs text-brand hover:underline">Editar dados bancários</button>
+                </div>
               </div>
             ))}
           </div>
         </>
       )}
+
+      {/* Modal Extrato */}
+      {extratoContaId && (() => {
+        const conta = contas.find(c => c.id === extratoContaId)
+        const saldoInicial = Number(conta?.saldo_inicial || 0)
+        let saldoAcc = saldoInicial
+        let totalEntradas = 0
+        let totalSaidas = 0
+        const rows = extratoData.map(l => {
+          const valor = Number(l.valor || 0)
+          const isReceita = l.tipo === 'receita'
+          if (isReceita) { totalEntradas += valor; saldoAcc += valor }
+          else { totalSaidas += valor; saldoAcc -= valor }
+          return { ...l, entrada: isReceita ? valor : 0, saida: !isReceita ? valor : 0, saldo: saldoAcc }
+        })
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col">
+              <div className="p-5 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
+                <div>
+                  <h3 className="text-base font-bold text-brand">Extrato — {conta?.nome}</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Saldo inicial: {fmt(saldoInicial)} · {extratoData.length} lançamento{extratoData.length !== 1 ? 's' : ''}</p>
+                </div>
+                <button onClick={() => setExtratoContaId(null)} className="text-gray-400 hover:text-gray-600 text-lg px-2">✕</button>
+              </div>
+              <div className="overflow-auto flex-1 p-5">
+                {extratoLoading ? (
+                  <div className="text-sm text-gray-400 text-center py-10">Carregando extrato...</div>
+                ) : rows.length === 0 ? (
+                  <div className="text-sm text-gray-400 text-center py-10">Nenhum lançamento pago encontrado para esta conta.</div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-[10px] uppercase tracking-wider text-gray-400 border-b border-gray-100">
+                        <th className="text-left py-2 pr-2 font-semibold">Data</th>
+                        <th className="text-left py-2 pr-2 font-semibold">Descrição</th>
+                        <th className="text-left py-2 pr-2 font-semibold">Origem</th>
+                        <th className="text-right py-2 pr-2 font-semibold">Entrada</th>
+                        <th className="text-right py-2 pr-2 font-semibold">Saída</th>
+                        <th className="text-right py-2 font-semibold">Saldo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map(r => (
+                        <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50/50">
+                          <td className="py-1.5 pr-2 text-xs text-gray-500 whitespace-nowrap">{r.data_pagamento ? new Date(r.data_pagamento + 'T12:00:00').toLocaleDateString('pt-BR') : '—'}</td>
+                          <td className="py-1.5 pr-2 text-xs text-gray-800 max-w-[200px] truncate">{r.nome}</td>
+                          <td className="py-1.5 pr-2 text-[10px] text-gray-400">{r.origem || '—'}</td>
+                          <td className="py-1.5 pr-2 text-xs text-right font-medium text-green-600">{r.entrada > 0 ? fmt(r.entrada) : ''}</td>
+                          <td className="py-1.5 pr-2 text-xs text-right font-medium text-red-600">{r.saida > 0 ? fmt(r.saida) : ''}</td>
+                          <td className={`py-1.5 text-xs text-right font-bold ${r.saldo < 0 ? 'text-red-600' : 'text-gray-800'}`}>{fmt(r.saldo)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-gray-200 font-bold text-xs">
+                        <td colSpan={3} className="py-2 text-gray-600">Totais</td>
+                        <td className="py-2 text-right text-green-700">{fmt(totalEntradas)}</td>
+                        <td className="py-2 text-right text-red-700">{fmt(totalSaidas)}</td>
+                        <td className={`py-2 text-right ${saldoAcc < 0 ? 'text-red-700' : 'text-brand'}`}>{fmt(saldoAcc)}</td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Modal Transferência */}
       {showTransferir && (

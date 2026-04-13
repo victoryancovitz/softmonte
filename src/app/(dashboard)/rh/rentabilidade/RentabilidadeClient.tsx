@@ -1,7 +1,8 @@
 'use client'
-import { useState, Fragment } from 'react'
+import { useState, useMemo, Fragment } from 'react'
 import { ChevronDown, ChevronUp, TrendingUp, Clock, DollarSign, Users } from 'lucide-react'
-import { fmt } from '@/lib/cores'
+import { fmt, corMargem } from '@/lib/cores'
+import { calcularTIR, anualizarTaxa } from '@/lib/tir'
 
 const BE_BADGE: Record<string, { label: string; icon: string; cls: string }> = {
   no_lucro: { label: 'No lucro', icon: '✅', cls: 'bg-green-100 text-green-700' },
@@ -17,6 +18,39 @@ export default function RentabilidadeClient({ data, ciclo, receitaReal, margemRe
   data: any[]; ciclo: any; receitaReal: number; margemReal: number | null; margemRealProv: number | null
 }) {
   const [expandido, setExpandido] = useState<string | null>(null)
+
+  const MESES = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
+
+  const tirMap = useMemo<Record<string, number | null>>(() => {
+    const map: Record<string, number | null> = {}
+    for (const row of data) {
+      try {
+        const fluxos: { ano: number; mes: number; receita: number; custo: number; margem: number }[] =
+          typeof row.fluxo_caixa_mensal === 'string' ? JSON.parse(row.fluxo_caixa_mensal || '[]') : (row.fluxo_caixa_mensal || [])
+        if (fluxos.length === 0) { map[row.funcionario_id] = null; continue }
+        const investimentoInicial = Number(row.custo_mobilizacao_total) > 0
+          ? -Number(row.custo_mobilizacao_total)
+          : -Number(row.custo_total_mensal)
+        const cashflows = [investimentoInicial, ...fluxos.map(f => f.margem)]
+        const tirMensal = calcularTIR(cashflows)
+        if (tirMensal === null) { map[row.funcionario_id] = null; continue }
+        map[row.funcionario_id] = anualizarTaxa(tirMensal) * 100
+      } catch {
+        map[row.funcionario_id] = null
+      }
+    }
+    return map
+  }, [data])
+
+  const corTIR = (tir: number | null) => {
+    if (tir === null) return 'text-gray-400'
+    if (tir < 0) return 'text-gray-400'
+    if (tir < 20) return 'text-red-600'
+    if (tir < 50) return 'text-orange-600'
+    if (tir < 100) return 'text-amber-600'
+    if (tir < 200) return 'text-green-600'
+    return 'text-green-700'
+  }
 
   const totalFuncs = data.length
   const noLucro = data.filter(d => d.status_breakeven === 'no_lucro').length
@@ -80,13 +114,15 @@ export default function RentabilidadeClient({ data, ciclo, receitaReal, margemRe
               <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Custo/HH</th>
               <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Margem/HH</th>
               <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase" title="Margem calculada sobre preço contratado por HH. Não reflete faturamento real.">Margem % (teórica)</th>
+              <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase" title="Margem real: receita BMs aprovados menos custo efetivo">Margem Real %</th>
+              <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase" title="Taxa Interna de Retorno anualizada do investimento neste funcionário">TIR (a.a.)</th>
               <th className="text-left px-3 py-3 text-xs font-semibold text-gray-500 uppercase">Break-even</th>
               <th className="text-right px-3 py-3 text-xs font-semibold text-gray-500 uppercase" title="Receita real de BMs aprovados menos custo real acumulado">Resultado real</th>
             </tr>
           </thead>
           <tbody>
             {data.length === 0 ? (
-              <tr><td colSpan={9} className="px-4 py-10 text-center text-gray-400">Sem dados de rentabilidade.</td></tr>
+              <tr><td colSpan={11} className="px-4 py-10 text-center text-gray-400">Sem dados de rentabilidade.</td></tr>
             ) : data.sort((a, b) => Number(b.margem_pct || 0) - Number(a.margem_pct || 0)).map(f => {
               const isOpen = expandido === f.funcionario_id
               const be = BE_BADGE[f.status_breakeven] || BE_BADGE.nunca_rentavel
@@ -106,6 +142,8 @@ export default function RentabilidadeClient({ data, ciclo, receitaReal, margemRe
                   <td className="px-3 py-3 text-right text-red-600">{fmt(f.custo_hora_real)}/h</td>
                   <td className={`px-3 py-3 text-right font-semibold ${Number(f.margem_hh) >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(f.margem_hh)}/h</td>
                   <td className={`px-3 py-3 text-right font-bold ${MARGEM_CLS(Number(f.margem_pct))}`}>{Number(f.margem_pct).toFixed(1)}%</td>
+                  <td className={`px-3 py-3 text-right font-bold ${corMargem(f.margem_real_pct != null ? Number(f.margem_real_pct) : null)}`}>{f.margem_real_pct != null ? `${Number(f.margem_real_pct).toFixed(1)}%` : '—'}</td>
+                  <td className={`px-3 py-3 text-right font-bold ${corTIR(tirMap[f.funcionario_id])}`}>{tirMap[f.funcionario_id] != null ? (tirMap[f.funcionario_id]! < 0 ? 'Amortizando' : `${tirMap[f.funcionario_id]!.toFixed(1)}%`) : '—'}</td>
                   <td className="px-3 py-3">
                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${be.cls}`}>
                       {be.icon} {be.label}{f.status_breakeven === 'em_amortizacao' && f.meses_para_breakeven ? ` (${f.meses_para_breakeven}m)` : ''}
@@ -117,7 +155,7 @@ export default function RentabilidadeClient({ data, ciclo, receitaReal, margemRe
                   </td>
                 </tr>
                 {isOpen && (
-                  <tr><td colSpan={9} className="bg-gray-50/80 border-b border-gray-200 px-4 py-5">
+                  <tr><td colSpan={11} className="bg-gray-50/80 border-b border-gray-200 px-4 py-5">
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Composição do custo */}
                       <div>
@@ -165,6 +203,86 @@ export default function RentabilidadeClient({ data, ciclo, receitaReal, margemRe
                         </div>
                       </div>
                     </div>
+                    {/* Fluxo de Caixa Acumulado */}
+                    {(() => {
+                      try {
+                        const fluxos: { ano: number; mes: number; receita: number; custo: number; margem: number }[] =
+                          typeof f.fluxo_caixa_mensal === 'string' ? JSON.parse(f.fluxo_caixa_mensal || '[]') : (f.fluxo_caixa_mensal || [])
+                        if (fluxos.length === 0) return null
+                        const mobil = Number(f.custo_mobilizacao_total) > 0 ? Number(f.custo_mobilizacao_total) : Number(f.custo_total_mensal)
+                        const acumulado: number[] = []
+                        let acc = -mobil
+                        for (const fl of fluxos) { acc += fl.margem; acumulado.push(acc) }
+                        const labels = fluxos.map(fl => `${MESES[fl.mes - 1]}/${String(fl.ano).slice(2)}`)
+                        const n = acumulado.length
+                        if (n < 2) return null
+                        const minY = Math.min(0, ...acumulado)
+                        const maxY = Math.max(0, ...acumulado)
+                        const rangeY = maxY - minY || 1
+                        const padL = 50; const padR = 10; const padT = 15; const padB = 30
+                        const W = 700; const H = 150
+                        const cW = W - padL - padR; const cH = H - padT - padB
+                        const px = (i: number) => padL + (i / (n - 1)) * cW
+                        const py = (v: number) => padT + cH - ((v - minY) / rangeY) * cH
+                        const y0 = py(0)
+                        const linePts = acumulado.map((v, i) => `${px(i)},${py(v)}`).join(' ')
+                        // Positive fill (green)
+                        const posPts: string[] = []; const negPts: string[] = []
+                        for (let i = 0; i < n; i++) {
+                          if (acumulado[i] >= 0) posPts.push(`${px(i)},${py(acumulado[i])}`)
+                          else posPts.push(`${px(i)},${y0}`)
+                          if (acumulado[i] <= 0) negPts.push(`${px(i)},${py(acumulado[i])}`)
+                          else negPts.push(`${px(i)},${y0}`)
+                        }
+                        const posPath = `${posPts.join(' ')} ${px(n-1)},${y0} ${px(0)},${y0}`
+                        const negPath = `${negPts.join(' ')} ${px(n-1)},${y0} ${px(0)},${y0}`
+                        // Break-even crossing
+                        let beCross: number | null = null
+                        for (let i = 1; i < n; i++) {
+                          if ((acumulado[i-1] < 0 && acumulado[i] >= 0) || (acumulado[i-1] >= 0 && acumulado[i] < 0)) {
+                            const ratio = Math.abs(acumulado[i-1]) / (Math.abs(acumulado[i-1]) + Math.abs(acumulado[i]))
+                            beCross = px(i - 1 + ratio)
+                            break
+                          }
+                        }
+                        return (
+                          <div className="mt-5">
+                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Fluxo de Caixa Acumulado</h4>
+                            <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 150 }}>
+                              {/* Grid lines */}
+                              <line x1={padL} y1={y0} x2={W - padR} y2={y0} stroke="#9ca3af" strokeWidth={1} strokeDasharray="4 3" />
+                              <text x={padL - 4} y={y0 + 3} textAnchor="end" className="fill-gray-400" fontSize={8}>R$ 0</text>
+                              {/* Green fill (positive) */}
+                              <polygon points={posPath} fill="#bbf7d0" opacity={0.5} />
+                              {/* Red fill (negative) */}
+                              <polygon points={negPath} fill="#fecaca" opacity={0.5} />
+                              {/* Line */}
+                              <polyline points={linePts} fill="none" stroke="#3b82f6" strokeWidth={2} />
+                              {/* Dots */}
+                              {acumulado.map((v, i) => (
+                                <circle key={i} cx={px(i)} cy={py(v)} r={2.5} fill={v >= 0 ? '#16a34a' : '#dc2626'} />
+                              ))}
+                              {/* X labels */}
+                              {labels.map((l, i) => {
+                                const step = Math.max(1, Math.floor(n / 8))
+                                if (i % step !== 0 && i !== n - 1) return null
+                                return <text key={i} x={px(i)} y={H - 5} textAnchor="middle" className="fill-gray-400" fontSize={7}>{l}</text>
+                              })}
+                              {/* Y min/max */}
+                              <text x={padL - 4} y={padT + 4} textAnchor="end" className="fill-gray-400" fontSize={7}>{(maxY / 1000).toFixed(0)}k</text>
+                              <text x={padL - 4} y={padT + cH + 4} textAnchor="end" className="fill-gray-400" fontSize={7}>{(minY / 1000).toFixed(0)}k</text>
+                              {/* Break-even label */}
+                              {beCross !== null && (
+                                <>
+                                  <line x1={beCross} y1={padT} x2={beCross} y2={padT + cH} stroke="#16a34a" strokeWidth={1} strokeDasharray="3 2" />
+                                  <text x={beCross} y={padT - 3} textAnchor="middle" fill="#16a34a" fontSize={8} fontWeight="bold">Break-even</text>
+                                </>
+                              )}
+                            </svg>
+                          </div>
+                        )
+                      } catch { return null }
+                    })()}
                   </td></tr>
                 )}
                 </Fragment>
