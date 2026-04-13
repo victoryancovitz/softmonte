@@ -109,10 +109,10 @@ function FinanceiroPage() {
       const mes = l.data_competencia?.slice(0, 7) ?? 'sem-data'
       if (!byMes[mes]) byMes[mes] = { mes, receita_pago: 0, receita_aberto: 0, despesa_pago: 0, despesa_aberto: 0, despesa_vencido: 0, provisao: 0 }
       const v = Number(l.valor)
-      if (l.tipo === 'receita') {
+      if (l.tipo === 'receita' && l.natureza !== 'financiamento') {
         if (l.status === 'pago') byMes[mes].receita_pago += v
         else byMes[mes].receita_aberto += v
-      } else {
+      } else if (l.tipo === 'despesa') {
         if (l.is_provisao) byMes[mes].provisao += v
         else if (l.status === 'pago') byMes[mes].despesa_pago += v
         else if (l.data_vencimento && l.data_vencimento < hojeLocal) byMes[mes].despesa_vencido += v
@@ -173,8 +173,8 @@ function FinanceiroPage() {
   }
 
   // KPIs
-  const receitaPaga = lancamentos.filter(l => l.tipo === 'receita' && l.status === 'pago').reduce((s, l) => s + Number(l.valor), 0)
-  const receitaAberto = lancamentos.filter(l => l.tipo === 'receita' && l.status === 'em_aberto').reduce((s, l) => s + Number(l.valor), 0)
+  const receitaPaga = lancamentos.filter(l => l.tipo === 'receita' && l.status === 'pago' && l.natureza !== 'financiamento').reduce((s, l) => s + Number(l.valor), 0)
+  const receitaAberto = lancamentos.filter(l => l.tipo === 'receita' && l.status === 'em_aberto' && l.natureza !== 'financiamento').reduce((s, l) => s + Number(l.valor), 0)
   const despesaPaga = lancamentos.filter(l => l.tipo === 'despesa' && !l.is_provisao && l.status === 'pago').reduce((s, l) => s + Number(l.valor), 0)
   const despesaAberto = lancamentos.filter(l => l.tipo === 'despesa' && !l.is_provisao && l.status === 'em_aberto').reduce((s, l) => s + Number(l.valor), 0)
   const provisoes = lancamentos.filter(l => l.tipo === 'despesa' && l.is_provisao).reduce((s, l) => s + Number(l.valor), 0)

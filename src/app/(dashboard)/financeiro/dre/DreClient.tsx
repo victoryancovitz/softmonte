@@ -90,7 +90,7 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
       const { key, label } = getGroupKey(l)
       if (!grouped[key]) grouped[key] = { key, label, receita: 0, custoMO: 0, outrasDesp: 0, provisoes: 0, despFin: 0 }
       const v = Number(l.valor || 0)
-      if (l.tipo === 'receita') grouped[key].receita += v
+      if (l.tipo === 'receita' && l.natureza !== 'financiamento') grouped[key].receita += v
       else if (l.is_provisao) grouped[key].provisoes += v
       else if (l.categoria === 'Folha de Pagamento' || l.origem === 'folha_fechamento') grouped[key].custoMO += v
       else if (l.categoria === 'Despesas Financeiras' || l.categoria === 'Amortização de Empréstimos') grouped[key].despFin += v
@@ -101,7 +101,7 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
   }, [lancamentos, granularidade, filtroObra, anoFiltro])
 
   // === DRE OFICIAL: classificar lançamentos ===
-  const receitaBruta = lancamentos.filter((l: any) => l.tipo === 'receita' && !l.is_provisao).reduce((s: number, l: any) => s + Number(l.valor), 0)
+  const receitaBruta = lancamentos.filter((l: any) => l.tipo === 'receita' && !l.is_provisao && l.natureza !== 'financiamento').reduce((s: number, l: any) => s + Number(l.valor), 0)
   const isSimples = empresa?.regime_tributario === 'simples_nacional'
 
   // Deduções da Receita Bruta
