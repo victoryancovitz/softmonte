@@ -5,7 +5,8 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { formatStatus } from '@/lib/formatters'
-import { ChevronDown, ChevronUp, Printer } from 'lucide-react'
+import { ChevronDown, ChevronUp, Printer, CheckCircle, Mail, Send } from 'lucide-react'
+import { useToast } from '@/components/Toast'
 
 const MESES = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
@@ -16,7 +17,11 @@ export default function FolhaDetalhePage() {
   const [empresa, setEmpresa] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [assinaturas, setAssinaturas] = useState<Record<string, any>>({})
+  const [envios, setEnvios] = useState<Record<string, any>>({})
+  const [enviando, setEnviando] = useState<string | null>(null)
   const supabase = createClient()
+  const toast = useToast()
 
   useEffect(() => {
     (async () => {
@@ -28,6 +33,17 @@ export default function FolhaDetalhePage() {
       setFolha(f)
       setItens(its || [])
       setEmpresa(emp)
+      // Carregar assinaturas e envios
+      const [{ data: sigs }, { data: sends }] = await Promise.all([
+        supabase.from('holerite_assinaturas').select('folha_item_id, status, assinado_em').eq('folha_id', id),
+        supabase.from('holerite_envios').select('folha_item_id, enviado_em, status').eq('status', 'enviado'),
+      ])
+      const sigMap: Record<string, any> = {}
+      ;(sigs ?? []).forEach((s: any) => { sigMap[s.folha_item_id] = s })
+      setAssinaturas(sigMap)
+      const envMap: Record<string, any> = {}
+      ;(sends ?? []).forEach((s: any) => { if (!envMap[s.folha_item_id]) envMap[s.folha_item_id] = s })
+      setEnvios(envMap)
       setLoading(false)
     })()
   }, [id])
@@ -90,7 +106,17 @@ export default function FolhaDetalhePage() {
               {formatStatus(folha.status)}
             </span>
           </div>
-          <p className="text-sm text-gray-500 mb-4">{folha.obras?.nome} · {folha.funcionarios_incluidos} funcionarios</p>
+          <div className="flex items-center justify-between mb-4">
+            <p className="text-sm text-gray-500">{folha.obras?.nome} · {folha.funcionarios_incluidos} funcionarios</p>
+            <div className="flex items-center gap-2 text-xs">
+              <span className="text-gray-400">{Object.keys(assinaturas).length}/{itens.length} assinados</span>
+              {Object.keys(assinaturas).length > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-bold">
+                  {Math.round(Object.keys(assinaturas).length / Math.max(itens.length, 1) * 100)}%
+                </span>
+              )}
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="p-3 bg-gray-50 rounded-lg">
@@ -147,7 +173,49 @@ export default function FolhaDetalhePage() {
                           <div className="px-4 py-3">{fmt(it.valor_bruto)}</div>
                           <div className="px-4 py-3 text-red-600 text-xs">{totalDescontos > 0 ? fmt(totalDescontos) : '--'}</div>
                           <div className="px-4 py-3 font-bold text-green-700">{fmt(it.valor_liquido)}</div>
-                          <div className="px-4 py-3 flex items-center gap-2 justify-end">
+                          <div className="px-4 py-3 flex items-center gap-1.5 justify-end">
+                            {assinaturas[it.id] ? (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold flex items-center gap-0.5" title={`Assinado em ${new Date(assinaturas[it.id].assinado_em).toLocaleDateString('pt-BR')}`}>
+                                <CheckCircle className="w-3 h-3" /> Assinado
+                              </span>
+                            ) : (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 font-bold">Pendente</span>
+                            )}
+                            {envios[it.id] && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-100 text-blue-700 font-bold flex items-center gap-0.5" title={`Enviado em ${new Date(envios[it.id].enviado_em).toLocaleDateString('pt-BR')}`}>
+                                <Mail className="w-3 h-3" />
+                              </span>
+                            )}
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation()
+                                setEnviando(it.id)
+                                try {
+                                  const { data: { session } } = await supabase.auth.getSession()
+                                  const funcData = await supabase.from('funcionarios').select('email, nome').eq('id', it.funcionario_id).maybeSingle()
+                                  const email = funcData.data?.email
+                                  if (!email) { toast.error(`${funcData.data?.nome || 'Funcionário'} não tem email cadastrado`); setEnviando(null); return }
+                                  const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/enviar-holerite`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token}` },
+                                    body: JSON.stringify({ folha_item_id: it.id, funcionario_id: it.funcionario_id, email }),
+                                  })
+                                  const result = await res.json()
+                                  if (res.ok) {
+                                    toast.success(`Holerite enviado para ${email}`)
+                                    setEnvios(prev => ({ ...prev, [it.id]: { folha_item_id: it.id, enviado_em: new Date().toISOString(), status: 'enviado' } }))
+                                  } else {
+                                    toast.error(result.error || 'Erro ao enviar')
+                                  }
+                                } catch (err: any) { toast.error('Erro: ' + err.message) }
+                                setEnviando(null)
+                              }}
+                              disabled={enviando === it.id}
+                              className="text-gray-400 hover:text-blue-600 p-1 disabled:opacity-50"
+                              title="Enviar holerite por email"
+                            >
+                              <Send className={`w-3.5 h-3.5 ${enviando === it.id ? 'animate-pulse' : ''}`} />
+                            </button>
                             <a href={`/rh/folha/${id}/holerite/${it.funcionario_id}`} target="_blank"
                               onClick={e => e.stopPropagation()}
                               className="text-gray-400 hover:text-brand p-1"

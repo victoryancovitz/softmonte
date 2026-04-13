@@ -32,7 +32,7 @@ export default async function HoleritePage({ params }: { params: { id: string; f
   const [{ data: fi }, { data: ff }, { data: func }, { data: empresa }] = await Promise.all([
     supabase.from('folha_itens').select('*').eq('folha_id', params.id).eq('funcionario_id', params.funcionarioId).maybeSingle(),
     supabase.from('folha_fechamentos').select('*, obras(nome, local)').eq('id', params.id).maybeSingle(),
-    supabase.from('funcionarios').select('*, funcoes(nome)').eq('id', params.funcionarioId).maybeSingle(),
+    supabase.from('funcionarios').select('*, funcoes(nome), email').eq('id', params.funcionarioId).maybeSingle(),
     supabase.from('empresa_config').select('*').limit(1).maybeSingle(),
   ])
   if (!fi || !ff || !func) notFound()
@@ -91,7 +91,7 @@ export default async function HoleritePage({ params }: { params: { id: string; f
 
   return (
     <>
-      <PrintButton />
+      <PrintButton folhaItemId={fi.id} funcionarioId={params.funcionarioId} email={func.email} />
       <style>{`
         @media print { nav,header,aside,.no-print,button{display:none!important} @page{size:A4 portrait;margin:8mm} body{margin:0} .hol{box-shadow:none!important;border:none!important;max-width:none!important} }
         @media screen { .hol{max-width:210mm;margin:20px auto;background:white;box-shadow:0 2px 12px rgba(0,0,0,.1);} }
