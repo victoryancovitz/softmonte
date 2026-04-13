@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
 import ImpactConfirmDialog from '@/components/ImpactConfirmDialog'
+import { calcularDescontosCLT } from '@/lib/clt'
 import { FileText, Plus, ChevronRight, Calendar, Users, DollarSign } from 'lucide-react'
 
 const MESES = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
@@ -85,21 +86,41 @@ export default function FolhaPage() {
       }).select().single()
       if (ffErr) throw ffErr
 
-      // 5) Itens por funcionário
-      const itens = custos.map(c => ({
-        folha_id: ff.id,
-        funcionario_id: c.funcionario_id,
-        salario_base: Number(c.salario_total_bruto || 0),
-        salario_total: Number(c.salario_total_bruto || 0),
-        dias_trabalhados: Number(c.dias_trab || 0),
-        dias_descontados: Number(c.dias_desc || 0),
-        encargos_valor: Number(c.encargos_valor || 0),
-        provisoes_valor: Number(c.provisoes_valor || 0),
-        beneficios_valor: Number(c.beneficios_valor || 0),
-        valor_bruto: Number(c.salario_liquido_empresa || 0),
-        valor_liquido: Number(c.salario_liquido_empresa || 0), // líquido detalhado fica p/ holerite
-        custo_total_empresa: Number(c.custo_real_mes || 0),
-      }))
+      // 5) Itens por funcionário — com cálculos CLT
+      const itens = custos.map(c => {
+        const func = funcMap[c.funcionario_id] || {}
+        const salBase = Number(func.salario_base || c.salario_total_bruto || 0)
+        const diasTrab = Number(c.dias_trab || 0)
+        const diasDesc = Number(c.dias_desc || 0)
+
+        const clt = calcularDescontosCLT({
+          salarioBase: salBase,
+          diasTrabalhados: diasTrab,
+          diasMes: 30,
+          insalubridadePct: Number(func.insalubridade_pct || 0),
+          periculosidadePct: Number(func.periculosidade_pct || 0),
+          vtMensal: Number(func.vt_mensal || 0),
+          dependentes: Number(func.dependentes_ir || 0),
+        })
+
+        return {
+          folha_id: ff.id,
+          funcionario_id: c.funcionario_id,
+          salario_base: salBase,
+          salario_total: clt.total_proventos,
+          dias_trabalhados: diasTrab,
+          dias_descontados: diasDesc,
+          desconto_inss: clt.desconto_inss,
+          desconto_irrf: clt.desconto_irrf,
+          outros_descontos: clt.desconto_vt,
+          encargos_valor: Number(c.encargos_valor || 0),
+          provisoes_valor: Number(c.provisoes_valor || 0),
+          beneficios_valor: Number(c.beneficios_valor || 0),
+          valor_bruto: clt.total_proventos,
+          valor_liquido: clt.valor_liquido,
+          custo_total_empresa: Number(c.custo_real_mes || 0),
+        }
+      })
       const { error: itensErr } = await supabase.from('folha_itens').insert(itens)
       if (itensErr) throw new Error('Falha ao salvar itens da folha: ' + itensErr.message)
 
@@ -108,15 +129,15 @@ export default function FolhaPage() {
       const compBase = `${form.ano}-${String(form.mes).padStart(2,'0')}-01`
       const dtAdiantamento = `${form.ano}-${String(form.mes).padStart(2,'0')}-20`
 
-      // Buscar adiantamento_pct
+      // Buscar dados dos funcionários para cálculos CLT
       const funcIds = custos.map((c: any) => c.funcionario_id)
-      const { data: funcsAdiant } = await supabase.from('funcionarios').select('id, adiantamento_pct').in('id', funcIds)
-      const adiantMap: Record<string, number> = {}
-      ;(funcsAdiant ?? []).forEach((f: any) => { adiantMap[f.id] = Number(f.adiantamento_pct ?? 40) / 100 })
+      const { data: funcsData } = await supabase.from('funcionarios').select('id, salario_base, adiantamento_pct, insalubridade_pct, periculosidade_pct, vt_mensal, dependentes_ir').in('id', funcIds)
+      const funcMap: Record<string, any> = {}
+      ;(funcsData ?? []).forEach((f: any) => { funcMap[f.id] = f })
 
       const lancamentosParaInserir: any[] = []
       for (const c of custos) {
-        const adiantPct = adiantMap[c.funcionario_id] ?? 0.4
+        const adiantPct = Number(funcMap[c.funcionario_id]?.adiantamento_pct ?? 40) / 100
         const salLiquido = Number(c.salario_liquido_empresa || 0)
         const vlAdiant = Math.round(salLiquido * adiantPct * 100) / 100
         const vlSaldo = Math.round((Number(c.custo_real_mes || 0) - vlAdiant) * 100) / 100
