@@ -12,6 +12,7 @@ export default function ForecastPage() {
   const [detalhe, setDetalhe] = useState<any[] | null>(null)
   const [obraAtiva, setObraAtiva] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [busca, setBusca] = useState('')
   const supabase = createClient()
   const toast = useToast()
@@ -44,6 +45,57 @@ export default function ForecastPage() {
     if (detalhe) {
       setDetalhe(detalhe.map(d => d.id === id ? { ...d, [field]: !current } : d))
     }
+  }
+
+  async function gerarForecast(obra: any) {
+    setSaving(true)
+    try {
+      const { data: composicao } = await supabase.from('contrato_composicao')
+        .select('quantidade_contratada, horas_mes, custo_hora_contratado')
+        .eq('obra_id', obra.obra_id).eq('ativo', true)
+      if (!composicao || composicao.length === 0) { toast.error('Obra sem composição de funções cadastrada.'); setSaving(false); return }
+
+      const receitaMesFull = composicao.reduce((s: number, c: any) => s + Number(c.quantidade_contratada) * Number(c.horas_mes) * Number(c.custo_hora_contratado), 0)
+      const hhMesFull = composicao.reduce((s: number, c: any) => s + Number(c.quantidade_contratada) * Number(c.horas_mes), 0)
+
+      const { data: bms } = await supabase.from('financeiro_lancamentos')
+        .select('data_competencia, valor').eq('tipo', 'receita').eq('origem', 'bm_aprovado').is('deleted_at', null)
+      const bmPorMes: Record<string, number> = {}
+      ;(bms || []).forEach((b: any) => { const ym = b.data_competencia?.slice(0, 7); if (ym) bmPorMes[ym] = (bmPorMes[ym] || 0) + Number(b.valor) })
+
+      // Buscar datas da obra
+      const { data: obraData } = await supabase.from('obras').select('data_inicio, data_prev_fim').eq('id', obra.obra_id).single()
+      const inicio = new Date((obraData?.data_inicio || '2026-01-20') + 'T12:00')
+      const fim = new Date((obraData?.data_prev_fim || '2026-04-30') + 'T12:00')
+      const rows: any[] = []
+      let cur = new Date(inicio.getFullYear(), inicio.getMonth(), 1)
+
+      while (cur <= fim) {
+        const ano = cur.getFullYear(), mes = cur.getMonth() + 1
+        const mesInicio = new Date(ano, mes - 1, 1), mesFim = new Date(ano, mes, 0)
+        const diaIni = Math.max(mesInicio.getTime(), inicio.getTime()), diaFim = Math.min(mesFim.getTime(), fim.getTime())
+        const fator = (Math.round((diaFim - diaIni) / 86400000) + 1) / mesFim.getDate()
+        const ymKey = `${ano}-${String(mes).padStart(2, '0')}`
+        const receitaRealizada = bmPorMes[ymKey] || 0
+        rows.push({
+          obra_id: obra.obra_id, mes, ano,
+          receita_prevista: Math.round(receitaMesFull * fator * 100) / 100,
+          receita_realizada: receitaRealizada,
+          hh_previsto: Math.round(hhMesFull * fator), hh_realizado: 0,
+          bm_emitido: receitaRealizada > 0, bm_aprovado: receitaRealizada > 0,
+          nf_emitida: false, pagamento_recebido: false,
+          data_pagamento_prevista: new Date(ano, mes, 5).toISOString().slice(0, 10),
+        })
+        cur = new Date(ano, mes, 1)
+      }
+
+      await supabase.from('forecast_contrato').delete().eq('obra_id', obra.obra_id)
+      const { error } = await supabase.from('forecast_contrato').insert(rows)
+      if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
+      toast.success(`Forecast gerado: ${rows.length} meses · ${fmt(receitaMesFull)}/mês completo`)
+      await abrirDetalhe(obra)
+    } catch (e: any) { toast.error('Erro: ' + e.message) }
+    finally { setSaving(false) }
   }
 
   const fmt = (v: number | null) => v != null ? Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'
@@ -143,6 +195,20 @@ export default function ForecastPage() {
             <div className="text-[10px] text-gray-400 mt-0.5">Meses não medidos</div>
           </div>
         </div>
+
+        {/* Gerar / Regerar forecast */}
+        {detalhe.length === 0 && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-6 text-center mb-5">
+            <TrendingUp className="w-8 h-8 text-blue-400 mx-auto mb-3" />
+            <p className="text-sm text-gray-600 mb-4">Nenhum registro de forecast para esta obra.<br />O sistema pode gerar automaticamente a partir da composição do contrato.</p>
+            <button onClick={() => gerarForecast(obraAtiva)} disabled={saving} className="px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-dark disabled:opacity-50">{saving ? 'Gerando...' : 'Gerar Forecast Automático'}</button>
+          </div>
+        )}
+        {detalhe.length > 0 && (
+          <div className="flex justify-end mb-3">
+            <button onClick={() => gerarForecast(obraAtiva)} disabled={saving} className="text-xs text-gray-400 hover:text-brand underline">{saving ? 'Gerando...' : '↻ Regerar forecast do contrato'}</button>
+          </div>
+        )}
 
         {/* Gráfico Previsto x Realizado */}
         {detalhe.length > 0 && (
