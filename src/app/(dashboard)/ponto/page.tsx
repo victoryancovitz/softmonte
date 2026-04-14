@@ -46,6 +46,7 @@ export default function PontoPage() {
   const [loadingHistorico, setLoadingHistorico] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [showDiaRapido, setShowDiaRapido] = useState(false)
+  const [limitesPorFuncao, setLimitesPorFuncao] = useState<Record<string, { qtd: number; hh_dia: number }>>({})
   const supabase = createClient()
   const toast = useToast()
 
@@ -162,6 +163,28 @@ export default function PontoPage() {
       }
     })
     setGrid(g)
+
+    // Fetch limites de HH por função (contrato_composicao)
+    const { data: composicao } = await supabase
+      .from('contrato_composicao')
+      .select('funcao_nome, quantidade_contratada, carga_horaria_dia, horas_mes')
+      .eq('obra_id', obraId)
+      .eq('ativo', true)
+    const limites: Record<string, { qtd: number; hh_dia: number }> = {}
+    ;(composicao ?? []).forEach((c: any) => {
+      const chave = (c.funcao_nome || '').toUpperCase()
+      if (limites[chave]) {
+        limites[chave].qtd += Number(c.quantidade_contratada)
+        limites[chave].hh_dia += Number(c.quantidade_contratada) * Number(c.carga_horaria_dia || 9)
+      } else {
+        limites[chave] = {
+          qtd: Number(c.quantidade_contratada),
+          hh_dia: Number(c.quantidade_contratada) * Number(c.carga_horaria_dia || 9),
+        }
+      }
+    })
+    setLimitesPorFuncao(limites)
+
     setLoading(false)
   }, [obraId, mes, ano])
 
@@ -255,6 +278,42 @@ export default function PontoPage() {
       horas_trabalhadas: c.horas_trabalhadas,
     }
   }
+
+  function calcExcedentes(dia: number): Record<string, { presentes: number; limite: number; excedente: number }> {
+    if (Object.keys(limitesPorFuncao).length === 0) return {}
+    const contagemPorCargo: Record<string, number> = {}
+    funcionarios.forEach(f => {
+      const c = grid[f.id]?.[dia]
+      if (c && c.efetivo_id && !c.falta_id) {
+        const cargo = (f.cargo || '').toUpperCase()
+        contagemPorCargo[cargo] = (contagemPorCargo[cargo] || 0) + 1
+      }
+    })
+    const resultado: Record<string, { presentes: number; limite: number; excedente: number }> = {}
+    for (const [cargo, presentes] of Object.entries(contagemPorCargo)) {
+      const limite = limitesPorFuncao[cargo]
+      if (limite && presentes > limite.qtd) {
+        resultado[cargo] = { presentes, limite: limite.qtd, excedente: presentes - limite.qtd }
+      }
+    }
+    return resultado
+  }
+
+  // Pre-compute excesses for all days
+  const excessosPorDia: Record<number, Record<string, { presentes: number; limite: number; excedente: number }>> = {}
+  const diasComExcesso: Record<string, number[]> = {} // cargo -> [dias]
+  days.forEach(d => {
+    if (isWeekend(ano, mes, d)) return
+    const exc = calcExcedentes(d)
+    if (Object.keys(exc).length > 0) {
+      excessosPorDia[d] = exc
+      for (const cargo of Object.keys(exc)) {
+        if (!diasComExcesso[cargo]) diasComExcesso[cargo] = []
+        diasComExcesso[cargo].push(d)
+      }
+    }
+  })
+  const temExcessoNoMes = Object.keys(diasComExcesso).length > 0
 
   let totalPresentes = 0, totalFaltas = 0, totalAtestados = 0
   funcionarios.forEach(f => {
@@ -416,6 +475,20 @@ export default function PontoPage() {
         </div>
       )}
 
+      {obraId && !loading && funcionarios.length > 0 && temExcessoNoMes && (
+        <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800">
+          <strong>⚠️ Excedente de HH contratadas:</strong>
+          <ul className="mt-1 ml-4 list-disc space-y-0.5">
+            {Object.entries(diasComExcesso).map(([cargo, dias]) => (
+              <li key={cargo}>
+                <strong>{cargo}</strong>: excedente em {dias.length} dia{dias.length > 1 ? 's' : ''} (dia{dias.length > 1 ? 's' : ''} {dias.join(', ')})
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1.5 text-red-600">Dias acima do contratado não serão faturados. Verificar necessidade de aditivo.</p>
+        </div>
+      )}
+
       {obraId && !loading && funcionarios.length > 0 && (
         <>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
@@ -423,9 +496,21 @@ export default function PontoPage() {
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="text-left px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide sticky left-0 bg-gray-50 z-10 min-w-[180px]">Funcionário</th>
-                  {days.map(d => (
-                    <th key={d} className={`px-1 py-2 text-center font-semibold min-w-[28px] ${isWeekend(ano, mes, d) ? 'text-gray-400 bg-gray-50' : 'text-gray-500'}`}>{d}</th>
-                  ))}
+                  {days.map(d => {
+                    const excedentes = excessosPorDia[d]
+                    const temExcesso = excedentes && Object.keys(excedentes).length > 0
+                    const tooltipExcesso = temExcesso
+                      ? Object.entries(excedentes).map(([cargo, v]) => `${cargo}: ${v.presentes}/${v.limite} (${v.excedente} excedente${v.excedente > 1 ? 's' : ''})`).join('\n')
+                      : ''
+                    return (
+                      <th key={d} className={`px-1 py-2 text-center font-semibold min-w-[28px] ${isWeekend(ano, mes, d) ? 'text-gray-400 bg-gray-50' : 'text-gray-500'}`}>
+                        {d}
+                        {temExcesso && (
+                          <div title={tooltipExcesso} className="w-4 h-4 bg-red-500 text-white rounded-full text-[8px] font-bold flex items-center justify-center cursor-help mx-auto mt-0.5">!</div>
+                        )}
+                      </th>
+                    )
+                  })}
                 </tr>
               </thead>
               <tbody>

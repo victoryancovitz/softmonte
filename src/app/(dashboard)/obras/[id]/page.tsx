@@ -9,6 +9,7 @@ import DocsAlocadosSection from './DocsAlocadosSection'
 import CronogramaTab from './CronogramaTab'
 import DiarioTab from './DiarioTab'
 import RncTab from './RncTab'
+import AditivosTab from './AditivosTab'
 import { formatStatus } from '@/lib/formatters'
 import ContasBancariasObra from './ContasBancariasObra'
 import { fmt } from '@/lib/cores'
@@ -46,6 +47,7 @@ const tabs = [
   { key: 'efetivo', label: 'Efetivo' },
   { key: 'boletins', label: 'Boletins' },
   { key: 'financeiro', label: 'Financeiro' },
+  { key: 'aditivos', label: 'Aditivos' },
   { key: 'documentos', label: 'Documentos' },
   { key: 'cronograma', label: 'Cronograma' },
   { key: 'diario', label: 'Diário' },
@@ -150,6 +152,8 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
     dias: d.vencimento ? Math.ceil((new Date(d.vencimento + 'T12:00').getTime() - hoje.getTime()) / 86400000) : null,
   }))
 
+  const aditivosPendentes = (aditivosData ?? []).filter((a: any) => a.status === 'pendente').length
+
   const docStatusColor = (dias: number | null) => {
     if (dias === null) return 'bg-gray-100 text-gray-500'
     if (dias < 0) return 'bg-red-100 text-red-700'
@@ -191,10 +195,15 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
       <div className="flex gap-1 overflow-x-auto mb-5 bg-white rounded-xl shadow-sm border border-gray-100 p-1">
         {tabs.map(t => (
           <Link key={t.key} href={`/obras/${params.id}?tab=${t.key}`}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-1.5 ${
               activeTab === t.key ? 'bg-brand text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}>
             {t.label}
+            {t.key === 'aditivos' && aditivosPendentes > 0 && (
+              <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-bold leading-none ${
+                activeTab === 'aditivos' ? 'bg-white/20 text-white' : 'bg-amber-100 text-amber-700'
+              }`}>{aditivosPendentes}</span>
+            )}
           </Link>
         ))}
       </div>
@@ -277,7 +286,11 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
                   <tbody>
                     {composicao.map((c: any) => (
                       <tr key={c.id} className="border-b border-gray-50">
-                        <td className="px-4 py-2 font-medium">{c.funcao_nome}</td>
+                        <td className="px-4 py-2 font-medium">
+                          {c.funcao_nome}
+                          {c.origem === 'aditivo' && <span className="text-[10px] px-1.5 py-0.5 bg-violet-100 text-violet-700 rounded font-semibold ml-1">Aditivo</span>}
+                          {c.data_fim && <span className="text-[10px] text-gray-400 ml-1">até {new Date(c.data_fim + 'T12:00').toLocaleDateString('pt-BR')}</span>}
+                        </td>
                         <td className="px-4 py-2">{c.quantidade_contratada}</td>
                         <td className="px-4 py-2">{c.horas_mes}h</td>
                         <td className="px-4 py-2">R$ {Number(c.custo_hora_contratado || 0).toFixed(2)}</td>
@@ -591,6 +604,9 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
           <DocsAlocadosSection docs={docsComDias} />
         </div>
       )}
+
+      {/* ===== ADITIVOS ===== */}
+      {activeTab === 'aditivos' && <AditivosTab obra={obra} aditivos={aditivosData ?? []} composicao={composicao ?? []} onRefresh={() => { /* server component — full page refresh */ if (typeof window !== 'undefined') window.location.reload() }} />}
 
       {/* ===== CRONOGRAMA ===== */}
       {activeTab === 'cronograma' && <CronogramaTab obraId={params.id} />}
