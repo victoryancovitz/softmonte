@@ -60,7 +60,7 @@ export default async function DiretoriaPage() {
     supabase.from('vw_rescisoes_previstas').select('*').limit(100),
     supabase.from('obras').select('*').eq('status', 'ativo').is('deleted_at', null),
     supabase.from('vw_contas_saldo').select('*'),
-    supabase.from('financeiro_lancamentos').select('id, tipo, valor, status, is_provisao, data_vencimento').is('deleted_at', null).limit(5000),
+    supabase.from('financeiro_lancamentos').select('id, tipo, valor, status, is_provisao, data_vencimento, natureza').is('deleted_at', null).limit(5000),
     supabase.from('funcionarios').select('id, nome, cargo, status, salario_base, vt_mensal, vr_diario, va_mensal, funcao_id, deleted_at').is('deleted_at', null),
     supabase.from('ponto_marcacoes').select('funcionario_id, data').gte('data', mesInicio).lte('data', hojeStr),
     supabase.from('boletins_medicao').select('id, numero, valor_aprovado, created_at, aprovado_em, obra_id, data_inicio, data_fim').eq('status', 'aprovado').is('deleted_at', null),
@@ -83,7 +83,7 @@ export default async function DiretoriaPage() {
 
   // === SEÇÃO 1: SAÚDE FINANCEIRA ===
   // Receita real: dos lançamentos financeiros (BMs aprovados geram lançamentos)
-  const totReceita = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita').reduce((s: number, l: any) => s + Number(l.valor), 0)
+  const totReceita = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita' && l.natureza !== 'financiamento').reduce((s: number, l: any) => s + Number(l.valor), 0)
   // Custo MO: da view DRE (baseada em ponto/faltas reais)
   const totCusto = (folhasFechadas ?? []).reduce((s: number, f: any) => s + Number(f.valor_total || 0), 0)
   const margemBruta = totReceita - totCusto
@@ -110,13 +110,13 @@ export default async function DiretoriaPage() {
   const saidaProj = cf30Projetados.filter((e: any) => Number(e.valor) < 0).reduce((s: number, e: any) => s + Number(e.valor), 0)
   const saldoContas = (contasSaldo ?? []).reduce((s: number, c: any) => s + Number(c.saldo || 0), 0)
   // BMs a receber nos próximos 30 dias
-  const receitaProx30 = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita' && l.status !== 'pago' && l.data_vencimento && l.data_vencimento >= hojeStr && l.data_vencimento <= em30).reduce((s: number, l: any) => s + Number(l.valor), 0)
+  const receitaProx30 = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita' && l.status !== 'pago' && l.natureza !== 'financiamento' && l.data_vencimento && l.data_vencimento >= hojeStr && l.data_vencimento <= em30).reduce((s: number, l: any) => s + Number(l.valor), 0)
   const saldo30 = saldoContas + entrada30 + saida30 + entradaProj + saidaProj + receitaProx30
   const saldo30Ok = saldo30 >= 0
   const temDadosReais = entrada30 !== 0 || saida30 !== 0 || receitaProx30 > 0
 
-  const receitaPaga = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita' && l.status === 'pago').reduce((s: number, l: any) => s + Number(l.valor), 0)
-  const receitaAberto = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita' && l.status === 'em_aberto').reduce((s: number, l: any) => s + Number(l.valor), 0)
+  const receitaPaga = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita' && l.status === 'pago' && l.natureza !== 'financiamento').reduce((s: number, l: any) => s + Number(l.valor), 0)
+  const receitaAberto = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita' && l.status === 'em_aberto' && l.natureza !== 'financiamento').reduce((s: number, l: any) => s + Number(l.valor), 0)
   const despesaPaga = (lancamentos ?? []).filter((l: any) => l.tipo === 'despesa' && !l.is_provisao && l.status === 'pago').reduce((s: number, l: any) => s + Number(l.valor), 0)
   const despesaAberto = (lancamentos ?? []).filter((l: any) => l.tipo === 'despesa' && !l.is_provisao && l.status === 'em_aberto').reduce((s: number, l: any) => s + Number(l.valor), 0)
   const provisoes = (lancamentos ?? []).filter((l: any) => l.tipo === 'despesa' && l.is_provisao).reduce((s: number, l: any) => s + Number(l.valor), 0)

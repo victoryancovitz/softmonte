@@ -9,15 +9,16 @@ export default async function RentabilidadePage() {
   const [{ data: breakeven }, { data: ciclo }, { data: lancReceita }, { data: folhas }] = await Promise.all([
     supabase.from('vw_breakeven_funcionario').select('*'),
     supabase.from('vw_ciclo_financeiro').select('*'),
-    supabase.from('financeiro_lancamentos').select('valor').eq('tipo', 'receita').is('deleted_at', null),
+    supabase.from('financeiro_lancamentos').select('valor, natureza').eq('tipo', 'receita').is('deleted_at', null),
     supabase.from('folha_fechamentos').select('valor_total_bruto, valor_total_encargos, valor_total_beneficios, valor_total_provisoes, valor_total').is('deleted_at', null),
   ])
 
-  const receitaReal = (lancReceita ?? []).reduce((s: number, l: any) => s + Number(l.valor), 0)
+  const receitaReal = (lancReceita ?? []).filter((l: any) => l.natureza !== 'financiamento').reduce((s: number, l: any) => s + Number(l.valor), 0)
   const custoSemProv = (folhas ?? []).reduce((s: number, f: any) => s + Number(f.valor_total_bruto || 0) + Number(f.valor_total_encargos || 0) + Number(f.valor_total_beneficios || 0), 0)
   const custoComProv = (folhas ?? []).reduce((s: number, f: any) => s + Number(f.valor_total || 0), 0)
-  const margemReal = receitaReal > 0 ? ((receitaReal - custoSemProv) / receitaReal * 100) : null
-  const margemRealProv = receitaReal > 0 ? ((receitaReal - custoComProv) / receitaReal * 100) : null
+  const temFolhas = (folhas ?? []).length > 0
+  const margemReal = (temFolhas && receitaReal > 0) ? ((receitaReal - custoSemProv) / receitaReal * 100) : null
+  const margemRealProv = (temFolhas && receitaReal > 0) ? ((receitaReal - custoComProv) / receitaReal * 100) : null
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
