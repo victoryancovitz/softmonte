@@ -228,6 +228,10 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
             {dre.map((obra: any) => {
               const isOpen = expandido === obra.obra_id
               const funcsObra = custos.filter((c: any) => c.obra === obra.obra)
+              const temReais = obra.tem_dados_reais
+              const recExib = temReais ? Number(obra.receita_realizada || 0) : Number(obra.receita_mensal_estimada || 0)
+              const custoExib = temReais ? Number(obra.custo_realizado || 0) : Number(obra.custo_mo_estimado || 0)
+              const margemExib = temReais ? obra.margem_real_pct : obra.margem_projetada_pct
               return (
                 <div key={obra.obra_id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                   <button onClick={() => setExpandido(isOpen ? null : obra.obra_id)}
@@ -236,14 +240,19 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-semibold text-gray-900">{obra.obra}</span>
                         <span className="text-xs text-gray-400">{obra.cliente}</span>
+                        {temReais ? (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-green-100 text-green-700">Realizado</span>
+                        ) : (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700" title="Baseado nos salários e valor estimado do contrato. Feche folhas e emita BMs para dados reais.">Projetado ⓘ</span>
+                        )}
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${statusColor[obra.status_margem] ?? 'bg-gray-100 text-gray-600'}`}>
                           {obra.status_margem?.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) ?? '—'}
                         </span>
                       </div>
                       <div className="flex flex-wrap gap-4 text-xs text-gray-500 mt-1">
-                        <span>Receita: <strong className="text-green-700">{fmt(obra.receita_mensal_contrato)}</strong></span>
-                        <span>Custo MO: <strong className="text-red-700">{fmt(obra.custo_mo_real_mensal)}</strong></span>
-                        <span>Margem: <strong className={Number(obra.margem_pct) >= 0 ? 'text-green-700' : 'text-red-700'}>{Number(obra.margem_pct).toFixed(1)}%</strong></span>
+                        <span title={!temReais ? 'Valor estimado do contrato' : undefined}>Receita: <strong className="text-green-700">{fmt(recExib)}</strong>{temReais && obra.qtd_bms > 0 ? <span className="text-gray-400 ml-1">({obra.qtd_bms} BMs)</span> : ''}</span>
+                        <span title={!temReais ? 'Custo estimado dos alocados' : undefined}>Custo MO: <strong className="text-red-700">{fmt(custoExib)}</strong>{temReais && obra.meses_com_folha > 0 ? <span className="text-gray-400 ml-1">({obra.meses_com_folha} folhas)</span> : ''}</span>
+                        <span>Margem: <strong className={margemExib != null && Number(margemExib) >= 0 ? 'text-green-700' : 'text-red-700'}>{margemExib != null ? `${Number(margemExib).toFixed(1)}%` : '—'}</strong></span>
                         <span><Users className="w-3 h-3 inline" /> {obra.funcionarios_alocados}</span>
                       </div>
                     </div>
@@ -253,7 +262,7 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
                     <div className="border-t border-gray-100 bg-gray-50/50 px-5 py-3">
                       {(() => {
                         const mesesObra = dreMes.filter((m: any) => m.obra_id === obra.obra_id)
-                        if (mesesObra.length === 0) return <p className="text-sm text-gray-400">Sem dados mensais.</p>
+                        if (mesesObra.length === 0) return <div>{!temReais && <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 mb-2"><strong>Dados projetados</strong> — valores baseados no contrato ({fmt(obra.receita_mensal_estimada)}/mês) e salários dos {obra.funcionarios_alocados} alocados. Para dados reais: feche folhas e emita BMs.</div>}<p className="text-sm text-gray-400">Sem dados mensais.</p></div>
                         return (
                           <table className="w-full text-sm">
                             <thead><tr className="border-b border-gray-200">
