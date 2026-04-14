@@ -149,6 +149,15 @@ export default function FuncionariosView({
     return applySort(result, sortField, sortDir, ['matricula'])
   }, [funcs, q, status, cargo, admDe, admAte, obraAtual, tipoVinculo, sortField, sortDir, obraAtualMap])
 
+  // Pagination
+  const PAGE_SIZE = 30
+  const [page, setPage] = useState(1)
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
+  const paginatedFiltered = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+
+  // Reset page when filters change
+  useEffect(() => { setPage(1) }, [q, status, cargo, admDe, admAte, obraAtual, tipoVinculo, sortField, sortDir])
+
   const hasFilter = q || status || cargo || admDe || admAte || obraAtual || tipoVinculo
 
   function clearFilters() {
@@ -299,7 +308,7 @@ export default function FuncionariosView({
       {filtered.length > 0 ? (
         view === 'cards' ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
-            {filtered.map((f: any) => {
+            {paginatedFiltered.map((f: any) => {
               const p1 = f.prazo1 ? new Date(f.prazo1 + 'T12:00') : null
               const dias = p1 ? Math.ceil((p1.getTime() - hojeDate.getTime()) / 86400000) : null
               const vencido = dias !== null && dias < 0
@@ -392,7 +401,7 @@ export default function FuncionariosView({
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((f: any) => {
+                {paginatedFiltered.map((f: any) => {
                   const p1 = f.prazo1 ? new Date(f.prazo1 + 'T12:00') : null
                   const dias = p1 ? Math.ceil((p1.getTime() - hojeDate.getTime()) / 86400000) : null
                   const vencido = dias !== null && dias < 0
@@ -457,7 +466,32 @@ export default function FuncionariosView({
             </table>
           </div>
         )
-      ) : (
+      ) : null}
+
+      {/* Pagination */}
+      {filtered.length > PAGE_SIZE && (
+        <div className="flex items-center justify-center gap-4 mt-4 text-sm">
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium"
+          >
+            Anterior
+          </button>
+          <span className="text-xs text-gray-500">
+            Página {page} de {totalPages}
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={page >= totalPages}
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium"
+          >
+            Próxima
+          </button>
+        </div>
+      )}
+
+      {filtered.length === 0 && (
         <div className="bg-white rounded-xl border border-gray-200 p-10 text-center">
           <svg width="48" height="48" viewBox="0 0 48 48" fill="none" className="mx-auto mb-4 text-gray-300">
             <circle cx="24" cy="24" r="22" stroke="currentColor" strokeWidth="2"/>

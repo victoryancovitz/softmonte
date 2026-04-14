@@ -119,9 +119,22 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
   }, [modalForm.nome, modalForm.valor, open, editingId])
 
   async function uploadAnexo(file: File) {
+    const MAX_SIZE = 10 * 1024 * 1024 // 10 MB
+    const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp']
+    const ALLOWED_EXTENSIONS = ['pdf', 'jpg', 'jpeg', 'png', 'webp']
+
+    const ext = (file.name.split('.').pop() || '').toLowerCase()
+    if (!ALLOWED_TYPES.includes(file.type) && !ALLOWED_EXTENSIONS.includes(ext)) {
+      toast.error('Tipo de arquivo nao permitido. Aceitos: PDF, JPG, PNG, WEBP')
+      return
+    }
+    if (file.size > MAX_SIZE) {
+      toast.error('Arquivo muito grande. Tamanho maximo: 10 MB')
+      return
+    }
+
     setUploadingAnexo(true)
     try {
-      const ext = file.name.split('.').pop() || 'pdf'
       const path = `comprovantes/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
       const { error } = await supabase.storage.from('documentos').upload(path, file)
       if (error) { toast.error('Erro no upload: ' + error.message); return }

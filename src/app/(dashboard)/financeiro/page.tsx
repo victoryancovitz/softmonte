@@ -1,17 +1,19 @@
 'use client'
-import { Suspense, useState, useEffect } from 'react'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import ConfirmButton from '@/components/ConfirmButton'
 import SearchInput from '@/components/SearchInput'
 import { useToast } from '@/components/Toast'
 import { exportarExcel, exportarPDF } from '@/lib/exportLancamentos'
 
-import FluxoCaixaChart from './components/FluxoCaixaChart'
-import LancamentoModal from './components/LancamentoModal'
+const FluxoCaixaChart = dynamic(() => import('./components/FluxoCaixaChart'), { ssr: false, loading: () => <div className="h-40 animate-pulse bg-gray-100 rounded-xl" /> })
+const LancamentoModal = dynamic(() => import('./components/LancamentoModal'), { ssr: false, loading: () => null })
+const LoteBar = dynamic(() => import('./components/LoteBar'), { ssr: false, loading: () => null })
 import FiltrosAvancados, { type FilterState, FILTER_INITIAL } from './components/FiltrosAvancados'
-import LoteBar from './components/LoteBar'
+import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -59,6 +61,9 @@ function FinanceiroPage() {
   const [showFiltros, setShowFiltros] = useState(false)
   const [advFilters, setAdvFilters] = useState<FilterState>({ ...FILTER_INITIAL })
   const [alertasCoerencia, setAlertasCoerencia] = useState<string[]>([])
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const PAGE_SIZE = 50
 
   const toggleSelect = (id: string) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleTodos = (ids: string[]) => setSelected(prev => prev.size === ids.length ? new Set() : new Set(ids))
@@ -86,7 +91,7 @@ function FinanceiroPage() {
 
   useEffect(() => {
     loadData()
-  }, [obraId, showProvisões])
+  }, [obraId, showProvisões, page])
 
   function verificarCoerencia(dados: any[]): string[] {
     const alertas: string[] = []
@@ -122,11 +127,13 @@ function FinanceiroPage() {
 
   async function loadData() {
     setLoading(true)
-    let q = supabase.from('financeiro_lancamentos').select('*, obras(nome)').is('deleted_at', null).order('data_competencia').limit(5000)
+    let q = supabase.from('financeiro_lancamentos').select('*, obras(nome)', { count: 'exact' }).is('deleted_at', null).order('data_competencia')
     if (obraId && obraId !== 'all') q = q.eq('obra_id', obraId)
     if (!showProvisões) q = q.eq('is_provisao', false)
-    const { data } = await q
+    q = q.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
+    const { data, count } = await q
     setLancamentos(data ?? [])
+    setTotalCount(count ?? 0)
 
     setAlertasCoerencia(verificarCoerencia(data ?? []))
 
@@ -168,6 +175,17 @@ function FinanceiroPage() {
     setEditingLanc(l)
     setShowModal(true)
   }
+
+  // Keyboard shortcuts
+  useKeyboardShortcut('n', useCallback(() => abrirNovo(), []))
+  useKeyboardShortcut('Escape', useCallback(() => {
+    if (showModal) setShowModal(false)
+    if (payPopover) setPayPopover(null)
+  }, [showModal, payPopover]))
+  useKeyboardShortcut('/', useCallback(() => {
+    const input = document.querySelector<HTMLInputElement>('input[placeholder*="Buscar"]')
+    if (input) input.focus()
+  }, []))
 
   // KPIs
   const receitaPaga = lancamentos.filter(l => l.tipo === 'receita' && l.status === 'pago' && l.natureza !== 'financiamento').reduce((s, l) => s + Number(l.valor), 0)
@@ -228,13 +246,13 @@ function FinanceiroPage() {
           <p className="text-sm text-gray-500 mt-0.5">Receitas, despesas e fluxo de caixa por obra</p>
         </div>
         <div className="flex items-center gap-2">
-          <select value={obraId} onChange={e => setObraId(e.target.value)}
+          <select value={obraId} onChange={e => { setObraId(e.target.value); setPage(1) }}
             className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
             <option value="all">Todas as obras</option>
             {obras.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
           </select>
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
-            <input type="checkbox" checked={showProvisões} onChange={e => setShowProvisões(e.target.checked)}
+            <input type="checkbox" checked={showProvisões} onChange={e => { setShowProvisões(e.target.checked); setPage(1) }}
               className="rounded border-gray-300 text-brand" />
             Provisões
           </label>
@@ -634,11 +652,34 @@ function FinanceiroPage() {
 
           {/* Totalizadores */}
           <div className="px-5 py-3 border-t border-gray-100 bg-gray-50/50 flex items-center gap-6 text-xs flex-wrap">
-            <span className="text-gray-500">{lancamentosFiltrados.length} lançamento{lancamentosFiltrados.length !== 1 ? 's' : ''}</span>
+            <span className="text-gray-500">{lancamentosFiltrados.length} de {totalCount} lançamento{totalCount !== 1 ? 's' : ''}</span>
             <span className="text-green-700 font-semibold">Receita: {fmt(totalReceitaFiltrada)}</span>
             <span className="text-red-700 font-semibold">Despesa: {fmt(totalDespesaFiltrada)}</span>
             <span className={`font-bold ${saldoFiltrado >= 0 ? 'text-green-700' : 'text-red-700'}`}>Saldo: {fmt(saldoFiltrado)}</span>
           </div>
+
+          {/* Pagination */}
+          {totalCount > PAGE_SIZE && (
+            <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-center gap-4 text-sm">
+              <button
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium"
+              >
+                Anterior
+              </button>
+              <span className="text-xs text-gray-500">
+                Página {page} de {Math.ceil(totalCount / PAGE_SIZE)}
+              </span>
+              <button
+                onClick={() => setPage(p => Math.min(Math.ceil(totalCount / PAGE_SIZE), p + 1))}
+                disabled={page >= Math.ceil(totalCount / PAGE_SIZE)}
+                className="px-3 py-1.5 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-medium"
+              >
+                Próxima
+              </button>
+            </div>
+          )}
           </>
         )}
       </div>

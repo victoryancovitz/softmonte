@@ -1,29 +1,27 @@
+import { createClient } from '@/lib/supabase-server'
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
 
 export const dynamic = 'force-dynamic'
-export const runtime = 'nodejs'
 
 export async function GET() {
-  let db: 'connected' | 'error' = 'error'
-
+  const start = Date.now()
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-    if (supabaseUrl && supabaseKey) {
-      const supabase = createClient(supabaseUrl, supabaseKey)
-      const { error } = await supabase.from('profiles').select('user_id').limit(1)
-      db = error ? 'error' : 'connected'
-    }
-  } catch {
-    db = 'error'
+    const supabase = createClient()
+    const { count, error } = await supabase.from('obras').select('id', { count: 'exact', head: true })
+    const ms = Date.now() - start
+    if (error) throw error
+    return NextResponse.json({
+      status: 'ok',
+      database: 'connected',
+      latency_ms: ms,
+      timestamp: new Date().toISOString(),
+    })
+  } catch (e: any) {
+    return NextResponse.json({
+      status: 'error',
+      database: 'disconnected',
+      error: e.message,
+      timestamp: new Date().toISOString(),
+    }, { status: 503 })
   }
-
-  return NextResponse.json({
-    ok: true,
-    timestamp: new Date().toISOString(),
-    version: '1.0.0',
-    db,
-  })
 }
