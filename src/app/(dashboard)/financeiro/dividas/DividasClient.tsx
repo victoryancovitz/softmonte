@@ -35,6 +35,9 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
   const [expandId, setExpandId] = useState<string | null>(null)
   const [showPagar, setShowPagar] = useState<any>(null) // parcela selecionada
   const [showReneg, setShowReneg] = useState<any>(null) // dívida para renegociar
+  const [confirmandoExclusao, setConfirmandoExclusao] = useState<any>(null)
+  const [showEditar, setShowEditar] = useState<any>(null)
+  const [editForm, setEditForm] = useState({ descricao: '', banco_credor: '', numero_contrato: '', finalidade: '', observacao: '', saldo_devedor_atual: '' })
   const [parcelas, setParcelas] = useState<any[]>([])
   const [renegs, setRenegs] = useState<any[]>([])
   const [pagForm, setPagForm] = useState({ data_pagamento: new Date().toISOString().slice(0, 10), conta_id: '', valor_juros_real: '' as string, valor_mora_real: '' as string, valor_multa_real: '' as string })
@@ -208,6 +211,40 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
     toast.success(`Pagamento da parcela ${p.numero} revertido.`)
     setSaving(false)
     if (expandId) { toggleExpand(expandId); setTimeout(() => toggleExpand(p.divida_id), 100) }
+  }
+
+  async function excluirDivida(d: any) {
+    setSaving(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    const agora = new Date().toISOString()
+    const { error: e1 } = await supabase.from('passivos_nao_circulantes').update({ deleted_at: agora, deleted_by: user?.id ?? null }).eq('id', d.id)
+    if (e1) { toast.error('Erro: ' + e1.message); setSaving(false); return }
+    await supabase.from('divida_parcelas').update({ status: 'cancelada' }).eq('divida_id', d.id).in('status', ['aberta', 'atrasada', 'pendente'])
+    await supabase.from('financeiro_lancamentos').update({ deleted_at: agora }).eq('natureza', 'financiamento').eq('status', 'em_aberto').is('deleted_at', null)
+    toast.success(`Dívida "${d.descricao}" excluída.`)
+    setConfirmandoExclusao(null); setSaving(false)
+    window.location.reload()
+  }
+
+  function abrirEditar(d: any) {
+    setEditForm({ descricao: d.descricao || '', banco_credor: d.banco_credor || d.credor_display || '', numero_contrato: d.numero_contrato || '', finalidade: d.finalidade || '', observacao: d.observacao || '', saldo_devedor_atual: String(d.saldo_devedor_atual || '') })
+    setShowEditar(d)
+  }
+
+  async function salvarEdicao() {
+    if (!showEditar) return
+    setSaving(true)
+    const { error } = await supabase.from('passivos_nao_circulantes').update({
+      descricao: editForm.descricao.trim(), banco_credor: editForm.banco_credor.trim() || null,
+      numero_contrato: editForm.numero_contrato.trim() || null, finalidade: editForm.finalidade.trim() || null,
+      observacao: editForm.observacao.trim() || null,
+      saldo_devedor_atual: parseFloat(editForm.saldo_devedor_atual) || showEditar.saldo_devedor_atual,
+      saldo_devedor: parseFloat(editForm.saldo_devedor_atual) || showEditar.saldo_devedor_atual,
+    }).eq('id', showEditar.id)
+    if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
+    toast.success('Dívida atualizada.')
+    setShowEditar(null); setSaving(false)
+    window.location.reload()
   }
 
   async function confirmarRenegociacao() {
@@ -416,8 +453,12 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
                     <div className="flex gap-2 mb-4">
                       <button onClick={e => { e.stopPropagation(); const prox = parcelas.find(p => p.status === 'atrasada') || parcelas.find(p => p.status === 'aberta'); if (prox) { setShowPagar({ ...prox, _divida_pagas: d.n_parcelas_pagas }); setPagForm(f => ({ ...f, data_pagamento: new Date().toISOString().slice(0, 10), valor_juros_real: '', valor_mora_real: '', valor_multa_real: '' })) } else toast.error('Sem parcelas abertas') }}
                         className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium">💰 Registrar Pagamento</button>
+                      <button onClick={e => { e.stopPropagation(); abrirEditar(d) }}
+                        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium hover:bg-gray-200">✏️ Editar</button>
                       <button onClick={e => { e.stopPropagation(); setShowReneg({ ...d, _reneg_novo_saldo: '', _reneg_parcelas: '', _reneg_taxa: '', _reneg_motivo: '', _reneg_responsavel: '', _reneg_protocolo: '', _reneg_condicoes: '' }) }}
                         className="px-3 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-medium">🔄 Renegociar</button>
+                      <button onClick={e => { e.stopPropagation(); setConfirmandoExclusao(d) }}
+                        className="px-3 py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg text-xs font-medium hover:bg-red-100 ml-auto">🗑 Excluir</button>
                     </div>
                     {/* Cronograma */}
                     <h4 className="text-xs font-bold text-gray-400 uppercase mb-2">Cronograma de Parcelas</h4>
@@ -549,6 +590,50 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
           <p><strong>Cobertura de Juros {'>'} 3×:</strong> O resultado cobre 3× as despesas financeiras — saudável.</p>
         </div>
       </details>
+      {/* Modal Excluir Dívida */}
+      {confirmandoExclusao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+            <div className="text-center mb-4">
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-3"><span className="text-2xl">⚠️</span></div>
+              <h3 className="text-base font-bold text-gray-900">Excluir dívida?</h3>
+              <p className="text-sm text-gray-500 mt-2"><strong>{confirmandoExclusao.descricao}</strong></p>
+              <p className="text-xs text-gray-400 mt-1">Saldo devedor: {fmt(confirmandoExclusao.saldo_devedor_atual)}</p>
+            </div>
+            {Number(confirmandoExclusao.n_parcelas_pagas) > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">⚠️ Esta dívida tem {confirmandoExclusao.n_parcelas_pagas} parcela(s) já paga(s). Os lançamentos financeiros dessas parcelas <strong>não serão revertidos</strong> — apenas as parcelas em aberto serão canceladas.</div>
+            )}
+            <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-3 mb-5">Esta ação não pode ser desfeita. A dívida será removida do painel e as parcelas em aberto serão canceladas.</div>
+            <div className="flex gap-3">
+              <button onClick={() => excluirDivida(confirmandoExclusao)} disabled={saving} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 disabled:opacity-50">{saving ? 'Excluindo...' : 'Sim, excluir'}</button>
+              <button onClick={() => setConfirmandoExclusao(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Editar Dívida */}
+      {showEditar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6">
+            <h3 className="text-base font-bold text-brand mb-5">✏️ Editar dívida</h3>
+            <div className="space-y-3">
+              <div><label className="block text-xs font-semibold text-gray-600 mb-1">Descrição *</label><input value={editForm.descricao} onChange={e => setEditForm(f => ({ ...f, descricao: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand focus:outline-none" /></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">Banco/Credor</label><input value={editForm.banco_credor} onChange={e => setEditForm(f => ({ ...f, banco_credor: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /></div>
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">Nº do Contrato</label><input value={editForm.numero_contrato} onChange={e => setEditForm(f => ({ ...f, numero_contrato: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /></div>
+              </div>
+              <div><label className="block text-xs font-semibold text-gray-600 mb-1">Saldo Devedor Atual (R$)</label><input type="number" step="0.01" value={editForm.saldo_devedor_atual} onChange={e => setEditForm(f => ({ ...f, saldo_devedor_atual: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /><p className="text-[10px] text-gray-400 mt-1">Use para corrigir o saldo após atualização do credor</p></div>
+              <div><label className="block text-xs font-semibold text-gray-600 mb-1">Finalidade</label><input value={editForm.finalidade} onChange={e => setEditForm(f => ({ ...f, finalidade: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /></div>
+              <div><label className="block text-xs font-semibold text-gray-600 mb-1">Observação</label><textarea rows={3} value={editForm.observacao} onChange={e => setEditForm(f => ({ ...f, observacao: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none" /></div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={salvarEdicao} disabled={saving || !editForm.descricao.trim()} className="flex-1 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar alterações'}</button>
+              <button onClick={() => setShowEditar(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
