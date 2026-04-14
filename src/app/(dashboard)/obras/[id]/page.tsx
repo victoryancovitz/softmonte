@@ -74,7 +74,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
     { data: contasCorrentes },
   ] = await Promise.all([
     supabase.from('obras').select('*').eq('id', params.id).is('deleted_at', null).maybeSingle(),
-    supabase.from('alocacoes').select('*, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao)').eq('obra_id', params.id).eq('ativo', true),
+    supabase.from('alocacoes').select('*, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao)').eq('obra_id', params.id).eq('ativo', true).order('data_inicio'),
     supabase.from('boletins_medicao').select('*').eq('obra_id', params.id).is('deleted_at', null).order('numero'),
     getRole(),
     supabase.from('efetivo_diario').select('id, data, tipo_dia, funcionario_id, observacao, funcionarios(nome)').eq('obra_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
@@ -87,6 +87,15 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
 
   if (!obra) notFound()
 
+  // Deduplicar alocações por funcionario_id (manter a mais antiga, já ordenado ASC)
+  const alocadosUnicos: any[] = Object.values(
+    (alocados ?? []).reduce((map: Record<string, any>, a: any) => {
+      const fId = a.funcionarios?.id
+      if (fId && !map[fId]) map[fId] = a
+      return map
+    }, {})
+  )
+
   // Buscar todos os funcionários que já tiveram efetivo_diario nesta obra (incluindo desligados)
   const { data: comPontoData } = await supabase
     .from('efetivo_diario')
@@ -98,12 +107,12 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
   })
 
   // Separar em ativos (com alocação ativa) e desligados (sem alocação ativa, mas com ponto registrado ou soft-deleted)
-  const ativosIds = new Set((alocados ?? []).map((a: any) => a.funcionarios?.id).filter(Boolean))
+  const ativosIds = new Set(alocadosUnicos.map((a: any) => a.funcionarios?.id).filter(Boolean))
   const desligados = Object.values(funcsComPontoMap).filter((f: any) => !ativosIds.has(f.id))
 
   // Todos os funcionários do efetivo: alocados + com registro de efetivo_diario (sem duplicatas)
   const efetivoFuncsMap: Record<string, any> = {}
-  ;(alocados ?? []).forEach((a: any) => {
+  alocadosUnicos.forEach((a: any) => {
     if (a.funcionarios) efetivoFuncsMap[a.funcionarios.id] = a.funcionarios
   })
   Object.entries(funcsComPontoMap).forEach(([id, f]) => {
@@ -216,7 +225,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
               <div className="text-xs text-gray-500 mb-1">Equipe alocada</div>
-              <div className="text-2xl font-bold">{alocados?.length ?? 0}</div>
+              <div className="text-2xl font-bold">{alocadosUnicos.length}</div>
               <div className="text-xs text-gray-400">funcionários</div>
             </div>
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
@@ -335,13 +344,13 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
             <div className="flex items-center justify-between mb-3">
               <h2 className="text-sm font-bold text-gray-700 flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                Ativos no momento ({alocados?.length ?? 0})
+                Ativos no momento ({alocadosUnicos.length})
               </h2>
               <Link href="/alocacao/nova" className="text-xs text-brand hover:underline font-medium">+ Alocar funcionário</Link>
             </div>
-            {alocados && alocados.length > 0 ? (
+            {alocadosUnicos.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {alocados.map((a: any) => {
+                {alocadosUnicos.map((a: any) => {
                   const f = a.funcionarios
                   const nome = f?.nome_guerra ?? f?.nome ?? 'Sem nome'
                   const initials = (f?.nome ?? '').split(' ').filter(Boolean).slice(0, 2).map((w: string) => w[0]).join('').toUpperCase()
