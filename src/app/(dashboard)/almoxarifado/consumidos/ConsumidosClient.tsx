@@ -5,8 +5,7 @@ import { useToast } from '@/components/Toast'
 import { processarSaidaFIFO } from '@/lib/estoque'
 import EmptyState from '@/components/ui/EmptyState'
 import { ClipboardList, Plus, Trash2 } from 'lucide-react'
-
-const fmt = (v: any) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+import { fmt } from '@/lib/cores'
 
 interface LinhaItem {
   item_id: string

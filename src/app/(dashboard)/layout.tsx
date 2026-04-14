@@ -5,6 +5,7 @@ import ModuleTabs from '@/components/ModuleTabs'
 import { ToastProvider } from '@/components/Toast'
 import InstallPrompt from '@/components/InstallPrompt'
 import NotificationTrigger from '@/components/NotificationTrigger'
+import ErrorBoundary from '@/components/ErrorBoundary'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = createClient()
@@ -19,7 +20,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Topbar profile={profile} />
       <ModuleTabs />
       <main>
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider><ErrorBoundary>{children}</ErrorBoundary></ToastProvider>
         <InstallPrompt />
         <NotificationTrigger />
       </main>

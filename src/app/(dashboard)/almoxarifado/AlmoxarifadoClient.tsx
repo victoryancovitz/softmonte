@@ -4,8 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import EmptyState from '@/components/ui/EmptyState'
 import { Package } from 'lucide-react'
-
-const fmt = (v: any) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+import { fmt } from '@/lib/cores'
 
 export default function AlmoxarifadoClient({ itens, fornecedores }: { itens: any[]; fornecedores: any[] }) {
   const supabase = createClient()

@@ -3,8 +3,7 @@ import Link from 'next/link'
 import RefreshButton from './RefreshButton'
 import { Target, DollarSign, AlertTriangle, Users, Calendar, ArrowRight } from 'lucide-react'
 
-const fmt = (v: any) => Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const fmtK = (v: any) => fmt(v)
+import { fmt, fmtK } from '@/lib/cores'
 
 function corMargem(pct: number | null): string {
   if (pct === null) return 'text-gray-400'

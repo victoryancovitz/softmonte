@@ -1,5 +1,5 @@
 'use client'
-import { Suspense, useState, useEffect, useRef } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
@@ -8,8 +8,12 @@ import SearchInput from '@/components/SearchInput'
 import { useToast } from '@/components/Toast'
 import { exportarExcel, exportarPDF } from '@/lib/exportLancamentos'
 
+import FluxoCaixaChart from './components/FluxoCaixaChart'
+import LancamentoModal from './components/LancamentoModal'
+import FiltrosAvancados, { type FilterState, FILTER_INITIAL } from './components/FiltrosAvancados'
+import LoteBar from './components/LoteBar'
+
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-const fmtK = (v: number) => fmt(v)
 
 const CAT_COLORS: Record<string, string> = {
   'Salário Base': '#6366f1',
@@ -19,35 +23,6 @@ const CAT_COLORS: Record<string, string> = {
   'Acordos Trabalhistas': '#ef4444',
   'Rescisões Extraordinárias': '#f97316',
   'Receita HH Homem-Hora': '#10b981',
-}
-
-const CATEGORIAS_RECEITA = ['Faturamento HH', 'Serviços', 'Outras receitas']
-const CATEGORIAS_DESPESA = ['Folha de Pagamento', 'Encargos', 'Aluguel', 'Materiais', 'Compras', 'Impostos', 'Honorários', 'Despesas Financeiras', 'Amortização de Empréstimos', 'Depreciação', 'Custo dos Serviços Prestados', 'Outras despesas']
-
-const FORM_INITIAL = {
-  tipo: 'despesa',
-  nome: '',
-  fornecedor: '',
-  categoria: '',
-  centro_custo: '',
-  valor: '',
-  data_competencia: new Date().toISOString().slice(0, 7) + '-01',
-  data_vencimento: '',
-  conta_id: '',
-  numero_documento: '',
-  observacao: '',
-  anexo_url: '',
-  obra_id: '',
-  is_provisao: false,
-  status: 'em_aberto',
-  forma_pagamento: '',
-  data_pagamento: '',
-  is_parcelado: false,
-  parcela_total: 1,
-  intervalo_parcelas_dias: 30,
-  is_recorrente: false,
-  frequencia: 'mensal',
-  total_ocorrencias: 12,
 }
 
 export default function FinanceiroPageWrapper() {
@@ -73,44 +48,20 @@ function FinanceiroPage() {
   const [filtroStatus, setFiltroStatus] = useState('')
   const [filtroProvisao, setFiltroProvisao] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [editingLanc, setEditingLanc] = useState<any | null>(null)
   const [statusTab, setStatusTab] = useState<'todos' | 'em_aberto' | 'vence_hoje' | 'vencidos' | 'pago'>('todos')
   const [payPopover, setPayPopover] = useState<string | null>(null)
   const [payDate, setPayDate] = useState(new Date().toISOString().slice(0, 10))
   const [payConta, setPayConta] = useState('')
   const [contas, setContas] = useState<any[]>([])
-  const [modalForm, setModalForm] = useState({ ...FORM_INITIAL })
-  // Pagamento em lote
   const [selected, setSelected] = useState<Set<string>>(new Set())
-  const [pagandoLote, setPagandoLote] = useState(false)
-  const [modalLote, setModalLote] = useState(false)
-  const [dataLote, setDataLote] = useState(new Date().toISOString().slice(0, 10))
-  const [contaLote, setContaLote] = useState('')
-  const [confirmandoExclusao, setConfirmandoExclusao] = useState(false)
-  const [excluindoLote, setExcluindoLote] = useState(false)
-
-  // New/enhanced state variables
-  const [editingId, setEditingId] = useState<string | null>(null)
-  const [abaModal, setAbaModal] = useState<'basico' | 'avancado'>('basico')
-  const [salvando, setSalvando] = useState(false)
-  const [avisoSimilar, setAvisoSimilar] = useState<string | null>(null)
-  const [uploadingAnexo, setUploadingAnexo] = useState(false)
   const [fornecedores, setFornecedores] = useState<any[]>([])
   const [showFiltros, setShowFiltros] = useState(false)
-  const [filtroCategoria, setFiltroCategoria] = useState('')
-  const [filtroCC, setFiltroCC] = useState('')
-  const [filtroFornecedor, setFiltroFornecedor] = useState('')
-  const [filtroDe, setFiltroDe] = useState('')
-  const [filtroAte, setFiltroAte] = useState('')
-  const [filtroValorMin, setFiltroValorMin] = useState('')
-  const [filtroValorMax, setFiltroValorMax] = useState('')
+  const [advFilters, setAdvFilters] = useState<FilterState>({ ...FILTER_INITIAL })
   const [alertasCoerencia, setAlertasCoerencia] = useState<string[]>([])
-
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const toggleSelect = (id: string) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleTodos = (ids: string[]) => setSelected(prev => prev.size === ids.length ? new Set() : new Set(ids))
-
-  const [hoveredBar, setHoveredBar] = useState<{ mes: string; receita: number; pago: number; aVencer: number; vencido: number; acumulado: number; x: number } | null>(null)
 
   const supabase = createClient()
   const toast = useToast()
@@ -137,48 +88,21 @@ function FinanceiroPage() {
     loadData()
   }, [obraId, showProvisões])
 
-  // Duplicate detection debounce
-  useEffect(() => {
-    if (!showModal || editingId) return
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    const nome = modalForm.nome.trim()
-    const valor = modalForm.valor
-    if (!nome || !valor) { setAvisoSimilar(null); return }
-    debounceRef.current = setTimeout(async () => {
-      const { data } = await supabase
-        .from('financeiro_lancamentos')
-        .select('id, nome, valor, data_competencia')
-        .is('deleted_at', null)
-        .ilike('nome', `%${nome}%`)
-        .eq('valor', Number(valor))
-        .limit(3)
-      if (data && data.length > 0) {
-        setAvisoSimilar(`Possível duplicidade: encontrado "${data[0].nome}" com mesmo valor (${fmt(Number(data[0].valor))}) em ${data[0].data_competencia || 'sem data'}`)
-      } else {
-        setAvisoSimilar(null)
-      }
-    }, 600)
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current) }
-  }, [modalForm.nome, modalForm.valor, showModal, editingId])
-
   function verificarCoerencia(dados: any[]): string[] {
     const alertas: string[] = []
     const hoje = new Date().toISOString().slice(0, 10)
     const trintaDiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
 
-    // Vencidos > 30 dias
     const vencidosAntigos = dados.filter(l => l.status === 'em_aberto' && l.data_vencimento && l.data_vencimento < trintaDiasAtras && !l.is_provisao)
     if (vencidosAntigos.length > 0) {
       alertas.push(`${vencidosAntigos.length} lançamento(s) vencido(s) há mais de 30 dias — total ${fmt(vencidosAntigos.reduce((s: number, l: any) => s + Number(l.valor), 0))}`)
     }
 
-    // Sem categoria
     const semCategoria = dados.filter(l => !l.categoria && l.status !== 'cancelado')
     if (semCategoria.length > 0) {
       alertas.push(`${semCategoria.length} lançamento(s) sem categoria definida`)
     }
 
-    // Parcelamentos incompletos
     const grupos = new Map<string, any[]>()
     dados.filter(l => l.parcela_grupo_id).forEach(l => {
       if (!grupos.has(l.parcela_grupo_id)) grupos.set(l.parcela_grupo_id, [])
@@ -204,10 +128,8 @@ function FinanceiroPage() {
     const { data } = await q
     setLancamentos(data ?? [])
 
-    // Coherence check
     setAlertasCoerencia(verificarCoerencia(data ?? []))
 
-    // Build monthly cash flow
     const hojeLocal = new Date().toISOString().slice(0, 10)
     const byMes: Record<string, { mes: string; receita_pago: number; receita_aberto: number; despesa_pago: number; despesa_aberto: number; despesa_vencido: number; provisao: number }> = {}
     ;(data ?? []).forEach((l: any) => {
@@ -237,220 +159,14 @@ function FinanceiroPage() {
     setLoading(false)
   }
 
-  // --- New helper functions ---
-
   function abrirNovo() {
-    setEditingId(null)
-    setModalForm({ ...FORM_INITIAL })
-    setAbaModal('basico')
-    setAvisoSimilar(null)
+    setEditingLanc(null)
     setShowModal(true)
   }
 
   function abrirEditar(l: any) {
-    setEditingId(l.id)
-    setModalForm({
-      tipo: l.tipo || 'despesa',
-      nome: l.nome || '',
-      fornecedor: l.fornecedor || '',
-      categoria: l.categoria || '',
-      centro_custo: l.centro_custo || '',
-      valor: String(l.valor || ''),
-      data_competencia: l.data_competencia || new Date().toISOString().slice(0, 7) + '-01',
-      data_vencimento: l.data_vencimento || '',
-      conta_id: l.conta_id || '',
-      numero_documento: l.numero_documento || '',
-      observacao: l.observacao || '',
-      anexo_url: l.anexo_url || '',
-      obra_id: l.obra_id || '',
-      is_provisao: l.is_provisao || false,
-      status: l.status || 'em_aberto',
-      forma_pagamento: l.forma_pagamento || '',
-      data_pagamento: l.data_pagamento || '',
-      is_parcelado: false,
-      parcela_total: 1,
-      intervalo_parcelas_dias: 30,
-      is_recorrente: false,
-      frequencia: 'mensal',
-      total_ocorrencias: 12,
-    })
-    setAbaModal('basico')
-    setAvisoSimilar(null)
+    setEditingLanc(l)
     setShowModal(true)
-  }
-
-  async function uploadAnexo(file: File) {
-    setUploadingAnexo(true)
-    try {
-      const ext = file.name.split('.').pop() || 'pdf'
-      const path = `comprovantes/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-      const { error } = await supabase.storage.from('documentos').upload(path, file)
-      if (error) { toast.error('Erro no upload: ' + error.message); return }
-      const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(path)
-      setModalForm(f => ({ ...f, anexo_url: urlData.publicUrl }))
-      toast.success('Arquivo anexado')
-    } catch (err: any) {
-      toast.error('Erro no upload: ' + (err.message || 'Tente novamente'))
-    } finally {
-      setUploadingAnexo(false)
-    }
-  }
-
-  async function salvar() {
-    setSalvando(true)
-    try {
-      const { data: { user } } = await supabase.auth.getUser()
-      const valorNum = Number(modalForm.valor)
-      if (!valorNum || valorNum <= 0) { toast.error('Valor inválido'); setSalvando(false); return }
-      if (!modalForm.nome.trim()) { toast.error('Descrição obrigatória'); setSalvando(false); return }
-
-      const frequenciaDias = modalForm.frequencia === 'semanal' ? 7 : modalForm.frequencia === 'quinzenal' ? 15 : modalForm.frequencia === 'bimestral' ? 60 : modalForm.frequencia === 'trimestral' ? 90 : modalForm.frequencia === 'semestral' ? 180 : modalForm.frequencia === 'anual' ? 365 : 30
-
-      // EDIT mode
-      if (editingId) {
-        const { error } = await supabase.from('financeiro_lancamentos').update({
-          tipo: modalForm.tipo,
-          nome: modalForm.nome,
-          fornecedor: modalForm.fornecedor || null,
-          valor: valorNum,
-          categoria: modalForm.categoria || null,
-          centro_custo: modalForm.centro_custo || null,
-          obra_id: modalForm.obra_id || null,
-          conta_id: modalForm.conta_id || null,
-          data_competencia: modalForm.data_competencia || null,
-          data_vencimento: modalForm.data_vencimento || null,
-          observacao: modalForm.observacao || null,
-          is_provisao: modalForm.is_provisao,
-          numero_documento: modalForm.numero_documento || null,
-          anexo_url: modalForm.anexo_url || null,
-          updated_by: user?.id ?? null,
-        }).eq('id', editingId)
-        if (error) { toast.error('Erro: ' + error.message); setSalvando(false); return }
-        toast.success('Lançamento atualizado')
-      }
-      // PARCELADO mode
-      else if (modalForm.is_parcelado && modalForm.parcela_total > 1) {
-        const grupoId = crypto.randomUUID()
-        const valorParcela = Math.round(valorNum / modalForm.parcela_total * 100) / 100
-        const baseVenc = modalForm.data_vencimento || new Date().toISOString().slice(0, 10)
-        const rows = Array.from({ length: modalForm.parcela_total }, (_, i) => {
-          const venc = new Date(baseVenc + 'T12:00')
-          venc.setDate(venc.getDate() + i * modalForm.intervalo_parcelas_dias)
-          return {
-            tipo: modalForm.tipo, nome: `${modalForm.nome} (${i + 1}/${modalForm.parcela_total})`,
-            fornecedor: modalForm.fornecedor || null,
-            valor: valorParcela, categoria: modalForm.categoria || null,
-            centro_custo: modalForm.centro_custo || null,
-            obra_id: modalForm.obra_id || null, conta_id: modalForm.conta_id || null,
-            data_competencia: modalForm.data_competencia || null,
-            data_vencimento: venc.toISOString().slice(0, 10),
-            observacao: modalForm.observacao || null, is_provisao: modalForm.is_provisao,
-            origem: 'manual', status: 'em_aberto', created_by: user?.id ?? null,
-            is_parcelado: true, parcela_numero: i + 1, parcela_total: modalForm.parcela_total,
-            parcela_grupo_id: grupoId, intervalo_parcelas_dias: modalForm.intervalo_parcelas_dias,
-            numero_documento: modalForm.numero_documento || null,
-            anexo_url: modalForm.anexo_url || null,
-          }
-        })
-        const { error } = await supabase.from('financeiro_lancamentos').insert(rows)
-        if (error) { toast.error('Erro: ' + error.message); setSalvando(false); return }
-        toast.success(`${modalForm.parcela_total} parcelas criadas`)
-      }
-      // RECORRENTE mode
-      else if (modalForm.is_recorrente) {
-        const grupoId = crypto.randomUUID()
-        const baseVenc = modalForm.data_vencimento || new Date().toISOString().slice(0, 10)
-        const rows = Array.from({ length: modalForm.total_ocorrencias }, (_, i) => {
-          const venc = new Date(baseVenc + 'T12:00')
-          venc.setDate(venc.getDate() + i * frequenciaDias)
-          const comp = new Date(venc)
-          return {
-            tipo: modalForm.tipo, nome: modalForm.nome,
-            fornecedor: modalForm.fornecedor || null,
-            valor: valorNum, categoria: modalForm.categoria || null,
-            centro_custo: modalForm.centro_custo || null,
-            obra_id: modalForm.obra_id || null, conta_id: modalForm.conta_id || null,
-            data_competencia: comp.toISOString().slice(0, 10),
-            data_vencimento: venc.toISOString().slice(0, 10),
-            observacao: modalForm.observacao || null, is_provisao: modalForm.is_provisao,
-            origem: 'manual', status: 'em_aberto', created_by: user?.id ?? null,
-            is_parcelado: true, parcela_numero: i + 1, parcela_total: modalForm.total_ocorrencias,
-            parcela_grupo_id: grupoId, intervalo_parcelas_dias: frequenciaDias,
-            numero_documento: modalForm.numero_documento || null,
-            anexo_url: modalForm.anexo_url || null,
-            is_recorrente: true,
-          }
-        })
-        const { error } = await supabase.from('financeiro_lancamentos').insert(rows)
-        if (error) { toast.error('Erro: ' + error.message); setSalvando(false); return }
-        toast.success(`${modalForm.total_ocorrencias} lançamentos recorrentes criados`)
-      }
-      // SIMPLE mode
-      else {
-        const { error } = await supabase.from('financeiro_lancamentos').insert({
-          tipo: modalForm.tipo, nome: modalForm.nome, valor: valorNum,
-          fornecedor: modalForm.fornecedor || null,
-          categoria: modalForm.categoria || null,
-          centro_custo: modalForm.centro_custo || null,
-          obra_id: modalForm.obra_id || null,
-          conta_id: modalForm.conta_id || null,
-          data_competencia: modalForm.data_competencia || null,
-          data_vencimento: modalForm.data_vencimento || null,
-          observacao: modalForm.observacao || null, is_provisao: modalForm.is_provisao,
-          origem: 'manual', status: 'em_aberto', created_by: user?.id ?? null,
-          numero_documento: modalForm.numero_documento || null,
-          anexo_url: modalForm.anexo_url || null,
-        })
-        if (error) { toast.error('Erro: ' + error.message); setSalvando(false); return }
-        toast.success('Lançamento criado')
-      }
-      setShowModal(false)
-      loadData()
-    } catch (err: any) {
-      toast.error('Erro: ' + (err.message || 'Tente novamente'))
-    } finally {
-      setSalvando(false)
-    }
-  }
-
-  // Pagamento em lote
-  async function confirmarPagamentoLote() {
-    if (!dataLote || selected.size === 0) return
-    setPagandoLote(true)
-    try {
-      const upd: Record<string, unknown> = { status: 'pago', data_pagamento: dataLote }
-      if (contaLote) upd.conta_id = contaLote
-      const { error } = await supabase.from('financeiro_lancamentos').update(upd).in('id', Array.from(selected)).eq('status', 'em_aberto')
-      if (error) throw error
-      const n = selected.size
-      toast.success(`${n} lançamento${n > 1 ? 's' : ''} confirmado${n > 1 ? 's' : ''}`)
-      setSelected(new Set())
-      setModalLote(false)
-      loadData()
-    } catch (err: any) {
-      toast.error('Erro ao processar: ' + (err.message || 'Tente novamente'))
-    } finally {
-      setPagandoLote(false)
-    }
-  }
-
-  // Exclusão em lote
-  async function confirmarExclusaoLote() {
-    if (selected.size === 0) return
-    setExcluindoLote(true)
-    try {
-      const { error } = await supabase.from('financeiro_lancamentos').update({ deleted_at: new Date().toISOString() }).in('id', Array.from(selected))
-      if (error) throw error
-      const n = selected.size
-      toast.success(`${n} lançamento${n > 1 ? 's' : ''} excluído${n > 1 ? 's' : ''}`)
-      setSelected(new Set())
-      setConfirmandoExclusao(false)
-      loadData()
-    } catch (err: any) {
-      toast.error('Erro ao excluir: ' + (err.message || 'Tente novamente'))
-    } finally {
-      setExcluindoLote(false)
-    }
   }
 
   // KPIs
@@ -476,29 +192,25 @@ function FinanceiroPage() {
   const catsSorted = Object.entries(cats).sort((a, b) => b[1] - a[1])
   const totalDesp = Object.values(cats).reduce((s, v) => s + v, 0)
 
-  // Advanced filter logic
-  const hasAdvancedFilters = filtroCategoria || filtroCC || filtroFornecedor || filtroDe || filtroAte || filtroValorMin || filtroValorMax
-
   // Filtered lancamentos for the table
   const lancamentosFiltrados = lancamentos.filter(l => {
     if (busca && !l.nome?.toLowerCase().includes(busca.toLowerCase()) && !l.categoria?.toLowerCase().includes(busca.toLowerCase()) && !l.tipo?.toLowerCase().includes(busca.toLowerCase()) && !l.fornecedor?.toLowerCase().includes(busca.toLowerCase())) return false
     if (filtroTipo && l.tipo !== filtroTipo) return false
     if (filtroStatus && l.status !== filtroStatus) return false
     if (filtroProvisao && !l.is_provisao) return false
-    // Status tab filter
     const hoje = new Date().toISOString().slice(0, 10)
     if (statusTab === 'em_aberto' && (l.status !== 'em_aberto' || l.is_provisao)) return false
     if (statusTab === 'vence_hoje' && !(l.status === 'em_aberto' && l.data_vencimento === hoje)) return false
     if (statusTab === 'vencidos' && !(l.status === 'em_aberto' && l.data_vencimento && l.data_vencimento < hoje)) return false
     if (statusTab === 'pago' && l.status !== 'pago') return false
     // Advanced filters
-    if (filtroCategoria && l.categoria !== filtroCategoria) return false
-    if (filtroCC && !(l.centro_custo || '').toLowerCase().includes(filtroCC.toLowerCase())) return false
-    if (filtroFornecedor && !(l.fornecedor || '').toLowerCase().includes(filtroFornecedor.toLowerCase())) return false
-    if (filtroDe && l.data_competencia && l.data_competencia < filtroDe) return false
-    if (filtroAte && l.data_competencia && l.data_competencia > filtroAte) return false
-    if (filtroValorMin && Number(l.valor) < Number(filtroValorMin)) return false
-    if (filtroValorMax && Number(l.valor) > Number(filtroValorMax)) return false
+    if (advFilters.categoria && l.categoria !== advFilters.categoria) return false
+    if (advFilters.centroCusto && !(l.centro_custo || '').toLowerCase().includes(advFilters.centroCusto.toLowerCase())) return false
+    if (advFilters.fornecedor && !(l.fornecedor || '').toLowerCase().includes(advFilters.fornecedor.toLowerCase())) return false
+    if (advFilters.de && l.data_competencia && l.data_competencia < advFilters.de) return false
+    if (advFilters.ate && l.data_competencia && l.data_competencia > advFilters.ate) return false
+    if (advFilters.valorMin && Number(l.valor) < Number(advFilters.valorMin)) return false
+    if (advFilters.valorMax && Number(l.valor) > Number(advFilters.valorMax)) return false
     return true
   })
 
@@ -506,24 +218,6 @@ function FinanceiroPage() {
   const totalReceitaFiltrada = lancamentosFiltrados.filter(l => l.tipo === 'receita' && l.natureza !== 'financiamento').reduce((s, l) => s + Number(l.valor), 0)
   const totalDespesaFiltrada = lancamentosFiltrados.filter(l => l.tipo === 'despesa' && !l.is_provisao).reduce((s, l) => s + Number(l.valor), 0)
   const saldoFiltrado = totalReceitaFiltrada - totalDespesaFiltrada
-
-  // Button text for modal
-  const modalButtonText = editingId
-    ? 'Salvar alterações'
-    : modalForm.is_parcelado && modalForm.parcela_total > 1
-      ? `Criar ${modalForm.parcela_total} parcelas`
-      : modalForm.is_recorrente
-        ? `Criar ${modalForm.total_ocorrencias} ocorrências`
-        : 'Criar lançamento'
-
-  // Parcelamento preview dates
-  const previewParcelas = modalForm.is_parcelado && modalForm.parcela_total > 1 && modalForm.data_vencimento
-    ? Array.from({ length: Math.min(modalForm.parcela_total, 6) }, (_, i) => {
-        const d = new Date(modalForm.data_vencimento + 'T12:00')
-        d.setDate(d.getDate() + i * modalForm.intervalo_parcelas_dias)
-        return d.toLocaleDateString('pt-BR')
-      })
-    : []
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
@@ -648,104 +342,7 @@ function FinanceiroPage() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5 mb-5">
         {/* Fluxo de caixa chart */}
-        <div className="lg:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-semibold">Fluxo de Caixa Mensal</h2>
-            <div className="flex items-center gap-3 text-xs text-gray-400">
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-400 inline-block"/>&nbsp;Receita</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-red-400 inline-block"/>&nbsp;Pago</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-400 inline-block"/>&nbsp;A vencer</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-rose-600 inline-block"/>&nbsp;Vencido</span>
-              <span className="flex items-center gap-1"><span className="w-3 h-1 border-t-2 border-dashed border-brand inline-block"/>&nbsp;Acumulado</span>
-            </div>
-          </div>
-          {fluxo.length > 0 ? (
-            <div className="relative">
-            <svg width="100%" viewBox={`0 0 600 ${chartH + 60}`} className="overflow-visible">
-              {/* Grid lines */}
-              {[0, 0.25, 0.5, 0.75, 1].map(p => (
-                <g key={p}>
-                  <line x1="40" y1={chartH - p * chartH + 10} x2="590" y2={chartH - p * chartH + 10}
-                    stroke="#f3f4f6" strokeWidth="1"/>
-                  <text x="35" y={chartH - p * chartH + 14} textAnchor="end" fontSize="8" fill="#9ca3af">
-                    {fmtK(maxVal * p)}
-                  </text>
-                </g>
-              ))}
-              {/* Zero line */}
-              <line x1="40" y1={chartH + 10} x2="590" y2={chartH + 10} stroke="#e5e7eb" strokeWidth="1"/>
-
-              {fluxo.map((m, i) => {
-                const xStep = 550 / Math.max(fluxo.length, 1)
-                const x = 40 + i * xStep + xStep / 2
-                const recH = Math.min((m.totalRec / maxVal) * chartH, chartH)
-                const despH = Math.min((m.totalDesp / maxVal) * chartH, chartH)
-                const mes = m.mes.slice(5, 7) + '/' + m.mes.slice(2, 4)
-                return (
-                  <g key={m.mes}>
-                    {/* Hit area for tooltip */}
-                    <rect x={x - barW - 6} y={0} width={barW * 2 + 12} height={chartH + 30} fill="transparent"
-                      onMouseEnter={() => setHoveredBar({ mes, receita: m.totalRec, pago: m.despesa_pago, aVencer: m.despesa_aberto, vencido: m.despesa_vencido || 0, acumulado: m.acum, x })}
-                      onMouseLeave={() => setHoveredBar(null)} style={{ cursor: 'pointer' }} />
-                    {/* Receita bar */}
-                    <rect x={x - barW - 2} y={chartH - recH + 10} width={barW} height={recH}
-                      fill="#34d399" rx="2" opacity="0.85" style={{ pointerEvents: 'none' }}/>
-                    {/* Despesa stacked: pago + a vencer + vencido */}
-                    {(() => {
-                      const pagoH = Math.min((m.despesa_pago / maxVal) * chartH, chartH)
-                      const aVencerH = Math.min((m.despesa_aberto / maxVal) * chartH, chartH)
-                      const vencidoH = Math.min(((m.despesa_vencido || 0) / maxVal) * chartH, chartH)
-                      return <>
-                        <rect x={x + 2} y={chartH - pagoH - aVencerH - vencidoH + 10} width={barW} height={vencidoH}
-                          fill="#e11d48" rx="0" opacity="0.9"/>
-                        <rect x={x + 2} y={chartH - pagoH - aVencerH + 10} width={barW} height={aVencerH}
-                          fill="#fbbf24" rx="0" opacity="0.85"/>
-                        <rect x={x + 2} y={chartH - pagoH + 10} width={barW} height={pagoH}
-                          fill="#f87171" rx="2" opacity="0.85"/>
-                      </>
-                    })()}
-                    {/* Month label */}
-                    <text x={x} y={chartH + 26} textAnchor="middle" fontSize="8" fill="#6b7280">{mes}</text>
-                  </g>
-                )
-              })}
-
-              {/* Accumulated line */}
-              {fluxo.length > 1 && (() => {
-                const maxAcum = Math.max(...fluxo.map(m => Math.abs(m.acum)), 1)
-                const midY = chartH / 2 + 10
-                const pts = fluxo.map((m, i) => {
-                  const xStep = 550 / Math.max(fluxo.length, 1)
-                  const x = 40 + i * xStep + xStep / 2
-                  const y = midY - (m.acum / maxAcum) * (chartH / 2 - 5)
-                  return `${x},${y}`
-                }).join(' ')
-                return (
-                  <polyline points={pts} fill="none" stroke="#c07000" strokeWidth="2"
-                    strokeDasharray="4,3" strokeLinecap="round"/>
-                )
-              })()}
-            </svg>
-            {hoveredBar && (
-              <div className="absolute z-20 pointer-events-none bg-[#0f1e2e] text-white rounded-xl shadow-2xl border border-white/10 p-3 text-xs min-w-[180px]" style={{ left: Math.min(hoveredBar.x * 100 / 600, 65) + '%', top: 20 }}>
-                <p className="font-bold text-brand mb-2 text-sm">{hoveredBar.mes}</p>
-                <div className="space-y-1.5">
-                  <div className="flex justify-between gap-4"><span className="text-green-400">Receita</span><span className="font-semibold">{fmt(hoveredBar.receita)}</span></div>
-                  <div className="flex justify-between gap-4"><span className="text-red-400">Pago</span><span className="font-semibold">{fmt(hoveredBar.pago)}</span></div>
-                  {hoveredBar.aVencer > 0 && <div className="flex justify-between gap-4"><span className="text-amber-400">A vencer</span><span>{fmt(hoveredBar.aVencer)}</span></div>}
-                  {hoveredBar.vencido > 0 && <div className="flex justify-between gap-4"><span className="text-rose-400">Vencido</span><span>{fmt(hoveredBar.vencido)}</span></div>}
-                  <div className="border-t border-white/10 pt-1.5 mt-1">
-                    <div className="flex justify-between gap-4"><span className="text-gray-400">Saldo mês</span><span className={`font-bold ${hoveredBar.receita - hoveredBar.pago >= 0 ? 'text-green-400' : 'text-red-400'}`}>{fmt(hoveredBar.receita - hoveredBar.pago)}</span></div>
-                    <div className="flex justify-between gap-4"><span className="text-gray-400">Acumulado</span><span className={`font-semibold ${hoveredBar.acumulado >= 0 ? 'text-green-300' : 'text-red-300'}`}>{fmt(hoveredBar.acumulado)}</span></div>
-                  </div>
-                </div>
-              </div>
-            )}
-            </div>
-          ) : (
-            <div className="h-40 flex items-center justify-center text-gray-400 text-sm">Sem dados</div>
-          )}
-        </div>
+        <FluxoCaixaChart fluxo={fluxo} chartH={chartH} maxVal={maxVal} barW={barW} />
 
         {/* Despesas por categoria */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
@@ -810,66 +407,13 @@ function FinanceiroPage() {
                   </button>
                 ))
               })()}
-              <button onClick={() => setShowFiltros(f => !f)}
-                className={`text-xs px-3 py-1.5 rounded-lg border transition-colors flex items-center gap-1.5 ${showFiltros ? 'border-brand text-brand bg-brand/5' : 'border-gray-200 text-gray-600 hover:border-brand hover:text-brand'}`}>
-                <span>🔍</span> Filtros avançados
-                {hasAdvancedFilters && <span className="w-1.5 h-1.5 rounded-full bg-brand" />}
-              </button>
+              <FiltrosAvancados
+                filters={advFilters}
+                onChange={setAdvFilters}
+                visible={showFiltros}
+                onToggle={() => setShowFiltros(f => !f)}
+              />
             </div>
-
-            {/* Advanced filters panel */}
-            {showFiltros && (
-              <div className="bg-gray-50 rounded-xl border border-gray-200 p-4 space-y-3">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-400 mb-1 uppercase">Categoria</label>
-                    <select value={filtroCategoria} onChange={e => setFiltroCategoria(e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs bg-white">
-                      <option value="">Todas</option>
-                      {[...CATEGORIAS_RECEITA, ...CATEGORIAS_DESPESA].map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-400 mb-1 uppercase">Centro de custo</label>
-                    <input value={filtroCC} onChange={e => setFiltroCC(e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs" placeholder="Filtrar..." />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-semibold text-gray-400 mb-1 uppercase">Fornecedor</label>
-                    <input value={filtroFornecedor} onChange={e => setFiltroFornecedor(e.target.value)}
-                      className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs" placeholder="Filtrar..." />
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-400 mb-1 uppercase">De</label>
-                      <input type="date" value={filtroDe} onChange={e => setFiltroDe(e.target.value)}
-                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-400 mb-1 uppercase">Até</label>
-                      <input type="date" value={filtroAte} onChange={e => setFiltroAte(e.target.value)}
-                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs" />
-                    </div>
-                  </div>
-                </div>
-                <div className="flex items-end gap-3">
-                  <div className="grid grid-cols-2 gap-2 flex-1 max-w-[200px]">
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-400 mb-1 uppercase">Valor mín</label>
-                      <input type="number" value={filtroValorMin} onChange={e => setFiltroValorMin(e.target.value)}
-                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs" placeholder="0" />
-                    </div>
-                    <div>
-                      <label className="block text-[10px] font-semibold text-gray-400 mb-1 uppercase">Valor máx</label>
-                      <input type="number" value={filtroValorMax} onChange={e => setFiltroValorMax(e.target.value)}
-                        className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs" placeholder="999999" />
-                    </div>
-                  </div>
-                  <button onClick={() => { setFiltroCategoria(''); setFiltroCC(''); setFiltroFornecedor(''); setFiltroDe(''); setFiltroAte(''); setFiltroValorMin(''); setFiltroValorMax('') }}
-                    className="text-xs text-brand hover:underline font-medium pb-1">Limpar filtros</button>
-                </div>
-              </div>
-            )}
 
             {(filtroTipo || filtroStatus || filtroProvisao) && (
               <div className="flex items-center gap-2 flex-wrap">
@@ -1147,346 +691,26 @@ function FinanceiroPage() {
         )
       })()}
 
-      {/* Barra flutuante de seleção em lote */}
-      {selected.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-5 py-3 bg-[#0f1e2e] rounded-xl shadow-2xl border border-brand/30">
-          <div className="text-white text-sm">
-            <span className="font-bold text-brand">{selected.size}</span>{' '}lançamento{selected.size > 1 ? 's' : ''}
-            <span className="ml-2 text-gray-400">= {lancamentos.filter(l => selected.has(l.id)).reduce((s, l) => s + Number(l.valor), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
-          </div>
-          <div className="w-px h-6 bg-white/20" />
-          <button onClick={() => setSelected(new Set())} className="text-gray-400 hover:text-white text-sm transition-colors">Limpar</button>
-          {(() => {
-            const sel = lancamentos.filter(l => selected.has(l.id))
-            const temR = sel.some(l => l.tipo === 'receita')
-            const temD = sel.some(l => l.tipo === 'despesa')
-            const label = temR && temD ? 'Confirmar liquidação' : temR ? `Confirmar recebimento (${selected.size})` : `Confirmar pagamento (${selected.size})`
-            const cls = temR && !temD ? 'bg-green-600 hover:bg-green-700' : 'bg-brand hover:bg-brand-dark'
-            return <button onClick={() => { setDataLote(new Date().toISOString().slice(0, 10)); setContaLote(''); setModalLote(true) }} className={`${cls} text-white text-sm font-semibold px-4 py-1.5 rounded-lg transition-colors`}>{label}</button>
-          })()}
-          <div className="w-px h-6 bg-white/20" />
-          <button onClick={() => setConfirmandoExclusao(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium text-red-400 hover:text-white hover:bg-red-600/80 transition-colors border border-red-500/30 hover:border-red-500">
-            <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 4h12M5 4V2h6v2M6 7v5M10 7v5M3 4l1 10h8l1-10"/></svg>
-            Excluir ({selected.size})
-          </button>
-        </div>
-      )}
+      {/* Batch selection bar + modals */}
+      <LoteBar
+        selected={selected}
+        lancamentos={lancamentos}
+        contas={contas}
+        onClear={() => setSelected(new Set())}
+        onPaid={() => { setSelected(new Set()); loadData() }}
+        onDeleted={() => { setSelected(new Set()); loadData() }}
+      />
 
-      {/* Modal confirmação lote */}
-      {modalLote && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-md p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-1">
-              {(() => { const sel = lancamentos.filter(l => selected.has(l.id)); const temR = sel.some(l => l.tipo === 'receita'); const temD = sel.some(l => l.tipo === 'despesa'); return temR && temD ? 'Liquidar lançamentos' : temR ? 'Confirmar recebimentos' : 'Confirmar pagamentos' })()}
-            </h3>
-            <div className="bg-gray-50 rounded-lg p-3 mb-4 text-sm space-y-1">
-              {(() => {
-                const sel = lancamentos.filter(l => selected.has(l.id))
-                const despesas = sel.filter(l => l.tipo === 'despesa')
-                const receitas = sel.filter(l => l.tipo === 'receita')
-                const sumD = despesas.reduce((s, l) => s + Number(l.valor), 0)
-                const sumR = receitas.reduce((s, l) => s + Number(l.valor), 0)
-                return <>
-                  {despesas.length > 0 && <div className="flex justify-between"><span className="text-gray-500">{despesas.length} despesa{despesas.length > 1 ? 's' : ''}</span><span className="font-semibold text-red-600">−{fmt(sumD)}</span></div>}
-                  {receitas.length > 0 && <div className="flex justify-between"><span className="text-gray-500">{receitas.length} receita{receitas.length > 1 ? 's' : ''}</span><span className="font-semibold text-green-600">+{fmt(sumR)}</span></div>}
-                  <div className="border-t pt-1 flex justify-between font-bold"><span>Total</span><span>{fmt(sumD + sumR)}</span></div>
-                </>
-              })()}
-            </div>
-            <div className="mb-3">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Data de pagamento / recebimento</label>
-              <input type="date" value={dataLote} onChange={e => setDataLote(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
-            </div>
-            <div className="mb-5">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Conta bancária <span className="text-gray-400 font-normal">(opcional)</span></label>
-              <select value={contaLote} onChange={e => setContaLote(e.target.value)} className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand">
-                <option value="">— Manter conta atual —</option>
-                {contas.map(c => <option key={c.id} value={c.id}>{c.is_padrao ? '★ ' : ''}{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}
-              </select>
-            </div>
-            <div className="flex gap-3">
-              <button onClick={() => setModalLote(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancelar</button>
-              <button onClick={confirmarPagamentoLote} disabled={pagandoLote} className="flex-1 px-4 py-2 bg-brand text-white rounded-lg text-sm font-semibold hover:bg-brand-dark disabled:opacity-50">{pagandoLote ? 'Processando...' : `Confirmar (${selected.size})`}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal confirmação exclusão em lote */}
-      {confirmandoExclusao && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
-            <div className="flex items-center justify-center w-12 h-12 rounded-full bg-red-100 mx-auto mb-4">
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-            </div>
-            <h3 className="text-center text-lg font-bold text-gray-900 mb-1">Excluir {selected.size} lançamento{selected.size > 1 ? 's' : ''}?</h3>
-            <p className="text-center text-sm text-gray-500 mb-2">Esta ação não pode ser desfeita.</p>
-            {(() => {
-              const sel = lancamentos.filter(l => selected.has(l.id))
-              const despesas = sel.filter(l => l.tipo === 'despesa')
-              const receitas = sel.filter(l => l.tipo === 'receita')
-              const pagos = sel.filter(l => l.status === 'pago')
-              return (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-5 text-sm space-y-1">
-                  {despesas.length > 0 && <div className="flex justify-between text-gray-700"><span>{despesas.length} despesa{despesas.length > 1 ? 's' : ''}</span><span className="font-medium text-red-700">{fmt(despesas.reduce((s, l) => s + Number(l.valor), 0))}</span></div>}
-                  {receitas.length > 0 && <div className="flex justify-between text-gray-700"><span>{receitas.length} receita{receitas.length > 1 ? 's' : ''}</span><span className="font-medium text-green-700">{fmt(receitas.reduce((s, l) => s + Number(l.valor), 0))}</span></div>}
-                  {pagos.length > 0 && <p className="text-xs text-red-600 font-medium pt-1 border-t border-red-200 mt-1">⚠️ {pagos.length} já pago{pagos.length > 1 ? 's' : ''} — excluir afetará o resultado financeiro</p>}
-                </div>
-              )
-            })()}
-            <div className="flex gap-3">
-              <button onClick={() => setConfirmandoExclusao(false)} className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Cancelar</button>
-              <button onClick={confirmarExclusaoLote} disabled={excluindoLote} className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-50">{excluindoLote ? 'Excluindo...' : `Excluir (${selected.size})`}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Novo/Editar Lançamento — 2-tab */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div className="fixed inset-0 bg-black/40" onClick={() => setShowModal(false)} />
-          <div className="relative w-full max-w-md bg-white shadow-2xl overflow-y-auto">
-            <div className={`px-6 py-4 flex items-center justify-between ${modalForm.tipo === 'receita' ? 'bg-green-600' : 'bg-red-600'} text-white`}>
-              <h2 className="font-bold">
-                {editingId
-                  ? (modalForm.tipo === 'receita' ? 'Editar Receita' : 'Editar Despesa')
-                  : (modalForm.tipo === 'receita' ? 'Nova Receita' : 'Nova Despesa')}
-              </h2>
-              <div className="flex items-center gap-3">
-                <select value={modalForm.tipo} onChange={e => setModalForm(f => ({ ...f, tipo: e.target.value }))}
-                  className="bg-white/20 text-white text-sm rounded px-2 py-1 border-0">
-                  <option value="receita" className="text-gray-900">Receita</option>
-                  <option value="despesa" className="text-gray-900">Despesa</option>
-                </select>
-                <button onClick={() => setShowModal(false)} className="text-white/80 hover:text-white text-lg">✕</button>
-              </div>
-            </div>
-
-            {/* Tabs */}
-            <div className="flex border-b border-gray-200">
-              <button onClick={() => setAbaModal('basico')}
-                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${abaModal === 'basico' ? 'text-brand border-b-2 border-brand' : 'text-gray-500 hover:text-gray-700'}`}>
-                Básico
-              </button>
-              {!editingId && (
-                <button onClick={() => setAbaModal('avancado')}
-                  className={`flex-1 py-2.5 text-sm font-medium transition-colors ${abaModal === 'avancado' ? 'text-brand border-b-2 border-brand' : 'text-gray-500 hover:text-gray-700'}`}>
-                  Avançado
-                </button>
-              )}
-            </div>
-
-            {/* Duplicate warning */}
-            {avisoSimilar && (
-              <div className="mx-6 mt-3 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
-                ⚠️ {avisoSimilar}
-              </div>
-            )}
-
-            <div className="p-6 space-y-4">
-              {abaModal === 'basico' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Descrição *</label>
-                    <input value={modalForm.nome} onChange={e => setModalForm(f => ({ ...f, nome: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Nome do lançamento" />
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Fornecedor</label>
-                    <input value={modalForm.fornecedor} onChange={e => setModalForm(f => ({ ...f, fornecedor: e.target.value }))}
-                      list="fornecedores-list"
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Buscar fornecedor..." />
-                    <datalist id="fornecedores-list">
-                      {fornecedores.map(f => <option key={f.id} value={f.nome} />)}
-                    </datalist>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Valor *</label>
-                    <input type="number" step="0.01" value={modalForm.valor} onChange={e => setModalForm(f => ({ ...f, valor: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="0,00" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Vencimento</label>
-                    <input type="date" value={modalForm.data_vencimento} onChange={e => setModalForm(f => ({ ...f, data_vencimento: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Competência</label>
-                    <input type="date" value={modalForm.data_competencia} onChange={e => setModalForm(f => ({ ...f, data_competencia: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Conta</label>
-                    <select value={modalForm.conta_id} onChange={e => setModalForm(f => ({ ...f, conta_id: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                      <option value="">Selecionar...</option>
-                      {contas.map(c => <option key={c.id} value={c.id}>{c.is_padrao ? '★ ' : ''}{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Categoria</label>
-                    <select value={modalForm.categoria} onChange={e => setModalForm(f => ({ ...f, categoria: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                      <option value="">Selecionar...</option>
-                      {(modalForm.tipo === 'receita' ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA).map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Centro de custo</label>
-                    <input value={modalForm.centro_custo} onChange={e => setModalForm(f => ({ ...f, centro_custo: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Ex: ADM, Obra X..." />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Obra</label>
-                    <select value={modalForm.obra_id} onChange={e => {
-                      const oId = e.target.value
-                      setModalForm(f => {
-                        const ob = obras.find(o => o.id === oId)
-                        const contaId = f.tipo === 'receita' ? ob?.conta_recebimento_id : ob?.conta_pagamento_id
-                        return { ...f, obra_id: oId, conta_id: contaId || f.conta_id || contas.find(c => c.is_padrao)?.id || '' }
-                      })
-                    }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                      <option value="">Nenhuma</option>
-                      {obras.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
-                    </select>
-                  </div>
-                  <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Observação</label>
-                    <textarea value={modalForm.observacao} onChange={e => setModalForm(f => ({ ...f, observacao: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" rows={2} />
-                  </div>
-                  {/* Anexo */}
-                  <div className="col-span-2">
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Anexo (comprovante)</label>
-                    <div className="flex items-center gap-2">
-                      <label className={`px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-medium cursor-pointer hover:bg-gray-50 transition-colors ${uploadingAnexo ? 'opacity-50 pointer-events-none' : ''}`}>
-                        {uploadingAnexo ? 'Enviando...' : '📎 Selecionar arquivo'}
-                        <input type="file" className="hidden" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={e => {
-                          const file = e.target.files?.[0]
-                          if (file) uploadAnexo(file)
-                        }} />
-                      </label>
-                      {modalForm.anexo_url && (
-                        <div className="flex items-center gap-1.5 text-xs text-green-700">
-                          <span>✓ Anexado</span>
-                          <a href={modalForm.anexo_url} target="_blank" rel="noopener noreferrer" className="underline">Ver</a>
-                          <button onClick={() => setModalForm(f => ({ ...f, anexo_url: '' }))} className="text-red-500 hover:text-red-700">✕</button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="col-span-2">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                      <input type="checkbox" checked={modalForm.is_provisao} onChange={e => setModalForm(f => ({ ...f, is_provisao: e.target.checked }))}
-                        className="rounded border-gray-300 text-brand" />
-                      É provisão (despesa futura estimada)
-                    </label>
-                  </div>
-                </div>
-              )}
-
-              {abaModal === 'avancado' && !editingId && (
-                <div className="space-y-4">
-                  {/* Nº Documento */}
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-500 mb-1">Nº Documento</label>
-                    <input value={modalForm.numero_documento} onChange={e => setModalForm(f => ({ ...f, numero_documento: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="NF-e, OS, boleto..." />
-                  </div>
-
-                  {/* Parcelamento */}
-                  <div className="border border-gray-200 rounded-xl p-4">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer mb-2">
-                      <input type="checkbox" checked={modalForm.is_parcelado} onChange={e => setModalForm(f => ({ ...f, is_parcelado: e.target.checked, is_recorrente: false }))}
-                        className="rounded border-gray-300 text-brand" />
-                      <span className="font-medium">Parcelado</span>
-                    </label>
-                    {modalForm.is_parcelado && (
-                      <div className="space-y-3 mt-2">
-                        <div className="flex gap-3">
-                          <div>
-                            <label className="block text-[10px] text-gray-400 mb-0.5">Parcelas</label>
-                            <select value={modalForm.parcela_total} onChange={e => setModalForm(f => ({ ...f, parcela_total: Number(e.target.value) }))}
-                              className="px-2 py-1 border border-gray-200 rounded text-sm">
-                              {[1,2,3,4,5,6,7,8,9,10,11,12,18,24,36].map(n => <option key={n} value={n}>{n}x</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-[10px] text-gray-400 mb-0.5">Intervalo</label>
-                            <select value={modalForm.intervalo_parcelas_dias} onChange={e => setModalForm(f => ({ ...f, intervalo_parcelas_dias: Number(e.target.value) }))}
-                              className="px-2 py-1 border border-gray-200 rounded text-sm">
-                              <option value={7}>Semanal</option>
-                              <option value={15}>Quinzenal</option>
-                              <option value={30}>Mensal</option>
-                              <option value={60}>Bimestral</option>
-                              <option value={90}>Trimestral</option>
-                            </select>
-                          </div>
-                        </div>
-                        {modalForm.parcela_total > 1 && Number(modalForm.valor) > 0 && (
-                          <div className="bg-gray-50 rounded-lg p-2.5 text-xs space-y-1">
-                            <div className="font-semibold text-gray-700">{modalForm.parcela_total}x de {fmt(Math.round(Number(modalForm.valor) / modalForm.parcela_total * 100) / 100)}</div>
-                            {previewParcelas.length > 0 && (
-                              <div className="text-gray-500">
-                                Vencimentos: {previewParcelas.join(', ')}{modalForm.parcela_total > 6 ? '...' : ''}
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Recorrência */}
-                  <div className="border border-gray-200 rounded-xl p-4">
-                    <label className="flex items-center gap-2 text-sm cursor-pointer mb-2">
-                      <input type="checkbox" checked={modalForm.is_recorrente} onChange={e => setModalForm(f => ({ ...f, is_recorrente: e.target.checked, is_parcelado: false }))}
-                        className="rounded border-gray-300 text-brand" />
-                      <span className="font-medium">Recorrente (gera automaticamente)</span>
-                    </label>
-                    {modalForm.is_recorrente && (
-                      <div className="flex gap-3 mt-2">
-                        <div>
-                          <label className="block text-[10px] text-gray-400 mb-0.5">Frequência</label>
-                          <select value={modalForm.frequencia} onChange={e => setModalForm(f => ({ ...f, frequencia: e.target.value }))}
-                            className="px-2 py-1 border border-gray-200 rounded text-sm">
-                            <option value="semanal">Semanal</option>
-                            <option value="quinzenal">Quinzenal</option>
-                            <option value="mensal">Mensal</option>
-                            <option value="bimestral">Bimestral</option>
-                            <option value="trimestral">Trimestral</option>
-                            <option value="semestral">Semestral</option>
-                            <option value="anual">Anual</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[10px] text-gray-400 mb-0.5">Total de ocorrências</label>
-                          <select value={modalForm.total_ocorrencias} onChange={e => setModalForm(f => ({ ...f, total_ocorrencias: Number(e.target.value) }))}
-                            className="px-2 py-1 border border-gray-200 rounded text-sm">
-                            {[3,6,12,24,36,48,60].map(n => <option key={n} value={n}>{n}x</option>)}
-                          </select>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-2">
-                <button onClick={() => setShowModal(false)} className="flex-1 px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">
-                  Cancelar
-                </button>
-                <button disabled={!modalForm.nome || !modalForm.valor || salvando} onClick={salvar}
-                  className={`flex-1 px-4 py-2 text-white rounded-xl text-sm font-medium disabled:opacity-40 ${editingId ? 'bg-brand hover:bg-brand-dark' : modalForm.tipo === 'receita' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}`}>
-                  {salvando ? 'Salvando...' : modalButtonText}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modal Novo/Editar Lançamento */}
+      <LancamentoModal
+        open={showModal}
+        onClose={() => setShowModal(false)}
+        editingLanc={editingLanc}
+        contas={contas}
+        fornecedores={fornecedores}
+        obras={obras}
+        onSaved={loadData}
+      />
     </div>
   )
 }
