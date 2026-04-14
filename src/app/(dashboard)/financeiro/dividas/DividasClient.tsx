@@ -215,12 +215,18 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
 
   async function excluirDivida(d: any) {
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
     const agora = new Date().toISOString()
-    const { error: e1 } = await supabase.from('passivos_nao_circulantes').update({ deleted_at: agora, deleted_by: user?.id ?? null }).eq('id', d.id)
-    if (e1) { toast.error('Erro: ' + e1.message); setSaving(false); return }
+    // 1. Soft-delete da dívida (sem deleted_by — campo não existe)
+    const { error: e1 } = await supabase.from('passivos_nao_circulantes').update({ deleted_at: agora, status: 'cancelada' }).eq('id', d.id)
+    if (e1) { toast.error('Erro ao excluir: ' + e1.message); setSaving(false); return }
+    // 2. Cancelar parcelas em aberto/atrasadas
     await supabase.from('divida_parcelas').update({ status: 'cancelada' }).eq('divida_id', d.id).in('status', ['aberta', 'atrasada', 'pendente'])
-    await supabase.from('financeiro_lancamentos').update({ deleted_at: agora }).eq('natureza', 'financiamento').eq('status', 'em_aberto').is('deleted_at', null)
+    // 3. Soft-delete apenas lançamentos em_aberto vinculados às parcelas
+    const { data: parcsComLanc } = await supabase.from('divida_parcelas').select('lancamento_id').eq('divida_id', d.id).not('lancamento_id', 'is', null)
+    const lancIds = (parcsComLanc ?? []).map((p: any) => p.lancamento_id).filter(Boolean)
+    if (lancIds.length > 0) {
+      await supabase.from('financeiro_lancamentos').update({ deleted_at: agora }).in('id', lancIds).eq('status', 'em_aberto')
+    }
     toast.success(`Dívida "${d.descricao}" excluída.`)
     setConfirmandoExclusao(null); setSaving(false)
     window.location.reload()
@@ -600,10 +606,18 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
               <p className="text-sm text-gray-500 mt-2"><strong>{confirmandoExclusao.descricao}</strong></p>
               <p className="text-xs text-gray-400 mt-1">Saldo devedor: {fmt(confirmandoExclusao.saldo_devedor_atual)}</p>
             </div>
-            {Number(confirmandoExclusao.n_parcelas_pagas) > 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mb-4 text-xs text-amber-800">⚠️ Esta dívida tem {confirmandoExclusao.n_parcelas_pagas} parcela(s) já paga(s). Os lançamentos financeiros dessas parcelas <strong>não serão revertidos</strong> — apenas as parcelas em aberto serão canceladas.</div>
-            )}
-            <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-3 mb-5">Esta ação não pode ser desfeita. A dívida será removida do painel e as parcelas em aberto serão canceladas.</div>
+            {(() => {
+              const pagas = parcelas.filter(p => p.status === 'paga').length
+              const abertas = parcelas.filter(p => p.status === 'aberta' || p.status === 'atrasada' || p.status === 'pendente').length
+              return (
+                <div className="space-y-1.5 mb-4">
+                  {pagas > 0 && <div className="flex items-center gap-2 text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-xs">🔒 {pagas} parcela(s) já paga(s) — mantidas no histórico financeiro</div>}
+                  {abertas > 0 && <div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-xs">❌ {abertas} parcela(s) em aberto — serão canceladas</div>}
+                  {pagas === 0 && abertas === 0 && <div className="text-xs text-gray-400">Sem parcelas carregadas — expanda a dívida antes de excluir para ver o impacto.</div>}
+                </div>
+              )
+            })()}
+            <div className="text-xs text-gray-400 bg-gray-50 rounded-lg p-3 mb-5">Esta ação não pode ser desfeita. A dívida será removida do painel.</div>
             <div className="flex gap-3">
               <button onClick={() => excluirDivida(confirmandoExclusao)} disabled={saving} className="flex-1 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 disabled:opacity-50">{saving ? 'Excluindo...' : 'Sim, excluir'}</button>
               <button onClick={() => setConfirmandoExclusao(null)} className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-600 hover:bg-gray-50">Cancelar</button>
