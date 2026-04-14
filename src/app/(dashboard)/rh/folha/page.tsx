@@ -61,6 +61,25 @@ export default function FolhaPage() {
       const tot_ben = custos.reduce((s, c) => s + Number(c.beneficios_valor || 0), 0)
       const tot = tot_bruto + tot_enc + tot_prov + tot_ben
 
+      // 3b) Validar composição contratual (alerta, não bloqueia)
+      const { data: composicaoCheck } = await supabase.from('contrato_composicao').select('funcao_nome, quantidade_contratada').eq('obra_id', form.obra_id).eq('ativo', true)
+      const porCargo: Record<string, number> = {}
+      for (const c of custos) { const cargo = (c.cargo || '').toUpperCase(); porCargo[cargo] = (porCargo[cargo] || 0) + 1 }
+      const excedentes: string[] = []
+      for (const comp of (composicaoCheck ?? [])) {
+        const cargo = comp.funcao_nome.toUpperCase()
+        const qtdReal = porCargo[cargo] || 0
+        if (qtdReal > comp.quantidade_contratada) excedentes.push(`${comp.funcao_nome}: ${comp.quantidade_contratada} contratados, ${qtdReal} na folha (+${qtdReal - comp.quantidade_contratada})`)
+      }
+      const semContrato: string[] = []
+      for (const [cargo, qtd] of Object.entries(porCargo)) {
+        if (!(composicaoCheck ?? []).find((c: any) => c.funcao_nome.toUpperCase() === cargo) && qtd > 0) semContrato.push(`${cargo}: ${qtd} pessoa(s) sem contrato`)
+      }
+      if (excedentes.length > 0 || semContrato.length > 0) {
+        const msg = [excedentes.length > 0 ? `FUNCIONÁRIOS ACIMA DO CONTRATO:\n${excedentes.join('\n')}` : '', semContrato.length > 0 ? `CARGOS SEM CONTRATO:\n${semContrato.join('\n')}` : '', '\nA folha será fechada normalmente (obrigação CLT).\nCrie aditivos para regularizar antes de emitir BMs.'].filter(Boolean).join('\n\n')
+        if (!window.confirm(`⚠️ ${msg}\n\nDeseja continuar com o fechamento?`)) { setFechando(false); return }
+      }
+
       // data de pagamento: 5º dia útil do mês seguinte (simplificado: dia 5)
       const pagMes = form.mes === 12 ? 1 : form.mes + 1
       const pagAno = form.mes === 12 ? form.ano + 1 : form.ano

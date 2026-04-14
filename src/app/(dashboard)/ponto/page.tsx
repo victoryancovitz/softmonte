@@ -47,6 +47,8 @@ export default function PontoPage() {
   const [showImport, setShowImport] = useState(false)
   const [showDiaRapido, setShowDiaRapido] = useState(false)
   const [limitesPorFuncao, setLimitesPorFuncao] = useState<Record<string, { qtd: number; hh_dia: number }>>({})
+  const [obraDataInicio, setObraDataInicio] = useState<string | null>(null)
+  const [obraDataFim, setObraDataFim] = useState<string | null>(null)
   const supabase = createClient()
   const toast = useToast()
 
@@ -184,6 +186,11 @@ export default function PontoPage() {
       }
     })
     setLimitesPorFuncao(limites)
+
+    // Buscar datas da obra para bloquear células fora do período
+    const { data: obraInfo } = await supabase.from('obras').select('data_inicio, data_prev_fim').eq('id', obraId).single()
+    setObraDataInicio(obraInfo?.data_inicio ?? null)
+    setObraDataFim(obraInfo?.data_prev_fim ?? null)
 
     setLoading(false)
   }, [obraId, mes, ano])
@@ -536,11 +543,14 @@ export default function PontoPage() {
                         const dateStr = `${ano}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`
                         const beforeAdm = admissaoDate && dateStr < admissaoDate
                         const afterDem = demissaoDate && dateStr > demissaoDate
-                        const naoElegivel = beforeAdm || afterDem
+                        const beforeObra = obraDataInicio && dateStr < obraDataInicio
+                        const afterObra = obraDataFim && dateStr > obraDataFim
+                        const naoElegivel = beforeAdm || afterDem || beforeObra || afterObra
                         if (naoElegivel) {
-                          // Cell hidden — funcionário não pertencia à empresa nesse dia
+                          const motivo = beforeObra ? 'Antes do início da obra' : afterObra ? 'Após o fim da obra' : beforeAdm ? 'Antes da admissão' : 'Após desligamento'
+                          // Cell blocked
                           return (
-                            <td key={d} className="p-0 bg-gray-200/50">
+                            <td key={d} className="p-0 bg-gray-200/50" title={motivo}>
                               <div className="w-full h-full px-1 py-1.5"></div>
                             </td>
                           )
