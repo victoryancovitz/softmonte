@@ -1,3 +1,5 @@
+export const revalidate = 120 // 2 min cache
+
 import { createClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import RefreshButton from './RefreshButton'
