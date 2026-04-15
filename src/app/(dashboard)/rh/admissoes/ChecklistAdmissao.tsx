@@ -8,6 +8,7 @@ import {
   ArrowRight, Check, X, Upload, AlertTriangle,
 } from 'lucide-react'
 import { etapaOk } from '@/lib/admissao-utils'
+import ModalFichaEPI from '@/components/admissao/ModalFichaEPI'
 
 /* ─── Constants ─── */
 
@@ -334,24 +335,18 @@ export default function ChecklistAdmissao({
         }}
       />
 
-      <EPIUniformeModal
-        open={activeModal === 'etapa_epi_entregue'}
-        onClose={() => setActiveModal(null)}
-        saving={saving}
-        categoria="EPI"
-        titulo="EPI Entregue"
-        funcionarioId={funcionario.id}
-        workflowId={workflow.id}
-        custoField="custo_epi"
-        etapaKey="etapa_epi_entregue"
-        onDone={async () => {
-          await updateEtapa('etapa_epi_entregue')
-          await checkCompletion()
-          setActiveModal(null)
-          onUpdate()
-          toast.success('EPI registrado!')
-        }}
-      />
+      {activeModal === 'etapa_epi_entregue' && (
+        <ModalFichaEPI
+          funcionario={funcionario}
+          workflowId={workflow.id}
+          onClose={() => setActiveModal(null)}
+          onSuccess={async () => {
+            await checkCompletion()
+            setActiveModal(null)
+            onUpdate()
+          }}
+        />
+      )}
 
       <IntegracaoSSTModal
         open={activeModal === 'etapa_integracao'}
