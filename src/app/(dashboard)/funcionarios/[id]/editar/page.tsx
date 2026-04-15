@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import Breadcrumb from '@/components/ui/Breadcrumb'
 import Tooltip from '@/components/ui/Tooltip'
@@ -15,6 +15,11 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const highlightField = searchParams.get('field')
+  const fromAdmissao = searchParams.get('from') === 'admissao'
+  const admissaoWorkflowId = searchParams.get('workflow_id')
+  const admissaoStep = searchParams.get('step')
   const supabase = createClient()
 
   useEffect(() => {
@@ -30,6 +35,22 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
       }
     })()
   }, [params.id])
+
+  // Scroll to and highlight field when coming from admissao panel
+  useEffect(() => {
+    if (!loading && highlightField) {
+      setTimeout(() => {
+        const el = document.querySelector(`[data-field="${highlightField}"]`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          el.classList.add('ring-2', 'ring-brand', 'ring-offset-2', 'rounded-xl')
+          const input = el.querySelector('input, select') as HTMLElement | null
+          if (input) input.focus()
+          setTimeout(() => el.classList.remove('ring-2', 'ring-brand', 'ring-offset-2', 'rounded-xl'), 3000)
+        }
+      }, 300)
+    }
+  }, [loading, highlightField])
 
   function set(field: string, value: any) { setForm((f: any) => ({ ...f, [field]: value })) }
 
@@ -106,7 +127,10 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
     if (error) { setError(formatSupabaseError(error)); setSaving(false); return }
     setSuccess(true)
     setTimeout(() => {
-      router.push(`/funcionarios/${params.id}`)
+      const backUrl = fromAdmissao && admissaoWorkflowId && admissaoStep
+        ? `/funcionarios/${params.id}?from=admissao&workflow_id=${admissaoWorkflowId}&step=${admissaoStep}`
+        : `/funcionarios/${params.id}`
+      router.push(backUrl)
       router.refresh()
     }, 1200)
   }
@@ -124,8 +148,14 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
         { label: 'Editar' },
       ]} />
 
+      {fromAdmissao && (
+        <div className="mb-4 bg-blue-600 text-white rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm">
+          <span>Preenchendo dados da admissao — salve para voltar ao checklist.</span>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h1 className="text-lg font-bold font-display text-brand mb-6">Editar funcionário</h1>
+        <h1 className="text-lg font-bold font-display text-brand mb-6">Editar funcionario</h1>
         {success && <div className="mb-4 p-3 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl">Atualizado! Redirecionando...</div>}
         {error && <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl">{error}</div>}
 
@@ -138,16 +168,16 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
                 <input required type="text" value={form.nome ?? ''} onChange={e => set('nome', e.target.value)} className={inp} style={{textTransform:'uppercase'}}/></div>
               <div><label className={lbl}>Nome de Guerra (opcional)</label>
                 <input type="text" value={form.nome_guerra ?? ''} onChange={e => set('nome_guerra', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Matrícula (opcional)</label>
+              <div data-field="matricula"><label className={lbl}>Matrícula (opcional)</label>
                 <input type="text" value={form.matricula ?? ''} onChange={e => set('matricula', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>ID Ponto (Secullum)</label>
+              <div data-field="id_ponto"><label className={lbl}>ID Ponto (Secullum)</label>
                 <input type="text" inputMode="numeric" pattern="[0-9]*" value={form.id_ponto ?? ''}
                   onChange={e => set('id_ponto', e.target.value.replace(/\D/g, ''))} className={inp}/></div>
-              <div><label className={lbl}>RE</label>
+              <div data-field="re"><label className={lbl}>RE</label>
                 <input type="text" value={form.re ?? ''} onChange={e => set('re', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>CPF</label>
+              <div data-field="cpf"><label className={lbl}>CPF</label>
                 <input type="text" value={form.cpf ?? ''} onChange={e => set('cpf', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>PIS</label>
+              <div data-field="pis"><label className={lbl}>PIS</label>
                 <input type="text" value={form.pis ?? ''} onChange={e => set('pis', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>Status</label>
                 <select value={form.status ?? 'disponivel'} onChange={e => set('status', e.target.value)} className={inp + ' bg-white'}>
@@ -167,7 +197,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
                 <select value={form.turno ?? 'diurno'} onChange={e => set('turno', e.target.value)} className={inp + ' bg-white'}>
                   <option value="diurno">Diurno</option><option value="noturno">Noturno</option><option value="misto">Misto</option>
                 </select></div>
-              <div><label className={lbl}>Data de nascimento</label>
+              <div data-field="data_nascimento"><label className={lbl}>Data de nascimento</label>
                 <input type="date" value={form.data_nascimento ?? ''} onChange={e => set('data_nascimento', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>Data de admissão</label>
                 <input type="date" value={form.admissao ?? ''} onChange={e => set('admissao', e.target.value)} className={inp}/></div>
@@ -244,32 +274,32 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
           <section>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Dados Pessoais</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className={lbl}>Telefone</label>
+              <div data-field="telefone"><label className={lbl}>Telefone</label>
                 <input type="text" value={form.telefone ?? ''} onChange={e => set('telefone', e.target.value)} className={inp} /></div>
-              <div><label className={lbl}>Naturalidade</label>
+              <div data-field="naturalidade"><label className={lbl}>Naturalidade</label>
                 <input type="text" value={form.naturalidade ?? ''} onChange={e => set('naturalidade', e.target.value)} className={inp} placeholder="Cidade-UF"/></div>
-              <div><label className={lbl}>Estado civil</label>
+              <div data-field="estado_civil"><label className={lbl}>Estado civil</label>
                 <select value={form.estado_civil ?? ''} onChange={e => set('estado_civil', e.target.value)} className={inp + ' bg-white'}>
                   <option value="">—</option>
                   <option>SOLTEIRO</option><option>CASADO</option><option>DIVORCIADO</option><option>VIUVO</option><option>UNIAO ESTAVEL</option>
                 </select></div>
-              <div><label className={lbl}>Raça/Cor</label>
+              <div data-field="raca_cor"><label className={lbl}>Raca/Cor</label>
                 <select value={form.raca_cor ?? ''} onChange={e => set('raca_cor', e.target.value)} className={inp + ' bg-white'}>
                   <option value="">—</option>
                   <option>BRANCA</option><option>PRETA</option><option>PARDA</option><option>AMARELA</option><option>INDIGENA</option>
                 </select></div>
-              <div><label className={lbl}>Título de Eleitor</label>
+              <div data-field="titulo_eleitor"><label className={lbl}>Titulo de Eleitor</label>
                 <input type="text" value={form.titulo_eleitor ?? ''} onChange={e => set('titulo_eleitor', e.target.value)} className={inp}/></div>
               <div /> {/* spacer */}
-              <div><label className={lbl}>Nome do Pai</label>
+              <div data-field="nome_pai"><label className={lbl}>Nome do Pai</label>
                 <input type="text" value={form.nome_pai ?? ''} onChange={e => set('nome_pai', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Nome da Mãe</label>
+              <div data-field="nome_mae"><label className={lbl}>Nome da Mae</label>
                 <input type="text" value={form.nome_mae ?? ''} onChange={e => set('nome_mae', e.target.value)} className={inp}/></div>
-              <div className="sm:col-span-2"><label className={lbl}>Endereço</label>
+              <div data-field="endereco" className="sm:col-span-2"><label className={lbl}>Endereco</label>
                 <input type="text" value={form.endereco ?? ''} onChange={e => set('endereco', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Cidade</label>
+              <div data-field="cidade_endereco"><label className={lbl}>Cidade</label>
                 <input type="text" value={form.cidade_endereco ?? ''} onChange={e => set('cidade_endereco', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>CEP</label>
+              <div data-field="cep"><label className={lbl}>CEP</label>
                 <input type="text" value={form.cep ?? ''} onChange={e => set('cep', e.target.value)} className={inp}/></div>
             </div>
           </section>
@@ -284,9 +314,9 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
                 <input type="text" value={form.agencia_conta ?? ''} onChange={e => set('agencia_conta', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>PIX</label>
                 <input type="text" value={form.pix ?? ''} onChange={e => set('pix', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Tamanho Bota <span className="text-gray-400 font-normal">(Compras)</span></label>
+              <div data-field="tamanho_bota"><label className={lbl}>Tamanho Bota <span className="text-gray-400 font-normal">(Compras)</span></label>
                 <input type="text" value={form.tamanho_bota ?? ''} onChange={e => set('tamanho_bota', e.target.value)} className={inp}/></div>
-              <div><label className={lbl}>Tamanho Uniforme <span className="text-gray-400 font-normal">(Compras)</span></label>
+              <div data-field="tamanho_uniforme"><label className={lbl}>Tamanho Uniforme <span className="text-gray-400 font-normal">(Compras)</span></label>
                 <input type="text" value={form.tamanho_uniforme ?? ''} onChange={e => set('tamanho_uniforme', e.target.value)} className={inp}/></div>
             </div>
           </section>

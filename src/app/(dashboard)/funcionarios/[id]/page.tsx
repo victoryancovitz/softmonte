@@ -8,6 +8,9 @@ import FuncionarioDocumentos from '@/components/FuncionarioDocumentos'
 import FuncionarioTabs, { Tab } from '@/components/FuncionarioTabs'
 import PromocaoButton from '@/components/PromocaoButton'
 import { User, Briefcase, DollarSign, Clock, FileText, History } from 'lucide-react'
+import AdmissaoStepPanel from '@/components/AdmissaoStepPanel'
+import AdmissaoBannerWrapper from '@/components/AdmissaoBannerWrapper'
+import { ADMISSAO_STEPS_FIELDS } from '@/lib/admissao-steps-config'
 
 import TabVisaoGeral from './tabs/TabVisaoGeral'
 import TabContrato from './tabs/TabContrato'
@@ -31,7 +34,7 @@ const STATUS_COLOR: Record<string, string> = {
   inativo: 'bg-gray-100 text-gray-500 border-gray-200',
 }
 
-export default async function FuncionarioPage({ params }: { params: { id: string } }) {
+export default async function FuncionarioPage({ params, searchParams }: { params: { id: string }, searchParams: { from?: string, workflow_id?: string, step?: string } }) {
   const supabase = createClient()
   const { data: f } = await supabase.from('funcionarios').select('*').eq('id', params.id).single()
   if (!f) notFound()
@@ -143,6 +146,11 @@ export default async function FuncionarioPage({ params }: { params: { id: string
   const vinculosAnteriores = (vinculosHistorico ?? []) as any[]
   const arquivadosAnteriores = (arquivadosHistorico ?? []) as any[]
   const totalVinculos = vinculosAnteriores.length + arquivadosAnteriores.length
+
+  // ========= ADMISSAO CONTEXT =========
+  const isAdmissaoFlow = searchParams.from === 'admissao' && searchParams.workflow_id && searchParams.step
+  const admissaoStep = searchParams.step || ''
+  const admissaoStepConfig = isAdmissaoFlow ? ADMISSAO_STEPS_FIELDS[admissaoStep] : null
 
   // ========= TABS =========
   const tabVisaoGeral: Tab = {
@@ -304,7 +312,13 @@ export default async function FuncionarioPage({ params }: { params: { id: string
 
   // ========= LAYOUT =========
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto">
+    <div className={`p-4 sm:p-6 max-w-6xl mx-auto ${isAdmissaoFlow ? 'md:mr-[280px]' : ''}`}>
+      {isAdmissaoFlow && admissaoStepConfig && (
+        <AdmissaoBannerWrapper
+          funcName={f.nome_guerra || f.nome}
+          stepLabel={admissaoStepConfig.label}
+        />
+      )}
       <div className="flex items-center gap-2 mb-4 text-sm">
         <BackButton fallback="/funcionarios" />
         <Link href="/funcionarios" className="text-gray-400 hover:text-gray-600">Funcionários</Link>
@@ -465,6 +479,14 @@ export default async function FuncionarioPage({ params }: { params: { id: string
 
       {/* Tabs */}
       <FuncionarioTabs tabs={tabs} />
+
+      {isAdmissaoFlow && (
+        <AdmissaoStepPanel
+          funcionario={f}
+          step={admissaoStep}
+          workflowId={searchParams.workflow_id!}
+        />
+      )}
     </div>
   )
 }
