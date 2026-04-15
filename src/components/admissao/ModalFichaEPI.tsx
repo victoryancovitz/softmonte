@@ -81,10 +81,10 @@ export default function ModalFichaEPI({ funcionario, workflowId, onClose, onSucc
       if (kit && kit.length > 0) {
         setItens(kit.map((k: any) => ({
           id: genId(),
-          nome: k.nome || k.epi_nome || '',
-          qtd: k.qtd || k.quantidade || 1,
-          un: k.un || k.unidade || 'un',
-          ca: k.ca || k.certificado_aprovacao || '',
+          nome: k.nome_epi || '',
+          qtd: Number(k.quantidade) || 1,
+          un: k.unidade || 'UND',
+          ca: k.ca || '',
         })))
       }
       setLoadingKit(false)

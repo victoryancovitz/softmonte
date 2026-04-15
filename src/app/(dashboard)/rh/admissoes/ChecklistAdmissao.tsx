@@ -32,7 +32,12 @@ const UFS = [
 
 function fmtDate(d: string | null | undefined): string {
   if (!d) return ''
-  return new Date(d + 'T12:00:00').toLocaleDateString('pt-BR')
+  try {
+    // Handle both "2026-04-15" and "2026-04-15T14:05:07+00" formats
+    const date = d.length <= 10 ? new Date(d + 'T12:00:00') : new Date(d)
+    if (isNaN(date.getTime())) return ''
+    return date.toLocaleDateString('pt-BR')
+  } catch { return '' }
 }
 
 /* ─── Modal Shell ─── */
