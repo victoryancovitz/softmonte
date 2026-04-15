@@ -101,7 +101,11 @@ export default async function HoleritePage({ params }: { params: { id: string; f
         {/* ══ BLOCO 1: RECIBO DE PAGAMENTO ══ */}
         <div style={{ border: '2px solid #000', padding: 10, marginBottom: 12 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid #000', paddingBottom: 6, marginBottom: 8 }}>
-            <div><div style={{ fontSize: 14, fontWeight: 900, color: '#0F3757' }}>TECNOMONTE</div><div style={{ fontSize: 8 }}>FABRICAÇÃO, MONTAGEM E MANUTENÇÃO INDUSTRIAL</div></div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo_tecnomonte.png" style={{ width: 140, height: 'auto' }} alt="Tecnomonte" />
+              <div><div style={{ fontSize: 14, fontWeight: 900, color: '#0F3757' }}>TECNOMONTE</div><div style={{ fontSize: 8 }}>FABRICAÇÃO, MONTAGEM E MANUTENÇÃO INDUSTRIAL</div></div>
+            </div>
             <div style={{ textAlign: 'right' }}><div style={{ fontSize: 11, fontWeight: 700 }}>RECIBO DE PAGAMENTO</div><div style={{ fontSize: 10, fontWeight: 700 }}>Valor R$ {f2(liquido)}</div></div>
           </div>
           <div style={{ fontSize: 9, lineHeight: 1.6 }}>

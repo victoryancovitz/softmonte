@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { X, Plus, Trash2, Check } from 'lucide-react'
+import { gerarPDFHTML } from '@/lib/pdf-template'
 
 /* ─── Types ─── */
 
@@ -234,53 +235,43 @@ export default function ModalFichaEPI({ funcionario, workflowId, onClose, onSucc
       ? new Date(funcionario.admissao + 'T12:00:00').toLocaleDateString('pt-BR')
       : '-'
     const signImg = assinaturaSvg || exportCanvas()
+    const entregaFmt = dataEntrega ? new Date(dataEntrega + 'T12:00:00').toLocaleDateString('pt-BR') : today
 
-    return `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Ficha de EPI - ${funcionario.nome}</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 11px; margin: 20px; color: #333; }
-  h1 { text-align: center; font-size: 16px; margin-bottom: 4px; }
-  h2 { text-align: center; font-size: 12px; font-weight: normal; margin-bottom: 20px; color: #666; }
-  .info { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 20px; margin-bottom: 16px; }
-  .info span { font-weight: bold; }
-  .termo { margin: 16px 0; padding: 12px; border: 1px solid #ccc; font-size: 10px; line-height: 1.5; }
-  .termo p { margin: 6px 0; }
-  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
-  th, td { border: 1px solid #999; padding: 6px 8px; text-align: left; font-size: 10px; }
-  th { background: #f0f0f0; font-weight: bold; }
-  .sig { margin-top: 30px; text-align: center; }
-  .sig img { max-width: 240px; height: 80px; border-bottom: 1px solid #333; }
-  .sig-line { width: 300px; border-top: 1px solid #333; margin: 40px auto 4px; }
-  .footer { margin-top: 30px; font-size: 9px; color: #999; text-align: center; }
-  @media print { body { margin: 10mm; } }
-</style></head><body>
-<h1>TECNOMONTE</h1>
-<h2>FICHA DE ENTREGA DE EPI - EQUIPAMENTO DE PROTECAO INDIVIDUAL</h2>
-<div class="info">
-  <div><span>Nome:</span> ${funcionario.nome || '-'}</div>
-  <div><span>CPF:</span> ${funcionario.cpf || '-'}</div>
-  <div><span>Funcao:</span> ${funcionario.funcao_nome || funcionario.funcao || '-'}</div>
-  <div><span>Matricula:</span> ${funcionario.matricula || '-'}</div>
-  <div><span>Data Admissao:</span> ${admissao}</div>
-  <div><span>Data Entrega:</span> ${dataEntrega ? new Date(dataEntrega + 'T12:00:00').toLocaleDateString('pt-BR') : today}</div>
-</div>
-<table>
-  <thead><tr><th>EPI</th><th>QTD</th><th>UN</th><th>C.A.</th><th>Data Recebimento</th><th>Devolucao</th><th>Assinatura</th></tr></thead>
-  <tbody>
-    ${itens.map(i => `<tr><td>${i.nome}</td><td>${i.qtd}</td><td>${i.un}</td><td>${i.ca}</td><td>${dataEntrega ? new Date(dataEntrega + 'T12:00:00').toLocaleDateString('pt-BR') : today}</td><td></td><td></td></tr>`).join('')}
-  </tbody>
-</table>
-<div class="termo">
-  ${TERMO_PARAGRAFOS.map(p => `<p>${p}</p>`).join('')}
-</div>
-${signImg ? `<div class="sig"><img src="${signImg}" alt="Assinatura digital" /><p style="font-size:10px;color:#666;">Assinatura digital</p></div>` : `<div class="sig"><div class="sig-line"></div><p style="font-size:10px;">Assinatura do funcionario</p></div>`}
-<div style="margin-top:20px;text-align:center;">
-  <div class="sig-line"></div>
-  <p style="font-size:10px;">Responsavel: ${responsavel || '_______________'}</p>
-</div>
-<div class="footer">Conforme NR-6 e NFPA 70E. Documento gerado em ${today}.</div>
-<script>window.onload = function() { window.print(); }</script>
-</body></html>`
+    const bodyHTML = `
+      <div class="info-row">
+        <span>NOME: <strong>${funcionario.nome || '-'}</strong></span>
+        <span>CPF: <strong>${funcionario.cpf || '-'}</strong></span>
+        <span>FUNCAO: <strong>${funcionario.funcao_nome || funcionario.funcao || '-'}</strong></span>
+        <span>MATRICULA: <strong>${funcionario.matricula || '-'}</strong></span>
+      </div>
+      <div class="info-row">
+        <span>DATA ADMISSAO: <strong>${admissao}</strong></span>
+        <span>DATA ENTREGA: <strong>${entregaFmt}</strong></span>
+      </div>
+
+      <table>
+        <thead><tr><th>EPI</th><th>QTD</th><th>UN</th><th>C.A.</th><th>Data Recebimento</th><th>Devolucao</th><th>Assinatura</th></tr></thead>
+        <tbody>
+          ${itens.map(i => `<tr><td>${i.nome}</td><td>${i.qtd}</td><td>${i.un}</td><td>${i.ca}</td><td>${entregaFmt}</td><td></td><td></td></tr>`).join('')}
+        </tbody>
+      </table>
+
+      <div class="termo-box">
+        ${TERMO_PARAGRAFOS.map(p => `<p style="margin:6px 0;">${p}</p>`).join('')}
+      </div>
+
+      ${signImg ? `<div style="margin-top:20px;text-align:center;"><img src="${signImg}" style="max-width:240px;height:80px;border-bottom:1px solid #333;" alt="Assinatura digital" /><p style="font-size:8px;color:#666;">Assinatura digital</p></div>` : `<div class="assinatura-area"><div class="assinatura-line">Assinatura do funcionario</div><div class="assinatura-line">Responsavel: ${responsavel || '_______________'}</div></div>`}
+
+      ${signImg ? `<div class="assinatura-area"><div class="assinatura-line">Responsavel: ${responsavel || '_______________'}</div></div>` : ''}
+
+      <p style="font-size:7px;color:#999;margin-top:16px;text-align:center;">Conforme NR-6 e NFPA 70E.</p>
+    `
+
+    return gerarPDFHTML({
+      titulo: 'FICHA DE EQUIPAMENTOS DE PROTEÇÃO INDIVIDUAL',
+      numero: `EPI-ADM-${funcionario.matricula || '---'}`,
+      logoUrl: '/logo_tecnomonte.png',
+    }, bodyHTML)
   }
 
   function openPrintWindow() {

@@ -1,3 +1,5 @@
+import { gerarPDFHTML } from '@/lib/pdf-template'
+
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
 export function exportarExcel(lancamentos: any[], nomeArquivo = 'lancamentos') {
@@ -21,23 +23,8 @@ export function exportarPDF(lancamentos: any[], titulo = 'Lançamentos Financeir
   const totalReceita = lancamentos.filter(l => l.tipo === 'receita').reduce((s, l) => s + Number(l.valor), 0)
   const totalDespesa = lancamentos.filter(l => l.tipo === 'despesa').reduce((s, l) => s + Number(l.valor), 0)
 
-  const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>${titulo}</title>
-<style>
-  body { font-family: Arial, sans-serif; font-size: 11px; margin: 20px; color: #333; }
-  h1 { font-size: 16px; margin-bottom: 4px; }
-  .subtitle { color: #888; font-size: 11px; margin-bottom: 16px; }
-  table { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-  th { background: #f3f4f6; text-align: left; padding: 6px 8px; font-size: 10px; text-transform: uppercase; color: #6b7280; border-bottom: 2px solid #e5e7eb; }
-  td { padding: 5px 8px; border-bottom: 1px solid #f3f4f6; }
-  .receita { color: #15803d; }
-  .despesa { color: #b91c1c; }
-  .total-row { font-weight: bold; background: #f9fafb; }
-  .footer { margin-top: 12px; font-size: 10px; color: #9ca3af; }
-  @media print { body { margin: 0; } }
-</style></head><body>
-<h1>${titulo}</h1>
-<div class="subtitle">Gerado em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR')} — ${lancamentos.length} lançamentos</div>
+  const bodyHTML = `
+<p style="font-size:9px;color:#666;margin-bottom:8px;">${lancamentos.length} lançamentos</p>
 <table>
 <thead><tr><th>Data</th><th>Descrição</th><th>Fornecedor</th><th>Tipo</th><th>Categoria</th><th>Valor</th><th>Status</th></tr></thead>
 <tbody>
@@ -53,10 +40,12 @@ ${lancamentos.map(l => `<tr>
 <tr class="total-row"><td colspan="5" style="text-align:right">Total Receita:</td><td class="receita">+${fmt(totalReceita)}</td><td></td></tr>
 <tr class="total-row"><td colspan="5" style="text-align:right">Total Despesa:</td><td class="despesa">-${fmt(totalDespesa)}</td><td></td></tr>
 <tr class="total-row"><td colspan="5" style="text-align:right">Saldo:</td><td class="${totalReceita - totalDespesa >= 0 ? 'receita' : 'despesa'}">${fmt(totalReceita - totalDespesa)}</td><td></td></tr>
-</tbody></table>
-<div class="footer">Softmonte — Relatório financeiro</div>
-<script>window.print()</script>
-</body></html>`
+</tbody></table>`
+
+  const html = gerarPDFHTML({
+    titulo,
+    logoUrl: '/logo_tecnomonte.png',
+  }, bodyHTML)
 
   const win = window.open('', '_blank')
   if (win) {
