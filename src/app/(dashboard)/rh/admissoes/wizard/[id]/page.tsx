@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { formatSupabaseError } from '@/lib/errors'
+import { validarCPF } from '@/lib/validators'
 import WizardStepper from '@/components/admissao/WizardStepper'
 import WizardStep1Pessoal from '@/components/admissao/WizardStep1Pessoal'
 import WizardStep2Contrato from '@/components/admissao/WizardStep2Contrato'
@@ -186,6 +187,12 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
       const val = formData[field]
       if (val === undefined || val === null || val === '') {
         errs[field] = `${FIELD_LABELS[field] || field} e obrigatorio`
+      }
+    }
+    // CPF digit validation on step 1
+    if (stepNum === 1 && formData.cpf && !errs.cpf) {
+      if (!validarCPF(formData.cpf)) {
+        errs.cpf = 'CPF invalido — verifique os digitos'
       }
     }
     setErrors(errs)

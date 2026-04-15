@@ -63,6 +63,8 @@ export default function PontoCellEditor({
   onSaved: () => void
   /** Modelo de cobrança da obra. hh_diaria = modo simples (horas manuais); outros = modo detalhado (pontos) */
   modeloCobranca?: 'hh_diaria' | 'hh_hora_efetiva' | 'hh_220'
+  /** Data de início da obra — bloqueia lançamento antes */
+  obraDataInicio?: string | null
   /** Escala da obra — usada quando modeloCobranca != hh_diaria */
   escala?: {
     escala_entrada?: string | null
@@ -80,6 +82,7 @@ export default function PontoCellEditor({
     (dataLimiteInicio && data < dataLimiteInicio) ||
     (dataLimiteFim && data > dataLimiteFim)
   )
+  const antesInicioObra: boolean = Boolean(obraDataInicio && data < obraDataInicio)
   const [status, setStatus] = useState<StatusValue | null>(initial.status)
   const [observacao, setObservacao] = useState(initial.observacao ?? '')
   const [horasNormais, setHorasNormais] = useState<string>(
@@ -144,6 +147,10 @@ export default function PontoCellEditor({
   async function handleSave() {
     if (foraDoVinculo) {
       toast.error('Data fora do período de vínculo do funcionário.')
+      return
+    }
+    if (antesInicioObra) {
+      toast.error('Data anterior ao início da obra.')
       return
     }
     setSaving(true)
@@ -248,6 +255,11 @@ export default function PontoCellEditor({
             {dataLimiteInicio && data < dataLimiteInicio && <> foi admitido em {new Date(dataLimiteInicio + 'T12:00').toLocaleDateString('pt-BR')}</>}
             {dataLimiteFim && data > dataLimiteFim && <> foi desligado em {new Date(dataLimiteFim + 'T12:00').toLocaleDateString('pt-BR')}</>}
             . Não é possível lançar ponto para esta data.
+          </div>
+        )}
+        {antesInicioObra && !foraDoVinculo && (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-700">
+            <strong>⚠ Data anterior ao início da obra:</strong> A obra iniciou em {new Date(obraDataInicio! + 'T12:00').toLocaleDateString('pt-BR')}. Não é possível lançar ponto para esta data.
           </div>
         )}
 
@@ -382,7 +394,7 @@ export default function PontoCellEditor({
         <div className="flex gap-2 justify-end pt-3 border-t border-gray-100">
           <button onClick={onClose} disabled={saving}
             className="px-4 py-2 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Cancelar</button>
-          <button onClick={handleSave} disabled={saving || !status || foraDoVinculo}
+          <button onClick={handleSave} disabled={saving || !status || foraDoVinculo || antesInicioObra}
             className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50">
             {saving ? 'Salvando...' : 'Salvar'}
           </button>

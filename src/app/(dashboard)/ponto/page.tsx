@@ -521,6 +521,7 @@ export default function PontoPage() {
             onClose={() => setEditing(null)}
             onSaved={loadData}
             modeloCobranca={obra?.modelo_cobranca}
+            obraDataInicio={obraDataInicio}
             escala={{
               escala_entrada: obra?.escala_entrada,
               escala_saida_seg_qui: obra?.escala_saida_seg_qui,

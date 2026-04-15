@@ -65,7 +65,16 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
         status: 'disponivel',
       }).eq('id', funcionario.id)
 
-      // 2. Insert alocacao
+      // 2. Validate obra is active before inserting
+      const { data: freshObra } = await supabase.from('obras')
+        .select('status').eq('id', obraId).maybeSingle()
+      if (!freshObra || freshObra.status !== 'ativo') {
+        toast.error(`Não é possível alocar em obra ${freshObra?.status ?? 'desconhecida'}.`)
+        setSaving(false)
+        return
+      }
+
+      // 3. Insert alocacao
       await supabase.from('alocacoes').insert({
         funcionario_id: funcionario.id,
         obra_id: obraId,
@@ -74,7 +83,7 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
         created_by: user?.id,
       })
 
-      // 3. Update workflow — mark as concluida
+      // 4. Update workflow — mark as concluida
       const updates: any = {
         etapa_integracao: {
           ok: true,
@@ -102,7 +111,7 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
 
       await supabase.from('admissoes_workflow').update(updates).eq('id', workflowId)
 
-      // 4. Close any active admissao_overrides
+      // 5. Close any active admissao_overrides
       await supabase.from('admissao_overrides')
         .update({ ativo: false, regularizado: true, fechado_em: new Date().toISOString(), regularizado_em: new Date().toISOString() })
         .eq('workflow_id', workflowId)
