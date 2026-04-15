@@ -135,11 +135,11 @@ export default function ChecklistAdmissao({
 
     // Navigation steps (no modal)
     if (etapa.key === 'etapa_docs_pessoais') {
-      window.location.href = `/funcionarios/${funcionario.id}?from=admissao&workflow_id=${workflow.id}`
+      window.location.href = `/funcionarios/${funcionario.id}?from=admissao&workflow_id=${workflow.id}&step=docs_pessoais`
       return
     }
     if (etapa.key === 'etapa_nr_obrigatorias') {
-      window.location.href = `/funcionarios/${funcionario.id}?tab=treinamentos&from=admissao&workflow_id=${workflow.id}`
+      window.location.href = `/funcionarios/${funcionario.id}?from=admissao&workflow_id=${workflow.id}&step=treinamentos&tab=treinamentos`
       return
     }
     // Modal steps

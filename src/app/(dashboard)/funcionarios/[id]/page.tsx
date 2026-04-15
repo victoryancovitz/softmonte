@@ -148,8 +148,8 @@ export default async function FuncionarioPage({ params, searchParams }: { params
   const totalVinculos = vinculosAnteriores.length + arquivadosAnteriores.length
 
   // ========= ADMISSAO CONTEXT =========
-  const isAdmissaoFlow = searchParams.from === 'admissao' && searchParams.workflow_id && searchParams.step
-  const admissaoStep = searchParams.step || ''
+  const isAdmissaoFlow = searchParams.from === 'admissao' && searchParams.workflow_id
+  const admissaoStep = searchParams.step || 'docs_pessoais'
   const admissaoStepConfig = isAdmissaoFlow ? ADMISSAO_STEPS_FIELDS[admissaoStep] : null
 
   // ========= TABS =========
