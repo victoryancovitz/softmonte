@@ -58,10 +58,15 @@ export default function AdmissaoStepPanel({ funcionario, step, workflowId }: Pro
     setSaving(true)
     try {
       // Map step name to the workflow column
-      const etapaColumn = step === 'docs_pessoais' ? 'etapa_docs_pessoais' : `etapa_${step}`
+      const STEP_TO_COLUMN: Record<string, string> = {
+        docs_pessoais: 'etapa_docs_pessoais',
+        treinamentos: 'etapa_nr_obrigatorias',
+      }
+      const etapaColumn = STEP_TO_COLUMN[step] || `etapa_${step}`
+      const { data: { user } } = await supabase.auth.getUser()
       const { error } = await supabase
         .from('admissoes_workflow')
-        .update({ [etapaColumn]: true })
+        .update({ [etapaColumn]: { ok: true, data: new Date().toISOString(), por: user?.email || 'sistema' } })
         .eq('id', workflowId)
       if (error) throw error
       toast.success('Etapa concluida!', `${config.label} marcada como completa.`)
