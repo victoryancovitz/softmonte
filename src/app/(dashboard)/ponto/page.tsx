@@ -92,7 +92,7 @@ export default function PontoPage() {
     // 1. Funcionários alocados ativos
     const { data: alocacoes } = await supabase
       .from('alocacoes')
-      .select('funcionarios(id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao)')
+      .select('funcionarios(id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao,data_inicio_ponto)')
       .eq('obra_id', obraId)
       .eq('ativo', true)
 
@@ -105,7 +105,7 @@ export default function PontoPage() {
     //    (admissão antes ou durante o período visível)
     const { data: deleted } = await supabase
       .from('funcionarios')
-      .select('id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao')
+      .select('id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao,data_inicio_ponto')
       .not('deleted_at', 'is', null)
       .lte('admissao', dateEnd)
     for (const d of deleted ?? []) {
@@ -117,7 +117,7 @@ export default function PontoPage() {
     // 3. Qualquer funcionário (ativo ou deletado) que já tem efetivo_diario nesta obra
     const { data: comPonto } = await supabase
       .from('efetivo_diario')
-      .select('funcionario_id, funcionarios(id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao)')
+      .select('funcionario_id, funcionarios(id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao,data_inicio_ponto)')
       .eq('obra_id', obraId)
     for (const r of (comPonto ?? []) as any[]) {
       if (r.funcionarios && !ids.has(r.funcionarios.id)) {

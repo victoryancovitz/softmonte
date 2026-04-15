@@ -9,8 +9,9 @@ import { useToast } from '@/components/Toast'
 import EmptyState from '@/components/ui/EmptyState'
 import {
   UserPlus, CheckCircle2, Clock, ChevronDown, ChevronRight,
-  Plus, CalendarCheck, MessageSquare,
+  Plus,
 } from 'lucide-react'
+import ChecklistAdmissao from './ChecklistAdmissao'
 
 const ETAPAS = [
   { key: 'etapa_docs_pessoais', label: 'Documentos Pessoais' },
@@ -63,7 +64,7 @@ export default function AdmissoesPage() {
     setLoading(true)
     const [{ data }, { data: alocs }] = await Promise.all([
       supabase.from('admissoes_workflow')
-        .select('*, funcionarios(id, nome, cargo), obras(nome)')
+        .select('*, funcionarios(id, nome, cargo, pis, ctps_numero, ctps_serie, ctps_uf, banco, agencia_conta, pix, vt_estrutura), obras(nome)')
         .order('created_at', { ascending: false }),
       supabase.from('alocacoes')
         .select('funcionario_id, obra_id, obras(nome)')
@@ -93,22 +94,6 @@ export default function AdmissoesPage() {
     })
   }
 
-  async function toggleEtapa(admId: string, key: string, currentVal: any) {
-    const isOk = currentVal?.ok === true
-    const updated = isOk ? { ok: false } : { ok: true, data: new Date().toISOString().split('T')[0] }
-    await supabase.from('admissoes_workflow').update({ [key]: updated, updated_at: new Date().toISOString() }).eq('id', admId)
-    loadData()
-  }
-
-  async function concluirAdmissao(admId: string) {
-    if (!window.confirm('Concluir esta admissão?')) return
-    await supabase.from('admissoes_workflow').update({
-      status: 'concluida',
-      concluida_em: new Date().toISOString(),
-    }).eq('id', admId)
-    toast.success('Admissão concluída!')
-    loadData()
-  }
 
   const obrasUnicas = useMemo(() => {
     const map = new Map<string, string>()
@@ -223,7 +208,6 @@ export default function AdmissoesPage() {
           {emAndamento.map(adm => {
             const isOpen = expanded.has(adm.id)
             const progress = getProgress(adm)
-            const allDone = progress.done === progress.total
 
             return (
               <div key={adm.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -266,46 +250,11 @@ export default function AdmissoesPage() {
                 {/* Expanded checklist */}
                 {isOpen && (
                   <div className="border-t border-gray-100 p-5">
-                    <div className="space-y-3">
-                      {ETAPAS.map(etapa => {
-                        const val = adm[etapa.key] ?? {}
-                        const checked = val.ok === true
-
-                        return (
-                          <div key={etapa.key} className={`flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl border ${checked ? 'bg-green-50/50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
-                            <label className="flex items-center gap-3 min-w-[220px] cursor-pointer">
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleEtapa(adm.id, etapa.key, val)}
-                                className="rounded border-gray-300 text-brand focus:ring-brand/30 w-5 h-5"
-                              />
-                              <span className={`text-sm font-medium ${checked ? 'text-green-700 line-through' : 'text-gray-800'}`}>
-                                {etapa.label}
-                              </span>
-                            </label>
-                            {val.data && (
-                              <span className="flex items-center gap-1 text-xs text-gray-400">
-                                <CalendarCheck className="w-3.5 h-3.5" />
-                                {formatDate(val.data)}
-                              </span>
-                            )}
-                          </div>
-                        )
-                      })}
-                    </div>
-
-                    {allDone && (
-                      <div className="mt-4 flex justify-end">
-                        <button
-                          onClick={() => concluirAdmissao(adm.id)}
-                          className="px-6 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 flex items-center gap-2"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                          Concluir Admissão
-                        </button>
-                      </div>
-                    )}
+                    <ChecklistAdmissao
+                      workflow={adm}
+                      funcionario={adm.funcionarios ?? { id: adm.funcionario_id }}
+                      onUpdate={loadData}
+                    />
                   </div>
                 )}
               </div>

@@ -124,13 +124,14 @@ export default function PontoGrid({
                     const cell = getCellInfo(func.id, d, ano, mes, cellData)
                     const isWk = isWeekend(ano, mes, d)
                     const dateStr = `${ano}-${String(mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`
-                    const beforeAdm = admissaoDate && dateStr < admissaoDate
+                    const pontoInicio = func.data_inicio_ponto || admissaoDate
+                    const beforeAdm = pontoInicio && dateStr < pontoInicio
                     const afterDem = demissaoDate && dateStr > demissaoDate
                     const beforeObra = obraDataInicio && dateStr < obraDataInicio
                     const afterObra = obraDataFim && dateStr > obraDataFim
                     const naoElegivel = beforeAdm || afterDem || beforeObra || afterObra
                     if (naoElegivel) {
-                      const motivo = beforeObra ? 'Antes do in\u00edcio da obra' : afterObra ? 'Ap\u00f3s o fim da obra' : beforeAdm ? 'Antes da admiss\u00e3o' : 'Ap\u00f3s desligamento'
+                      const motivo = beforeObra ? 'Antes do início da obra' : afterObra ? 'Após o fim da obra' : beforeAdm ? (func.data_inicio_ponto ? 'Antes do início no ponto (integração SST)' : 'Antes da admissão') : 'Após desligamento'
                       return (
                         <td key={d} className="p-0 bg-gray-200/50" title={motivo}>
                           <div className="w-full h-full px-1 py-1.5"></div>
