@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
+import { ExcluirFuncaoBtn } from './ExcluirFuncaoBtn'
 
 const CAT_COLOR: Record<string, string> = {
   'Montagem': 'bg-blue-100 text-blue-700',
@@ -20,6 +21,7 @@ export default async function FuncoesPage() {
   const { data: funcoes } = await supabase
     .from('funcoes')
     .select('*')
+    .is('deleted_at', null)
     .order('categoria')
     .order('nome')
 
@@ -110,8 +112,11 @@ export default async function FuncoesPage() {
                           {custoHora ? fmt(custoHora) + '/h' : '—'}
                         </td>
                         <td className="px-5 py-3 text-right opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
-                          <Link href={`/cadastros/funcoes/${f.id}/editar`}
-                            className="text-xs text-brand hover:underline font-medium">Editar</Link>
+                          <span className="inline-flex items-center gap-2">
+                            <Link href={`/cadastros/funcoes/${f.id}/editar`}
+                              className="text-xs text-brand hover:underline font-medium">Editar</Link>
+                            <ExcluirFuncaoBtn funcaoId={f.id} nome={f.nome} />
+                          </span>
                         </td>
                       </tr>
                     )

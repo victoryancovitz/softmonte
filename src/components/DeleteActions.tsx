@@ -137,7 +137,7 @@ export function EncerrarAlocacaoBtn({ alocacaoId, funcId, role }: { alocacaoId: 
   )
 }
 
-// 5. Excluir HH
+// 5. Excluir HH (soft delete)
 export function ExcluirHHBtn({ hhId, nome, role }: { hhId: string; nome: string; role: string }) {
   const router = useRouter()
   const supabase = createClient()
@@ -146,7 +146,10 @@ export function ExcluirHHBtn({ hhId, nome, role }: { hhId: string; nome: string;
   return (
     <InlineConfirm label="Excluir"
       onConfirm={async () => {
-        await supabase.from('hh_lancamentos').delete().eq('id', hhId)
+        const { data: { user } } = await supabase.auth.getUser()
+        await supabase.from('hh_lancamentos')
+          .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+          .eq('id', hhId)
         router.refresh()
       }} />
   )

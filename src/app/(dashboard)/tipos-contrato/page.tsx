@@ -6,6 +6,7 @@ import BackButton from '@/components/BackButton'
 import SearchInput from '@/components/SearchInput'
 import { useToast } from '@/components/Toast'
 import { FileText, Clock, DollarSign, Calendar, ChevronDown, ChevronUp, Edit2, Check, X, Plus } from 'lucide-react'
+import ConfirmButton from '@/components/ConfirmButton'
 
 export default function TiposContratoPage() {
   const [tipos, setTipos] = useState<any[]>([])
@@ -41,7 +42,7 @@ export default function TiposContratoPage() {
   useEffect(() => { load() }, [])
 
   async function load() {
-    const { data: t } = await supabase.from('tipos_contrato').select('*').eq('ativo', true).order('nome')
+    const { data: t } = await supabase.from('tipos_contrato').select('*').eq('ativo', true).is('deleted_at', null).order('nome')
     setTipos(t || [])
     if (t && t.length > 0) {
       const { data: c } = await supabase.from('tipos_contrato_composicao').select('*').order('ordem')
@@ -195,6 +196,19 @@ export default function TiposContratoPage() {
                       className="text-xs px-3 py-1.5 bg-brand text-white rounded-lg hover:bg-brand-dark transition-colors">
                       Usar este tipo
                     </Link>
+                    <span onClick={e => e.stopPropagation()}>
+                      <ConfirmButton label="Excluir" onConfirm={async () => {
+                        const { data: { user } } = await supabase.auth.getUser()
+                        const { error } = await supabase.from('tipos_contrato').update({
+                          deleted_at: new Date().toISOString(),
+                          deleted_by: user?.id ?? null,
+                          ativo: false,
+                        }).eq('id', tipo.id)
+                        if (error) { toast.error('Erro ao excluir: ' + error.message); return }
+                        toast.success('Tipo de contrato excluído')
+                        load()
+                      }} className="text-xs text-gray-400 hover:text-red-600 px-2 py-1" />
+                    </span>
                     {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
                   </div>
                 </button>

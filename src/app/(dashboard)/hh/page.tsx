@@ -14,6 +14,7 @@ export default async function HHPage() {
     .from('hh_lancamentos')
     .select('*, funcionarios(nome, cargo, matricula, custo_hora), obras(nome)')
     .eq('mes', mesAtual).eq('ano', anoAtual)
+    .is('deleted_at', null)
     .order('created_at', { ascending: false })
 
   // Totais do mes atual

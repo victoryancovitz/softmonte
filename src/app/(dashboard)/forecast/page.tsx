@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { TrendingUp, DollarSign, Calendar, ArrowLeft, Check, X } from 'lucide-react'
+import ConfirmButton from '@/components/ConfirmButton'
 import SearchInput from '@/components/SearchInput'
 import { useToast } from '@/components/Toast'
 
@@ -29,7 +30,7 @@ export default function ForecastPage() {
   async function abrirDetalhe(obra: any) {
     setObraAtiva(obra)
     const { data, error } = await supabase.from('forecast_contrato')
-      .select('*').eq('obra_id', obra.obra_id).order('ano').order('mes')
+      .select('*').eq('obra_id', obra.obra_id).is('deleted_at', null).order('ano').order('mes')
     if (error) { toast.error('Erro: ' + error.message); return }
     setDetalhe(data || [])
   }
@@ -89,7 +90,7 @@ export default function ForecastPage() {
         cur = new Date(ano, mes, 1)
       }
 
-      await supabase.from('forecast_contrato').delete().eq('obra_id', obra.obra_id)
+      await supabase.from('forecast_contrato').update({ deleted_at: new Date().toISOString() }).eq('obra_id', obra.obra_id).is('deleted_at', null)
       const { error } = await supabase.from('forecast_contrato').insert(rows)
       if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
       toast.success(`Forecast gerado: ${rows.length} meses · ${fmt(receitaMesFull)}/mês completo`)
@@ -205,7 +206,16 @@ export default function ForecastPage() {
           </div>
         )}
         {detalhe.length > 0 && (
-          <div className="flex justify-end mb-3">
+          <div className="flex justify-end gap-4 mb-3">
+            <ConfirmButton label="Limpar forecast" onConfirm={async () => {
+              const { error } = await supabase.from('forecast_contrato')
+                .update({ deleted_at: new Date().toISOString() })
+                .eq('obra_id', obraAtiva.obra_id)
+              if (error) { toast.error('Erro ao limpar: ' + error.message); return }
+              toast.success('Forecast limpo')
+              setDetalhe([])
+              loadForecast()
+            }} className="text-xs text-red-400 hover:text-red-600 underline" />
             <button onClick={() => gerarForecast(obraAtiva)} disabled={saving} className="text-xs text-gray-400 hover:text-brand underline">{saving ? 'Gerando...' : '↻ Regerar forecast do contrato'}</button>
           </div>
         )}

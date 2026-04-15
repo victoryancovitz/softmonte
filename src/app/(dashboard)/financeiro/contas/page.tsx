@@ -155,7 +155,7 @@ export default function ContasCorrentesPage() {
     if (!confirm(`Excluir a conta "${c.nome}"? Lançamentos vinculados manterão o histórico.`)) return
     const { data: { user } } = await supabase.auth.getUser()
     const { error } = await supabase.from('contas_correntes')
-      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null, ativo: false })
       .eq('id', c.id)
     if (error) { toast.error('Erro ao excluir: ' + error.message); return }
     toast.success('Conta excluída')

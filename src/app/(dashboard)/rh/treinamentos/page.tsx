@@ -10,6 +10,7 @@ import {
   GraduationCap, CheckCircle2, Clock, XCircle, AlertTriangle,
   ChevronDown, ChevronRight, Plus, Users, ShieldAlert, FileWarning,
 } from 'lucide-react'
+import ConfirmButton from '@/components/ConfirmButton'
 
 /* ═══ Types ═══ */
 
@@ -323,6 +324,30 @@ export default function TreinamentosPage() {
     loadData()
   }
 
+  async function handleDeleteTreinamento(item: ViewRow) {
+    const tipo = tipos.find(t => t.codigo === item.codigo)
+    if (!tipo) { toast.error('Tipo de treinamento nao encontrado'); return }
+    const { data: { user } } = await supabase.auth.getUser()
+    const { data: records } = await supabase.from('treinamentos_funcionarios')
+      .select('id')
+      .eq('funcionario_id', item.funcionario_id)
+      .eq('tipo_id', tipo.id)
+      .eq('status', 'valido')
+      .is('deleted_at', null)
+      .limit(1)
+    if (records && records.length > 0) {
+      const { error } = await supabase.from('treinamentos_funcionarios')
+        .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })
+        .eq('id', records[0].id)
+      if (error) { toast.error('Erro ao excluir: ' + error.message); return }
+    } else {
+      toast.error('Registro nao encontrado')
+      return
+    }
+    toast.success('Treinamento excluido')
+    loadData()
+  }
+
   const filteredFormFuncs = funcionarios.filter(f =>
     f.nome.toLowerCase().includes(funcSearchTerm.toLowerCase()) ||
     f.cargo.toLowerCase().includes(funcSearchTerm.toLowerCase())
@@ -619,11 +644,17 @@ export default function TreinamentosPage() {
                                 </span>
                               </td>
                               <td className="px-4 py-2">
-                                {(norm === 'vencido' || norm === 'vencendo' || norm === 'pendente') && (
-                                  <button onClick={() => openRenew(item)} className="text-xs text-brand font-semibold hover:underline">
-                                    {norm === 'pendente' ? 'Registrar' : 'Renovar'}
-                                  </button>
-                                )}
+                                <span className="inline-flex items-center gap-2">
+                                  {(norm === 'vencido' || norm === 'vencendo' || norm === 'pendente') && (
+                                    <button onClick={() => openRenew(item)} className="text-xs text-brand font-semibold hover:underline">
+                                      {norm === 'pendente' ? 'Registrar' : 'Renovar'}
+                                    </button>
+                                  )}
+                                  {norm !== 'pendente' && (
+                                    <ConfirmButton label="Excluir" onConfirm={() => handleDeleteTreinamento(item)}
+                                      className="text-xs text-gray-400 hover:text-red-600" />
+                                  )}
+                                </span>
                               </td>
                             </tr>
                           )
@@ -715,11 +746,17 @@ export default function TreinamentosPage() {
                                   </span>
                                 </td>
                                 <td className="px-4 py-2">
-                                  {(norm === 'vencido' || norm === 'vencendo' || norm === 'pendente') && (
-                                    <button onClick={() => openRenew(item)} className="text-xs text-brand font-semibold hover:underline">
-                                      {norm === 'pendente' ? 'Registrar' : 'Renovar'}
-                                    </button>
-                                  )}
+                                  <span className="inline-flex items-center gap-2">
+                                    {(norm === 'vencido' || norm === 'vencendo' || norm === 'pendente') && (
+                                      <button onClick={() => openRenew(item)} className="text-xs text-brand font-semibold hover:underline">
+                                        {norm === 'pendente' ? 'Registrar' : 'Renovar'}
+                                      </button>
+                                    )}
+                                    {norm !== 'pendente' && (
+                                      <ConfirmButton label="Excluir" onConfirm={() => handleDeleteTreinamento(item)}
+                                        className="text-xs text-gray-400 hover:text-red-600" />
+                                    )}
+                                  </span>
                                 </td>
                               </tr>
                             )
