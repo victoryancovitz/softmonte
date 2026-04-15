@@ -53,6 +53,7 @@ export default function PontoCellEditor({
   onClose,
   onSaved,
   modeloCobranca,
+  obraDataInicio,
   escala,
 }: {
   funcionario: { id: string; nome: string; cargo?: string; admissao?: string; deleted_at?: string | null }

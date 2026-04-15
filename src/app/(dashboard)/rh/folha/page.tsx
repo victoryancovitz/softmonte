@@ -54,17 +54,28 @@ export default function FolhaPage() {
         setFechando(false); return
       }
 
+      // Filtrar funcionários com salário zerado
+      const semSalario = custos.filter((c: any) => !Number(c.salario_total_bruto))
+      if (semSalario.length > 0) {
+        toast.warning(`${semSalario.length} funcionário(s) com salário zerado foram excluídos da folha.`)
+      }
+      const custosValidos = custos.filter((c: any) => Number(c.salario_total_bruto) > 0)
+      if (custosValidos.length === 0) {
+        toast.error('Todos os funcionários do período possuem salário zerado.')
+        setFechando(false); return
+      }
+
       // 3) Totais
-      const tot_bruto = custos.reduce((s, c) => s + Number(c.salario_liquido_empresa || 0), 0)
-      const tot_enc = custos.reduce((s, c) => s + Number(c.encargos_valor || 0), 0)
-      const tot_prov = custos.reduce((s, c) => s + Number(c.provisoes_valor || 0), 0)
-      const tot_ben = custos.reduce((s, c) => s + Number(c.beneficios_valor || 0), 0)
+      const tot_bruto = custosValidos.reduce((s: number, c: any) => s + Number(c.salario_liquido_empresa || 0), 0)
+      const tot_enc = custosValidos.reduce((s: number, c: any) => s + Number(c.encargos_valor || 0), 0)
+      const tot_prov = custosValidos.reduce((s: number, c: any) => s + Number(c.provisoes_valor || 0), 0)
+      const tot_ben = custosValidos.reduce((s: number, c: any) => s + Number(c.beneficios_valor || 0), 0)
       const tot = tot_bruto + tot_enc + tot_prov + tot_ben
 
       // 3b) Validar composição contratual (alerta, não bloqueia)
       const { data: composicaoCheck } = await supabase.from('contrato_composicao').select('funcao_nome, quantidade_contratada').eq('obra_id', form.obra_id).eq('ativo', true)
       const porCargo: Record<string, number> = {}
-      for (const c of custos) { const cargo = (c.cargo || '').toUpperCase(); porCargo[cargo] = (porCargo[cargo] || 0) + 1 }
+      for (const c of custosValidos) { const cargo = (c.cargo || '').toUpperCase(); porCargo[cargo] = (porCargo[cargo] || 0) + 1 }
       const excedentes: string[] = []
       for (const comp of (composicaoCheck ?? [])) {
         const cargo = comp.funcao_nome.toUpperCase()
@@ -99,20 +110,20 @@ export default function FolhaPage() {
         valor_total_provisoes: tot_prov,
         valor_total_beneficios: tot_ben,
         valor_total: tot,
-        funcionarios_incluidos: custos.length,
+        funcionarios_incluidos: custosValidos.length,
         status: 'fechada',
         created_by: user?.id ?? null,
       }).select().single()
       if (ffErr) throw ffErr
 
       // 5) Buscar dados individuais dos funcionários (ANTES dos itens)
-      const funcIds = custos.map((c: any) => c.funcionario_id)
+      const funcIds = custosValidos.map((c: any) => c.funcionario_id)
       const { data: funcsData } = await supabase.from('funcionarios').select('id, salario_base, adiantamento_pct, insalubridade_pct, periculosidade_pct, vt_mensal, dependentes_ir').in('id', funcIds)
       const funcMap: Record<string, any> = {}
       ;(funcsData ?? []).forEach((f: any) => { funcMap[f.id] = f })
 
       // 6) Itens por funcionário — com cálculos CLT
-      const itens = custos.map((c: any) => {
+      const itens = custosValidos.map((c: any) => {
         const func = funcMap[c.funcionario_id] || {}
         const salBase = Number(func.salario_base || c.salario_total_bruto || 0)
         const diasTrab = Number(c.dias_trab || 0)
@@ -155,7 +166,7 @@ export default function FolhaPage() {
       const dtAdiantamento = `${form.ano}-${String(form.mes).padStart(2,'0')}-20`
 
       const lancamentosParaInserir: any[] = []
-      for (const c of custos) {
+      for (const c of custosValidos) {
         const adiantPct = Number(funcMap[c.funcionario_id]?.adiantamento_pct ?? 40) / 100
         const salLiquido = Number(c.salario_liquido_empresa || 0)
         const vlAdiant = Math.round(salLiquido * adiantPct * 100) / 100
@@ -193,7 +204,7 @@ export default function FolhaPage() {
       if (lancErr) throw new Error('Falha ao gerar lançamentos da folha: ' + lancErr.message)
 
       // 8) Provisões por funcionário
-      const provisoesRows = custos.map((c: any) => ({
+      const provisoesRows = custosValidos.map((c: any) => ({
         funcionario_id: c.funcionario_id, obra_id: form.obra_id,
         ano: form.ano, mes: form.mes,
         provisao_decimo_mes: Math.round(Number(c.provisoes_valor || 0) * 0.397 * 100) / 100,

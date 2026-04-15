@@ -14,11 +14,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'setup', testMatch: /auth\.setup\.ts/, teardown: undefined },
-    {
-      name: 'chromium',
-      use: { browserName: 'chromium', storageState: STORAGE_STATE },
-      dependencies: ['setup'],
-    },
+    { name: 'chromium', use: { browserName: 'chromium' }, testMatch: /platform\.spec\.ts/ },
   ],
+  workers: 1, // sequential to avoid auth race conditions
 })

@@ -366,6 +366,13 @@ export default function FuncionariosView({
                       </div>
                     </div>
                   )}
+                  {(!f.cpf || !Number(f.salario_base) || !f.funcao_id) && !desligado && (
+                    <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap gap-1">
+                      {!f.cpf && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem CPF</span>}
+                      {!Number(f.salario_base) && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem salario</span>}
+                      {!f.funcao_id && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem funcao</span>}
+                    </div>
+                  )}
                   {alertas[f.id] && ALERTA_BADGE[alertas[f.id]] && (
                     <div className="mt-2 pt-2 border-t border-gray-100">
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${ALERTA_BADGE[alertas[f.id]].cls}`}>
@@ -443,6 +450,7 @@ export default function FuncionariosView({
                         {alerta && <span className="ml-1 bg-amber-100 text-amber-700 px-1.5 rounded text-[10px]">{dias}d</span>}
                       </td>
                       <td className="px-4 py-3">
+                        <div className="flex flex-wrap items-center gap-1">
                         {desligado ? (
                           <span className="text-xs px-2.5 py-1 rounded-full font-semibold bg-red-100 text-red-700">
                             Desligado em {new Date(f.deleted_at).toLocaleDateString('pt-BR')}
@@ -452,6 +460,10 @@ export default function FuncionariosView({
                             {f.status === 'disponivel' ? 'Disponível' : f.status}
                           </span>
                         )}
+                        {!desligado && !f.cpf && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem CPF</span>}
+                        {!desligado && !Number(f.salario_base) && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem salario</span>}
+                        {!desligado && !f.funcao_id && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem funcao</span>}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">
