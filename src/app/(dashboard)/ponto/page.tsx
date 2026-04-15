@@ -10,6 +10,7 @@ import { useToast } from '@/components/Toast'
 import PontoGrid from './components/PontoGrid'
 import PontoAlertas from './components/PontoAlertas'
 import ModalOverrideEmergencial from '@/components/ModalOverrideEmergencial'
+import ModalEdicaoPonto from '@/components/ModalEdicaoPonto'
 
 function getDaysInMonth(month: number, year: number): number {
   return new Date(year, month, 0).getDate()
@@ -49,6 +50,7 @@ export default function PontoPage() {
   const [loadingHistorico, setLoadingHistorico] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [showDiaRapido, setShowDiaRapido] = useState(false)
+  const [editingPonto, setEditingPonto] = useState<{ funcId: string; data: string } | null>(null)
   const [overrideFunc, setOverrideFunc] = useState<any>(null)
   const [overrideEtapas, setOverrideEtapas] = useState<string[]>([])
   const [limitesPorFuncao, setLimitesPorFuncao] = useState<Record<string, { qtd: number; hh_dia: number }>>({})
@@ -513,23 +515,32 @@ export default function PontoPage() {
         const dateStr = `${ano}-${String(mes).padStart(2,'0')}-${String(editing.day).padStart(2,'0')}`
         const obra = obras.find(o => o.id === obraId)
         return (
-          <PontoCellEditor
-            funcionario={func}
-            obraId={obraId}
-            data={dateStr}
-            initial={buildEditorInitial(editing.funcId, editing.day)}
-            onClose={() => setEditing(null)}
-            onSaved={loadData}
-            modeloCobranca={obra?.modelo_cobranca}
-            obraDataInicio={obraDataInicio}
-            escala={{
-              escala_entrada: obra?.escala_entrada,
-              escala_saida_seg_qui: obra?.escala_saida_seg_qui,
-              escala_saida_sex: obra?.escala_saida_sex,
-              escala_almoco_minutos: obra?.escala_almoco_minutos,
-              escala_tolerancia_min: obra?.escala_tolerancia_min,
-            }}
-          />
+          <>
+            <PontoCellEditor
+              funcionario={func}
+              obraId={obraId}
+              data={dateStr}
+              initial={buildEditorInitial(editing.funcId, editing.day)}
+              onClose={() => setEditing(null)}
+              onSaved={loadData}
+              modeloCobranca={obra?.modelo_cobranca}
+              obraDataInicio={obraDataInicio}
+              escala={{
+                escala_entrada: obra?.escala_entrada,
+                escala_saida_seg_qui: obra?.escala_saida_seg_qui,
+                escala_saida_sex: obra?.escala_saida_sex,
+                escala_almoco_minutos: obra?.escala_almoco_minutos,
+                escala_tolerancia_min: obra?.escala_tolerancia_min,
+              }}
+            />
+            <div className="fixed bottom-4 left-4 z-50">
+              <button
+                onClick={() => { setEditingPonto({ funcId: editing.funcId, data: dateStr }); setEditing(null) }}
+                className="px-3 py-2 bg-white border border-brand text-brand rounded-xl text-xs font-semibold shadow-lg hover:bg-brand/5">
+                🔍 Edicao detalhada (batidas + historico)
+              </button>
+            </div>
+          </>
         )
       })()}
 
@@ -563,6 +574,22 @@ export default function PontoPage() {
           onSuccess={() => { setOverrideFunc(null); loadData() }}
         />
       )}
+
+      {editingPonto && (() => {
+        const func = funcionarios.find(f => f.id === editingPonto.funcId)
+        if (!func) return null
+        return (
+          <ModalEdicaoPonto
+            funcionario={func}
+            data={editingPonto.data}
+            obraId={obraId}
+            open={true}
+            onClose={() => setEditingPonto(null)}
+            onSaved={() => { loadData() }}
+            mesFechado={pontoFechado && !isAdmin}
+          />
+        )
+      })()}
     </div>
   )
 }
