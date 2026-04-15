@@ -564,7 +564,7 @@ export default function NovoFuncionarioPage() {
                 <input type="text" value={form.tamanho_uniforme} onChange={e => set('tamanho_uniforme', e.target.value)} placeholder="G" className={inp} />
               </div>
               <div>
-                <label className={lbl}>RE</label>
+                <label className={lbl}>RG</label>
                 <input type="text" value={form.re} onChange={e => set('re', e.target.value)} className={inp} />
               </div>
             </div>

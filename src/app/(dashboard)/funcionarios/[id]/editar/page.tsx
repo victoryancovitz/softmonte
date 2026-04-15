@@ -174,7 +174,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
               <div data-field="id_ponto"><label className={lbl}>ID Ponto (Secullum)</label>
                 <input type="text" inputMode="numeric" pattern="[0-9]*" value={form.id_ponto ?? ''}
                   onChange={e => set('id_ponto', e.target.value.replace(/\D/g, ''))} className={inp}/></div>
-              <div data-field="re"><label className={lbl}>RE</label>
+              <div data-field="re"><label className={lbl}>RG</label>
                 <input type="text" value={form.re ?? ''} onChange={e => set('re', e.target.value)} className={inp}/></div>
               <div data-field="cpf"><label className={lbl}>CPF</label>
                 <input type="text" value={form.cpf ?? ''} onChange={e => set('cpf', e.target.value)} className={inp}/></div>
