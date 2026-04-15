@@ -37,7 +37,7 @@ function getProgress(adm: any): { done: number; total: number; pct: number; next
   let nextPending: string | null = null
   for (const etapa of ETAPAS) {
     const val = adm[etapa.key]
-    if (val?.ok === true) {
+    if (val === true || (typeof val === 'object' && val?.ok === true)) {
       done++
     } else if (!nextPending) {
       nextPending = etapa.label

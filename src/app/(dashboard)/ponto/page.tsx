@@ -271,7 +271,7 @@ export default function PontoPage() {
     const pendentes: string[] = []
     if (wf) {
       for (const [key, label] of Object.entries(ETAPAS_LABELS)) {
-        if (!wf[key]?.ok) pendentes.push(label)
+        const v = wf[key]; if (!(v === true || (typeof v === 'object' && v?.ok === true))) pendentes.push(label)
       }
     } else {
       // No workflow at all - all steps pending

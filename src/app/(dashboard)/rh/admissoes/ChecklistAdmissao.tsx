@@ -7,6 +7,7 @@ import { fmt } from '@/lib/cores'
 import {
   ArrowRight, Check, X, Upload, AlertTriangle,
 } from 'lucide-react'
+import { etapaOk } from '@/lib/admissao-utils'
 
 /* ─── Constants ─── */
 
@@ -81,7 +82,7 @@ export default function ChecklistAdmissao({
   const [saving, setSaving] = useState(false)
 
   // Count completed
-  const doneCount = ETAPAS.filter(e => workflow[e.key]?.ok === true).length
+  const doneCount = ETAPAS.filter(e => etapaOk(workflow[e.key])).length
 
   /* ─── helpers ─── */
 
@@ -105,7 +106,7 @@ export default function ChecklistAdmissao({
     // Re-fetch workflow to check
     const { data: wf } = await supabase.from('admissoes_workflow').select('*').eq('id', workflow.id).single()
     if (!wf) return
-    const allDone = ETAPAS.every(e => wf[e.key]?.ok === true)
+    const allDone = ETAPAS.every(e => etapaOk(wf[e.key]))
     if (allDone) {
       await supabase.from('admissoes_workflow').update({
         status: 'concluida',
@@ -130,8 +131,7 @@ export default function ChecklistAdmissao({
   }
 
   function handleRowClick(etapa: typeof ETAPAS[number]) {
-    const val = workflow[etapa.key]
-    if (val?.ok) return // already done, no action
+    if (etapaOk(workflow[etapa.key])) return // already done, no action
 
     // Navigation steps (no modal)
     if (etapa.key === 'etapa_docs_pessoais') {
@@ -167,7 +167,7 @@ export default function ChecklistAdmissao({
       <div className="space-y-2">
         {ETAPAS.map(etapa => {
           const val = workflow[etapa.key] ?? {}
-          const done = val.ok === true
+          const done = etapaOk(val)
           return (
             <button
               key={etapa.key}
