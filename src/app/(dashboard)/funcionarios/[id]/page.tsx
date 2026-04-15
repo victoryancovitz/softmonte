@@ -10,6 +10,7 @@ import PromocaoButton from '@/components/PromocaoButton'
 import { User, Briefcase, DollarSign, Clock, FileText, History } from 'lucide-react'
 import AdmissaoStepPanel from '@/components/AdmissaoStepPanel'
 import AdmissaoBannerWrapper from '@/components/AdmissaoBannerWrapper'
+import AdmissaoDrawerTrigger from '@/components/admissao/AdmissaoDrawerTrigger'
 import { ADMISSAO_STEPS_FIELDS } from '@/lib/admissao-steps-config'
 
 import TabVisaoGeral from './tabs/TabVisaoGeral'
@@ -57,7 +58,7 @@ export default async function FuncionarioPage({ params, searchParams }: { params
     supabase.from('efetivo_diario').select('data,tipo_dia,obras(nome)').eq('funcionario_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
     supabase.from('documentos_gerados').select('*').eq('funcionario_id', params.id).order('created_at', { ascending: false }),
     supabase.from('vw_prazos_legais').select('*').eq('funcionario_id', params.id).limit(1),
-    supabase.from('admissoes_workflow').select('id, status, concluida_em, created_at').eq('funcionario_id', params.id).order('created_at', { ascending: false }).limit(1),
+    supabase.from('admissoes_workflow').select('*').eq('funcionario_id', params.id).order('created_at', { ascending: false }).limit(1),
     supabase.from('desligamentos_workflow').select('id, status, concluido_em, created_at').eq('funcionario_id', params.id).eq('status', 'em_andamento').order('created_at', { ascending: false }).limit(1),
     supabase.from('faltas').select('id', { count: 'exact', head: true }).eq('funcionario_id', params.id).in('tipo', ['falta_injustificada','falta_justificada']),
     supabase.from('documentos').select('id', { count: 'exact', head: true }).eq('funcionario_id', params.id).is('deleted_at', null),
@@ -411,13 +412,7 @@ export default async function FuncionarioPage({ params, searchParams }: { params
         </div>
       )}
       {admissao?.status === 'em_andamento' && (
-        <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-            <span className="text-sm font-semibold text-amber-800">Admissão em andamento</span>
-          </div>
-          <Link href="/rh/admissoes" className="text-xs text-amber-700 font-semibold hover:underline">Continuar</Link>
-        </div>
+        <AdmissaoDrawerTrigger funcionario={f} workflow={admissao} />
       )}
       {desligamento && (
         <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 flex items-center justify-between">

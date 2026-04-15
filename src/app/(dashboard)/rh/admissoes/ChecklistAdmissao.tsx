@@ -70,10 +70,12 @@ export default function ChecklistAdmissao({
   workflow,
   funcionario,
   onUpdate,
+  onNavigateTab,
 }: {
   workflow: any
   funcionario: any
   onUpdate: () => void
+  onNavigateTab?: (tab: string) => void
 }) {
   const supabase = createClient()
   const toast = useToast()
@@ -135,10 +137,18 @@ export default function ChecklistAdmissao({
 
     // Navigation steps (no modal)
     if (etapa.key === 'etapa_docs_pessoais') {
+      if (onNavigateTab) {
+        onNavigateTab('visao')
+        return
+      }
       window.location.href = `/funcionarios/${funcionario.id}?from=admissao&workflow_id=${workflow.id}&step=docs_pessoais`
       return
     }
     if (etapa.key === 'etapa_nr_obrigatorias') {
+      if (onNavigateTab) {
+        onNavigateTab('treinamentos')
+        return
+      }
       window.location.href = `/funcionarios/${funcionario.id}?from=admissao&workflow_id=${workflow.id}&step=treinamentos&tab=treinamentos`
       return
     }

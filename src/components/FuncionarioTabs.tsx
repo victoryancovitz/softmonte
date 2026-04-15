@@ -1,5 +1,5 @@
 'use client'
-import { useState, ReactNode } from 'react'
+import { useState, useEffect, ReactNode } from 'react'
 
 export interface Tab {
   id: string
@@ -12,6 +12,18 @@ export interface Tab {
 export default function FuncionarioTabs({ tabs, defaultTab }: { tabs: Tab[]; defaultTab?: string }) {
   const [active, setActive] = useState(defaultTab || tabs[0]?.id)
   const current = tabs.find(t => t.id === active) || tabs[0]
+
+  // Listen for external tab switch events (e.g. from DrawerAdmissao)
+  useEffect(() => {
+    function handleTabSwitch(e: Event) {
+      const detail = (e as CustomEvent).detail
+      if (detail?.tab && tabs.some(t => t.id === detail.tab)) {
+        setActive(detail.tab)
+      }
+    }
+    window.addEventListener('funcionario-tab-switch', handleTabSwitch)
+    return () => window.removeEventListener('funcionario-tab-switch', handleTabSwitch)
+  }, [tabs])
 
   return (
     <div>
