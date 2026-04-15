@@ -362,7 +362,7 @@ export default async function FuncionarioPage({ params, searchParams }: { params
             {f.status !== 'inativo' && !isArquivado && (
               <PromocaoButton funcionario={f} funcoes={funcoes ?? []} />
             )}
-            <Link href={`/funcionarios/${f.id}/editar`}
+            <Link href={`/funcionarios/${f.id}/editar${isAdmissaoFlow ? `?from=admissao&workflow_id=${searchParams.workflow_id}&step=${admissaoStep}` : ''}`}
               className="px-3 py-1.5 border border-gray-200 rounded-lg text-xs font-semibold hover:bg-gray-50">
               Editar
             </Link>

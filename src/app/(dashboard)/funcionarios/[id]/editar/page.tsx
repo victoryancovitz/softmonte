@@ -7,6 +7,7 @@ import Breadcrumb from '@/components/ui/Breadcrumb'
 import Tooltip from '@/components/ui/Tooltip'
 import { formatSupabaseError } from '@/lib/errors'
 import DeleteEntityButton from '@/components/DeleteEntityButton'
+import AdmissaoStepPanel from '@/components/AdmissaoStepPanel'
 
 export default function EditarFuncionarioPage({ params }: { params: { id: string } }) {
   const [form, setForm] = useState<any>({})
@@ -141,7 +142,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
   const lbl = "block text-xs font-semibold text-gray-700 mb-1"
 
   return (
-    <div className="p-4 sm:p-6 max-w-3xl mx-auto">
+    <div className={`p-4 sm:p-6 max-w-3xl mx-auto ${fromAdmissao ? 'md:mr-[280px]' : ''}`}>
       <Breadcrumb fallback="/funcionarios" items={[
         { label: 'Funcionarios', href: '/funcionarios' },
         { label: form.nome || '...', href: `/funcionarios/${params.id}` },
@@ -355,6 +356,14 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
           </div>
         </form>
       </div>
+
+      {fromAdmissao && admissaoWorkflowId && (
+        <AdmissaoStepPanel
+          funcionario={form}
+          step={admissaoStep || 'docs_pessoais'}
+          workflowId={admissaoWorkflowId}
+        />
+      )}
     </div>
   )
 }
