@@ -7,24 +7,16 @@ dotenv.config({ path: path.resolve(__dirname, '../.env.test') })
 const STORAGE_STATE = path.resolve(__dirname, '.auth/user.json')
 
 setup('login', async ({ page }) => {
-  const supabaseUrl = 'https://wzmkifutluyqzqefrbpp.supabase.co'
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  // Use the test-login API route to set server-side cookies
+  const response = await page.goto('/api/test-login?' + new URLSearchParams({
+    email: process.env.E2E_EMAIL || '',
+    password: process.env.E2E_PASSWORD || '',
+  }).toString())
 
-  // Login via Supabase Auth REST API directly
-  const response = await page.request.post(`${supabaseUrl}/auth/v1/token?grant_type=password`, {
-    headers: {
-      'apikey': supabaseAnonKey,
-      'Content-Type': 'application/json',
-    },
-    data: {
-      email: process.env.E2E_EMAIL,
-      password: process.env.E2E_PASSWORD,
-    },
-  })
-
-  if (!response.ok()) {
-    // Fallback: login via UI
-    console.log('API login failed, trying UI login...')
+  if (response?.ok()) {
+    console.log('✅ Logged in via API route')
+  } else {
+    console.log('API route failed, trying UI...')
     await page.goto('/login')
     await page.waitForTimeout(2000)
     await page.locator('input[type="email"]').fill(process.env.E2E_EMAIL || '')
@@ -32,27 +24,11 @@ setup('login', async ({ page }) => {
     await page.waitForTimeout(300)
     await page.locator('button:has-text("Entrar")').click()
     await page.waitForTimeout(8000)
-  } else {
-    const tokens = await response.json()
-    // Navigate to the app and inject the session via localStorage
-    await page.goto('/login')
-    await page.waitForTimeout(1000)
-    await page.evaluate((t) => {
-      // Supabase stores session in localStorage
-      const key = Object.keys(localStorage).find(k => k.includes('supabase')) || 'sb-wzmkifutluyqzqefrbpp-auth-token'
-      localStorage.setItem(key, JSON.stringify({
-        access_token: t.access_token,
-        refresh_token: t.refresh_token,
-        expires_at: Math.floor(Date.now() / 1000) + t.expires_in,
-        token_type: 'bearer',
-        user: t.user,
-      }))
-    }, tokens)
-    // Reload to pick up the session
-    await page.goto('/diretoria')
-    await page.waitForTimeout(5000)
   }
 
+  // Navigate to confirm auth works
+  await page.goto('/diretoria')
+  await page.waitForTimeout(5000)
   await page.context().storageState({ path: STORAGE_STATE })
 })
 
