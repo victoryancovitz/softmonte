@@ -64,7 +64,7 @@ export default function AdmissoesPage() {
     setLoading(true)
     const [{ data }, { data: alocs }] = await Promise.all([
       supabase.from('admissoes_workflow')
-        .select('*, funcionarios(id, nome, cargo, pis, ctps_numero, ctps_serie, ctps_uf, banco, agencia_conta, pix, vt_estrutura), obras(nome)')
+        .select('*, funcionarios(id, nome, cargo, funcao_id, matricula, pis, ctps_numero, ctps_serie, ctps_uf, banco, agencia_conta, pix, vt_estrutura, insalubridade_pct, tamanho_uniforme, tamanho_bota), obras(nome)')
         .order('created_at', { ascending: false }),
       supabase.from('alocacoes')
         .select('funcionario_id, obra_id, obras(nome)')
