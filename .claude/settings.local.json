@@ -187,7 +187,9 @@
       "Bash(wc -l src/app/\\\\\\(dashboard\\\\\\)/financeiro/components/*.tsx src/app/\\\\\\(dashboard\\\\\\)/ponto/components/*.tsx src/components/ErrorBoundary.tsx src/hooks/useSupabaseQuery.ts)",
       "Bash(npx vitest:*)",
       "Bash(wc -l src/app/\\\\\\(dashboard\\\\\\)/funcionarios/[id]/page.tsx)",
-      "Bash(wc -l src/app/\\\\\\(dashboard\\\\\\)/funcionarios/[id]/tabs/*.tsx)"
+      "Bash(wc -l src/app/\\\\\\(dashboard\\\\\\)/funcionarios/[id]/tabs/*.tsx)",
+      "Bash(node:*)",
+      "Bash(cat \"src/app/\\(dashboard\\)/rh/admissoes/wizard/[id]/page.tsx\")"
     ]
   }
 }
