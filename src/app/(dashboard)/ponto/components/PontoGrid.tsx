@@ -1,5 +1,7 @@
 'use client'
 
+import { useState } from 'react'
+
 function isWeekend(year: number, month: number, day: number): boolean {
   const d = new Date(year, month - 1, day).getDay()
   return d === 0 || d === 6
@@ -26,6 +28,8 @@ interface PontoGridProps {
   onCellClick: (funcId: string, dia: number) => void
   excedentes: Record<number, Record<string, { presentes: number; limite: number; excedente: number }>>
   podeEditar: boolean
+  userRole?: string
+  onOverrideRequest?: (func: any) => void
 }
 
 function getCellInfo(
@@ -65,7 +69,12 @@ export default function PontoGrid({
   onCellClick,
   excedentes,
   podeEditar,
+  userRole,
+  onOverrideRequest,
 }: PontoGridProps) {
+  const [blockedDialog, setBlockedDialog] = useState<{ func: any; motivo: string } | null>(null)
+  const isRhOrAdmin = userRole === 'admin' || userRole === 'rh'
+
   // Compute summary totals
   let totalPresentes = 0, totalFaltas = 0, totalAtestados = 0
   funcionarios.forEach(f => {
@@ -132,9 +141,13 @@ export default function PontoGrid({
                     const naoElegivel = beforeAdm || afterDem || beforeObra || afterObra
                     if (naoElegivel) {
                       const motivo = beforeObra ? 'Antes do início da obra' : afterObra ? 'Após o fim da obra' : beforeAdm ? (func.data_inicio_ponto ? 'Antes do início no ponto (integração SST)' : 'Antes da admissão') : 'Após desligamento'
+                      const podeOverride = beforeAdm && !beforeObra && !afterObra && !afterDem
                       return (
                         <td key={d} className="p-0 bg-gray-200/50" title={motivo}>
-                          <div className="w-full h-full px-1 py-1.5"></div>
+                          <div
+                            className={`w-full h-full px-1 py-1.5 ${podeOverride ? 'cursor-pointer hover:bg-amber-100/50' : ''}`}
+                            onClick={podeOverride ? () => setBlockedDialog({ func, motivo }) : undefined}
+                          />
                         </td>
                       )
                     }
@@ -184,6 +197,37 @@ export default function PontoGrid({
         <span className="flex items-center gap-1"><span className="w-4 h-4 rounded bg-pink-100"></span> L = Licen&ccedil;a</span>
         <span className="flex items-center gap-1"><span className="w-4 h-4 rounded border border-gray-200 bg-white"></span> &middot; = Pendente</span>
       </div>
+
+      {/* Dialog for blocked cells */}
+      {blockedDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setBlockedDialog(null)}>
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="px-5 py-4 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-800">Funcionário bloqueado</h3>
+            </div>
+            <div className="px-5 py-4 space-y-3">
+              <p className="text-sm text-gray-600">
+                <strong>{blockedDialog.func.nome_guerra || blockedDialog.func.nome}</strong> ainda não está liberado. Admissão incompleta.
+              </p>
+              <p className="text-xs text-gray-400">{blockedDialog.motivo}</p>
+              {isRhOrAdmin && onOverrideRequest ? (
+                <button
+                  onClick={() => { onOverrideRequest(blockedDialog.func); setBlockedDialog(null) }}
+                  className="w-full px-4 py-2.5 bg-red-600 text-white rounded-xl text-sm font-bold hover:bg-red-700 transition-colors">
+                  Liberar emergencialmente
+                </button>
+              ) : (
+                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2.5 font-medium">
+                  Solicite ao RH a liberação emergencial.
+                </p>
+              )}
+            </div>
+            <div className="px-5 py-3 border-t border-gray-100 flex justify-end">
+              <button onClick={() => setBlockedDialog(null)} className="text-xs text-gray-500 hover:text-gray-700 font-semibold">Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }

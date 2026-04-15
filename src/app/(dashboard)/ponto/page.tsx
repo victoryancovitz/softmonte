@@ -9,6 +9,7 @@ import PontoMarcacoesGrid from '@/components/PontoMarcacoesGrid'
 import { useToast } from '@/components/Toast'
 import PontoGrid from './components/PontoGrid'
 import PontoAlertas from './components/PontoAlertas'
+import ModalOverrideEmergencial from '@/components/ModalOverrideEmergencial'
 
 function getDaysInMonth(month: number, year: number): number {
   return new Date(year, month, 0).getDate()
@@ -48,6 +49,8 @@ export default function PontoPage() {
   const [loadingHistorico, setLoadingHistorico] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [showDiaRapido, setShowDiaRapido] = useState(false)
+  const [overrideFunc, setOverrideFunc] = useState<any>(null)
+  const [overrideEtapas, setOverrideEtapas] = useState<string[]>([])
   const [limitesPorFuncao, setLimitesPorFuncao] = useState<Record<string, { qtd: number; hh_dia: number }>>({})
   const [obraDataInicio, setObraDataInicio] = useState<string | null>(null)
   const [obraDataFim, setObraDataFim] = useState<string | null>(null)
@@ -245,6 +248,37 @@ export default function PontoPage() {
     const next = !showHistorico
     setShowHistorico(next)
     if (next && historico.length === 0) loadHistorico()
+  }
+
+  async function handleOverrideRequest(func: any) {
+    // Fetch admissoes_workflow to determine etapas pendentes
+    const ETAPAS_LABELS: Record<string, string> = {
+      etapa_docs_pessoais: 'Documentos Pessoais',
+      etapa_exame_admissional: 'Exame Admissional',
+      etapa_ctps: 'CTPS',
+      etapa_contrato_assinado: 'Contrato Assinado',
+      etapa_dados_bancarios: 'Dados Bancários',
+      etapa_epi_entregue: 'EPI Entregue',
+      etapa_nr_obrigatorias: 'Treinamentos NR',
+      etapa_integracao: 'Integração SST',
+      etapa_uniforme: 'Uniforme',
+      etapa_esocial: 'eSocial',
+    }
+    const { data: wf } = await supabase.from('admissoes_workflow')
+      .select('*').eq('funcionario_id', func.id)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle()
+
+    const pendentes: string[] = []
+    if (wf) {
+      for (const [key, label] of Object.entries(ETAPAS_LABELS)) {
+        if (!wf[key]?.ok) pendentes.push(label)
+      }
+    } else {
+      // No workflow at all - all steps pending
+      pendentes.push(...Object.values(ETAPAS_LABELS))
+    }
+    setOverrideEtapas(pendentes)
+    setOverrideFunc(func)
   }
 
   const totalDays = getDaysInMonth(mes, ano)
@@ -468,6 +502,8 @@ export default function PontoPage() {
           onCellClick={(funcId, dia) => setEditing({ funcId, day: dia })}
           excedentes={excessosPorDia}
           podeEditar={podeEditar}
+          userRole={role}
+          onOverrideRequest={handleOverrideRequest}
         />
       )}
 
@@ -515,6 +551,15 @@ export default function PontoPage() {
           ano={ano}
           onClose={() => setShowDiaRapido(false)}
           onSaved={loadData}
+        />
+      )}
+
+      {overrideFunc && (
+        <ModalOverrideEmergencial
+          funcionario={{ id: overrideFunc.id, nome: overrideFunc.nome }}
+          etapasPendentes={overrideEtapas}
+          onClose={() => setOverrideFunc(null)}
+          onSuccess={() => { setOverrideFunc(null); loadData() }}
         />
       )}
     </div>

@@ -46,6 +46,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
     { count: faltasCount }, { count: docsCount }, { data: rescisao },
     { data: vinculosHistorico }, { data: arquivadosHistorico },
     { data: holeriteItens }, { data: holeriteAssinaturas }, { data: holeriteEnvios },
+    { data: overrideAtivo },
   ] = await Promise.all([
     supabase.from('alocacoes').select('*, obras!inner(nome, status, deleted_at)').eq('funcionario_id', params.id).is('obras.deleted_at', null).order('data_inicio', { ascending: false }),
     supabase.from('faltas').select('*').eq('funcionario_id', params.id).order('data', { ascending: false }).limit(20),
@@ -69,6 +70,7 @@ export default async function FuncionarioPage({ params }: { params: { id: string
     supabase.from('folha_itens').select('id, folha_id, salario_base, valor_bruto, valor_liquido, dias_trabalhados, dias_descontados, desconto_inss, desconto_irrf, outros_descontos, created_at, folha_fechamentos(ano, mes, obras(nome))').eq('funcionario_id', params.id).order('created_at', { ascending: false }).limit(24),
     supabase.from('holerite_assinaturas').select('folha_item_id, status, assinado_em').eq('funcionario_id', params.id),
     supabase.from('holerite_envios').select('folha_item_id, enviado_em').eq('funcionario_id', params.id).eq('status', 'enviado'),
+    supabase.from('admissao_overrides').select('*').eq('funcionario_id', params.id).eq('regularizado', false).maybeSingle(),
   ])
   const [
     { data: funcoes },
@@ -429,6 +431,37 @@ export default async function FuncionarioPage({ params }: { params: { id: string
           {f.motivo_saida && <span className="block text-xs mt-1">Motivo: <strong>{f.motivo_saida}</strong></span>}
         </div>
       )}
+
+      {/* Override emergencial banner */}
+      {overrideAtivo && (() => {
+        const prazoDate = new Date(overrideAtivo.prazo_regularizacao + 'T12:00')
+        const diasRestantes = Math.ceil((prazoDate.getTime() - hoje.getTime()) / 86400000)
+        const corBanner = diasRestantes < 0 ? 'bg-red-50 border-red-300' : diasRestantes <= 3 ? 'bg-orange-50 border-orange-300' : 'bg-yellow-50 border-yellow-300'
+        const corTexto = diasRestantes < 0 ? 'text-red-800' : diasRestantes <= 3 ? 'text-orange-800' : 'text-yellow-800'
+        const etapas: string[] = overrideAtivo.etapas_pendentes ?? []
+        return (
+          <div className={`mb-4 p-3 rounded-xl border ${corBanner}`}>
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex-1 min-w-0">
+                <p className={`text-sm font-bold ${corTexto}`}>
+                  Liberado emergencialmente em {fmtD(overrideAtivo.data_liberacao)} | Motivo: {overrideAtivo.motivo} | Prazo: {fmtD(overrideAtivo.prazo_regularizacao)}
+                  {diasRestantes < 0 && <span className="ml-1 text-red-600 font-bold">(VENCIDO)</span>}
+                </p>
+                {etapas.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {etapas.map((e: string) => (
+                      <span key={e} className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-red-100 text-red-700 border border-red-200">{e}</span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <Link href="/rh/admissoes" className={`text-xs font-semibold hover:underline flex-shrink-0 ${corTexto}`}>
+                Ir para admissão &rarr;
+              </Link>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Tabs */}
       <FuncionarioTabs tabs={tabs} />

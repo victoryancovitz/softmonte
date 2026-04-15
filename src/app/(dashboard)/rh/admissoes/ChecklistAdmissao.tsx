@@ -112,6 +112,11 @@ export default function ChecklistAdmissao({
         concluida_em: new Date().toISOString(),
       }).eq('id', workflow.id)
       await supabase.from('funcionarios').update({ status: 'disponivel' }).eq('id', funcionario.id)
+      // Auto-close any active emergency override
+      await supabase.from('admissao_overrides').update({
+        regularizado: true,
+        regularizado_em: new Date().toISOString(),
+      }).eq('funcionario_id', funcionario.id).eq('regularizado', false)
       toast.success('Admissao concluida!')
     }
   }
