@@ -4,6 +4,8 @@ import { createClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import RefreshButton from './RefreshButton'
 import { Target, DollarSign, AlertTriangle, Users, Calendar, ArrowRight } from 'lucide-react'
+import { getEfetivoDashboard } from '@/lib/efetivo/get-efetivo-dashboard'
+import EfetivoDashboard from '@/components/EfetivoDashboard'
 
 import { fmt, fmtK } from '@/lib/cores'
 
@@ -77,6 +79,8 @@ export default async function DiretoriaPage() {
     supabase.from('vw_custo_funcionario').select('margem_pct'),
     supabase.from('vw_tir_contrato').select('*').limit(10),
   ])
+
+  const efetivoData = await getEfetivoDashboard()
 
   const funcs = funcAtivos ?? []
   const obra = (obrasAtivas ?? [])[0]
@@ -233,6 +237,9 @@ export default async function DiretoriaPage() {
         <div />
         <RefreshButton />
       </div>
+
+      {/* ══════ EFETIVO DIÁRIO ══════ */}
+      <EfetivoDashboard data={efetivoData} />
 
       {/* ══════ SEÇÃO 1: SAÚDE FINANCEIRA ══════ */}
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Saúde Financeira</p>
