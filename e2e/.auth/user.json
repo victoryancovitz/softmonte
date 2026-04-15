@@ -1,0 +1,15 @@
+{
+  "cookies": [
+    {
+      "name": "__cf_bm",
+      "value": "ah4tl9ELwK8js3lQjX1KrkHPGDJaRJZ_zr4j_caC1Ns-1776272019-1.0.1.1-XkOFwmP8VBOJfcbCn.5Wy30bH.oa4bc2zuqPZDTTwEti6ns3NcGNoKWmvH18VsKu3LZKLBdkBdvhTCs9Nxy7yVVTVSFEQN7a6pez3lh6wgk",
+      "domain": "supabase.co",
+      "path": "/",
+      "expires": 1776273819,
+      "httpOnly": true,
+      "secure": true,
+      "sameSite": "None"
+    }
+  ],
+  "origins": []
+}
