@@ -2,243 +2,181 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { FileText, Plus, Upload, FileDown } from 'lucide-react'
+import RdoForm from './diario/RdoForm'
+import RdoImportModal from './diario/RdoImportModal'
 
-type Registro = {
+type RdoSummary = {
   id: string
-  obra_id: string
   data: string
-  clima: string | null
-  efetivo_presente: number | null
-  servicos_executados: string | null
-  ocorrencias: string | null
-  equipamentos_utilizados: string | null
-  observacoes: string | null
-  registrado_por: string | null
-  registrado_por_nome: string | null
+  numero_rdo: number | null
+  status: 'rascunho' | 'enviado' | 'aprovado' | string
+  formato: string | null
+  horas_trabalhadas: number | null
+  engenheiro_resp: string | null
 }
 
-type FormData = {
-  data: string
-  clima: string
-  efetivo_presente: string
-  servicos_executados: string
-  ocorrencias: string
-  equipamentos_utilizados: string
-  observacoes: string
+const STATUS_BADGE: Record<string, string> = {
+  rascunho: 'bg-gray-100 text-gray-600',
+  enviado: 'bg-blue-100 text-blue-700',
+  aprovado: 'bg-green-100 text-green-700',
 }
 
-const hoje = new Date().toISOString().split('T')[0]
-
-const emptyForm: FormData = {
-  data: hoje,
-  clima: '',
-  efetivo_presente: '',
-  servicos_executados: '',
-  ocorrencias: '',
-  equipamentos_utilizados: '',
-  observacoes: '',
-}
-
-const CLIMA_OPTIONS = [
-  { value: '', label: 'Selecione' },
-  { value: 'sol', label: 'Sol' },
-  { value: 'nublado', label: 'Nublado' },
-  { value: 'chuva', label: 'Chuva' },
-]
-
-const CLIMA_ICON: Record<string, string> = {
-  sol: '\u2600\uFE0F',
-  nublado: '\u2601\uFE0F',
-  chuva: '\uD83C\uDF27\uFE0F',
+const STATUS_LABEL: Record<string, string> = {
+  rascunho: 'Rascunho',
+  enviado: 'Enviado',
+  aprovado: 'Aprovado',
 }
 
 function fmtDate(d: string) {
-  return new Date(d + 'T12:00').toLocaleDateString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' })
+  return new Date(d + 'T12:00').toLocaleDateString('pt-BR', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  })
 }
 
 export default function DiarioTab({ obraId }: { obraId: string }) {
   const supabase = createClient()
   const toast = useToast()
 
-  const [registros, setRegistros] = useState<Registro[]>([])
+  const [registros, setRegistros] = useState<RdoSummary[]>([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [form, setForm] = useState<FormData>(emptyForm)
-  const [saving, setSaving] = useState(false)
+  const [showForm, setShowForm] = useState(false)
+  const [showImport, setShowImport] = useState(false)
+  const [counts, setCounts] = useState<Record<string, { ef: number; hh: number; cli: number }>>({})
 
   const fetchRegistros = useCallback(async () => {
+    setLoading(true)
     const { data, error } = await supabase
       .from('diario_obra')
-      .select('*')
+      .select('id, data, numero_rdo, status, formato, horas_trabalhadas, engenheiro_resp')
       .eq('obra_id', obraId)
       .order('data', { ascending: false })
-    if (error) toast.error('Erro ao carregar diário')
-    else setRegistros(data ?? [])
+    if (error) toast.error('Erro ao carregar diário', error.message)
+    const rows = (data ?? []) as RdoSummary[]
+    setRegistros(rows)
+
+    // Agrega efetivo/clima por RDO
+    if (rows.length > 0) {
+      const ids = rows.map(r => r.id)
+      const [{ data: efs }, { data: cls }] = await Promise.all([
+        supabase.from('diario_efetivo').select('diario_id, quantidade, horas_trabalhadas').in('diario_id', ids),
+        supabase.from('diario_clima').select('diario_id, condicao').in('diario_id', ids),
+      ])
+      const agg: Record<string, { ef: number; hh: number; cli: number }> = {}
+      ;(efs ?? []).forEach((e: any) => {
+        agg[e.diario_id] = agg[e.diario_id] || { ef: 0, hh: 0, cli: 0 }
+        agg[e.diario_id].ef += Number(e.quantidade ?? 0)
+        agg[e.diario_id].hh += Number(e.horas_trabalhadas ?? 0) * Number(e.quantidade ?? 1)
+      })
+      ;(cls ?? []).forEach((c: any) => {
+        agg[c.diario_id] = agg[c.diario_id] || { ef: 0, hh: 0, cli: 0 }
+        if (c.condicao === 'chuvoso' || c.condicao === 'impraticavel' || c.condicao === 'restrito') {
+          agg[c.diario_id].cli++
+        }
+      })
+      setCounts(agg)
+    }
     setLoading(false)
-  }, [obraId])
+  }, [obraId, supabase, toast])
 
   useEffect(() => { fetchRegistros() }, [fetchRegistros])
 
-  function openNew() {
-    setEditingId(null)
-    setForm(emptyForm)
-    setShowForm(true)
+  const openNew = () => { setEditingId(null); setShowForm(true) }
+  const openEdit = (id: string) => { setEditingId(id); setShowForm(true) }
+
+  if (showForm) {
+    return (
+      <RdoForm
+        obraId={obraId}
+        rdoId={editingId}
+        onClose={() => { setShowForm(false); setEditingId(null); fetchRegistros() }}
+      />
+    )
   }
-
-  function openEdit(r: Registro) {
-    setEditingId(r.id)
-    setForm({
-      data: r.data ?? hoje,
-      clima: r.clima ?? '',
-      efetivo_presente: r.efetivo_presente != null ? String(r.efetivo_presente) : '',
-      servicos_executados: r.servicos_executados ?? '',
-      ocorrencias: r.ocorrencias ?? '',
-      equipamentos_utilizados: r.equipamentos_utilizados ?? '',
-      observacoes: r.observacoes ?? '',
-    })
-    setShowForm(true)
-  }
-
-  function cancel() {
-    setShowForm(false)
-    setEditingId(null)
-    setForm(emptyForm)
-  }
-
-  async function save() {
-    if (!form.data || !form.servicos_executados.trim()) {
-      toast.warning('Preencha data e serviços executados')
-      return
-    }
-    setSaving(true)
-
-    // Get current user for registrado_por
-    const { data: { user } } = await supabase.auth.getUser()
-
-    const payload: Record<string, any> = {
-      data: form.data,
-      clima: form.clima || null,
-      efetivo_presente: form.efetivo_presente ? Number(form.efetivo_presente) : null,
-      servicos_executados: form.servicos_executados.trim(),
-      ocorrencias: form.ocorrencias.trim() || null,
-      equipamentos_utilizados: form.equipamentos_utilizados.trim() || null,
-      observacoes: form.observacoes.trim() || null,
-    }
-
-    if (editingId) {
-      const { error } = await supabase.from('diario_obra').update(payload).eq('id', editingId)
-      if (error) toast.error('Erro ao atualizar registro')
-      else toast.success('Registro atualizado')
-    } else {
-      payload.obra_id = obraId
-      payload.registrado_por = user?.id ?? null
-      payload.registrado_por_nome = user?.user_metadata?.nome ?? user?.email ?? null
-      const { error } = await supabase.from('diario_obra').insert(payload)
-      if (error) toast.error('Erro ao criar registro')
-      else toast.success('Registro adicionado')
-    }
-    setSaving(false)
-    cancel()
-    fetchRegistros()
-  }
-
-  async function handleDelete(id: string) {
-    if (!confirm('Excluir este registro?')) return
-    const { error } = await supabase.from('diario_obra').delete().eq('id', id)
-    if (error) toast.error('Erro ao excluir registro')
-    else { toast.success('Registro excluído'); fetchRegistros() }
-  }
-
-  if (loading) return <div className="text-sm text-gray-400 py-8 text-center">Carregando...</div>
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-sm font-semibold text-gray-700">Diário da Obra</h2>
-        {!showForm && (
-          <button onClick={openNew} className="text-xs font-semibold text-brand hover:underline">+ Novo registro</button>
-        )}
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
+        <h2 className="text-sm font-semibold text-gray-700">Diário de Obra (RDO)</h2>
+        <div className="flex gap-2">
+          <button onClick={() => setShowImport(true)}
+            className="px-3 py-2 border border-brand text-brand text-xs font-semibold rounded-lg hover:bg-brand/5 flex items-center gap-1.5">
+            <Upload className="w-3.5 h-3.5" /> Importar Excel
+          </button>
+          <button onClick={openNew}
+            className="px-3 py-2 bg-brand text-white text-xs font-semibold rounded-lg hover:bg-brand/90 flex items-center gap-1.5">
+            <Plus className="w-3.5 h-3.5" /> Novo RDO
+          </button>
+        </div>
       </div>
 
-      {/* Inline form */}
-      {showForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">{editingId ? 'Editar registro' : 'Novo registro'}</h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Data *</label>
-              <input type="date" value={form.data} onChange={e => setForm({ ...form, data: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand/30 focus:border-brand outline-none" />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Clima</label>
-              <select value={form.clima} onChange={e => setForm({ ...form, clima: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand/30 focus:border-brand outline-none">
-                {CLIMA_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block">Efetivo presente</label>
-              <input type="number" min="0" value={form.efetivo_presente} onChange={e => setForm({ ...form, efetivo_presente: e.target.value })} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand/30 focus:border-brand outline-none" />
-            </div>
-            <div className="sm:col-span-3">
-              <label className="text-xs text-gray-500 mb-1 block">Serviços executados *</label>
-              <textarea value={form.servicos_executados} onChange={e => setForm({ ...form, servicos_executados: e.target.value })} rows={3} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand/30 focus:border-brand outline-none resize-none" />
-            </div>
-            <div className="sm:col-span-3">
-              <label className="text-xs text-gray-500 mb-1 block">Ocorrências</label>
-              <textarea value={form.ocorrencias} onChange={e => setForm({ ...form, ocorrencias: e.target.value })} rows={2} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand/30 focus:border-brand outline-none resize-none" />
-            </div>
-            <div className="sm:col-span-3">
-              <label className="text-xs text-gray-500 mb-1 block">Equipamentos utilizados</label>
-              <textarea value={form.equipamentos_utilizados} onChange={e => setForm({ ...form, equipamentos_utilizados: e.target.value })} rows={2} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand/30 focus:border-brand outline-none resize-none" />
-            </div>
-            <div className="sm:col-span-3">
-              <label className="text-xs text-gray-500 mb-1 block">Observações</label>
-              <textarea value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} rows={2} className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-brand/30 focus:border-brand outline-none resize-none" />
-            </div>
-          </div>
-          <div className="flex gap-2 mt-4">
-            <button onClick={save} disabled={saving} className="px-4 py-2 bg-brand text-white text-xs font-semibold rounded-lg hover:bg-brand/90 disabled:opacity-50">
-              {saving ? 'Salvando...' : editingId ? 'Atualizar' : 'Adicionar'}
+      {/* Lista */}
+      {loading ? (
+        <div className="text-sm text-gray-400 py-8 text-center">Carregando...</div>
+      ) : registros.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-10 text-center">
+          <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-sm font-semibold text-gray-700">Nenhum RDO registrado</p>
+          <p className="text-xs text-gray-500 mt-1">Registre o dia-a-dia da obra ou importe um Excel existente.</p>
+          <div className="flex gap-2 justify-center mt-4">
+            <button onClick={openNew} className="px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90">
+              + Novo RDO
             </button>
-            <button onClick={cancel} className="px-4 py-2 text-xs font-semibold text-gray-500 hover:text-gray-700">Cancelar</button>
+            <button onClick={() => setShowImport(true)} className="px-4 py-2 border border-brand text-brand text-sm font-medium rounded-lg hover:bg-brand/5">
+              Importar Excel
+            </button>
           </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 bg-gray-50">
+                {['Data', 'Nº RDO', 'Efetivo', 'HH Total', 'Clima', 'Formato', 'Status', ''].map(h => (
+                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {registros.map(r => {
+                const c = counts[r.id] ?? { ef: 0, hh: 0, cli: 0 }
+                return (
+                  <tr key={r.id} className="border-b border-gray-50 hover:bg-gray-50/60 cursor-pointer" onClick={() => openEdit(r.id)}>
+                    <td className="px-4 py-3 font-medium">{fmtDate(r.data)}</td>
+                    <td className="px-4 py-3 text-gray-600">#{r.numero_rdo ?? '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">{c.ef || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">{c.hh > 0 ? c.hh.toFixed(1) + 'h' : '—'}</td>
+                    <td className="px-4 py-3 text-xs">
+                      {c.cli > 0 ? <span className="text-amber-700">⚠ {c.cli} faixas</span> : <span className="text-green-700">OK</span>}
+                    </td>
+                    <td className="px-4 py-3 text-[10px] uppercase text-gray-400">{r.formato ?? '—'}</td>
+                    <td className="px-4 py-3">
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${STATUS_BADGE[r.status] ?? 'bg-gray-100'}`}>
+                        {STATUS_LABEL[r.status] ?? r.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button className="text-[11px] text-brand hover:underline">Abrir →</button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
         </div>
       )}
 
-      {/* List */}
-      {registros.length > 0 ? (
-        <div className="space-y-3">
-          {registros.map(d => (
-            <div key={d.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold">{fmtDate(d.data)}</span>
-                  {d.clima && <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded">{CLIMA_ICON[d.clima] ?? ''} {d.clima}</span>}
-                </div>
-                <div className="flex items-center gap-3">
-                  {d.efetivo_presente != null && <span className="text-xs text-gray-400">{d.efetivo_presente} presentes</span>}
-                  <button onClick={() => openEdit(d)} className="text-xs text-gray-400 hover:text-brand">Editar</button>
-                  <button onClick={() => handleDelete(d.id)} className="text-xs text-gray-400 hover:text-red-600">Excluir</button>
-                </div>
-              </div>
-              {d.servicos_executados && (
-                <p className="text-xs text-gray-600 mb-1 line-clamp-2">{d.servicos_executados}</p>
-              )}
-              {d.ocorrencias && <p className="text-xs text-red-600 mb-1">{d.ocorrencias}</p>}
-              {d.equipamentos_utilizados && <p className="text-xs text-gray-500 mb-1">Equip.: {d.equipamentos_utilizados}</p>}
-              {d.registrado_por_nome && <p className="text-[10px] text-gray-400 mt-1">Registrado por: {d.registrado_por_nome}</p>}
-            </div>
-          ))}
-        </div>
-      ) : (
-        !showForm && (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-            <p className="text-gray-500 font-medium mb-1">Nenhum registro no diário de obra</p>
-            <p className="text-xs text-gray-400 mb-3">Registre atividades diárias, clima e ocorrências.</p>
-            <button onClick={openNew} className="text-xs font-semibold text-brand hover:underline">+ Novo registro</button>
-          </div>
-        )
+      {showImport && (
+        <RdoImportModal
+          obraId={obraId}
+          onClose={() => setShowImport(false)}
+          onImported={() => { setShowImport(false); fetchRegistros() }}
+        />
       )}
     </div>
   )
