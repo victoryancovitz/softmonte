@@ -2,9 +2,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
-import { FileText, Plus, Upload, FileDown } from 'lucide-react'
+import { FileText, Plus, Upload, FileDown, AlertTriangle } from 'lucide-react'
 import RdoForm from './diario/RdoForm'
 import RdoImportModal from './diario/RdoImportModal'
+import OcorrenciasView from './diario/OcorrenciasView'
 
 type RdoSummary = {
   id: string
@@ -47,6 +48,8 @@ export default function DiarioTab({ obraId }: { obraId: string }) {
   const [showForm, setShowForm] = useState(false)
   const [showImport, setShowImport] = useState(false)
   const [counts, setCounts] = useState<Record<string, { ef: number; hh: number; cli: number }>>({})
+  const [subTab, setSubTab] = useState<'rdos' | 'ocorrencias'>('rdos')
+  const [ocorrenciasAbertas, setOcorrenciasAbertas] = useState(0)
 
   const fetchRegistros = useCallback(async () => {
     setLoading(true)
@@ -80,6 +83,15 @@ export default function DiarioTab({ obraId }: { obraId: string }) {
       })
       setCounts(agg)
     }
+
+    // Contagem de ocorrências abertas
+    const { count } = await supabase
+      .from('vw_ocorrencias_obra')
+      .select('*', { count: 'exact', head: true })
+      .eq('obra_id', obraId)
+      .eq('status_ocorrencia', 'aberta')
+    setOcorrenciasAbertas(count ?? 0)
+
     setLoading(false)
   }, [obraId, supabase, toast])
 
@@ -100,20 +112,46 @@ export default function DiarioTab({ obraId }: { obraId: string }) {
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
-        <h2 className="text-sm font-semibold text-gray-700">Diário de Obra (RDO)</h2>
-        <div className="flex gap-2">
-          <button onClick={() => setShowImport(true)}
-            className="px-3 py-2 border border-brand text-brand text-xs font-semibold rounded-lg hover:bg-brand/5 flex items-center gap-1.5">
-            <Upload className="w-3.5 h-3.5" /> Importar Excel
+      {/* Sub-tabs */}
+      <div className="flex items-center justify-between mb-4 border-b border-gray-200 gap-2 flex-wrap">
+        <div className="flex">
+          <button
+            onClick={() => setSubTab('rdos')}
+            className={`px-4 py-2 text-sm font-semibold transition-colors ${subTab === 'rdos' ? 'text-brand border-b-2 border-brand' : 'text-gray-500 hover:text-gray-700'}`}>
+            RDOs ({registros.length})
           </button>
-          <button onClick={openNew}
-            className="px-3 py-2 bg-brand text-white text-xs font-semibold rounded-lg hover:bg-brand/90 flex items-center gap-1.5">
-            <Plus className="w-3.5 h-3.5" /> Novo RDO
+          <button
+            onClick={() => setSubTab('ocorrencias')}
+            className={`px-4 py-2 text-sm font-semibold transition-colors flex items-center gap-1.5 ${subTab === 'ocorrencias' ? 'text-brand border-b-2 border-brand' : 'text-gray-500 hover:text-gray-700'}`}>
+            <AlertTriangle className="w-3.5 h-3.5" />
+            Ocorrências
+            {ocorrenciasAbertas > 0 && (
+              <span className="bg-red-500 text-white text-[10px] rounded-full w-5 h-5 inline-flex items-center justify-center font-bold">
+                {ocorrenciasAbertas}
+              </span>
+            )}
           </button>
         </div>
+        {subTab === 'rdos' && (
+          <div className="flex gap-2 pb-2">
+            <button onClick={() => setShowImport(true)}
+              className="px-3 py-2 border border-brand text-brand text-xs font-semibold rounded-lg hover:bg-brand/5 flex items-center gap-1.5">
+              <Upload className="w-3.5 h-3.5" /> Importar Excel
+            </button>
+            <button onClick={openNew}
+              className="px-3 py-2 bg-brand text-white text-xs font-semibold rounded-lg hover:bg-brand/90 flex items-center gap-1.5">
+              <Plus className="w-3.5 h-3.5" /> Novo RDO
+            </button>
+          </div>
+        )}
       </div>
+
+      {subTab === 'ocorrencias' ? (
+        <OcorrenciasView obraId={obraId} onOpenRdo={openEdit} />
+      ) : (<></>)}
+
+      {subTab === 'rdos' && (<>
+        {/* RDOs content */}
 
       {/* Lista */}
       {loading ? (
@@ -170,6 +208,7 @@ export default function DiarioTab({ obraId }: { obraId: string }) {
           </table>
         </div>
       )}
+      </>)}
 
       {showImport && (
         <RdoImportModal

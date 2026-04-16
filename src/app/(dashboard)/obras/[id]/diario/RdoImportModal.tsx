@@ -15,6 +15,7 @@ type PreviewData = {
   abas: string[]
   rdo?: any
   ponto?: any[]
+  imagens?: Array<{ name: string; dataBase64: string; mediaType: string }>
   preview?: any[]
   fileName: string
   fileSize: number
@@ -30,6 +31,8 @@ export default function RdoImportModal({ obraId, onClose, onImported }: Props) {
   const [saving, setSaving] = useState(false)
   const [activeTab, setActiveTab] = useState<'rdo' | 'ponto' | 'nao_encontrados'>('rdo')
   const [pontoMatch, setPontoMatch] = useState<Record<string, string | null>>({}) // nome → funcionario_id ou null
+  const [lancarPonto, setLancarPonto] = useState(true)
+  const [sobrescreverPonto, setSobrescreverPonto] = useState(false)
 
   const handleFile = async (f: File | null) => {
     if (!f) return
@@ -141,20 +144,106 @@ export default function RdoImportModal({ obraId, onClose, onImported }: Props) {
           rdo.equipamentos.map((e: any) => ({ diario_id: id, ...e })),
         ) as any)
       }
-      if (rdo.fotos?.length) {
-        inserts.push(supabase.from('diario_fotos').insert(
-          rdo.fotos.map((f: any) => ({ diario_id: id, numero: f.numero, legenda: f.legenda, url: f.url || '' })),
-        ) as any)
+      // Upload de imagens embutidas no OOXML para o Storage
+      const fotosComUrl: any[] = []
+      const imagens = preview.imagens ?? []
+      const legendas = rdo.fotos ?? []
+      for (let i = 0; i < imagens.length && i < 10; i++) {
+        const img = imagens[i]
+        const legenda = legendas[i]?.legenda ?? ''
+        const numero = legendas[i]?.numero ?? (i + 1)
+        try {
+          const ext = img.mediaType === 'image/jpeg' ? 'jpg' : img.mediaType === 'image/png' ? 'png' : 'img'
+          const binary = Uint8Array.from(atob(img.dataBase64), c => c.charCodeAt(0))
+          const blob = new Blob([binary], { type: img.mediaType })
+          const path = `${obraId}/${dataRdo}/foto-${numero}-${Date.now()}.${ext}`
+          const { error: upErr } = await supabase.storage.from('rdos').upload(path, blob, { upsert: true })
+          if (!upErr) {
+            const { data: pub } = supabase.storage.from('rdos').getPublicUrl(path)
+            fotosComUrl.push({ diario_id: id, numero, legenda, url: pub.publicUrl })
+          }
+        } catch { /* ignore individual image failures */ }
+      }
+
+      // Se não conseguiu extrair imagens mas tem legendas, ainda salva só as legendas
+      if (fotosComUrl.length === 0 && legendas.length > 0) {
+        legendas.slice(0, 10).forEach((f: any) => {
+          fotosComUrl.push({ diario_id: id, numero: f.numero, legenda: f.legenda, url: f.url || '' })
+        })
+      }
+
+      if (fotosComUrl.length > 0) {
+        inserts.push(supabase.from('diario_fotos').insert(fotosComUrl) as any)
       }
       await Promise.all(inserts)
 
-      toast.success('RDO importado!', `${preview.rdo.efetivo?.length ?? 0} entradas de efetivo, ${preview.rdo.atividades?.length ?? 0} atividades`)
+      // Lançar ponto dos funcionários identificados
+      let pontoLancado = 0
+      if (lancarPonto && preview.ponto && preview.ponto.length > 0) {
+        pontoLancado = await inserirPontoRegistros(id, dataRdo, preview.ponto)
+      }
+
+      const msg = `${preview.rdo.efetivo?.length ?? 0} efetivo · ${preview.rdo.atividades?.length ?? 0} atividades · ${fotosComUrl.length} fotos` +
+        (pontoLancado > 0 ? ` · ${pontoLancado} pontos` : '')
+      toast.success('RDO importado!', msg)
       onImported()
     } catch (e: any) {
       toast.error('Erro ao importar', e?.message ?? '')
     } finally {
       setSaving(false)
     }
+  }
+
+  async function inserirPontoRegistros(rdoId: string, dataRdo: string, pontos: any[]): Promise<number> {
+    const { data: { user } } = await supabase.auth.getUser()
+    let inseridos = 0
+    const linhasParaUpsert: any[] = []
+    const parsePonto = (p: any) => ({
+      funcionario_id: pontoMatch[p.nome],
+      obra_id: obraId,
+      data: dataRdo,
+      entrada: p.entrada1 || null,
+      saida: p.saida1 || null,
+      horas_trabalhadas: Number(p.normais ?? 0) + Number(p.extras ?? 0),
+      origem: 'importacao_rdo',
+      origem_ref: rdoId,
+      registrado_por: user?.id ?? null,
+      observacao: `Importado de RDO (aba ${p.aba ?? ''})`,
+    })
+
+    for (const p of pontos) {
+      const funcId = pontoMatch[p.nome]
+      if (!funcId) continue // não encontrado
+
+      const { data: existing } = await supabase
+        .from('ponto_registros')
+        .select('id')
+        .eq('funcionario_id', funcId)
+        .eq('data', dataRdo)
+        .maybeSingle()
+
+      if (existing?.id) {
+        if (!sobrescreverPonto) continue
+        // Sobrescreve o existente
+        const row = parsePonto(p)
+        const { error } = await supabase.from('ponto_registros').update({
+          entrada: row.entrada, saida: row.saida, horas_trabalhadas: row.horas_trabalhadas,
+          origem: row.origem, origem_ref: row.origem_ref,
+          editado_em: new Date().toISOString(), editado_por: user?.id ?? null,
+          motivo_edicao: 'Reimportação de RDO',
+        }).eq('id', existing.id)
+        if (!error) inseridos++
+      } else {
+        linhasParaUpsert.push(parsePonto(p))
+      }
+    }
+
+    if (linhasParaUpsert.length > 0) {
+      const { error } = await supabase.from('ponto_registros').insert(linhasParaUpsert)
+      if (!error) inseridos += linhasParaUpsert.length
+    }
+
+    return inseridos
   }
 
   const naoEncontrados = preview?.ponto
@@ -326,6 +415,23 @@ export default function RdoImportModal({ obraId, onClose, onImported }: Props) {
                     ))}
                     <p className="text-[10px] text-gray-400 mt-2">Cadastre esses funcionários via /funcionarios/novo para lançar o ponto deles.</p>
                   </div>
+                )}
+              </div>
+            )}
+
+            {/* Footer options */}
+            {encontrados.length > 0 && (
+              <div className="mt-4 p-3 bg-blue-50 border border-blue-100 rounded-xl space-y-2">
+                <label className="flex items-center gap-2 text-sm text-blue-900">
+                  <input type="checkbox" checked={lancarPonto} onChange={e => setLancarPonto(e.target.checked)} className="w-4 h-4" />
+                  <span className="font-semibold">Lançar ponto automaticamente</span>
+                  <span className="text-xs text-blue-700">({encontrados.length} funcionários)</span>
+                </label>
+                {lancarPonto && (
+                  <label className="flex items-center gap-2 text-xs text-blue-700 ml-6">
+                    <input type="checkbox" checked={sobrescreverPonto} onChange={e => setSobrescreverPonto(e.target.checked)} className="w-4 h-4" />
+                    <span>Sobrescrever registros existentes</span>
+                  </label>
                 )}
               </div>
             )}

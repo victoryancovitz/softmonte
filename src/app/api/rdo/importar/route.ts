@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
+import JSZip from 'jszip'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -25,11 +26,14 @@ export async function POST(req: NextRequest) {
     if (formato === 'ageo') {
       const rdo = parseAgeoRdo(wb)
       const ponto = parseAgeoPonto(wb, 'NR 12').concat(parseAgeoPonto(wb, 'APOIO'))
+      // Extrai imagens embutidas do OOXML (.xlsm / .xlsx)
+      const imagens = await extrairImagensOOXML(buf)
       return NextResponse.json({
         formato: 'ageo',
         abas,
         rdo,
         ponto,
+        imagens, // [{ name, dataBase64, mediaType }]
         fileName: file.name,
         fileSize: file.size,
       })
@@ -264,6 +268,32 @@ function parseDate(v: any): string | null {
     return `${year}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`
   }
   return null
+}
+
+// ─── Extração de imagens embutidas no OOXML (.xlsx/.xlsm) ────────────────────
+
+async function extrairImagensOOXML(buf: Buffer): Promise<Array<{ name: string; dataBase64: string; mediaType: string }>> {
+  try {
+    const zip = await JSZip.loadAsync(buf)
+    const results: Array<{ name: string; dataBase64: string; mediaType: string }> = []
+    const files = Object.keys(zip.files).filter(f => f.startsWith('xl/media/'))
+    for (const filePath of files) {
+      const f = zip.files[filePath]
+      if (f.dir) continue
+      const ext = filePath.split('.').pop()?.toLowerCase() ?? 'png'
+      const mediaType =
+        ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' :
+        ext === 'png' ? 'image/png' :
+        ext === 'gif' ? 'image/gif' :
+        'image/png'
+      const data = await f.async('base64')
+      const name = filePath.split('/').pop() ?? 'imagem'
+      results.push({ name, dataBase64: data, mediaType })
+    }
+    return results
+  } catch {
+    return []
+  }
 }
 
 function parseTime(v: any): string | null {
