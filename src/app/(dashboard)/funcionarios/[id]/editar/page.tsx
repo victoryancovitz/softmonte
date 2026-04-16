@@ -111,7 +111,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
       admissao: form.admissao || null,
       prazo1: form.prazo1 || null,
       prazo2: form.prazo2 || null,
-      tipo_vinculo: form.tipo_vinculo || 'indeterminado',
+      tipo_vinculo: form.tipo_vinculo || 'experiencia_45_45',
       salario_base: parseFloat(form.salario_base) || null,
       insalubridade_pct: parseFloat(form.insalubridade_pct) || 0,
       periculosidade_pct: parseFloat(form.periculosidade_pct) || 0,
@@ -211,7 +211,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
               <div><label className={lbl}>2º Prazo experiência (90d)</label>
                 <input type="date" value={form.prazo2 ?? ''} min={form.prazo1 ?? form.admissao ?? undefined} onChange={e => set('prazo2', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>Tipo de vínculo</label>
-                <select value={form.tipo_vinculo ?? 'indeterminado'} onChange={e => set('tipo_vinculo', e.target.value)} className={inp + ' bg-white'}>
+                <select value={form.tipo_vinculo ?? 'experiencia_45_45'} onChange={e => set('tipo_vinculo', e.target.value)} className={inp + ' bg-white'}>
                   <option value="experiencia_45_45">Experiência 45+45 dias</option>
                   <option value="experiencia_30_60">Experiência 30+60 dias</option>
                   <option value="experiencia_90">Experiência 90 dias</option>

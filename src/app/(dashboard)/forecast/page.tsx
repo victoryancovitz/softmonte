@@ -31,7 +31,7 @@ export default function ForecastPage() {
   async function abrirDetalhe(obra: any) {
     setObraAtiva(obra)
     const { data, error } = await supabase.from('forecast_contrato')
-      .select('*').eq('obra_id', obra.obra_id).is('deleted_at', null).order('ano').order('mes')
+      .select('*').eq('obra_id', obra.obra_id).order('ano').order('mes')
     if (error) { toast.error('Erro: ' + error.message); return }
     setDetalhe(data || [])
   }
@@ -62,7 +62,7 @@ export default function ForecastPage() {
       const hhMesFull = composicao.reduce((s: number, c: any) => s + Number(c.horas_mes), 0)
 
       const { data: bms } = await supabase.from('financeiro_lancamentos')
-        .select('data_competencia, valor').eq('tipo', 'receita').eq('origem', 'bm_aprovado').is('deleted_at', null)
+        .select('data_competencia, valor').eq('tipo', 'receita').eq('origem', 'bm_aprovado')
       const bmPorMes: Record<string, number> = {}
       ;(bms || []).forEach((b: any) => { const ym = b.data_competencia?.slice(0, 7); if (ym) bmPorMes[ym] = (bmPorMes[ym] || 0) + Number(b.valor) })
 
@@ -120,7 +120,7 @@ export default function ForecastPage() {
         cur = new Date(ano, mes, 1)
       }
 
-      await supabase.from('forecast_contrato').update({ deleted_at: new Date().toISOString() }).eq('obra_id', obra.obra_id).is('deleted_at', null)
+      await supabase.from('forecast_contrato').delete().eq('obra_id', obra.obra_id)
       const { error } = await supabase.from('forecast_contrato').insert(rows)
       if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
       toast.success(`Forecast gerado: ${rows.length} meses · ${fmt(receitaMesFull)}/mês completo`)
@@ -249,7 +249,7 @@ export default function ForecastPage() {
           <div className="flex justify-end gap-4 mb-3">
             <ConfirmButton label="Limpar forecast" onConfirm={async () => {
               const { error } = await supabase.from('forecast_contrato')
-                .update({ deleted_at: new Date().toISOString() })
+                .delete()
                 .eq('obra_id', obraAtiva.obra_id)
               if (error) { toast.error('Erro ao limpar: ' + error.message); return }
               toast.success('Forecast limpo')
