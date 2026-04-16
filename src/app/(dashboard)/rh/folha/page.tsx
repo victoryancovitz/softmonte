@@ -76,18 +76,29 @@ export default function FolhaPage() {
       const tot = tot_bruto + tot_enc + tot_prov + tot_ben
 
       // 3b) Validar composição contratual (alerta, não bloqueia)
-      const { data: composicaoCheck } = await supabase.from('contrato_composicao').select('funcao_nome, quantidade_contratada').eq('obra_id', form.obra_id).eq('ativo', true)
+      // Cruza por funcao_id quando disponível; fallback por nome normalizado (UPPER+TRIM)
+      const { data: composicaoCheck } = await supabase.from('contrato_composicao')
+        .select('funcao_id, funcao_nome, quantidade_contratada')
+        .eq('obra_id', form.obra_id).eq('ativo', true)
+      const norm = (s: any) => (s || '').toString().toUpperCase().trim()
       const porCargo: Record<string, number> = {}
-      for (const c of custosValidos) { const cargo = (c.cargo || '').toUpperCase(); porCargo[cargo] = (porCargo[cargo] || 0) + 1 }
+      const porFuncaoId: Record<string, number> = {}
+      for (const c of custosValidos) {
+        const cargo = norm(c.cargo)
+        if (cargo) porCargo[cargo] = (porCargo[cargo] || 0) + 1
+        if (c.funcao_id) porFuncaoId[c.funcao_id] = (porFuncaoId[c.funcao_id] || 0) + 1
+      }
       const excedentes: string[] = []
       for (const comp of (composicaoCheck ?? [])) {
-        const cargo = comp.funcao_nome.toUpperCase()
-        const qtdReal = porCargo[cargo] || 0
+        const qtdPorId = comp.funcao_id ? (porFuncaoId[comp.funcao_id] || 0) : 0
+        const qtdPorNome = porCargo[norm(comp.funcao_nome)] || 0
+        const qtdReal = Math.max(qtdPorId, qtdPorNome)
         if (qtdReal > comp.quantidade_contratada) excedentes.push(`${comp.funcao_nome}: ${comp.quantidade_contratada} contratados, ${qtdReal} na folha (+${qtdReal - comp.quantidade_contratada})`)
       }
       const semContrato: string[] = []
       for (const [cargo, qtd] of Object.entries(porCargo)) {
-        if (!(composicaoCheck ?? []).find((c: any) => c.funcao_nome.toUpperCase() === cargo) && qtd > 0) semContrato.push(`${cargo}: ${qtd} pessoa(s) sem contrato`)
+        const matchNome = (composicaoCheck ?? []).find((c: any) => norm(c.funcao_nome) === cargo)
+        if (!matchNome && qtd > 0) semContrato.push(`${cargo}: ${qtd} pessoa(s) sem contrato`)
       }
       // Helper to proceed with closing after validation
       const procederFechamento = async (cargosSemContrato?: string[]) => {

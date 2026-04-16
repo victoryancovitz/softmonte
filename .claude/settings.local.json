@@ -217,7 +217,9 @@
       "Bash(echo \"EXIT=$?\")",
       "Bash(ls '/Users/victoryancovitz/softmonte-git/src/app/\\(dashboard\\)/cadastros/funcoes/')",
       "Bash(tail:*)",
-      "Bash(grep -n \"</footer>\\\\|{showConfirmFinal\\\\|^    </div>\\\\|^  \\)$\" '/Users/victoryancovitz/softmonte-git/src/app/\\(dashboard\\)/rh/desligamentos/novo/wizard/page.tsx')"
+      "Bash(grep -n \"</footer>\\\\|{showConfirmFinal\\\\|^    </div>\\\\|^  \\)$\" '/Users/victoryancovitz/softmonte-git/src/app/\\(dashboard\\)/rh/desligamentos/novo/wizard/page.tsx')",
+      "Bash(find /Users/victoryancovitz/softmonte-git/src/app -path *portal* -name page.tsx -o -path *portal* -name layout.tsx)",
+      "Bash(grep -r \"setShowDeleteModal\" /Users/victoryancovitz/softmonte-git/src/app/\\\\\\(dashboard\\\\\\)/boletins/[id]/page.tsx)"
     ]
   }
 }
