@@ -14,7 +14,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   projects: [
-    { name: 'chromium', use: { browserName: 'chromium' }, testMatch: /platform\.spec\.ts/ },
+    { name: 'chromium', use: { browserName: 'chromium' }, testMatch: /platform\.spec\.ts|fluxos\.spec\.ts/ },
   ],
   workers: 1, // sequential to avoid auth race conditions
 })
