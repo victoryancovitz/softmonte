@@ -1,5 +1,6 @@
 'use client'
 import { useState, useCallback } from 'react'
+import { FileText } from 'lucide-react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { fmt } from '@/lib/cores'
@@ -64,9 +65,22 @@ const emptyForm = (obra: any): FormData => ({
   observacoes: '',
 })
 
-function fmtDate(d: string | null) {
+function fmtDate(d: string | null | undefined): string {
   if (!d) return '—'
-  return new Date(d + 'T12:00').toLocaleDateString('pt-BR')
+  try {
+    // Datas ISO (2026-04-16) e timestamps (2026-04-16T14:00:00+00)
+    const iso = typeof d === 'string' && d.length === 10 ? d + 'T12:00' : d
+    const dt = new Date(iso)
+    if (isNaN(dt.getTime())) return '—'
+    return dt.toLocaleDateString('pt-BR')
+  } catch {
+    return '—'
+  }
+}
+
+function safeNum(v: any): number {
+  const n = Number(v)
+  return Number.isFinite(n) ? n : 0
 }
 
 export default function AditivosTab({ obra, aditivos: rawAditivos, composicao: rawComposicao, onRefresh }: { obra: any; aditivos: any[]; composicao: any[]; onRefresh: () => void }) {
@@ -77,25 +91,29 @@ export default function AditivosTab({ obra, aditivos: rawAditivos, composicao: r
   const [approving, setApproving] = useState<string | null>(null)
   const [form, setForm] = useState<FormData>(emptyForm(obra))
 
-  const aditivos = rawAditivos ?? []
-  const composicao = rawComposicao ?? []
+  const aditivos = Array.isArray(rawAditivos) ? rawAditivos : []
+  const composicao = Array.isArray(rawComposicao) ? rawComposicao : []
+  const obraSafe = obra ?? {}
 
-  const aprovados = aditivos.filter(a => a.status === 'aprovado' || a.status === 'executado')
-  const funcoesAdicionadas = aprovados.filter(a => a.tipo === 'escopo_funcao').length
-  const valorContratualMes = composicao.reduce((s: number, c: any) => s + (Number(c.quantidade_contratada ?? 0) * Number(c.horas_mes || 220) * Number(c.custo_hora_contratado || 0)), 0)
+  const aprovados = aditivos.filter((a: any) => a?.status === 'aprovado' || a?.status === 'executado')
+  const funcoesAdicionadas = aprovados.filter((a: any) => a?.tipo === 'escopo_funcao').length
+  const valorContratualMes = composicao.reduce(
+    (s: number, c: any) => s + safeNum(c?.quantidade_contratada) * safeNum(c?.horas_mes || 220) * safeNum(c?.custo_hora_contratado),
+    0,
+  )
 
   const openModal = useCallback(() => {
-    setForm(emptyForm(obra))
+    setForm(emptyForm(obraSafe))
     setShowModal(true)
-  }, [obra])
+  }, [obraSafe])
 
   const handleFuncaoChange = useCallback((funcaoNome: string) => {
-    const match = composicao.find((c: any) => c.funcao_nome === funcaoNome)
+    const match = composicao.find((c: any) => c?.funcao_nome === funcaoNome)
     setForm(prev => ({
       ...prev,
       funcao_nome: funcaoNome,
-      quantidade_anterior: match?.quantidade_contratada ?? 0,
-      custo_hora: match ? Number(match.custo_hora_contratado || 0) : prev.custo_hora,
+      quantidade_anterior: safeNum(match?.quantidade_contratada),
+      custo_hora: match ? safeNum(match.custo_hora_contratado) : prev.custo_hora,
     }))
   }, [composicao])
 
@@ -104,11 +122,15 @@ export default function AditivosTab({ obra, aditivos: rawAditivos, composicao: r
       toast.warning('Preencha a descrição do aditivo.')
       return
     }
+    if (!obraSafe?.id) {
+      toast.error('Obra inválida — recarregue a página.')
+      return
+    }
     setSaving(true)
     try {
       const nextNumero = aditivos.length + 1
       const row: any = {
-        obra_id: obra.id,
+        obra_id: obraSafe.id,
         numero: nextNumero,
         tipo: form.tipo,
         descricao: form.descricao,
@@ -169,9 +191,9 @@ export default function AditivosTab({ obra, aditivos: rawAditivos, composicao: r
       if (errUpdate) throw errUpdate
 
       // Side effects by type
-      if (aditivo.tipo === 'escopo_funcao' && aditivo.funcao_nome) {
+      if (aditivo?.tipo === 'escopo_funcao' && aditivo?.funcao_nome && obraSafe?.id) {
         const { error: errComp } = await supabase.from('contrato_composicao').insert({
-          obra_id: obra.id,
+          obra_id: obraSafe.id,
           funcao_nome: aditivo.funcao_nome,
           quantidade_contratada: aditivo.quantidade_nova ?? 1,
           horas_mes: 220,
@@ -183,10 +205,10 @@ export default function AditivosTab({ obra, aditivos: rawAditivos, composicao: r
         if (errComp) throw errComp
       }
 
-      if (aditivo.tipo === 'prazo' && aditivo.data_fim_nova) {
+      if (aditivo?.tipo === 'prazo' && aditivo?.data_fim_nova && obraSafe?.id) {
         const { error: errObra } = await supabase.from('obras').update({
           data_prev_fim: aditivo.data_fim_nova,
-        }).eq('id', obra.id)
+        }).eq('id', obraSafe.id)
         if (errObra) throw errObra
       }
 
@@ -230,54 +252,68 @@ export default function AditivosTab({ obra, aditivos: rawAditivos, composicao: r
       {/* List */}
       {aditivos.length > 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden divide-y divide-gray-100">
-          {aditivos.map((a: any) => (
-            <div key={a.id} className="px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-bold">#{a.numero}</span>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${STATUS_BADGE[a.status] ?? 'bg-gray-100 text-gray-500'}`}>
-                    {STATUS_LABEL[a.status] ?? a.status}
-                  </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-semibold">
-                    {TIPO_LABEL[a.tipo] ?? a.tipo}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-700 mt-1">{a.descricao ?? '—'}</p>
-                <div className="text-xs text-gray-400 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                  {a.funcao_nome && <span>Função: <strong className="text-gray-600">{a.funcao_nome ?? '—'}</strong></span>}
-                  {a.quantidade_anterior != null && a.quantidade_nova != null && (
-                    <span>Qty: {Number(a.quantidade_anterior ?? 0)} → <strong className="text-gray-600">{Number(a.quantidade_nova ?? 0)}</strong></span>
-                  )}
-                  {a.tipo === 'prazo' && a.data_fim_anterior && (
-                    <span>Prazo: {fmtDate(a.data_fim_anterior)} → <strong className="text-gray-600">{fmtDate(a.data_fim_nova)}</strong></span>
-                  )}
-                  {(a.tipo === 'preco' || a.tipo === 'reducao') && a.valor_anterior != null && (
-                    <span>Valor: {fmt(Number(a.valor_anterior ?? 0))} → <strong className="text-gray-600">{fmt(Number(a.valor_novo ?? 0))}</strong></span>
-                  )}
-                  {a.impacto_valor != null && Number(a.impacto_valor ?? 0) !== 0 && (
-                    <span className={Number(a.impacto_valor ?? 0) > 0 ? 'text-green-600' : 'text-red-600'}>
-                      Impacto: {Number(a.impacto_valor ?? 0) > 0 ? '+' : ''}{fmt(Number(a.impacto_valor ?? 0))}
+          {aditivos.map((a: any) => {
+            const tipo = a?.tipo ?? ''
+            const status = a?.status ?? ''
+            const qtdAnt = a?.quantidade_anterior
+            const qtdNov = a?.quantidade_nova
+            const valAnt = a?.valor_anterior
+            const valNov = a?.valor_novo
+            const impacto = safeNum(a?.impacto_valor)
+            return (
+              <div key={a?.id ?? Math.random()} className="px-4 py-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-bold">#{a?.numero ?? '—'}</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${STATUS_BADGE[status] ?? 'bg-gray-100 text-gray-500'}`}>
+                      {STATUS_LABEL[status] ?? status ?? '—'}
                     </span>
-                  )}
-                  {a.data_solicitacao && <span>Solicitado: {fmtDate(a.data_solicitacao)}</span>}
-                  {a.aprovado_em && <span>Aprovado: {a.aprovado_em ? new Date(a.aprovado_em).toLocaleDateString('pt-BR') : '—'}{a.aprovado_por ? ` por ${a.aprovado_por}` : ''}</span>}
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 font-semibold">
+                      {TIPO_LABEL[tipo] ?? tipo ?? '—'}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700 mt-1">{a?.descricao ?? '—'}</p>
+                  <div className="text-xs text-gray-400 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+                    {a?.funcao_nome && <span>Função: <strong className="text-gray-600">{a.funcao_nome}</strong></span>}
+                    {qtdAnt != null && qtdNov != null && (
+                      <span>Qty: {safeNum(qtdAnt)} → <strong className="text-gray-600">{safeNum(qtdNov)}</strong></span>
+                    )}
+                    {tipo === 'prazo' && a?.data_fim_anterior && (
+                      <span>Prazo: {fmtDate(a.data_fim_anterior)} → <strong className="text-gray-600">{fmtDate(a?.data_fim_nova)}</strong></span>
+                    )}
+                    {(tipo === 'preco' || tipo === 'reducao') && valAnt != null && (
+                      <span>Valor: {fmt(safeNum(valAnt))} → <strong className="text-gray-600">{fmt(safeNum(valNov))}</strong></span>
+                    )}
+                    {impacto !== 0 && (
+                      <span className={impacto > 0 ? 'text-green-600' : 'text-red-600'}>
+                        Impacto: {impacto > 0 ? '+' : ''}{fmt(impacto)}
+                      </span>
+                    )}
+                    {a?.data_solicitacao && <span>Solicitado: {fmtDate(a.data_solicitacao)}</span>}
+                    {a?.aprovado_em && <span>Aprovado: {fmtDate(a.aprovado_em)}{a?.aprovado_por ? ` por ${a.aprovado_por}` : ''}</span>}
+                  </div>
                 </div>
+                {status === 'pendente' && a?.id && (
+                  <button
+                    onClick={() => handleAprovar(a)}
+                    disabled={approving === a.id}
+                    className="px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 shrink-0"
+                  >
+                    {approving === a.id ? 'Aprovando...' : 'Aprovar'}
+                  </button>
+                )}
               </div>
-              {a.status === 'pendente' && (
-                <button
-                  onClick={() => handleAprovar(a)}
-                  disabled={approving === a.id}
-                  className="px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 shrink-0"
-                >
-                  {approving === a.id ? 'Aprovando...' : 'Aprovar'}
-                </button>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-12 text-center text-gray-400 text-sm">
-          Nenhum aditivo registrado para esta obra.
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 px-4 py-12 text-center">
+          <FileText className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-sm font-semibold text-gray-700">Nenhum aditivo registrado</p>
+          <p className="text-xs text-gray-500 mt-1">Registre extensões de prazo ou alterações de equipe.</p>
+          <button onClick={openModal} className="mt-4 px-4 py-2 bg-brand text-white text-sm font-medium rounded-lg hover:bg-brand/90 transition-colors">
+            + Novo Aditivo
+          </button>
         </div>
       )}
 
