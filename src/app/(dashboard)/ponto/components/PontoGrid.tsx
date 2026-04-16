@@ -30,6 +30,7 @@ interface PontoGridProps {
   podeEditar: boolean
   userRole?: string
   onOverrideRequest?: (func: any) => void
+  cargaHorariaDia?: number // jornada contratual (ex: 9h)
 }
 
 function getCellInfo(
@@ -43,7 +44,13 @@ function getCellInfo(
   const c = cellData[funcId]?.[day]
   if (!c) return { label: '\u00b7', cls: 'bg-white text-gray-300 hover:bg-blue-50', title: 'Pendente \u2014 clique para editar' }
   if (c.efetivo_id && !c.falta_id) {
-    return { label: 'P', cls: 'bg-green-100 text-green-700 hover:bg-green-200', title: 'Presente' + (c.observacao ? ` \u2014 ${c.observacao}` : '') }
+    const hh = c.horas_trabalhadas ?? 0
+    const heExtra = hh > 0 && hh > 9 ? hh - 9 : 0
+    const heLabel = heExtra > 0 ? ` · HE +${heExtra.toFixed(1)}h` : ''
+    // Color coding: green=normal, amber=minor issue (<30min off), red=major (>30min off or absent)
+    let cls = 'bg-green-100 text-green-700 hover:bg-green-200'
+    if (hh > 0 && hh < 8.5) cls = 'bg-amber-100 text-amber-700 hover:bg-amber-200' // saída antecipada > 30min
+    return { label: 'P', cls, title: `Presente${hh > 0 ? ` · ${hh.toFixed(1)}h` : ''}${heLabel}` + (c.observacao ? ` — ${c.observacao}` : '') }
   }
   if (c.falta_tipo) {
     const t = c.falta_tipo
@@ -71,6 +78,7 @@ export default function PontoGrid({
   podeEditar,
   userRole,
   onOverrideRequest,
+  cargaHorariaDia = 9,
 }: PontoGridProps) {
   const [blockedDialog, setBlockedDialog] = useState<{ func: any; motivo: string } | null>(null)
   const isRhOrAdmin = userRole === 'admin' || userRole === 'rh'

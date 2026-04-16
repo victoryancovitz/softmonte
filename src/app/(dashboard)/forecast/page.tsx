@@ -3,10 +3,11 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
-import { TrendingUp, DollarSign, Calendar, ArrowLeft, Check, X } from 'lucide-react'
+import { TrendingUp, DollarSign, Calendar, ArrowLeft, Check, X, Info } from 'lucide-react'
 import ConfirmButton from '@/components/ConfirmButton'
 import SearchInput from '@/components/SearchInput'
 import { useToast } from '@/components/Toast'
+import { calcularFatorMes, contarDiasUteis } from '@/lib/utils/dias-uteis'
 
 export default function ForecastPage() {
   const [forecast, setForecast] = useState<any[]>([])
@@ -56,28 +57,54 @@ export default function ForecastPage() {
         .eq('obra_id', obra.obra_id).eq('ativo', true)
       if (!composicao || composicao.length === 0) { toast.error('Obra sem composição de funções cadastrada.'); setSaving(false); return }
 
-      const receitaMesFull = composicao.reduce((s: number, c: any) => s + Number(c.quantidade_contratada) * Number(c.horas_mes) * Number(c.custo_hora_contratado), 0)
-      const hhMesFull = composicao.reduce((s: number, c: any) => s + Number(c.quantidade_contratada) * Number(c.horas_mes), 0)
+      // horas_mes já inclui quantidade (ex: 3 ajudantes × 189h = 567h)
+      const receitaMesFull = composicao.reduce((s: number, c: any) => s + Number(c.horas_mes) * Number(c.custo_hora_contratado), 0)
+      const hhMesFull = composicao.reduce((s: number, c: any) => s + Number(c.horas_mes), 0)
 
       const { data: bms } = await supabase.from('financeiro_lancamentos')
         .select('data_competencia, valor').eq('tipo', 'receita').eq('origem', 'bm_aprovado').is('deleted_at', null)
       const bmPorMes: Record<string, number> = {}
       ;(bms || []).forEach((b: any) => { const ym = b.data_competencia?.slice(0, 7); if (ym) bmPorMes[ym] = (bmPorMes[ym] || 0) + Number(b.valor) })
 
-      // Buscar datas da obra
-      const { data: obraData } = await supabase.from('obras').select('data_inicio, data_prev_fim').eq('id', obra.obra_id).single()
+      // Buscar datas e metodologia da obra
+      const { data: obraData } = await supabase.from('obras')
+        .select('data_inicio, data_prev_fim, base_calculo_dias, considera_feriados, considera_sabado, considera_domingo')
+        .eq('id', obra.obra_id).single()
       const inicio = new Date((obraData?.data_inicio || '2026-01-20') + 'T12:00')
       const fim = new Date((obraData?.data_prev_fim || '2026-04-30') + 'T12:00')
+      const opcoesDias = {
+        consideraSabado: obraData?.considera_sabado ?? false,
+        consideraDomingo: obraData?.considera_domingo ?? false,
+        consideraFeriados: obraData?.considera_feriados ?? false,
+      }
+      const usaDiasUteis = (obraData?.base_calculo_dias || 'dias_uteis') === 'dias_uteis'
+
       const rows: any[] = []
       let cur = new Date(inicio.getFullYear(), inicio.getMonth(), 1)
 
       while (cur <= fim) {
         const ano = cur.getFullYear(), mes = cur.getMonth() + 1
-        const mesInicio = new Date(ano, mes - 1, 1), mesFim = new Date(ano, mes, 0)
-        const diaIni = Math.max(mesInicio.getTime(), inicio.getTime()), diaFim = Math.min(mesFim.getTime(), fim.getTime())
-        const fator = (Math.round((diaFim - diaIni) / 86400000) + 1) / mesFim.getDate()
         const ymKey = `${ano}-${String(mes).padStart(2, '0')}`
         const receitaRealizada = bmPorMes[ymKey] || 0
+
+        let fator: number
+        let diasUteisAtivos = 0
+        let diasUteisMes = 0
+
+        if (usaDiasUteis) {
+          const calc = calcularFatorMes(inicio, fim, mes, ano, opcoesDias)
+          fator = calc.fator
+          diasUteisAtivos = calc.diasUteisAtivos
+          diasUteisMes = calc.diasUteisMes
+        } else {
+          // Dias corridos (fallback)
+          const mesInicio = new Date(ano, mes - 1, 1), mesFim = new Date(ano, mes, 0)
+          const diaIni = Math.max(mesInicio.getTime(), inicio.getTime()), diaFim = Math.min(mesFim.getTime(), fim.getTime())
+          fator = (Math.round((diaFim - diaIni) / 86400000) + 1) / mesFim.getDate()
+          diasUteisMes = mesFim.getDate()
+          diasUteisAtivos = Math.round(diasUteisMes * fator)
+        }
+
         rows.push({
           obra_id: obra.obra_id, mes, ano,
           receita_prevista: Math.round(receitaMesFull * fator * 100) / 100,
@@ -86,6 +113,9 @@ export default function ForecastPage() {
           bm_emitido: receitaRealizada > 0, bm_aprovado: receitaRealizada > 0,
           nf_emitida: false, pagamento_recebido: false,
           data_pagamento_prevista: new Date(ano, mes, 5).toISOString().slice(0, 10),
+          dias_uteis_mes: diasUteisMes,
+          dias_uteis_ativos: diasUteisAtivos,
+          fator_prorata: Math.round(fator * 10000) / 10000,
         })
         cur = new Date(ano, mes, 1)
       }
@@ -164,7 +194,17 @@ export default function ForecastPage() {
         </div>
 
         <h1 className="text-xl font-bold font-display text-brand mb-1">{obraAtiva.obra}</h1>
-        <p className="text-sm text-gray-500 mb-6">{obraAtiva.cliente} — Forecast mensal detalhado</p>
+        <div className="flex items-center gap-2 mb-1">
+          <p className="text-sm text-gray-500">{obraAtiva.cliente} — Forecast mensal detalhado</p>
+        </div>
+        {detalhe.length > 0 && detalhe[0].dias_uteis_mes && (
+          <div className="flex items-center gap-2 mb-4">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-50 border border-blue-100 text-xs font-semibold text-blue-700">
+              <Info className="w-3 h-3" />
+              {obraAtiva.modelo_cobranca === 'hh_diaria' ? 'HH Diária' : obraAtiva.modelo_cobranca === 'hh_hora_efetiva' ? 'HH Hora Efetiva' : 'HH 220h'} · Seg–Sex · {detalhe[0].dias_uteis_mes}d/mês · Pro-rata por dias úteis
+            </span>
+          </div>
+        )}
 
         {/* KPIs do contrato */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
@@ -284,7 +324,7 @@ export default function ForecastPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {['Mês/Ano', 'Receita Prevista', 'Receita Realizada', 'Diferença', 'BM Emitido', 'BM Aprovado', 'NF Emitida', 'Pgto Recebido', 'Pgto Previsto'].map(h => (
+                {['Mês/Ano', 'Dias úteis', 'Receita Prevista', 'Receita Realizada', 'Diferença', 'BM Emitido', 'BM Aprovado', 'NF Emitida', 'Pgto Recebido', 'Pgto Previsto'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -295,6 +335,17 @@ export default function ForecastPage() {
                 return (
                   <tr key={d.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                     <td className="px-4 py-3 font-medium">{MESES[d.mes]}/{d.ano}</td>
+                    <td className="px-4 py-3 text-center">
+                      {d.dias_uteis_ativos != null ? (
+                        <span className="text-xs font-mono" title={`Fator: ${((d.fator_prorata || 0) * 100).toFixed(1)}%`}>
+                          <span className="font-semibold">{d.dias_uteis_ativos}</span>
+                          {d.dias_uteis_ativos !== d.dias_uteis_mes && (
+                            <span className="text-gray-400">/{d.dias_uteis_mes}</span>
+                          )}
+                          <span className="text-gray-400 ml-0.5">d</span>
+                        </span>
+                      ) : <span className="text-gray-300">—</span>}
+                    </td>
                     <td className="px-4 py-3 text-gray-600">{fmt(d.receita_prevista)}</td>
                     <td className="px-4 py-3 font-semibold">{fmt(d.receita_realizada)}</td>
                     <td className={`px-4 py-3 font-semibold ${diff >= 0 ? 'text-green-700' : 'text-red-700'}`}>
@@ -321,12 +372,13 @@ export default function ForecastPage() {
               <tfoot>
                 <tr className="bg-brand/5 border-t-2 border-brand/20 font-bold">
                   <td className="px-4 py-3 text-brand">TOTAL</td>
+                  <td className="px-4 py-3"></td>
                   <td className="px-4 py-3 text-brand">{fmt(totPrev)}</td>
                   <td className="px-4 py-3 text-green-700">{fmt(totReal)}</td>
                   <td className={`px-4 py-3 ${(totReal - totPrev) >= 0 ? 'text-green-700' : 'text-red-700'}`}>
                     {(totReal - totPrev) !== 0 ? `${(totReal - totPrev) > 0 ? '+' : ''}${fmt(totReal - totPrev)}` : '—'}
                   </td>
-                  <td colSpan={5} className="px-4 py-3 text-[11px] text-gray-500 font-normal">
+                  <td colSpan={6} className="px-4 py-3 text-[11px] text-gray-500 font-normal">
                     {mesesMedidos} de {detalhe.length} meses medidos · {pctRealizado.toFixed(1)}% do contrato realizado
                   </td>
                 </tr>

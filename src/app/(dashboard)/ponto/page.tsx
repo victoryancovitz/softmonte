@@ -65,7 +65,7 @@ export default function PontoPage() {
   const podeEditar = !pontoFechado || isAdmin
 
   useEffect(() => {
-    supabase.from('obras').select('id,nome,modelo_cobranca,escala_entrada,escala_saida_seg_qui,escala_saida_sex,escala_almoco_minutos,escala_tolerancia_min').eq('status', 'ativo').is('deleted_at', null).order('nome')
+    supabase.from('obras').select('id,nome,modelo_cobranca,escala_entrada,escala_saida_seg_qui,escala_saida_sex,escala_almoco_minutos,escala_tolerancia_min,carga_horaria_dia').eq('status', 'ativo').is('deleted_at', null).order('nome')
       .then(({ data }) => setObras(data ?? []))
     // Buscar role do usuário (profiles.user_id é a FK pra auth.users.id)
     supabase.auth.getUser().then(({ data: { user } }) => {
@@ -506,6 +506,7 @@ export default function PontoPage() {
           podeEditar={podeEditar}
           userRole={role}
           onOverrideRequest={handleOverrideRequest}
+          cargaHorariaDia={obras.find(o => o.id === obraId)?.carga_horaria_dia ?? 9}
         />
       )}
 

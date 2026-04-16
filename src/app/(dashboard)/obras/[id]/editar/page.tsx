@@ -27,6 +27,8 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
     indice_reajuste: '', percentual_reajuste: '',
     // Horário
     horario_inicio: '', horario_fim: '', dias_uteis_mes: '', carga_horaria_dia: '',
+    // Metodologia
+    base_calculo_dias: 'dias_uteis', considera_feriados: true, considera_sabado: false, considera_domingo: false,
     // Modelo de faturamento HH
     modelo_cobranca: 'hh_diaria',
     escala_entrada: '07:00', escala_saida_seg_qui: '17:00', escala_saida_sex: '16:00',
@@ -86,6 +88,10 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
           contato_contratada_email: data.contato_contratada_email ?? '',
           contato_contratada_tel: data.contato_contratada_tel ?? '',
           bm_dia_unico: data.bm_dia_unico ?? false,
+          base_calculo_dias: data.base_calculo_dias ?? 'dias_uteis',
+          considera_feriados: data.considera_feriados ?? true,
+          considera_sabado: data.considera_sabado ?? false,
+          considera_domingo: data.considera_domingo ?? false,
           modelo_cobranca: data.modelo_cobranca ?? 'hh_diaria',
           escala_entrada: data.escala_entrada ?? '07:00',
           escala_saida_seg_qui: data.escala_saida_seg_qui ?? '17:00',
@@ -146,6 +152,10 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
       contato_contratada_email: n(form.contato_contratada_email),
       contato_contratada_tel: n(form.contato_contratada_tel),
       bm_dia_unico: !!form.bm_dia_unico,
+      base_calculo_dias: form.base_calculo_dias || 'dias_uteis',
+      considera_feriados: !!form.considera_feriados,
+      considera_sabado: !!form.considera_sabado,
+      considera_domingo: !!form.considera_domingo,
       modelo_cobranca: form.modelo_cobranca || 'hh_diaria',
       escala_entrada: n(form.escala_entrada),
       escala_saida_seg_qui: n(form.escala_saida_seg_qui),
@@ -389,6 +399,44 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
               <div>
                 <label className={lbl}>Dias úteis/mês</label>
                 <input type="number" value={form.dias_uteis_mes} onChange={e => set('dias_uteis_mes', e.target.value)} placeholder="22" className={inp} />
+              </div>
+            </div>
+          </section>
+
+          {/* === METODOLOGIA DE CÁLCULO === */}
+          <section>
+            <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Metodologia de Cálculo</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={lbl}>Base de cálculo</label>
+                <select value={form.base_calculo_dias} onChange={e => set('base_calculo_dias', e.target.value)} className={inp + ' bg-white'}>
+                  <option value="dias_uteis">Dias úteis (Seg–Sex)</option>
+                  <option value="dias_corridos">Dias corridos (30/31)</option>
+                  <option value="dias_trabalhados">Dias trabalhados (efetivo real)</option>
+                </select>
+                <p className="text-[10px] text-gray-400 mt-0.5">
+                  {form.base_calculo_dias === 'dias_uteis' && 'Forecast e folha calculam pro-rata por dias úteis reais do mês.'}
+                  {form.base_calculo_dias === 'dias_corridos' && 'Usa total de dias do mês (30/31) como base.'}
+                  {form.base_calculo_dias === 'dias_trabalhados' && 'Conta apenas dias com presença registrada no ponto.'}
+                </p>
+              </div>
+              <div>
+                <label className={lbl}>Inclui nos dias úteis</label>
+                <div className="flex flex-wrap gap-4 mt-1.5">
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" checked={!!form.considera_sabado} onChange={e => set('considera_sabado', e.target.checked)} className="w-4 h-4 rounded text-brand focus:ring-brand" />
+                    Sábados
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" checked={!!form.considera_domingo} onChange={e => set('considera_domingo', e.target.checked)} className="w-4 h-4 rounded text-brand focus:ring-brand" />
+                    Domingos
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" checked={!!form.considera_feriados} onChange={e => set('considera_feriados', e.target.checked)} className="w-4 h-4 rounded text-brand focus:ring-brand" />
+                    Feriados
+                  </label>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1">Desmarcado = desconta do cálculo. Cesari: tudo desmarcado (seg-sex sem feriados).</p>
               </div>
             </div>
           </section>

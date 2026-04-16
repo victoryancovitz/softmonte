@@ -189,7 +189,21 @@
       "Bash(wc -l src/app/\\\\\\(dashboard\\\\\\)/funcionarios/[id]/page.tsx)",
       "Bash(wc -l src/app/\\\\\\(dashboard\\\\\\)/funcionarios/[id]/tabs/*.tsx)",
       "Bash(node:*)",
-      "Bash(cat \"src/app/\\(dashboard\\)/rh/admissoes/wizard/[id]/page.tsx\")"
+      "Bash(cat \"src/app/\\(dashboard\\)/rh/admissoes/wizard/[id]/page.tsx\")",
+      "Bash(grep '\"\"playwright\"\"' /Users/victoryancovitz/softmonte-git/package.json)",
+      "Bash(npx playwright:*)",
+      "Bash(curl -s -X POST 'https://wzmkifutluyqzqefrbpp.supabase.co/auth/v1/token?grant_type=password' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6bWtpZnV0bHV5cXpxZWZyYnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODY3ODgsImV4cCI6MjA5MDU2Mjc4OH0.-UwnnQpK175uA1_RSWgul7AkI-RUUd4Oz5KnrtcamH4' -H 'Content-Type: application/json' -d '{\"\"\"\"email\"\"\"\":\"\"\"\"diretoria@tecnomonte.com.br\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"Yanco251289@!\"\"\"\"}')",
+      "Bash(curl -s -X POST 'https://wzmkifutluyqzqefrbpp.supabase.co/auth/v1/token?grant_type=password' -H 'apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind6bWtpZnV0bHV5cXpxZWZyYnBwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ5ODY3ODgsImV4cCI6MjA5MDU2Mjc4OH0.-UwnnQpK175uA1_RSWgul7AkI-RUUd4Oz5KnrtcamH4' -H 'Content-Type: application/json' -d '{\"\"\"\"email\"\"\"\":\"\"\"\"diretoria@tecnomonte.com.br\"\"\"\",\"\"\"\"password\"\"\"\":\"\"\"\"Softmonte@2026\"\"\"\"}')",
+      "Bash(/Users/victoryancovitz/softmonte-git/.env.test:*)",
+      "Bash(unzip -q -o /Users/victoryancovitz/Downloads/OneDrive_2026-04-06.zip -d /tmp/cesari_06)",
+      "Bash(unzip -q -o /Users/victoryancovitz/Downloads/OneDrive_2026-04-16.zip -d /tmp/cesari_16)",
+      "Bash(unzip -o /Users/victoryancovitz/Downloads/OneDrive_2026-04-06.zip -d /tmp/cesari_06)",
+      "Bash(ditto -x -k /Users/victoryancovitz/Downloads/OneDrive_2026-04-06.zip /tmp/cesari_06)",
+      "Bash(ditto -x -k /Users/victoryancovitz/Downloads/OneDrive_2026-04-16.zip /tmp/cesari_16)",
+      "Bash(sort -t'|' -k4)",
+      "Bash(git diff:*)",
+      "Bash(find /Users/victoryancovitz/softmonte-git/src -type f -name *dias* -o -name *util*)",
+      "Bash(find /Users/victoryancovitz/softmonte-git -type f -name *forecast* -o -name *horas*)"
     ]
   }
 }
