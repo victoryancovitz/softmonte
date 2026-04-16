@@ -46,8 +46,8 @@ export default function ModuleTabs() {
   const algumaSecundariaAtiva = secundarias.some(isActive)
 
   return (
-    <nav className="bg-white border-b border-gray-100 sticky top-12 z-30 overflow-x-auto scrollbar-thin">
-      <div className="flex gap-1 px-3 sm:px-6 min-w-max items-stretch">
+    <nav className="bg-white border-b border-gray-100 sticky top-12 z-30">
+      <div className="flex gap-1 px-3 sm:px-6 min-w-max items-stretch overflow-x-auto scrollbar-thin">
         {primarias.map(tab => {
           const active = isActive(tab)
           return (

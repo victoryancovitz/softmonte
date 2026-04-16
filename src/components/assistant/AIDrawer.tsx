@@ -298,7 +298,7 @@ export default function AIDrawer({ open, minimized, messages, onMessagesChange, 
         aria-hidden
       />
       <aside
-        className="fixed top-0 left-0 z-50 h-full w-full sm:w-[480px] bg-white shadow-2xl flex flex-col relative"
+        className="fixed top-0 right-0 z-50 h-full w-full sm:w-[420px] bg-white shadow-2xl flex flex-col relative"
         role="dialog"
         aria-label="Assistente Softmonte"
         onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragOver(true) }}

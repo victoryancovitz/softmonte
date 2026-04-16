@@ -21,7 +21,7 @@ export default function AIButton() {
           onClick={() => { setOpen(true); setMinimized(false) }}
           title={hasConversa ? 'Continuar conversa com o Assistente IA' : 'Assistente IA Softmonte'}
           aria-label="Assistente IA Softmonte"
-          className="fixed bottom-6 left-6 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95"
+          className="fixed bottom-24 right-6 z-50 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105 active:scale-95"
           style={{ backgroundColor: '#00215B' }}
         >
           <span className="text-2xl leading-none text-white">{'\u2728'}</span>
