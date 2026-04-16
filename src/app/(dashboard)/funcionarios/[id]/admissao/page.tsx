@@ -303,11 +303,11 @@ export default function AdmissaoWizardPage() {
   async function handleNext() {
     setError('')
     if (etapa === 1 && (!contrato.admissao || !contrato.cargo)) {
-      setError('Data de admissao e cargo sao obrigatorios.')
+      setError('Data de admissão e cargo são obrigatórios.')
       return
     }
     if (etapa === 3 && exame.laudo === 'inapto') {
-      setError('Funcionario inapto nao pode prosseguir com a admissao.')
+      setError('Funcionário inapto não pode prosseguir com a admissão.')
       return
     }
     const ok = await saveStep(etapa)
@@ -350,7 +350,7 @@ export default function AdmissaoWizardPage() {
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback={`/funcionarios/${id}`} />
-        <Link href="/funcionarios" className="text-gray-400 hover:text-gray-600">Funcionarios</Link>
+        <Link href="/funcionarios" className="text-gray-400 hover:text-gray-600">Funcionários</Link>
         <span className="text-gray-300">/</span>
         <Link href={`/funcionarios/${id}`} className="text-gray-400 hover:text-gray-600">{func?.nome}</Link>
         <span className="text-gray-300">/</span>
@@ -487,14 +487,14 @@ export default function AdmissaoWizardPage() {
                 }} className={inp} />
               </div>
               <div>
-                <label className={lbl}>Medico</label>
+                <label className={lbl}>Médico</label>
                 <input type="text" value={exame.medico} onChange={e => setExame(ex => ({ ...ex, medico: e.target.value }))} className={inp} />
               </div>
               <div>
                 <label className={lbl}>Laudo</label>
                 <select value={exame.laudo} onChange={e => setExame(ex => ({ ...ex, laudo: e.target.value }))} className={inp + ' bg-white'}>
                   <option value="apto">Apto</option>
-                  <option value="apto_restricoes">Apto com restricoes</option>
+                  <option value="apto_restricoes">Apto com restrições</option>
                   <option value="inapto">Inapto</option>
                 </select>
               </div>
@@ -504,7 +504,7 @@ export default function AdmissaoWizardPage() {
                 {exame.aso_vencimento && (
                   <p className="text-[10px] text-gray-400 mt-1">
                     Vencimento: {formatDate(exame.aso_vencimento)}
-                    {func?.insalubridade_pct > 0 || func?.periculosidade_pct > 0 ? ' (6 meses — insalubridade/periculosidade)' : ' (12 meses — padrao)'}
+                    {func?.insalubridade_pct > 0 || func?.periculosidade_pct > 0 ? ' (6 meses — insalubridade/periculosidade)' : ' (12 meses — padrão)'}
                   </p>
                 )}
               </div>
@@ -521,12 +521,12 @@ export default function AdmissaoWizardPage() {
             </div>
             {exame.laudo === 'inapto' && (
               <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
-                Funcionario considerado inapto. A admissao nao podera ser concluida.
+                Funcionário considerado inapto. A admissão não poderá ser concluída.
               </div>
             )}
             {exame.laudo === 'apto_restricoes' && (
               <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
-                Funcionario apto com restricoes. Verifique se as restricoes sao compativeis com a funcao.
+                Funcionário apto com restrições. Verifique se as restrições são compatíveis com a função.
               </div>
             )}
           </section>

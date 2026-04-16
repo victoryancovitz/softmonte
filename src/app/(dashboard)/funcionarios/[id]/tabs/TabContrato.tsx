@@ -1,10 +1,21 @@
 import Link from 'next/link'
 
 const STATUS_COLOR: Record<string, string> = {
+  pendente: 'bg-amber-100 text-amber-700 border-amber-200',
+  em_admissao: 'bg-violet-100 text-violet-700 border-violet-200',
   disponivel: 'bg-green-100 text-green-700 border-green-200',
   alocado: 'bg-blue-100 text-blue-700 border-blue-200',
   afastado: 'bg-yellow-100 text-yellow-700 border-yellow-200',
   inativo: 'bg-gray-100 text-gray-500 border-gray-200',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  pendente: 'Aguardando admissão',
+  em_admissao: 'Em admissão',
+  disponivel: 'Disponível',
+  alocado: 'Alocado',
+  afastado: 'Afastado',
+  inativo: 'Inativo',
 }
 
 const TIPO_VINCULO_LABEL: Record<string, string> = {
@@ -46,7 +57,7 @@ export default function TabContrato({
             ['Cargo', f.cargo],
             ['Turno', f.turno],
             ['Jornada', `${f.horas_mes ?? 220}h/mês`],
-            ['Status', <span key="s" className={`text-[11px] px-2 py-0.5 rounded-full font-bold border ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>{f.status}</span>],
+            ['Status', <span key="s" className={`text-[11px] px-2 py-0.5 rounded-full font-bold border ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>{STATUS_LABEL[f.status] ?? f.status}</span>],
           ].map(([k, v], i) => (
             <div key={i} className="flex justify-between py-1 border-b border-gray-50">
               <span className="text-[11px] text-gray-500">{k}</span>

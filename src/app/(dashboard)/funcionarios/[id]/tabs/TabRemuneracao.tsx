@@ -137,7 +137,7 @@ export default function TabRemuneracao({
       {/* Histórico de cargo e salário (timeline server-rendered) */}
       {(historicoSalarial ?? []).length > 0 && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Historico de Cargo e Salario</h2>
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Histórico de Cargo e Salário</h2>
           <div className="space-y-0">
             {(historicoSalarial ?? []).map((h: any, i: number) => {
               const anterior = Number(h.salario_anterior || 0)

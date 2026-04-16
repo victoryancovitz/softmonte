@@ -181,9 +181,13 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
               <div data-field="pis"><label className={lbl}>PIS</label>
                 <input type="text" value={form.pis ?? ''} onChange={e => set('pis', e.target.value)} className={inp}/></div>
               <div><label className={lbl}>Status</label>
-                <select value={form.status ?? 'disponivel'} onChange={e => set('status', e.target.value)} className={inp + ' bg-white'}>
-                  <option value="disponivel">Disponível</option><option value="alocado">Alocado</option>
-                  <option value="afastado">Afastado</option><option value="inativo">Inativo</option>
+                <select value={form.status ?? 'pendente'} onChange={e => set('status', e.target.value)} className={inp + ' bg-white'}>
+                  <option value="pendente">Aguardando admissão</option>
+                  <option value="em_admissao">Em admissão</option>
+                  <option value="disponivel">Disponível</option>
+                  <option value="alocado">Alocado</option>
+                  <option value="afastado">Afastado</option>
+                  <option value="inativo">Inativo</option>
                 </select></div>
             </div>
           </section>

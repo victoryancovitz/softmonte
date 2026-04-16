@@ -349,7 +349,7 @@ export default function DemissaoWizardPage() {
 
   const STEPS = [
     { n: 1, label: 'Tipo/Motivo' },
-    { n: 2, label: 'Devolucao' },
+    { n: 2, label: 'Devolução' },
     { n: 3, label: 'Exame' },
     { n: 4, label: 'Acerto' },
     { n: 5, label: 'eSocial' },
@@ -363,7 +363,7 @@ export default function DemissaoWizardPage() {
     <div className="p-4 sm:p-6 max-w-3xl mx-auto">
       <div className="flex items-center gap-2 mb-6 text-sm">
         <BackButton fallback={`/funcionarios/${id}`} />
-        <Link href="/funcionarios" className="text-gray-400 hover:text-gray-600">Funcionarios</Link>
+        <Link href="/funcionarios" className="text-gray-400 hover:text-gray-600">Funcionários</Link>
         <span className="text-gray-300">/</span>
         <Link href={`/funcionarios/${id}`} className="text-gray-400 hover:text-gray-600">{func?.nome}</Link>
         <span className="text-gray-300">/</span>
@@ -458,7 +458,7 @@ export default function DemissaoWizardPage() {
         {/* Step 2 — Checklist de devolucao */}
         {etapa === 2 && (
           <section>
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Checklist de Devolucao</h3>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Checklist de Devolução</h3>
             <div className="space-y-2">
               {DEVOLUCAO_ITEMS.map(item => (
                 <div key={item.key} className={`flex flex-col sm:flex-row sm:items-center gap-3 p-3 rounded-xl border ${devolucao[item.key]?.ok ? 'bg-green-50/50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
@@ -475,7 +475,7 @@ export default function DemissaoWizardPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="Observacao..."
+                    placeholder="Observação..."
                     value={devolucao[item.key]?.obs ?? ''}
                     onChange={e => setDevolucao(d => ({ ...d, [item.key]: { ...d[item.key], obs: e.target.value } }))}
                     className="flex-1 px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-brand/30"
@@ -501,7 +501,7 @@ export default function DemissaoWizardPage() {
                 <input type="date" value={exameDem.data_exame} onChange={e => setExameDem(ex => ({ ...ex, data_exame: e.target.value }))} className={inp} />
               </div>
               <div>
-                <label className={lbl}>Medico</label>
+                <label className={lbl}>Médico</label>
                 <input type="text" value={exameDem.medico} onChange={e => setExameDem(ex => ({ ...ex, medico: e.target.value }))} className={inp} />
               </div>
               <div className="col-span-1 sm:col-span-2">

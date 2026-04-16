@@ -18,19 +18,19 @@ interface Funcionario {
 const TIPOS_DESLIGAMENTO = [
   { value: 'sem_justa_causa', label: 'Sem Justa Causa' },
   { value: 'justa_causa', label: 'Justa Causa' },
-  { value: 'pedido_demissao', label: 'Pedido de Demissao' },
-  { value: 'termino_contrato', label: 'Termino de Contrato' },
+  { value: 'pedido_demissao', label: 'Pedido de Demissão' },
+  { value: 'termino_contrato', label: 'Término de Contrato' },
   { value: 'acordo', label: 'Acordo' },
 ]
 
 const CHECKLIST_ITEMS = [
-  { key: 'etapa_aviso_previo', label: 'Aviso Previo' },
-  { key: 'etapa_devolucao_epi', label: 'Devolucao de EPI' },
-  { key: 'etapa_devolucao_ferramentas', label: 'Devolucao de Ferramentas' },
+  { key: 'etapa_aviso_previo', label: 'Aviso Prévio' },
+  { key: 'etapa_devolucao_epi', label: 'Devolução de EPI' },
+  { key: 'etapa_devolucao_ferramentas', label: 'Devolução de Ferramentas' },
   { key: 'etapa_exame_demissional', label: 'Exame Demissional' },
   { key: 'etapa_baixa_ctps', label: 'Baixa CTPS' },
-  { key: 'etapa_calculo_rescisao', label: 'Calculo Rescisao' },
-  { key: 'etapa_homologacao', label: 'Homologacao' },
+  { key: 'etapa_calculo_rescisao', label: 'Cálculo de Rescisão' },
+  { key: 'etapa_homologacao', label: 'Homologação' },
   { key: 'etapa_esocial', label: 'eSocial' },
   { key: 'etapa_acerto_banco_horas', label: 'Acerto Banco de Horas' },
 ] as const
@@ -62,7 +62,7 @@ export default function NovoDesligamentoPage() {
   async function handleSubmit() {
     if (!funcId) { setError('Selecione um funcionario.'); return }
     if (!tipo) { setError('Selecione o tipo de desligamento.'); return }
-    if (!dataSaida) { setError('Informe a data prevista de saida.'); return }
+    if (!dataSaida) { setError('Informe a data prevista de saída.'); return }
 
     setSaving(true)
     setError('')
@@ -117,7 +117,7 @@ export default function NovoDesligamentoPage() {
       return
     }
 
-    toast.success('Desligamento criado!', `${selectedFunc?.nome ?? 'Funcionario'} — processo iniciado`)
+    toast.success('Desligamento criado!', `${selectedFunc?.nome ?? 'Funcionário'} — processo iniciado`)
     router.push('/rh/desligamentos')
   }
 
@@ -154,7 +154,7 @@ export default function NovoDesligamentoPage() {
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Funcionario *</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Funcionário *</label>
             <select value={funcId} onChange={e => setFuncId(e.target.value)}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
               <option value="">Selecione...</option>
@@ -185,7 +185,7 @@ export default function NovoDesligamentoPage() {
                 className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Data prevista saida *</label>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Data prevista de saída *</label>
               <input type="date" value={dataSaida} onChange={e => setDataSaida(e.target.value)}
                 className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
             </div>
@@ -193,7 +193,7 @@ export default function NovoDesligamentoPage() {
 
           {dataSaida && (
             <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
-              <p><span className="font-semibold">Prazo pagamento rescisao:</span> {(() => {
+              <p><span className="font-semibold">Prazo pagamento rescisão:</span> {(() => {
                 const d = new Date(dataSaida + 'T12:00:00'); d.setDate(d.getDate() + 10)
                 return d.toLocaleDateString('pt-BR')
               })()} (10 dias)</p>
@@ -205,14 +205,14 @@ export default function NovoDesligamentoPage() {
           )}
 
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Observacoes</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Observações</label>
             <textarea value={observacoes} onChange={e => setObservacoes(e.target.value)} rows={2}
               className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none" />
           </div>
 
           {/* Checklist preview */}
           <div className="border-t border-gray-100 pt-4">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Etapas que serao criadas</p>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Etapas que serão criadas</p>
             <div className="grid grid-cols-2 gap-2">
               {CHECKLIST_ITEMS.map(item => (
                 <div key={item.key} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">

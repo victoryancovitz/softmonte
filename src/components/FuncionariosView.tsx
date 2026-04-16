@@ -266,7 +266,7 @@ export default function FuncionariosView({
           )}
           <select value={tipoVinculo} onChange={e => setTipoVinculo(e.target.value)}
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
-            <option value="">Todos os vinculos</option>
+            <option value="">Todos os vínculos</option>
             {Object.entries(TIPO_VINCULO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
           <div className="flex border border-gray-200 rounded-lg overflow-hidden flex-shrink-0">
@@ -384,8 +384,8 @@ export default function FuncionariosView({
                   {(!f.cpf || !Number(f.salario_base) || !f.funcao_id) && !desligado && (
                     <div className="mt-2 pt-2 border-t border-gray-100 flex flex-wrap gap-1">
                       {!f.cpf && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem CPF</span>}
-                      {!Number(f.salario_base) && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem salario</span>}
-                      {!f.funcao_id && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem funcao</span>}
+                      {!Number(f.salario_base) && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem salário</span>}
+                      {!f.funcao_id && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem função</span>}
                     </div>
                   )}
                   {alertas[f.id] && ALERTA_BADGE[alertas[f.id]] && (
@@ -476,8 +476,8 @@ export default function FuncionariosView({
                           </span>
                         )}
                         {!desligado && !f.cpf && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem CPF</span>}
-                        {!desligado && !Number(f.salario_base) && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem salario</span>}
-                        {!desligado && !f.funcao_id && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem funcao</span>}
+                        {!desligado && !Number(f.salario_base) && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem salário</span>}
+                        {!desligado && !f.funcao_id && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem função</span>}
                         </div>
                       </td>
                       <td className="px-4 py-3 text-right">

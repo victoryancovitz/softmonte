@@ -196,7 +196,7 @@ export default function BancoHorasPage() {
 
   async function fecharMes() {
     if (!obraId) return
-    const confirmed = window.confirm(`Fechar o mes de ${MESES[mes - 1]}/${ano} para esta obra? Esta acao nao pode ser desfeita.`)
+    const confirmed = window.confirm(`Fechar o mês de ${MESES[mes - 1]}/${ano} para esta obra? Esta ação não pode ser desfeita.`)
     if (!confirmed) return
 
     setFechando(true)
@@ -398,7 +398,7 @@ export default function BancoHorasPage() {
       {mesFechado && !useFallback && (
         <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-sm text-amber-700">
           <AlertTriangle className="w-4 h-4" />
-          <span>Este mes esta fechado. Os valores nao podem ser editados.</span>
+          <span>Este mês está fechado. Os valores não podem ser editados.</span>
         </div>
       )}
 
