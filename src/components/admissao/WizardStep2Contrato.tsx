@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useEffect } from 'react'
+import { calcularDescontosCLT } from '@/lib/clt'
 
 interface Props {
   data: any
@@ -89,22 +90,38 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes, o
 
   const today = new Date().toISOString().slice(0, 10)
 
-  // Real-time cost summary
+  // Real-time cost summary com cálculo CLT real (INSS progressivo + IRRF)
   const summary = useMemo(() => {
     const salarioBase = parseFloat(data.salario_base) || 0
     const insalPct = parseFloat(data.insalubridade_pct) || 0
     const perPct = parseFloat(data.periculosidade_pct) || 0
     const horasMes = parseFloat(data.horas_mes) || 220
 
-    const insalubridade = salarioBase * insalPct / 100
-    const periculosidade = salarioBase * perPct / 100
-    const bruto = salarioBase + insalubridade + periculosidade
-    const encargos = bruto * 0.374
-    const provisoes = bruto * 0.21
+    const clt = calcularDescontosCLT({
+      salarioBase,
+      diasTrabalhados: 30,
+      diasMes: 30,
+      insalubridadePct: insalPct,
+      periculosidadePct: perPct,
+      vtMensal: 0,
+      dependentes: 0,
+    })
+
+    const bruto = clt.total_proventos
+    // Encargos empregador: INSS 20% + RAT ~3% + Sistema S ~3.3% + FGTS 8% = ~34.3%
+    const encargos = bruto * 0.343
+    const provisoes = bruto * 0.21 // 13º + férias + 1/3 + FGTS provisão
     const custoEmpresa = bruto + encargos + provisoes
     const custoHora = horasMes > 0 ? custoEmpresa / horasMes : 0
 
-    return { bruto, custoEmpresa, custoHora }
+    return {
+      bruto,
+      custoEmpresa,
+      custoHora,
+      liquidoFuncionario: clt.valor_liquido,
+      descontoINSS: clt.desconto_inss,
+      descontoIRRF: clt.desconto_irrf,
+    }
   }, [data.salario_base, data.insalubridade_pct, data.periculosidade_pct, data.horas_mes])
 
   return (
@@ -244,11 +261,15 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes, o
         {/* Summary card */}
         {summary.bruto > 0 && (
           <div className="mt-4 p-4 bg-brand/5 rounded-xl border border-brand/10">
-            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Preview de Custo</p>
-            <div className="grid grid-cols-3 gap-3 text-center">
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Preview de Custo (cálculo CLT progressivo)</p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
               <div>
                 <p className="text-xs text-gray-400">Bruto</p>
                 <p className="font-bold text-gray-900">{fmtR(summary.bruto)}</p>
+              </div>
+              <div className="bg-green-50 rounded-lg p-2">
+                <p className="text-xs text-green-700">Líquido func.</p>
+                <p className="font-bold text-green-800">{fmtR(summary.liquidoFuncionario)}</p>
               </div>
               <div className="bg-brand/10 rounded-lg p-2">
                 <p className="text-xs text-brand">Custo empresa</p>
@@ -258,6 +279,9 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes, o
                 <p className="text-xs text-brand">Custo/hora</p>
                 <p className="text-lg font-bold text-brand">{fmtR(summary.custoHora)}/h</p>
               </div>
+            </div>
+            <div className="mt-2 text-[10px] text-gray-500 text-center">
+              INSS {fmtR(summary.descontoINSS)} · IRRF {fmtR(summary.descontoIRRF)}
             </div>
           </div>
         )}

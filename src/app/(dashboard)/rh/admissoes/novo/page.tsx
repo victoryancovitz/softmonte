@@ -55,8 +55,8 @@ export default function NovaAdmissaoPage() {
 
   useEffect(() => {
     Promise.all([
-      // Apenas funcionários elegíveis para admissão: status 'inativo' (cadastrado sem admissão concluída) OU nunca admitidos
-      supabase.from('funcionarios').select('id, nome, cargo, status, nao_renovar, observacao_renovacao').is('deleted_at', null).order('nome'),
+      // Apenas funcionários elegíveis: pendente (aguardando admissão) ou em_admissao (processo em andamento)
+      supabase.from('funcionarios').select('id, nome, cargo, status, nao_renovar, observacao_renovacao').in('status', ['pendente', 'em_admissao']).is('deleted_at', null).order('nome'),
       supabase.from('obras').select('id, nome').eq('status', 'ativo').is('deleted_at', null).order('nome'),
     ]).then(([funcRes, obrasRes]) => {
       setFuncionarios(funcRes.data ?? [])

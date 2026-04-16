@@ -59,10 +59,10 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
       const { data: { user } } = await supabase.auth.getUser()
       const email = user?.email ?? 'sistema'
 
-      // 1. Update funcionarios
+      // 1. Update funcionarios — alocado se tem obra, senão disponivel
       await supabase.from('funcionarios').update({
         data_inicio_ponto: dataIntegracao,
-        status: 'disponivel',
+        status: obraId ? 'alocado' : 'disponivel',
       }).eq('id', funcionario.id)
 
       // 2. Validate obra is active before inserting

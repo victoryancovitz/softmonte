@@ -236,14 +236,22 @@ export default function NovoBMPage() {
     // Fetch contrato_composicao for this obra
     const { data: composicao } = await supabase
       .from('contrato_composicao')
-      .select('funcao_nome, custo_hora_contratado, custo_hora_extra_70, custo_hora_extra_100, carga_horaria_dia')
+      .select('funcao_id, funcao_nome, custo_hora_contratado, custo_hora_extra_70, custo_hora_extra_100, carga_horaria_dia')
       .eq('obra_id', form.obra_id)
       .eq('ativo', true)
 
     const compMap: Record<string, any> = {}
+    const compMapById: Record<string, any> = {}
     ;(composicao ?? []).forEach((c: any) => {
-      compMap[c.funcao_nome?.toUpperCase()] = c
+      if (c.funcao_nome) compMap[c.funcao_nome.toUpperCase()] = c
+      if (c.funcao_id) compMapById[c.funcao_id] = c
     })
+    // Helper global para buscar composição: tenta funcao_id primeiro, fallback nome
+    const findComp = (funcaoId?: string | null, cargo?: string | null): any => {
+      if (funcaoId && compMapById[funcaoId]) return compMapById[funcaoId]
+      if (cargo && compMap[cargo.toUpperCase()]) return compMap[cargo.toUpperCase()]
+      return null
+    }
 
     // --- PASSO 3: Calcular horas por funcionário com base nas marcações ---
     // Classifica dias: dom/feriado = HE100, sábado = HE50 (excedente), dia útil = normal + HE50
@@ -300,6 +308,7 @@ export default function NovoBMPage() {
     // Step 2: group funcionarios by função (cargo)
     const perFuncao: Record<string, {
       cargo: string
+      funcao_id?: string | null
       funcs: Array<{ id: string; nome: string; dias_normais: number; dias_he70: number; dias_he100: number; datas: string[]; hh_normais_real?: number; hh_he70_real?: number; hh_he100_real?: number }>
       horasReais: { normais: number; he50: number; he100: number }
     }> = {}
@@ -328,7 +337,7 @@ export default function NovoBMPage() {
         datas = Array.from(new Set<string>(allArr)).sort()
       }
 
-      if (!perFuncao[cargoKey]) perFuncao[cargoKey] = { cargo, funcs: [], horasReais: { normais: 0, he50: 0, he100: 0 } }
+      if (!perFuncao[cargoKey]) perFuncao[cargoKey] = { cargo, funcao_id: g.func.funcao_id ?? null, funcs: [], horasReais: { normais: 0, he50: 0, he100: 0 } }
       perFuncao[cargoKey].funcs.push({
         id: g.func.id,
         nome: g.func.nome_guerra ?? g.func.nome,
@@ -345,7 +354,8 @@ export default function NovoBMPage() {
 
     // Step 3: build rows - one per função
     const rows: PreviewRow[] = Object.entries(perFuncao).map(([cargoKey, group]) => {
-      const comp = compMap[cargoKey]
+      // Tenta por funcao_id (mais preciso), fallback por nome
+      const comp = findComp((group as any).funcao_id, cargoKey)
       const cargaHoraDia = Number(comp?.carga_horaria_dia ?? 8)
       const totalNormais = group.funcs.reduce((s, f) => s + f.dias_normais, 0)
       const totalHe70 = group.funcs.reduce((s, f) => s + f.dias_he70, 0)
