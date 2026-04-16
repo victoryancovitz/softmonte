@@ -23,6 +23,11 @@ interface Props {
 
 const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand'
 
+/* Dropdown options */
+const TAMANHOS_BOTA = Array.from({ length: 48 - 33 + 1 }, (_, i) => String(33 + i))
+const TAMANHOS_UNIFORME = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XXG']
+const CORES_CAPACETE = ['Branco', 'Amarelo', 'Laranja', 'Azul', 'Vermelho']
+
 let idCounter = 0
 function genId() { return `u_${++idCounter}_${Date.now()}` }
 
@@ -37,7 +42,21 @@ export default function WizardStep7Uniforme({ funcionario, workflowId, onComplet
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
+  /* Form fields — salvos em etapa_uniforme jsonb */
+  const [tamanhoBota, setTamanhoBota] = useState<string>('')
+  const [tamanhoUniforme, setTamanhoUniforme] = useState<string>('')
+  const [qtdCamisas, setQtdCamisas] = useState<number>(2)
+  const [qtdCalcas, setQtdCalcas] = useState<number>(2)
+  const [qtdBones, setQtdBones] = useState<number>(1)
+  const [capaceteCor, setCapaceteCor] = useState<string>('Branco')
+
   useEffect(() => { loadEstoque() }, [])
+
+  /* Pré-preencher com tamanhos vindos da etapa 2 */
+  useEffect(() => {
+    if (funcionario?.tamanho_uniforme) setTamanhoUniforme(String(funcionario.tamanho_uniforme))
+    if (funcionario?.tamanho_bota) setTamanhoBota(String(funcionario.tamanho_bota))
+  }, [funcionario?.tamanho_uniforme, funcionario?.tamanho_bota])
 
   async function loadEstoque() {
     setLoading(true)
@@ -56,7 +75,7 @@ export default function WizardStep7Uniforme({ funcionario, workflowId, onComplet
         id: genId(),
         item_id: it.id,
         nome: it.nome || '',
-        tamanho: funcionario.tamanho_uniforme || '',
+        tamanho: funcionario?.tamanho_uniforme || '',
         qtd: 1,
       })))
     }
@@ -85,12 +104,16 @@ export default function WizardStep7Uniforme({ funcionario, workflowId, onComplet
   }
 
   async function handleSave() {
-    if (itens.length === 0) {
-      toast.warning('Adicione pelo menos um item de uniforme.')
-      return
-    }
     if (!dataEntrega) {
       toast.warning('Informe a data de entrega.')
+      return
+    }
+    if (!tamanhoUniforme) {
+      toast.warning('Selecione o tamanho do uniforme.')
+      return
+    }
+    if (!tamanhoBota) {
+      toast.warning('Selecione o tamanho da bota.')
       return
     }
 
@@ -99,7 +122,7 @@ export default function WizardStep7Uniforme({ funcionario, workflowId, onComplet
       const { data: { user } } = await supabase.auth.getUser()
       const email = user?.email ?? 'sistema'
 
-      // Insert requisicao
+      // Insert requisicao (quando houver itens no estoque)
       const itensJson = itens.map(i => ({
         item_id: i.item_id,
         nome: i.nome,
@@ -107,15 +130,17 @@ export default function WizardStep7Uniforme({ funcionario, workflowId, onComplet
         qtd: i.qtd,
       }))
 
-      await supabase.from('estoque_requisicoes').insert({
-        funcionario_id: funcionario.id,
-        tipo: 'uniforme',
-        data_entrega: dataEntrega,
-        responsavel,
-        itens: itensJson,
-        workflow_id: workflowId,
-        created_by: user?.id,
-      })
+      if (itens.length > 0) {
+        await supabase.from('estoque_requisicoes').insert({
+          funcionario_id: funcionario.id,
+          tipo: 'uniforme',
+          data_entrega: dataEntrega,
+          responsavel,
+          itens: itensJson,
+          workflow_id: workflowId,
+          created_by: user?.id,
+        })
+      }
 
       // Update custo_uniforme on funcionarios (sum of items * qty as placeholder)
       const custoTotal = itens.reduce((sum, i) => {
@@ -129,13 +154,19 @@ export default function WizardStep7Uniforme({ funcionario, workflowId, onComplet
         }).eq('id', funcionario.id)
       }
 
-      // Update workflow
+      // Update workflow — etapa_uniforme jsonb carrega os campos do formulário
       await supabase.from('admissoes_workflow').update({
         etapa_uniforme: {
           ok: true,
           data: new Date().toISOString().split('T')[0],
           por: email,
           total_itens: itens.length,
+          tamanho_bota: tamanhoBota,
+          tamanho_uniforme: tamanhoUniforme,
+          qtd_camisas: qtdCamisas,
+          qtd_calcas: qtdCalcas,
+          qtd_bones: qtdBones,
+          capacete_cor: capaceteCor,
         },
         updated_at: new Date().toISOString(),
       }).eq('id', workflowId)
@@ -159,33 +190,116 @@ export default function WizardStep7Uniforme({ funcionario, workflowId, onComplet
       <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-center gap-3">
         <Shirt className="w-5 h-5 text-blue-600 flex-shrink-0" />
         <div className="text-sm text-blue-800">
-          <span className="font-medium">Tamanhos do funcionario:</span>{' '}
-          Uniforme <strong>{funcionario.tamanho_uniforme || '—'}</strong> &middot; Bota <strong>{funcionario.tamanho_bota || '—'}</strong>
+          <span className="font-medium">Tamanhos do funcionário:</span>{' '}
+          Uniforme <strong>{funcionario?.tamanho_uniforme || '—'}</strong> &middot; Bota <strong>{funcionario?.tamanho_bota || '—'}</strong>
         </div>
       </div>
 
-      {/* Data + Responsavel */}
+      {/* Data + Responsável */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-xs font-semibold text-gray-600 mb-1">Data de entrega</label>
           <input type="date" value={dataEntrega} onChange={e => setDataEntrega(e.target.value)} className={inputCls} />
         </div>
         <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1">Responsavel</label>
-          <input type="text" value={responsavel} onChange={e => setResponsavel(e.target.value)} className={inputCls} placeholder="Nome do responsavel" />
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Responsável</label>
+          <input type="text" value={responsavel} onChange={e => setResponsavel(e.target.value)} className={inputCls} placeholder="Nome do responsável" />
         </div>
       </div>
 
-      {/* Items table */}
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Itens de Uniforme</p>
+      {/* Kit padrão — tamanhos e quantidades */}
+      <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Kit do colaborador</p>
 
-        <div className="grid grid-cols-[1fr_100px_60px_36px] gap-2 px-2">
-          <span className="text-[10px] font-bold text-gray-400 uppercase">Item</span>
-          <span className="text-[10px] font-bold text-gray-400 uppercase">Tamanho</span>
-          <span className="text-[10px] font-bold text-gray-400 uppercase">QTD</span>
-          <span />
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Tamanho uniforme</label>
+            <select
+              value={tamanhoUniforme}
+              onChange={e => setTamanhoUniforme(e.target.value)}
+              className={inputCls}
+            >
+              <option value="">Selecione...</option>
+              {TAMANHOS_UNIFORME.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Tamanho bota</label>
+            <select
+              value={tamanhoBota}
+              onChange={e => setTamanhoBota(e.target.value)}
+              className={inputCls}
+            >
+              <option value="">Selecione...</option>
+              {TAMANHOS_BOTA.map(t => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Cor do capacete</label>
+            <select
+              value={capaceteCor}
+              onChange={e => setCapaceteCor(e.target.value)}
+              className={inputCls}
+            >
+              {CORES_CAPACETE.map(c => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Qtd. camisas</label>
+            <input
+              type="number"
+              min={0}
+              value={qtdCamisas}
+              onChange={e => setQtdCamisas(Math.max(0, Number(e.target.value) || 0))}
+              className={inputCls}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Qtd. calças</label>
+            <input
+              type="number"
+              min={0}
+              value={qtdCalcas}
+              onChange={e => setQtdCalcas(Math.max(0, Number(e.target.value) || 0))}
+              className={inputCls}
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Qtd. bonés</label>
+            <input
+              type="number"
+              min={0}
+              value={qtdBones}
+              onChange={e => setQtdBones(Math.max(0, Number(e.target.value) || 0))}
+              className={inputCls}
+            />
+          </div>
         </div>
+      </div>
+
+      {/* Items table (opcional — itens do estoque) */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Itens do estoque (opcional)</p>
+
+        {itens.length > 0 && (
+          <div className="grid grid-cols-[1fr_100px_60px_36px] gap-2 px-2">
+            <span className="text-[10px] font-bold text-gray-400 uppercase">Item</span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase">Tamanho</span>
+            <span className="text-[10px] font-bold text-gray-400 uppercase">QTD</span>
+            <span />
+          </div>
+        )}
 
         <div className="space-y-1.5 max-h-60 overflow-y-auto">
           {itens.map(item => (
@@ -238,10 +352,10 @@ export default function WizardStep7Uniforme({ funcionario, workflowId, onComplet
       {/* Submit */}
       <button
         onClick={handleSave}
-        disabled={itens.length === 0 || saving}
+        disabled={saving}
         className="w-full px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50 transition-colors"
       >
-        {saving ? 'Salvando...' : `Confirmar ${itens.length} itens de uniforme`}
+        {saving ? 'Salvando...' : 'Confirmar uniforme'}
       </button>
     </div>
   )

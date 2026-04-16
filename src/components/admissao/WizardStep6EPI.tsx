@@ -13,6 +13,7 @@ interface EPIItem {
   qtd: number
   un: string
   ca: string
+  entregue: boolean
 }
 
 interface Props {
@@ -26,10 +27,10 @@ const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm b
 const STEP_LABELS = ['Itens', 'Assinatura']
 
 const TERMO_PARAGRAFOS = [
-  'Declaro ter recebido gratuitamente os Equipamentos de Protecao Individual (EPI) acima relacionados, comprometendo-me a usa-los adequadamente durante a jornada de trabalho, conforme as instrucoes recebidas.',
-  'Comprometo-me a zelar pela guarda e conservacao dos equipamentos, devolvendo-os quando danificados, para substituicao, ou ao termino do contrato de trabalho.',
-  'Estou ciente de que o uso do EPI e obrigatorio conforme o disposto na NR-6 do Ministerio do Trabalho, e que o nao cumprimento podera acarretar em sancoes disciplinares, conforme legislacao vigente.',
-  'Declaro ainda que os EPIs foram entregues em perfeitas condicoes de uso e que fui orientado sobre a forma correta de utilizacao, guarda e conservacao dos mesmos.',
+  'Declaro ter recebido gratuitamente os Equipamentos de Proteção Individual (EPI) acima relacionados, comprometendo-me a usá-los adequadamente durante a jornada de trabalho, conforme as instruções recebidas.',
+  'Comprometo-me a zelar pela guarda e conservação dos equipamentos, devolvendo-os quando danificados, para substituição, ou ao término do contrato de trabalho.',
+  'Estou ciente de que o uso do EPI é obrigatório conforme o disposto na NR-6 do Ministério do Trabalho, e que o não cumprimento poderá acarretar em sanções disciplinares, conforme legislação vigente.',
+  'Declaro ainda que os EPIs foram entregues em perfeitas condições de uso e que fui orientado sobre a forma correta de utilização, guarda e conservação dos mesmos.',
 ]
 
 let itemIdCounter = 0
@@ -76,6 +77,7 @@ export default function WizardStep6EPI({ funcionario, workflowId, onComplete }: 
           qtd: Number(k.quantidade) || 1,
           un: k.unidade || 'UND',
           ca: k.ca || '',
+          entregue: false,
         })))
       }
       setLoadingKit(false)
@@ -218,7 +220,7 @@ ${signImg ? `<div class="sig"><img src="${signImg}" alt="Assinatura digital" /><
       let signatureData: string | null = null
       if (tipo === 'digital') signatureData = exportCanvas()
 
-      const itensJson = itens.map(i => ({ nome: i.nome, qtd: i.qtd, un: i.un, ca: i.ca }))
+      const itensJson = itens.map(i => ({ nome: i.nome, qtd: i.qtd, un: i.un, ca: i.ca, entregue: i.entregue }))
 
       const { data: ficha } = await supabase.from('fichas_epi').insert({
         funcionario_id: funcionario.id,
@@ -254,10 +256,32 @@ ${signImg ? `<div class="sig"><img src="${signImg}" alt="Assinatura digital" /><
 
   /* ─── Item helpers ─── */
 
-  function addItem() { setItens(prev => [...prev, { id: genId(), nome: '', qtd: 1, un: 'un', ca: '' }]) }
+  function addItem() { setItens(prev => [...prev, { id: genId(), nome: '', qtd: 1, un: 'un', ca: '', entregue: false }]) }
   function removeItem(id: string) { setItens(prev => prev.filter(i => i.id !== id)) }
-  function updateItem(id: string, field: keyof EPIItem, value: string | number) {
+  function updateItem(id: string, field: keyof EPIItem, value: string | number | boolean) {
     setItens(prev => prev.map(i => i.id === id ? { ...i, [field]: value } : i))
+  }
+  async function naoSeAplica() {
+    setSaving(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      const email = user?.email ?? 'sistema'
+      await supabase.from('admissoes_workflow').update({
+        etapa_epi_entregue: {
+          ok: true,
+          data: new Date().toISOString().split('T')[0],
+          por: email,
+          nao_se_aplica: true,
+        },
+        updated_at: new Date().toISOString(),
+      }).eq('id', workflowId)
+      toast.success('Etapa de EPI marcada como não aplicável')
+      onComplete()
+    } catch {
+      toast.error('Erro ao marcar etapa')
+    } finally {
+      setSaving(false)
+    }
   }
 
   /* ─── Render ─── */
@@ -295,18 +319,38 @@ ${signImg ? `<div class="sig"><img src="${signImg}" alt="Assinatura digital" /><
               <input type="date" value={dataEntrega} onChange={e => setDataEntrega(e.target.value)} className={inputCls} />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">Responsavel</label>
-              <input type="text" value={responsavel} onChange={e => setResponsavel(e.target.value)} className={inputCls} placeholder="Nome do responsavel" />
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Responsável</label>
+              <input type="text" value={responsavel} onChange={e => setResponsavel(e.target.value)} className={inputCls} placeholder="Nome do responsável" />
             </div>
           </div>
 
           {loadingKit ? (
-            <div className="py-8 text-center text-sm text-gray-400">Carregando kit da funcao...</div>
+            <div className="py-8 text-center text-sm text-gray-400">Carregando kit da função...</div>
+          ) : itens.length === 0 ? (
+            <div className="py-8 px-4 rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 text-center space-y-3">
+              <p className="text-sm font-semibold text-gray-700">Nenhum kit EPI para esta função</p>
+              <p className="text-xs text-gray-500">
+                Você pode adicionar EPIs manualmente ou marcar esta etapa como não aplicável.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+                <button onClick={addItem} className="inline-flex items-center justify-center gap-1.5 px-4 py-2 text-sm font-medium text-brand border border-brand rounded-lg hover:bg-brand/5 transition-colors">
+                  <Plus className="w-4 h-4" /> Adicionar EPI manualmente
+                </button>
+                <button
+                  onClick={naoSeAplica}
+                  disabled={saving}
+                  className="inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-gray-700 border border-gray-300 rounded-lg hover:bg-white transition-colors disabled:opacity-50"
+                >
+                  Não se aplica
+                </button>
+              </div>
+            </div>
           ) : (
             <>
               <div className="space-y-2">
                 <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Itens EPI</p>
-                <div className="grid grid-cols-[1fr_60px_60px_100px_36px] gap-2 px-2">
+                <div className="grid grid-cols-[28px_1fr_60px_60px_100px_36px] gap-2 px-2">
+                  <span className="text-[10px] font-bold text-gray-400 uppercase text-center">OK</span>
                   <span className="text-[10px] font-bold text-gray-400 uppercase">EPI</span>
                   <span className="text-[10px] font-bold text-gray-400 uppercase">QTD</span>
                   <span className="text-[10px] font-bold text-gray-400 uppercase">UN</span>
@@ -315,7 +359,15 @@ ${signImg ? `<div class="sig"><img src="${signImg}" alt="Assinatura digital" /><
                 </div>
                 <div className="space-y-1.5 max-h-52 overflow-y-auto">
                   {itens.map(item => (
-                    <div key={item.id} className="grid grid-cols-[1fr_60px_60px_100px_36px] gap-2 items-center">
+                    <div key={item.id} className="grid grid-cols-[28px_1fr_60px_60px_100px_36px] gap-2 items-center">
+                      <label className="flex items-center justify-center cursor-pointer" title="Marcar como entregue">
+                        <input
+                          type="checkbox"
+                          checked={item.entregue}
+                          onChange={e => updateItem(item.id, 'entregue', e.target.checked)}
+                          className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
+                        />
+                      </label>
                       <input type="text" value={item.nome} onChange={e => updateItem(item.id, 'nome', e.target.value)}
                         className="px-2 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" placeholder="Nome do EPI" />
                       <input type="number" min={1} value={item.qtd} onChange={e => updateItem(item.id, 'qtd', Number(e.target.value) || 1)}
@@ -332,9 +384,18 @@ ${signImg ? `<div class="sig"><img src="${signImg}" alt="Assinatura digital" /><
                   ))}
                 </div>
               </div>
-              <button onClick={addItem} className="flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand-dark transition-colors">
-                <Plus className="w-4 h-4" /> Adicionar EPI
-              </button>
+              <div className="flex items-center justify-between">
+                <button onClick={addItem} className="flex items-center gap-1.5 text-sm font-medium text-brand hover:text-brand-dark transition-colors">
+                  <Plus className="w-4 h-4" /> Adicionar EPI
+                </button>
+                <button
+                  onClick={naoSeAplica}
+                  disabled={saving}
+                  className="text-xs font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                >
+                  Não se aplica
+                </button>
+              </div>
             </>
           )}
 
@@ -343,7 +404,7 @@ ${signImg ? `<div class="sig"><img src="${signImg}" alt="Assinatura digital" /><
             disabled={itens.length === 0}
             className="w-full px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50"
           >
-            Avancar para Assinatura
+            Avançar para Assinatura
           </button>
         </>
       )}
@@ -378,6 +439,13 @@ ${signImg ? `<div class="sig"><img src="${signImg}" alt="Assinatura digital" /><
               </div>
               <button onClick={() => setStep(1)} className="text-sm text-gray-500 hover:text-gray-700 font-medium">
                 &larr; Voltar para itens
+              </button>
+              <button
+                onClick={naoSeAplica}
+                disabled={saving}
+                className="w-full text-xs font-medium text-gray-500 hover:text-gray-700 disabled:opacity-50"
+              >
+                Não se aplica — pular etapa de EPI
               </button>
             </>
           )}
@@ -430,7 +498,7 @@ ${signImg ? `<div class="sig"><img src="${signImg}" alt="Assinatura digital" /><
             <div className="space-y-3">
               <div className="p-3 rounded-xl bg-blue-50 border border-blue-200">
                 <p className="text-sm text-blue-800 font-medium">
-                  Clique em &ldquo;Imprimir ficha&rdquo; para gerar o documento. Apos assinatura fisica, clique em &ldquo;Confirmar&rdquo;.
+                  Clique em &ldquo;Imprimir ficha&rdquo; para gerar o documento. Após assinatura física, clique em &ldquo;Confirmar&rdquo;.
                 </p>
               </div>
               <button onClick={openPrintWindow}
@@ -449,7 +517,7 @@ ${signImg ? `<div class="sig"><img src="${signImg}" alt="Assinatura digital" /><
                   disabled={!printConfirmed || saving}
                   className="flex-1 px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50"
                 >
-                  {saving ? 'Salvando...' : 'Confirmar entrega fisica'}
+                  {saving ? 'Salvando...' : 'Confirmar entrega física'}
                 </button>
                 <button onClick={() => { setAssinaturaTipo(null); setPrintConfirmed(false) }}
                   className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium hover:bg-gray-50">Voltar</button>

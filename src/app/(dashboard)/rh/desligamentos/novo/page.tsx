@@ -3,10 +3,11 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
+import Link from 'next/link'
 import Breadcrumb from '@/components/ui/Breadcrumb'
 import { useToast } from '@/components/Toast'
 import { formatSupabaseError } from '@/lib/errors'
-import { UserMinus } from 'lucide-react'
+import { UserMinus, ArrowRight } from 'lucide-react'
 
 interface Funcionario {
   id: string
@@ -132,9 +133,18 @@ export default function NovoDesligamentoPage() {
       ]} />
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <UserMinus className="w-5 h-5 text-red-600" />
-          <h1 className="text-lg font-bold font-display text-red-600">Novo Desligamento</h1>
+        <div className="flex items-center justify-between gap-3 mb-6 flex-wrap">
+          <div className="flex items-center gap-3">
+            <UserMinus className="w-5 h-5 text-red-600" />
+            <h1 className="text-lg font-bold font-display text-red-600">Novo Desligamento</h1>
+          </div>
+          <Link
+            href={`/rh/desligamentos/novo/wizard${funcId ? `?funcionario_id=${funcId}` : ''}`}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg text-xs font-semibold text-red-700 hover:bg-red-100 transition-colors"
+          >
+            Usar wizard completo
+            <ArrowRight className="w-3.5 h-3.5" />
+          </Link>
         </div>
 
         {/* Selected employee preview */}

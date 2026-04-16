@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload, FileText, X } from 'lucide-react'
+import { Upload, FileText, X, AlertTriangle, AlertCircle } from 'lucide-react'
 
 interface Props {
   data: any
@@ -32,9 +32,15 @@ export default function WizardStep4ASO({ data, onChange, errors, onFileUpload }:
   const [uploading, setUploading] = useState(false)
   const [fileName, setFileName] = useState<string | null>(data.aso_arquivo_nome ?? null)
 
-  function handleDataExameChange(value: string) {
+  const resultado = data.aso_resultado ?? ''
+  const isInapto = resultado === 'inapto'
+  const isAptoRestricoes = resultado === 'apto_restricoes'
+
+  function handleDataRealizacaoChange(value: string) {
+    onChange('aso_data_realizacao', value)
+    // Espelha em aso_data_exame (campo persistido no banco)
     onChange('aso_data_exame', value)
-    // Auto-fill vencimento +365 days
+    // Auto-preenche vencimento +365 dias
     if (value) {
       const date = new Date(value + 'T12:00:00')
       date.setFullYear(date.getFullYear() + 1)
@@ -70,16 +76,45 @@ export default function WizardStep4ASO({ data, onChange, errors, onFileUpload }:
       <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-6">
         <p className="text-sm text-blue-800 font-medium">Exame Admissional (ASO)</p>
         <p className="text-xs text-blue-600 mt-1">
-          O ASO admissional e obrigatorio antes do inicio das atividades. O vencimento e calculado automaticamente para 1 ano apos a data do exame.
+          O ASO admissional é obrigatório antes do início das atividades. O vencimento é calculado automaticamente para 1 ano após a data de realização do exame.
         </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Field label="Data do exame" required error={errors.aso_data_exame}>
+        <Field label="Clínica" error={errors.aso_clinica}>
+          <input
+            type="text"
+            value={data.aso_clinica ?? ''}
+            onChange={e => onChange('aso_clinica', e.target.value)}
+            className={inp}
+            placeholder="Nome da clínica"
+          />
+        </Field>
+
+        <Field label="Médico" error={errors.aso_medico}>
+          <input
+            type="text"
+            value={data.aso_medico ?? ''}
+            onChange={e => onChange('aso_medico', e.target.value)}
+            className={inp}
+            placeholder="Nome do médico"
+          />
+        </Field>
+
+        <Field label="Data de agendamento" error={errors.aso_data_agendamento}>
           <input
             type="date"
-            value={data.aso_data_exame ?? ''}
-            onChange={e => handleDataExameChange(e.target.value)}
+            value={data.aso_data_agendamento ?? ''}
+            onChange={e => onChange('aso_data_agendamento', e.target.value)}
+            className={inp}
+          />
+        </Field>
+
+        <Field label="Data de realização" required error={errors.aso_data_exame || errors.aso_data_realizacao}>
+          <input
+            type="date"
+            value={data.aso_data_realizacao ?? data.aso_data_exame ?? ''}
+            onChange={e => handleDataRealizacaoChange(e.target.value)}
             className={inp}
           />
         </Field>
@@ -93,14 +128,17 @@ export default function WizardStep4ASO({ data, onChange, errors, onFileUpload }:
           />
         </Field>
 
-        <Field label="Medico" error={errors.aso_medico}>
-          <input
-            type="text"
-            value={data.aso_medico ?? ''}
-            onChange={e => onChange('aso_medico', e.target.value)}
+        <Field label="Resultado" error={errors.aso_resultado}>
+          <select
+            value={resultado}
+            onChange={e => onChange('aso_resultado', e.target.value)}
             className={inp}
-            placeholder="Nome do medico"
-          />
+          >
+            <option value="">Selecione…</option>
+            <option value="apto">Apto</option>
+            <option value="apto_restricoes">Apto com restrições</option>
+            <option value="inapto">Inapto</option>
+          </select>
         </Field>
 
         <Field label="CID" error={errors.aso_cid}>
@@ -109,7 +147,7 @@ export default function WizardStep4ASO({ data, onChange, errors, onFileUpload }:
             value={data.aso_cid ?? ''}
             onChange={e => onChange('aso_cid', e.target.value)}
             className={inp}
-            placeholder="Codigo CID (opcional)"
+            placeholder="Código CID (opcional)"
           />
         </Field>
 
@@ -125,9 +163,63 @@ export default function WizardStep4ASO({ data, onChange, errors, onFileUpload }:
         </Field>
       </div>
 
-      {/* File upload */}
+      {/* Banner + motivo: Inapto */}
+      {isInapto && (
+        <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-red-800">
+                Funcionário inapto — não pode ser admitido.
+              </p>
+              <p className="text-xs text-red-700 mt-1">
+                Registre o motivo e encerre o processo.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Field label="Motivo da inaptidão" required error={errors.aso_motivo_inapto}>
+              <textarea
+                value={data.aso_motivo_inapto ?? ''}
+                onChange={e => onChange('aso_motivo_inapto', e.target.value)}
+                className={`${inp} min-h-[88px]`}
+                placeholder="Descreva o motivo da inaptidão informado pelo médico"
+              />
+            </Field>
+          </div>
+        </div>
+      )}
+
+      {/* Banner + observações: Apto com restrições */}
+      {isAptoRestricoes && (
+        <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-amber-800">
+                Apto com restrições.
+              </p>
+              <p className="text-xs text-amber-700 mt-1">
+                Descreva as restrições e recomendações indicadas no ASO.
+              </p>
+            </div>
+          </div>
+          <div className="mt-4">
+            <Field label="Observações / Restrições" error={errors.aso_observacoes_restricao}>
+              <textarea
+                value={data.aso_observacoes_restricao ?? ''}
+                onChange={e => onChange('aso_observacoes_restricao', e.target.value)}
+                className={`${inp} min-h-[88px]`}
+                placeholder="Ex: evitar esforço físico intenso, uso obrigatório de EPI auditivo, etc."
+              />
+            </Field>
+          </div>
+        </div>
+      )}
+
+      {/* Upload do arquivo */}
       <div className="mt-6">
-        <Field label="Arquivo do ASO" error={errors.aso_arquivo}>
+        <Field label="Arquivo do ASO (PDF)" error={errors.aso_arquivo}>
           {fileName ? (
             <div className="flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-xl">
               <FileText className="w-5 h-5 text-green-600 flex-shrink-0" />
@@ -146,7 +238,7 @@ export default function WizardStep4ASO({ data, onChange, errors, onFileUpload }:
               <span className="text-sm text-gray-500">
                 {uploading ? 'Enviando...' : 'Clique para enviar PDF ou imagem'}
               </span>
-              <span className="text-xs text-gray-400">PDF, JPG, PNG (max 10MB)</span>
+              <span className="text-xs text-gray-400">PDF, JPG, PNG (máx. 10MB)</span>
               <input
                 type="file"
                 accept=".pdf,.jpg,.jpeg,.png"

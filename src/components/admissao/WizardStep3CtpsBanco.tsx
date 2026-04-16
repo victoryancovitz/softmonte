@@ -8,9 +8,16 @@ const UF_OPTIONS = [
 ]
 
 const BANCOS_COMUNS = [
-  'Banco do Brasil', 'Bradesco', 'Caixa Economica Federal', 'Itau Unibanco',
+  'Banco do Brasil', 'Bradesco', 'Caixa Econômica Federal', 'Itaú Unibanco',
   'Santander', 'Nubank', 'Inter', 'Sicoob', 'Sicredi', 'C6 Bank',
   'PagBank', 'Mercado Pago', 'BTG Pactual', 'Safra', 'Original',
+]
+
+const PIX_TIPOS = [
+  { value: 'cpf', label: 'CPF' },
+  { value: 'email', label: 'E-mail' },
+  { value: 'telefone', label: 'Telefone' },
+  { value: 'aleatoria', label: 'Chave aleatória' },
 ]
 
 interface Props {
@@ -41,14 +48,77 @@ function fmtR(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+// Mascaras condicionais para PIX
+function maskPix(value: string, tipo: string): string {
+  if (!value) return ''
+  const digits = value.replace(/\D/g, '')
+  if (tipo === 'cpf') {
+    return digits
+      .slice(0, 11)
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})(\d{1,2})$/, '$1-$2')
+  }
+  if (tipo === 'telefone') {
+    const d = digits.slice(0, 11)
+    if (d.length <= 10) {
+      return d.replace(/(\d{2})(\d{4})(\d{0,4}).*/, '($1) $2-$3').replace(/-$/, '')
+    }
+    return d.replace(/(\d{2})(\d{5})(\d{0,4}).*/, '($1) $2-$3').replace(/-$/, '')
+  }
+  // email e aleatoria: sem mascara
+  return value
+}
+
+function pixPlaceholder(tipo: string): string {
+  switch (tipo) {
+    case 'cpf': return '000.000.000-00'
+    case 'email': return 'exemplo@dominio.com'
+    case 'telefone': return '(11) 98765-4321'
+    case 'aleatoria': return 'Chave aleatória (UUID)'
+    default: return 'Selecione o tipo primeiro'
+  }
+}
+
 export default function WizardStep3CtpsBanco({ data, onChange, errors }: Props) {
+  const temVt = data.tem_vt !== false // default true quando undefined
+
   const totalBeneficios = useMemo(() => {
-    const vt = parseFloat(data.vt_mensal) || 0
+    const vt = temVt ? (parseFloat(data.vt_mensal) || 0) : 0
     const vr = (parseFloat(data.vr_diario) || 0) * 21
     const va = parseFloat(data.va_mensal) || 0
     const ps = parseFloat(data.plano_saude_mensal) || 0
     return { vt, vrMensal: vr, va, ps, total: vt + vr + va + ps }
-  }, [data.vt_mensal, data.vr_diario, data.va_mensal, data.plano_saude_mensal])
+  }, [temVt, data.vt_mensal, data.vr_diario, data.va_mensal, data.plano_saude_mensal])
+
+  // Calculos VT
+  const vtCalc = useMemo(() => {
+    const salario = parseFloat(data.salario_base) || 0
+    const vtBruto = parseFloat(data.vt_mensal) || 0
+    const descontoEmpregado = salario * 0.06
+    // Desconto nao pode exceder VT bruto (regra CLT)
+    const descontoEfetivo = Math.min(descontoEmpregado, vtBruto)
+    const custoEmpresa = Math.max(0, vtBruto - descontoEfetivo)
+    return { descontoEmpregado: descontoEfetivo, custoEmpresa, vtBruto }
+  }, [data.salario_base, data.vt_mensal])
+
+  const pixTipo = data.pix_tipo ?? ''
+
+  function handlePixTipoChange(novoTipo: string) {
+    onChange('pix_tipo', novoTipo)
+    // Se CPF, pre-preencher com data.cpf
+    if (novoTipo === 'cpf' && data.cpf) {
+      onChange('pix', data.cpf)
+    } else if (novoTipo !== pixTipo) {
+      // Limpa ao trocar de tipo (exceto no primeiro set)
+      onChange('pix', '')
+    }
+  }
+
+  function handlePixChange(raw: string) {
+    const masked = maskPix(raw, pixTipo)
+    onChange('pix', masked)
+  }
 
   return (
     <div className="space-y-6">
@@ -59,7 +129,7 @@ export default function WizardStep3CtpsBanco({ data, onChange, errors }: Props) 
             CTPS
           </h3>
 
-          <Field label="Numero da CTPS" required error={errors.ctps_numero}>
+          <Field label="Número da CTPS" required error={errors.ctps_numero}>
             <input
               type="text"
               value={data.ctps_numero ?? ''}
@@ -68,7 +138,7 @@ export default function WizardStep3CtpsBanco({ data, onChange, errors }: Props) 
             />
           </Field>
 
-          <Field label="Serie" required error={errors.ctps_serie}>
+          <Field label="Série" required error={errors.ctps_serie}>
             <input
               type="text"
               value={data.ctps_serie ?? ''}
@@ -94,7 +164,7 @@ export default function WizardStep3CtpsBanco({ data, onChange, errors }: Props) 
         {/* Banco */}
         <section className="space-y-4">
           <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">
-            Dados Bancarios
+            Dados Bancários
           </h3>
 
           <Field label="Banco" required error={errors.banco}>
@@ -113,7 +183,7 @@ export default function WizardStep3CtpsBanco({ data, onChange, errors }: Props) 
             </datalist>
           </Field>
 
-          <Field label="Agencia / Conta" error={errors.agencia_conta}>
+          <Field label="Agência / Conta" error={errors.agencia_conta}>
             <input
               type="text"
               value={data.agencia_conta ?? ''}
@@ -123,34 +193,98 @@ export default function WizardStep3CtpsBanco({ data, onChange, errors }: Props) 
             />
           </Field>
 
-          <Field label="PIX" error={errors.pix}>
+          <Field label="Tipo de PIX" error={errors.pix_tipo}>
+            <select
+              value={pixTipo}
+              onChange={e => handlePixTipoChange(e.target.value)}
+              className={inp + ' bg-white'}
+            >
+              <option value="">Selecione...</option>
+              {PIX_TIPOS.map(p => (
+                <option key={p.value} value={p.value}>{p.label}</option>
+              ))}
+            </select>
+          </Field>
+
+          <Field label="Chave PIX" error={errors.pix}>
             <input
-              type="text"
+              type={pixTipo === 'email' ? 'email' : 'text'}
               value={data.pix ?? ''}
-              onChange={e => onChange('pix', e.target.value)}
+              onChange={e => handlePixChange(e.target.value)}
               className={inp}
-              placeholder="CPF, telefone, e-mail ou chave aleatoria"
+              placeholder={pixPlaceholder(pixTipo)}
+              disabled={!pixTipo}
             />
           </Field>
         </section>
       </div>
 
-      {/* Beneficios */}
+      {/* Benefícios */}
       <section>
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">
-          Beneficios
+          Benefícios
         </h3>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="VT mensal (R$)" error={errors.vt_mensal}>
-            <input
-              type="number"
-              step="0.01"
-              value={data.vt_mensal ?? 198}
-              onChange={e => onChange('vt_mensal', e.target.value)}
-              className={inp}
-            />
-          </Field>
 
+        {/* VT estruturado */}
+        <div className="mb-4 p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Recebe VT (Vale-Transporte)?</p>
+              <p className="text-xs text-gray-500">Desconto máximo de 6% sobre o salário base (CLT)</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => onChange('tem_vt', !temVt)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                temVt ? 'bg-brand' : 'bg-gray-300'
+              }`}
+              aria-label="Recebe VT"
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  temVt ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {temVt && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <Field label="Estrutura de linhas" error={errors.vt_estrutura}>
+                <input
+                  type="text"
+                  value={data.vt_estrutura ?? ''}
+                  onChange={e => onChange('vt_estrutura', e.target.value)}
+                  className={inp}
+                  placeholder="Ex: 10+7,25+7,25"
+                />
+              </Field>
+
+              <Field label="Total bruto VT (R$)" error={errors.vt_mensal}>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={data.vt_mensal ?? 198}
+                  onChange={e => onChange('vt_mensal', e.target.value)}
+                  className={inp}
+                />
+              </Field>
+
+              <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div className="p-3 bg-white rounded-lg border border-gray-200">
+                  <p className="text-xs text-gray-500">Desconto empregado (6%)</p>
+                  <p className="text-sm font-bold text-gray-700">{fmtR(vtCalc.descontoEmpregado)}</p>
+                </div>
+                <div className="p-3 bg-purple-50 rounded-lg border border-purple-100">
+                  <p className="text-xs text-purple-700">Custo empresa líquido</p>
+                  <p className="text-sm font-bold text-purple-800">{fmtR(vtCalc.custoEmpresa)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="VR por dia (R$)" error={errors.vr_diario}>
             <input
               type="number"
@@ -171,7 +305,7 @@ export default function WizardStep3CtpsBanco({ data, onChange, errors }: Props) 
             />
           </Field>
 
-          <Field label="Plano de saude (R$/mes)" error={errors.plano_saude_mensal}>
+          <Field label="Plano de saúde (R$/mês)" error={errors.plano_saude_mensal}>
             <input
               type="number"
               step="0.01"
@@ -184,7 +318,7 @@ export default function WizardStep3CtpsBanco({ data, onChange, errors }: Props) 
 
         {/* Benefits summary card */}
         <div className="mt-4 p-4 bg-purple-50 rounded-xl border border-purple-100">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Total Beneficios</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-3">Total Benefícios</p>
           <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
             <div>
               <p className="text-xs text-gray-400">VT</p>
@@ -199,11 +333,11 @@ export default function WizardStep3CtpsBanco({ data, onChange, errors }: Props) 
               <p className="text-sm font-bold text-gray-700">{fmtR(totalBeneficios.va)}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400">Saude</p>
+              <p className="text-xs text-gray-400">Saúde</p>
               <p className="text-sm font-bold text-gray-700">{fmtR(totalBeneficios.ps)}</p>
             </div>
             <div className="bg-purple-100 rounded-lg p-2">
-              <p className="text-xs text-purple-700">Total/mes</p>
+              <p className="text-xs text-purple-700">Total/mês</p>
               <p className="text-lg font-bold text-purple-800">{fmtR(totalBeneficios.total)}</p>
             </div>
           </div>

@@ -42,12 +42,13 @@ export default function NovoFuncionarioPage() {
   const CATEGORIAS_FUNCAO = ['Montagem', 'Elétrica', 'Gestão', 'Qualidade', 'Suporte', 'Tubulação', 'Pintura', 'Mecânica', 'Equipamentos', 'Operacional', 'Administrativo', 'Engenharia']
 
   async function checkCpfHistorico(cpf: string) {
-    if (!cpf || cpf.replace(/\D/g, '').length < 11) { setCpfHistorico(null); return }
+    const cpfLimpo = cpf ? cpf.replace(/\D/g, '') : ''
+    if (!cpfLimpo || cpfLimpo.length < 11) { setCpfHistorico(null); return }
     setCpfChecking(true)
     // Buscar funcionário soft-deleted com este CPF
     const { data: oldFunc } = await supabase.from('funcionarios')
       .select('id, nome, cpf, data_nascimento, pis, banco, pix, cargo, admissao, deleted_at')
-      .eq('cpf', cpf)
+      .eq('cpf', cpfLimpo)
       .not('deleted_at', 'is', null)
       .order('deleted_at', { ascending: false })
       .limit(1)
@@ -56,7 +57,7 @@ export default function NovoFuncionarioPage() {
     // Buscar vínculos anteriores
     const { data: vinculos } = await supabase.from('vinculos_funcionario')
       .select('*')
-      .eq('cpf', cpf)
+      .eq('cpf', cpfLimpo)
       .order('demissao', { ascending: false })
       .limit(1)
 
@@ -67,22 +68,45 @@ export default function NovoFuncionarioPage() {
         admissao: oldFunc?.admissao ?? v?.admissao,
         demissao: oldFunc?.deleted_at ? oldFunc.deleted_at.split('T')[0] : v?.demissao,
         cargo: oldFunc?.cargo ?? v?.cargo,
+        cpfLimpo,
+        temFuncionario: !!oldFunc,
       })
-      // Pré-preencher dados se houver funcionário anterior
-      if (oldFunc) {
-        setForm((f: any) => ({
-          ...f,
-          nome: oldFunc.nome ?? f.nome,
-          data_nascimento: oldFunc.data_nascimento ?? f.data_nascimento,
-          pis: oldFunc.pis ?? f.pis,
-          banco: oldFunc.banco ?? f.banco,
-          pix: oldFunc.pix ?? f.pix,
-        }))
-      }
     } else {
       setCpfHistorico(null)
     }
     setCpfChecking(false)
+  }
+
+  async function reaproveitarDadosAnteriores() {
+    if (!cpfHistorico?.cpfLimpo) return
+    const { data: dadosAntigos, error: reErr } = await supabase.from('funcionarios')
+      .select('*')
+      .eq('cpf', cpfHistorico.cpfLimpo)
+      .not('deleted_at', 'is', null)
+      .order('admissao', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (reErr || !dadosAntigos) {
+      toast.error('Não foi possível recuperar os dados anteriores.')
+      return
+    }
+
+    // Campos que NÃO devem ser reaproveitados
+    const camposExcluidos = new Set(['id', 'admissao', 'deleted_at', 'deleted_by', 'status', 'matricula', 'id_ponto'])
+    // Apenas campos que existem no form (evita injetar colunas extras do DB)
+    const camposForm = Object.keys(form)
+    const normalizados: any = {}
+    camposForm.forEach(k => {
+      if (camposExcluidos.has(k)) return
+      const v = (dadosAntigos as any)[k]
+      if (v === null || v === undefined) return
+      normalizados[k] = typeof v === 'number' ? String(v) : v
+    })
+
+    setForm((prev: any) => ({ ...prev, ...normalizados }))
+    setCpfHistorico(null)
+    toast.success('Dados reaproveitados do vínculo anterior')
   }
 
   async function handleCriarFuncaoInline() {
@@ -299,15 +323,38 @@ export default function NovoFuncionarioPage() {
               <div className="mb-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
                 <div className="flex items-start gap-2">
                   <span className="text-amber-500 text-lg flex-shrink-0">⚠</span>
-                  <div className="text-sm">
-                    <p className="font-bold text-amber-800">Este CPF já possui cadastro anterior na empresa.</p>
-                    <p className="text-amber-700 mt-1">
-                      <strong>{cpfHistorico.nome}</strong> — Admitido em{' '}
-                      {cpfHistorico.admissao ? new Date(cpfHistorico.admissao + 'T12:00').toLocaleDateString('pt-BR') : '—'} | Demitido em{' '}
-                      {cpfHistorico.demissao ? new Date(cpfHistorico.demissao + 'T12:00').toLocaleDateString('pt-BR') : '—'} | Cargo: {cpfHistorico.cargo ?? '—'}
+                  <div className="text-sm flex-1">
+                    <p className="font-bold text-amber-800">
+                      Este CPF pertence a <strong>{cpfHistorico.nome || '—'}</strong>
+                      {cpfHistorico.demissao ? <>, demitido em {new Date(cpfHistorico.demissao + 'T12:00').toLocaleDateString('pt-BR')}</> : ''}.
                     </p>
+                    <p className="text-amber-700 mt-1">
+                      Admitido em{' '}
+                      {cpfHistorico.admissao ? new Date(cpfHistorico.admissao + 'T12:00').toLocaleDateString('pt-BR') : '—'} | Cargo: {cpfHistorico.cargo ?? '—'}
+                    </p>
+                    <p className="text-amber-800 mt-2 font-medium">
+                      Deseja reaproveitar os dados cadastrais?
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {cpfHistorico.temFuncionario && (
+                        <button
+                          type="button"
+                          onClick={reaproveitarDadosAnteriores}
+                          className="px-3 py-1.5 bg-amber-600 text-white text-xs font-semibold rounded-lg hover:bg-amber-700 transition"
+                        >
+                          Reaproveitar dados
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setCpfHistorico(null)}
+                        className="px-3 py-1.5 bg-white border border-amber-300 text-amber-800 text-xs font-semibold rounded-lg hover:bg-amber-100 transition"
+                      >
+                        Cadastrar do zero
+                      </button>
+                    </div>
                     <p className="text-xs text-amber-600 mt-2">
-                      Este funcionário pode ser recontratado. O histórico anterior será preservado. Os dados pessoais foram pré-preenchidos.
+                      O histórico anterior será preservado. Matrícula, admissão e status serão definidos no novo vínculo.
                     </p>
                   </div>
                 </div>

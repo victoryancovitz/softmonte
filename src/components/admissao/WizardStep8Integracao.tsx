@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
-import { AlertTriangle, Building2, Calendar, User, FileText, MapPin } from 'lucide-react'
+import { AlertTriangle, Building2, Calendar, User, FileText, MapPin, Upload, CheckSquare, X } from 'lucide-react'
 
 /* ─── Types ─── */
 
@@ -16,41 +16,76 @@ interface Props {
 
 const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand'
 
+const TOPICOS_PADRAO = [
+  'Apresentação da empresa',
+  'Normas de segurança',
+  'EPI obrigatório',
+  'Procedimentos de emergência',
+  'Regras internas da obra',
+  'Contatos importantes',
+]
+
 export default function WizardStep8Integracao({ funcionario, workflowId, obras, onComplete }: Props) {
   const supabase = createClient()
   const toast = useToast()
 
-  // Section 1: Integracao SST
+  // Section 1: Integração SST
   const [dataIntegracao, setDataIntegracao] = useState('')
   const [responsavelSST, setResponsavelSST] = useState('')
-  const [localSST, setLocalSST] = useState('')
+  const [localSST, setLocalSST] = useState<'obra' | 'sede' | ''>('')
+  const [topicos, setTopicos] = useState<string[]>([])
   const [obsSST, setObsSST] = useState('')
+  const [fotoUrl, setFotoUrl] = useState('')
+  const [uploadingFoto, setUploadingFoto] = useState(false)
 
   // Section 2: eSocial
   const [dataEnvioS2200, setDataEnvioS2200] = useState('')
   const [reciboESocial, setReciboESocial] = useState('')
   const [obsESocial, setObsESocial] = useState('')
 
-  // Section 3: Alocacao
+  // Section 3: Alocação
   const [obraId, setObraId] = useState('')
   const [dataInicioObra, setDataInicioObra] = useState('')
   const [cargoNaObra, setCargoNaObra] = useState(funcionario.cargo || '')
 
   const [saving, setSaving] = useState(false)
 
-  // Sync data_inicio_obra with data_integracao when changed
+  // Sync data_inicio_obra com data_integracao
   function handleDataIntegracaoChange(val: string) {
     setDataIntegracao(val)
     if (!dataInicioObra) setDataInicioObra(val)
+  }
+
+  function toggleTopico(t: string) {
+    setTopicos(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t])
+  }
+
+  async function handleUploadFoto(file: File) {
+    setUploadingFoto(true)
+    try {
+      const ext = file.name.split('.').pop() || 'jpg'
+      const path = `${funcionario.id}/integracao/foto_${Date.now()}.${ext}`
+      const { error } = await supabase.storage.from('documentos').upload(path, file, { upsert: true })
+      if (error) throw error
+      const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(path)
+      setFotoUrl(publicUrl)
+      toast.success('Arquivo enviado')
+    } catch {
+      toast.error('Erro ao enviar arquivo')
+    } finally {
+      setUploadingFoto(false)
+    }
   }
 
   function canSubmit() {
     return dataIntegracao && responsavelSST && obraId
   }
 
+  const obraSelecionada = obras.find(o => o.id === obraId)
+
   async function handleSave() {
     if (!canSubmit()) {
-      toast.warning('Preencha os campos obrigatorios: data de integracao, responsavel e obra.')
+      toast.warning('Preencha os campos obrigatórios: data de integração, responsável e obra.')
       return
     }
 
@@ -59,13 +94,14 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
       const { data: { user } } = await supabase.auth.getUser()
       const email = user?.email ?? 'sistema'
 
-      // 1. Update funcionarios — alocado se tem obra, senão disponivel
+      // 1. Atualiza funcionários — alocado se tem obra, senão disponível
       await supabase.from('funcionarios').update({
         data_inicio_ponto: dataIntegracao,
+        data_integracao: dataIntegracao,
         status: obraId ? 'alocado' : 'disponivel',
       }).eq('id', funcionario.id)
 
-      // 2. Validate obra is active before inserting
+      // 2. Valida se obra está ativa antes de inserir alocação
       const { data: freshObra } = await supabase.from('obras')
         .select('status').eq('id', obraId).maybeSingle()
       if (!freshObra || freshObra.status !== 'ativo') {
@@ -74,7 +110,7 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
         return
       }
 
-      // 3. Insert alocacao
+      // 3. Insere alocação
       await supabase.from('alocacoes').insert({
         funcionario_id: funcionario.id,
         obra_id: obraId,
@@ -83,7 +119,11 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
         created_by: user?.id,
       })
 
-      // 4. Update workflow — mark as concluida
+      // 4. Atualiza workflow — marca como concluída
+      const localLabel = localSST === 'obra'
+        ? (obraSelecionada?.nome ? `Obra: ${obraSelecionada.nome}` : 'Obra')
+        : localSST === 'sede' ? 'Sede' : null
+
       const updates: any = {
         etapa_integracao: {
           ok: true,
@@ -91,7 +131,11 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
           por: email,
           responsavel: responsavelSST,
           local: localSST || null,
+          local_label: localLabel,
+          obra_id: localSST === 'obra' ? obraId : null,
+          topicos,
           observacoes: obsSST || null,
+          foto_url: fotoUrl || null,
         },
         status: 'concluida',
         concluida_em: new Date().toISOString(),
@@ -111,7 +155,7 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
 
       await supabase.from('admissoes_workflow').update(updates).eq('id', workflowId)
 
-      // 5. Close any active admissao_overrides
+      // 5. Fecha admissao_overrides ativos
       await supabase.from('admissao_overrides')
         .update({ ativo: false, regularizado: true, fechado_em: new Date().toISOString(), regularizado_em: new Date().toISOString() })
         .eq('workflow_id', workflowId)
@@ -120,47 +164,123 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
       toast.success('Admissão concluída com sucesso!')
       onComplete()
     } catch {
-      toast.error('Erro ao finalizar admissao')
+      toast.error('Erro ao finalizar admissão')
     } finally {
       setSaving(false)
     }
   }
 
-  const obraSelecionada = obras.find(o => o.id === obraId)
-
   return (
     <div className="space-y-6">
-      {/* ─── Section 1: Integracao SST ─── */}
+      {/* ─── Section 1: Integração SST ─── */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-brand" />
-          <h4 className="text-sm font-bold text-gray-800">Integracao SST</h4>
+          <h4 className="text-sm font-bold text-gray-800">Integração SST</h4>
         </div>
 
         <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
           <p className="text-xs text-amber-700">
-            A <strong>data de integracao</strong> sera utilizada como <strong>data de inicio do ponto</strong> do funcionario. Certifique-se de que esta correta.
+            A <strong>data de integração</strong> será utilizada como <strong>data de início do ponto</strong> do funcionário. Certifique-se de que está correta.
           </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Data da integracao *</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Data da integração *</label>
             <input type="date" value={dataIntegracao} onChange={e => handleDataIntegracaoChange(e.target.value)} className={inputCls} />
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Responsavel SST *</label>
-            <input type="text" value={responsavelSST} onChange={e => setResponsavelSST(e.target.value)} className={inputCls} placeholder="Nome do responsavel" />
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Responsável pela integração *</label>
+            <input type="text" value={responsavelSST} onChange={e => setResponsavelSST(e.target.value)} className={inputCls} placeholder="Nome do responsável" />
           </div>
-          <div>
+          <div className="col-span-2">
             <label className="block text-xs font-semibold text-gray-600 mb-1">Local</label>
-            <input type="text" value={localSST} onChange={e => setLocalSST(e.target.value)} className={inputCls} placeholder="Ex: Escritorio central" />
+            <select value={localSST} onChange={e => setLocalSST(e.target.value as 'obra' | 'sede' | '')} className={inputCls}>
+              <option value="">Selecionar local...</option>
+              <option value="obra">Obra{obraSelecionada?.nome ? ` — ${obraSelecionada.nome}` : ''}</option>
+              <option value="sede">Sede</option>
+            </select>
+            {localSST === 'obra' && !obraId && (
+              <p className="text-[11px] text-amber-600 mt-1">Selecione a obra na seção de alocação abaixo.</p>
+            )}
           </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Observacoes</label>
-            <input type="text" value={obsSST} onChange={e => setObsSST(e.target.value)} className={inputCls} placeholder="Opcional" />
+        </div>
+
+        {/* Tópicos abordados */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1">
+            <CheckSquare className="w-3.5 h-3.5" /> Tópicos abordados
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            {TOPICOS_PADRAO.map(t => {
+              const checked = topicos.includes(t)
+              return (
+                <label
+                  key={t}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-xs cursor-pointer transition-colors ${
+                    checked ? 'border-brand bg-brand/5 text-gray-800' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleTopico(t)}
+                    className="w-4 h-4 rounded border-gray-300 text-brand focus:ring-brand"
+                  />
+                  <span>{t}</span>
+                </label>
+              )
+            })}
           </div>
+        </div>
+
+        {/* Observações */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1">Observações</label>
+          <textarea
+            value={obsSST}
+            onChange={e => setObsSST(e.target.value)}
+            className={`${inputCls} min-h-[80px] resize-y`}
+            placeholder="Observações adicionais sobre a integração (opcional)"
+          />
+        </div>
+
+        {/* Upload foto/assinatura */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1 flex items-center gap-1">
+            <Upload className="w-3.5 h-3.5" /> Foto / assinatura <span className="text-gray-400 font-normal">(opcional)</span>
+          </label>
+          {fotoUrl ? (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-green-200 bg-green-50 text-xs">
+              <a href={fotoUrl} target="_blank" rel="noreferrer" className="text-green-700 hover:underline truncate flex-1">
+                Arquivo enviado — visualizar
+              </a>
+              <button
+                type="button"
+                onClick={() => setFotoUrl('')}
+                className="p-1 rounded-lg hover:bg-green-100 text-green-700"
+                aria-label="Remover arquivo"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <label className={`flex items-center justify-center gap-2 px-3 py-3 rounded-xl border border-dashed border-gray-300 text-xs cursor-pointer hover:bg-gray-50 transition-colors ${uploadingFoto ? 'opacity-50 pointer-events-none' : ''}`}>
+              <Upload className="w-4 h-4 text-gray-400" />
+              <span className="text-gray-600">{uploadingFoto ? 'Enviando...' : 'Clique para enviar foto ou assinatura'}</span>
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                onChange={e => {
+                  const f = e.target.files?.[0]
+                  if (f) handleUploadFoto(f)
+                }}
+              />
+            </label>
+          )}
         </div>
       </div>
 
@@ -179,20 +299,20 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Recibo eSocial</label>
-            <input type="text" value={reciboESocial} onChange={e => setReciboESocial(e.target.value)} className={inputCls} placeholder="Numero do recibo" />
+            <input type="text" value={reciboESocial} onChange={e => setReciboESocial(e.target.value)} className={inputCls} placeholder="Número do recibo" />
           </div>
           <div className="col-span-2">
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Observacoes</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Observações</label>
             <input type="text" value={obsESocial} onChange={e => setObsESocial(e.target.value)} className={inputCls} placeholder="Opcional" />
           </div>
         </div>
       </div>
 
-      {/* ─── Section 3: Alocacao ─── */}
+      {/* ─── Section 3: Alocação ─── */}
       <div className="space-y-3">
         <div className="flex items-center gap-2">
           <Building2 className="w-4 h-4 text-brand" />
-          <h4 className="text-sm font-bold text-gray-800">Alocacao em Obra</h4>
+          <h4 className="text-sm font-bold text-gray-800">Alocação em Obra</h4>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -206,23 +326,23 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold text-gray-600 mb-1">Data inicio na obra</label>
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Data início na obra</label>
             <input type="date" value={dataInicioObra} onChange={e => setDataInicioObra(e.target.value)} className={inputCls} />
           </div>
           <div>
             <label className="block text-xs font-semibold text-gray-600 mb-1">Cargo na obra</label>
-            <input type="text" value={cargoNaObra} onChange={e => setCargoNaObra(e.target.value)} className={inputCls} placeholder="Funcao/cargo" />
+            <input type="text" value={cargoNaObra} onChange={e => setCargoNaObra(e.target.value)} className={inputCls} placeholder="Função/cargo" />
           </div>
         </div>
       </div>
 
-      {/* ─── Section 4: Summary ─── */}
+      {/* ─── Section 4: Resumo ─── */}
       {canSubmit() && (
         <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-2">
           <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Resumo da Admissão</p>
           <div className="space-y-1.5">
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500 flex items-center gap-1"><User className="w-3.5 h-3.5" /> Funcionario</span>
+              <span className="text-gray-500 flex items-center gap-1"><User className="w-3.5 h-3.5" /> Funcionário</span>
               <span className="font-medium text-gray-800">{funcionario.nome}</span>
             </div>
             <div className="flex justify-between text-sm">
@@ -230,7 +350,7 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
               <span className="font-medium text-gray-800">{funcionario.cargo || '---'}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500 flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Inicio ponto</span>
+              <span className="text-gray-500 flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Início ponto</span>
               <span className="font-medium text-gray-800">
                 {dataIntegracao ? new Date(dataIntegracao + 'T12:00:00').toLocaleDateString('pt-BR') : '---'}
               </span>
@@ -240,9 +360,18 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
               <span className="font-medium text-gray-800">{obraSelecionada?.nome || '---'}</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-gray-500 flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> Integracao SST</span>
-              <span className="font-medium text-gray-800">{responsavelSST} {localSST ? `- ${localSST}` : ''}</span>
+              <span className="text-gray-500 flex items-center gap-1"><MapPin className="w-3.5 h-3.5" /> Integração SST</span>
+              <span className="font-medium text-gray-800">
+                {responsavelSST}
+                {localSST === 'obra' ? ' — Obra' : localSST === 'sede' ? ' — Sede' : ''}
+              </span>
             </div>
+            {topicos.length > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-gray-500 flex items-center gap-1"><CheckSquare className="w-3.5 h-3.5" /> Tópicos</span>
+                <span className="font-medium text-gray-800">{topicos.length} abordado{topicos.length > 1 ? 's' : ''}</span>
+              </div>
+            )}
             {dataEnvioS2200 && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-500 flex items-center gap-1"><FileText className="w-3.5 h-3.5" /> eSocial S-2200</span>
