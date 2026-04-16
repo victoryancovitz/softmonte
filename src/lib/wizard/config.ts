@@ -14,7 +14,7 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
   { id: 4,  key: 'obras',            titulo: 'Obra Ativa',            descricao: 'Ao menos 1 obra com status ativo',     depends: [2, 3],  rota: '/obras' },
   { id: 5,  key: 'composicao',       titulo: 'Composicao do Contrato', descricao: 'Funcoes x billing rate',              depends: [4],     rota: '/obras' },
   { id: 6,  key: 'funcionarios',     titulo: 'Funcionarios',          descricao: 'Equipe cadastrada',                    depends: [2],     rota: '/funcionarios' },
-  { id: 7,  key: 'admissoes',        titulo: 'Admissoes',             descricao: 'Workflow concluido ou bypass',         depends: [6],     rota: '/rh/admissoes' },
+  { id: 7,  key: 'admissoes',        titulo: 'Admissões',             descricao: 'Workflow concluido ou bypass',         depends: [6],     rota: '/rh/admissoes' },
   { id: 8,  key: 'alocacoes',        titulo: 'Alocacoes',             descricao: 'Funcionarios alocados em obras',       depends: [4, 6],  rota: '/funcionarios' },
   { id: 9,  key: 'efetivo',          titulo: 'Efetivo Diario',        descricao: 'Presenca registrada',                  depends: [8],     rota: '/ponto' },
   { id: 10, key: 'ponto',            titulo: 'Ponto',                 descricao: 'Registros de ponto processados',       depends: [9],     rota: '/ponto' },

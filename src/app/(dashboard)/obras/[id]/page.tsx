@@ -191,7 +191,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
       <div className="flex items-start justify-between mb-5">
         <div>
           <h1 className="text-2xl font-bold font-display text-gray-900">{obra.nome}</h1>
-          <p className="text-gray-500 mt-1">{obra.cliente} · {obra.local}</p>
+          <p className="text-gray-500 mt-1">{obra.cliente} · {obra.local || obra.cidade || '—'}</p>
         </div>
         <div className="flex items-center gap-2">
           <span className={`text-xs px-3 py-1.5 rounded-full font-medium ${STATUS_BADGE[obra.status] ?? 'bg-gray-100 text-gray-600'}`}>{formatStatus(obra.status)}</span>
@@ -253,7 +253,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               </div>
               <div>
                 <span className="text-gray-500">Local:</span>
-                <span className="ml-2 font-medium">{obra.local ?? '—'}</span>
+                <span className="ml-2 font-medium">{obra.local || obra.cidade || '—'}</span>
               </div>
               <div>
                 <span className="text-gray-500">Status:</span>

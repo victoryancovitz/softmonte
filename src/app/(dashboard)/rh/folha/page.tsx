@@ -6,7 +6,8 @@ import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
 import ImpactConfirmDialog from '@/components/ImpactConfirmDialog'
 import { calcularDescontosCLT } from '@/lib/clt'
-import { FileText, Plus, ChevronRight, Calendar, Users, DollarSign } from 'lucide-react'
+import { FileText, Plus, ChevronRight, Calendar, Users, DollarSign, AlertTriangle, X } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 const MESES = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
@@ -17,8 +18,10 @@ export default function FolhaPage() {
   const [fechando, setFechando] = useState(false)
   const [reverterAlvo, setReverterAlvo] = useState<any>(null)
   const [form, setForm] = useState({ obra_id: '', ano: new Date().getFullYear(), mes: new Date().getMonth() + 1 })
+  const [alertaComposicao, setAlertaComposicao] = useState<{ excedentes: string[], semContrato: string[], onContinue: () => void } | null>(null)
   const supabase = createClient()
   const toast = useToast()
+  const router = useRouter()
 
   useEffect(() => {
     (async () => {
@@ -86,142 +89,162 @@ export default function FolhaPage() {
       for (const [cargo, qtd] of Object.entries(porCargo)) {
         if (!(composicaoCheck ?? []).find((c: any) => c.funcao_nome.toUpperCase() === cargo) && qtd > 0) semContrato.push(`${cargo}: ${qtd} pessoa(s) sem contrato`)
       }
-      if (excedentes.length > 0 || semContrato.length > 0) {
-        const msg = [excedentes.length > 0 ? `FUNCIONÁRIOS ACIMA DO CONTRATO:\n${excedentes.join('\n')}` : '', semContrato.length > 0 ? `CARGOS SEM CONTRATO:\n${semContrato.join('\n')}` : '', '\nA folha será fechada normalmente (obrigação CLT).\nCrie aditivos para regularizar antes de emitir BMs.'].filter(Boolean).join('\n\n')
-        if (!window.confirm(`⚠️ ${msg}\n\nDeseja continuar com o fechamento?`)) { setFechando(false); return }
-      }
+      // Helper to proceed with closing after validation
+      const procederFechamento = async (cargosSemContrato?: string[]) => {
+        try {
+          // data de pagamento: 5o dia util do mes seguinte (simplificado: dia 5)
+          const pagMes = form.mes === 12 ? 1 : form.mes + 1
+          const pagAno = form.mes === 12 ? form.ano + 1 : form.ano
+          const data_pg = `${pagAno}-${String(pagMes).padStart(2,'0')}-05`
 
-      // data de pagamento: 5º dia útil do mês seguinte (simplificado: dia 5)
-      const pagMes = form.mes === 12 ? 1 : form.mes + 1
-      const pagAno = form.mes === 12 ? form.ano + 1 : form.ano
-      const data_pg = `${pagAno}-${String(pagMes).padStart(2,'0')}-05`
+          const { data: { user } } = await supabase.auth.getUser()
 
-      const { data: { user } } = await supabase.auth.getUser()
+          // 4) Insere fechamento
+          const { data: ff, error: ffErr } = await supabase.from('folha_fechamentos').insert({
+            obra_id: form.obra_id,
+            ano: form.ano,
+            mes: form.mes,
+            data_fechamento: new Date().toISOString().slice(0, 10),
+            data_pagamento_prevista: data_pg,
+            valor_total_bruto: tot_bruto,
+            valor_total_encargos: tot_enc,
+            valor_total_provisoes: tot_prov,
+            valor_total_beneficios: tot_ben,
+            valor_total: tot,
+            funcionarios_incluidos: custosValidos.length,
+            status: 'fechada',
+            created_by: user?.id ?? null,
+            ...(cargosSemContrato && cargosSemContrato.length > 0 ? { cargos_sem_contrato: cargosSemContrato } : {}),
+          }).select().single()
+          if (ffErr) throw ffErr
 
-      // 4) Insere fechamento
-      const { data: ff, error: ffErr } = await supabase.from('folha_fechamentos').insert({
-        obra_id: form.obra_id,
-        ano: form.ano,
-        mes: form.mes,
-        data_fechamento: new Date().toISOString().slice(0, 10),
-        data_pagamento_prevista: data_pg,
-        valor_total_bruto: tot_bruto,
-        valor_total_encargos: tot_enc,
-        valor_total_provisoes: tot_prov,
-        valor_total_beneficios: tot_ben,
-        valor_total: tot,
-        funcionarios_incluidos: custosValidos.length,
-        status: 'fechada',
-        created_by: user?.id ?? null,
-      }).select().single()
-      if (ffErr) throw ffErr
+          // 5) Buscar dados individuais dos funcionarios (ANTES dos itens)
+          const funcIds = custosValidos.map((c: any) => c.funcionario_id)
+          const { data: funcsData } = await supabase.from('funcionarios').select('id, salario_base, adiantamento_pct, insalubridade_pct, periculosidade_pct, vt_mensal, dependentes_ir').in('id', funcIds)
+          const funcMap: Record<string, any> = {}
+          ;(funcsData ?? []).forEach((f: any) => { funcMap[f.id] = f })
 
-      // 5) Buscar dados individuais dos funcionários (ANTES dos itens)
-      const funcIds = custosValidos.map((c: any) => c.funcionario_id)
-      const { data: funcsData } = await supabase.from('funcionarios').select('id, salario_base, adiantamento_pct, insalubridade_pct, periculosidade_pct, vt_mensal, dependentes_ir').in('id', funcIds)
-      const funcMap: Record<string, any> = {}
-      ;(funcsData ?? []).forEach((f: any) => { funcMap[f.id] = f })
+          // 6) Itens por funcionario — com calculos CLT
+          const itens = custosValidos.map((c: any) => {
+            const func = funcMap[c.funcionario_id] || {}
+            const salBase = Number(func.salario_base || c.salario_total_bruto || 0)
+            const diasTrab = Number(c.dias_trab || 0)
+            const diasDesc = Number(c.dias_desc || 0)
 
-      // 6) Itens por funcionário — com cálculos CLT
-      const itens = custosValidos.map((c: any) => {
-        const func = funcMap[c.funcionario_id] || {}
-        const salBase = Number(func.salario_base || c.salario_total_bruto || 0)
-        const diasTrab = Number(c.dias_trab || 0)
-        const diasDesc = Number(c.dias_desc || 0)
+            const clt = calcularDescontosCLT({
+              salarioBase: salBase,
+              diasTrabalhados: diasTrab,
+              diasMes: 30,
+              insalubridadePct: Number(func.insalubridade_pct || 0),
+              periculosidadePct: Number(func.periculosidade_pct || 0),
+              vtMensal: Number(func.vt_mensal || 0),
+              dependentes: Number(func.dependentes_ir || 0),
+            })
 
-        const clt = calcularDescontosCLT({
-          salarioBase: salBase,
-          diasTrabalhados: diasTrab,
-          diasMes: 30,
-          insalubridadePct: Number(func.insalubridade_pct || 0),
-          periculosidadePct: Number(func.periculosidade_pct || 0),
-          vtMensal: Number(func.vt_mensal || 0),
-          dependentes: Number(func.dependentes_ir || 0),
-        })
+            return {
+              folha_id: ff.id,
+              funcionario_id: c.funcionario_id,
+              salario_base: salBase,
+              salario_total: clt.total_proventos,
+              dias_trabalhados: diasTrab,
+              dias_descontados: diasDesc,
+              desconto_inss: clt.desconto_inss,
+              desconto_irrf: clt.desconto_irrf,
+              outros_descontos: clt.desconto_vt,
+              encargos_valor: Number(c.encargos_valor || 0),
+              provisoes_valor: Number(c.provisoes_valor || 0),
+              beneficios_valor: Number(c.beneficios_valor || 0),
+              valor_bruto: clt.total_proventos,
+              valor_liquido: clt.valor_liquido,
+              custo_total_empresa: Number(c.custo_real_mes || 0),
+            }
+          })
+          const { error: itensErr } = await supabase.from('folha_itens').insert(itens)
+          if (itensErr) throw new Error('Falha ao salvar itens da folha: ' + itensErr.message)
 
-        return {
-          folha_id: ff.id,
-          funcionario_id: c.funcionario_id,
-          salario_base: salBase,
-          salario_total: clt.total_proventos,
-          dias_trabalhados: diasTrab,
-          dias_descontados: diasDesc,
-          desconto_inss: clt.desconto_inss,
-          desconto_irrf: clt.desconto_irrf,
-          outros_descontos: clt.desconto_vt,
-          encargos_valor: Number(c.encargos_valor || 0),
-          provisoes_valor: Number(c.provisoes_valor || 0),
-          beneficios_valor: Number(c.beneficios_valor || 0),
-          valor_bruto: clt.total_proventos,
-          valor_liquido: clt.valor_liquido,
-          custo_total_empresa: Number(c.custo_real_mes || 0),
+          // 7) Lancamentos por funcionario (adiantamento + saldo) + provisao agregada
+          const obraNome = obras.find((o: any) => o.id === form.obra_id)?.nome || 'Obra'
+          const compBase = `${form.ano}-${String(form.mes).padStart(2,'0')}-01`
+          const dtAdiantamento = `${form.ano}-${String(form.mes).padStart(2,'0')}-20`
+
+          const lancamentosParaInserir: any[] = []
+          for (const c of custosValidos) {
+            const adiantPct = Number(funcMap[c.funcionario_id]?.adiantamento_pct ?? 40) / 100
+            const salLiquido = Number(c.salario_liquido_empresa || 0)
+            const vlAdiant = Math.round(salLiquido * adiantPct * 100) / 100
+            const vlSaldo = Math.round((Number(c.custo_real_mes || 0) - vlAdiant) * 100) / 100
+
+            lancamentosParaInserir.push({
+              obra_id: form.obra_id, funcionario_id: c.funcionario_id,
+              tipo: 'despesa', nome: `Adiantamento — ${c.nome} ${String(form.mes).padStart(2,'0')}/${form.ano}`,
+              categoria: 'Folha de Pagamento', tipo_folha: 'adiantamento',
+              valor: vlAdiant, status: 'em_aberto', data_competencia: compBase,
+              data_vencimento: dtAdiantamento, origem: 'folha_fechamento', is_provisao: false,
+              created_by: user?.id ?? null,
+            })
+            lancamentosParaInserir.push({
+              obra_id: form.obra_id, funcionario_id: c.funcionario_id,
+              tipo: 'despesa', nome: `Saldo Salario — ${c.nome} ${String(form.mes).padStart(2,'0')}/${form.ano}`,
+              categoria: 'Folha de Pagamento', tipo_folha: 'saldo_salario',
+              valor: vlSaldo, status: 'em_aberto', data_competencia: compBase,
+              data_vencimento: data_pg, origem: 'folha_fechamento', is_provisao: false,
+              created_by: user?.id ?? null,
+            })
+          }
+          // Provisao agregada
+          if (tot_prov > 0) {
+            lancamentosParaInserir.push({
+              obra_id: form.obra_id, tipo: 'despesa',
+              nome: `Provisao 13/Ferias/FGTS — ${String(form.mes).padStart(2,'0')}/${form.ano} — ${obraNome}`,
+              categoria: 'Folha de Pagamento', valor: tot_prov,
+              status: 'em_aberto', data_competencia: compBase,
+              origem: 'folha_fechamento', is_provisao: true,
+              created_by: user?.id ?? null,
+            })
+          }
+          const { error: lancErr } = await supabase.from('financeiro_lancamentos').insert(lancamentosParaInserir)
+          if (lancErr) throw new Error('Falha ao gerar lancamentos da folha: ' + lancErr.message)
+
+          // 8) Provisoes por funcionario
+          const provisoesRows = custosValidos.map((c: any) => ({
+            funcionario_id: c.funcionario_id, obra_id: form.obra_id,
+            ano: form.ano, mes: form.mes,
+            provisao_decimo_mes: Math.round(Number(c.provisoes_valor || 0) * 0.397 * 100) / 100,
+            provisao_ferias_mes: Math.round(Number(c.provisoes_valor || 0) * 0.529 * 100) / 100,
+            provisao_fgts_mes: Math.round(Number(c.provisoes_valor || 0) * 0.074 * 100) / 100,
+            total_provisionado_mes: Number(c.provisoes_valor || 0),
+            saldo_anterior: 0, decimo_pago: 0, ferias_pagas: 0, fgts_rescisao_pago: 0,
+          }))
+          await supabase.from('provisoes_funcionario').upsert(provisoesRows, { onConflict: 'funcionario_id,ano,mes' })
+
+          const { error: updFFErr } = await supabase.from('folha_fechamentos').update({ lancamentos_gerados: lancamentosParaInserir.length }).eq('id', ff.id)
+          if (updFFErr) throw new Error('Falha ao marcar folha como lancada: ' + updFFErr.message)
+
+          toast.success(`Folha ${String(form.mes).padStart(2,'0')}/${form.ano} fechada: R$ ${tot.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`)
+          // recarrega
+          const { data: f2 } = await supabase.from('folha_fechamentos').select('*, obras(nome)').is('deleted_at', null).order('ano', { ascending: false }).order('mes', { ascending: false })
+          setFechamentos(f2 || [])
+        } catch (e: any) {
+          toast.error('Erro: ' + (e.message || e))
+        } finally {
+          setFechando(false)
         }
-      })
-      const { error: itensErr } = await supabase.from('folha_itens').insert(itens)
-      if (itensErr) throw new Error('Falha ao salvar itens da folha: ' + itensErr.message)
-
-      // 7) Lançamentos por funcionário (adiantamento + saldo) + provisão agregada
-      const obraNome = obras.find((o: any) => o.id === form.obra_id)?.nome || 'Obra'
-      const compBase = `${form.ano}-${String(form.mes).padStart(2,'0')}-01`
-      const dtAdiantamento = `${form.ano}-${String(form.mes).padStart(2,'0')}-20`
-
-      const lancamentosParaInserir: any[] = []
-      for (const c of custosValidos) {
-        const adiantPct = Number(funcMap[c.funcionario_id]?.adiantamento_pct ?? 40) / 100
-        const salLiquido = Number(c.salario_liquido_empresa || 0)
-        const vlAdiant = Math.round(salLiquido * adiantPct * 100) / 100
-        const vlSaldo = Math.round((Number(c.custo_real_mes || 0) - vlAdiant) * 100) / 100
-
-        lancamentosParaInserir.push({
-          obra_id: form.obra_id, funcionario_id: c.funcionario_id,
-          tipo: 'despesa', nome: `Adiantamento — ${c.nome} ${String(form.mes).padStart(2,'0')}/${form.ano}`,
-          categoria: 'Folha de Pagamento', tipo_folha: 'adiantamento',
-          valor: vlAdiant, status: 'em_aberto', data_competencia: compBase,
-          data_vencimento: dtAdiantamento, origem: 'folha_fechamento', is_provisao: false,
-          created_by: user?.id ?? null,
-        })
-        lancamentosParaInserir.push({
-          obra_id: form.obra_id, funcionario_id: c.funcionario_id,
-          tipo: 'despesa', nome: `Saldo Salário — ${c.nome} ${String(form.mes).padStart(2,'0')}/${form.ano}`,
-          categoria: 'Folha de Pagamento', tipo_folha: 'saldo_salario',
-          valor: vlSaldo, status: 'em_aberto', data_competencia: compBase,
-          data_vencimento: data_pg, origem: 'folha_fechamento', is_provisao: false,
-          created_by: user?.id ?? null,
-        })
       }
-      // Provisão agregada
-      if (tot_prov > 0) {
-        lancamentosParaInserir.push({
-          obra_id: form.obra_id, tipo: 'despesa',
-          nome: `Provisão 13°/Férias/FGTS — ${String(form.mes).padStart(2,'0')}/${form.ano} — ${obraNome}`,
-          categoria: 'Folha de Pagamento', valor: tot_prov,
-          status: 'em_aberto', data_competencia: compBase,
-          origem: 'folha_fechamento', is_provisao: true,
-          created_by: user?.id ?? null,
+
+      if (excedentes.length > 0 || semContrato.length > 0) {
+        const allSemContrato = [...excedentes, ...semContrato]
+        setAlertaComposicao({
+          excedentes,
+          semContrato,
+          onContinue: () => {
+            setAlertaComposicao(null)
+            procederFechamento(allSemContrato)
+          },
         })
+        return
       }
-      const { error: lancErr } = await supabase.from('financeiro_lancamentos').insert(lancamentosParaInserir)
-      if (lancErr) throw new Error('Falha ao gerar lançamentos da folha: ' + lancErr.message)
 
-      // 8) Provisões por funcionário
-      const provisoesRows = custosValidos.map((c: any) => ({
-        funcionario_id: c.funcionario_id, obra_id: form.obra_id,
-        ano: form.ano, mes: form.mes,
-        provisao_decimo_mes: Math.round(Number(c.provisoes_valor || 0) * 0.397 * 100) / 100,
-        provisao_ferias_mes: Math.round(Number(c.provisoes_valor || 0) * 0.529 * 100) / 100,
-        provisao_fgts_mes: Math.round(Number(c.provisoes_valor || 0) * 0.074 * 100) / 100,
-        total_provisionado_mes: Number(c.provisoes_valor || 0),
-        saldo_anterior: 0, decimo_pago: 0, ferias_pagas: 0, fgts_rescisao_pago: 0,
-      }))
-      await supabase.from('provisoes_funcionario').upsert(provisoesRows, { onConflict: 'funcionario_id,ano,mes' })
-
-      const { error: updFFErr } = await supabase.from('folha_fechamentos').update({ lancamentos_gerados: lancamentosParaInserir.length }).eq('id', ff.id)
-      if (updFFErr) throw new Error('Falha ao marcar folha como lançada: ' + updFFErr.message)
-
-      toast.success(`Folha ${String(form.mes).padStart(2,'0')}/${form.ano} fechada: R$ ${tot.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`)
-      // recarrega
-      const { data: f2 } = await supabase.from('folha_fechamentos').select('*, obras(nome)').is('deleted_at', null).order('ano', { ascending: false }).order('mes', { ascending: false })
-      setFechamentos(f2 || [])
+      await procederFechamento()
     } catch (e: any) {
       toast.error('Erro: ' + (e.message || e))
     } finally {
@@ -365,6 +388,80 @@ export default function FolhaPage() {
           <div className="bg-white rounded-xl border border-gray-100 p-4">
             <div className="flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-blue-500" /><span className="text-[11px] font-semibold text-gray-400 uppercase">Funcs/mês média</span></div>
             <div className="text-xl font-bold text-gray-900">{Math.round(fechamentos.reduce((s, f) => s + (f.funcionarios_incluidos || 0), 0) / fechamentos.length)}</div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de alerta de composicao */}
+      {alertaComposicao && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="bg-red-50 border-b border-red-100 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-red-900 text-base">Divergencia na Composicao</h3>
+                  <p className="text-xs text-red-600">Revise antes de fechar a folha</p>
+                </div>
+              </div>
+              <button onClick={() => { setAlertaComposicao(null); setFechando(false) }} className="p-1.5 rounded-lg text-red-400 hover:text-red-600 hover:bg-red-100 transition-all">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-4 max-h-[60vh] overflow-y-auto">
+              {alertaComposicao.excedentes.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-red-800 mb-2">Funcionarios acima do contrato</h4>
+                  <ul className="space-y-1">
+                    {alertaComposicao.excedentes.map((e, i) => (
+                      <li key={i} className="text-sm text-gray-700 bg-red-50 rounded-lg px-3 py-2 border border-red-100">{e}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {alertaComposicao.semContrato.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-amber-800 mb-2">Cargos sem contrato</h4>
+                  <ul className="space-y-1">
+                    {alertaComposicao.semContrato.map((e, i) => (
+                      <li key={i} className="text-sm text-gray-700 bg-amber-50 rounded-lg px-3 py-2 border border-amber-100">{e}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="text-xs text-gray-500 leading-relaxed">
+                A folha sera fechada normalmente (obrigacao CLT). Crie aditivos para regularizar antes de emitir BMs.
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
+              <button
+                onClick={() => { setAlertaComposicao(null); setFechando(false) }}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all"
+              >
+                Cancelar
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { setAlertaComposicao(null); setFechando(false); router.push(`/obras/${form.obra_id}?tab=aditivos`) }}
+                  className="px-4 py-2 text-sm font-semibold text-brand border border-brand/30 rounded-lg hover:bg-brand/5 transition-all"
+                >
+                  Criar aditivo &rarr;
+                </button>
+                <button
+                  onClick={alertaComposicao.onContinue}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all"
+                >
+                  Fechar folha mesmo assim
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

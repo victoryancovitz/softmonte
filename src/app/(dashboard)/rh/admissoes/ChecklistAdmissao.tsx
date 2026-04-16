@@ -126,7 +126,7 @@ export default function ChecklistAdmissao({
         regularizado: true,
         regularizado_em: new Date().toISOString(),
       }).eq('funcionario_id', funcionario.id).eq('regularizado', false)
-      toast.success('Admissao concluida!')
+      toast.success('Admissão concluída!')
     }
   }
 

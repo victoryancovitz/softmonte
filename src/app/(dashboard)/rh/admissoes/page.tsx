@@ -104,7 +104,7 @@ export default function AdmissoesPage() {
         <div className="flex items-center gap-3">
           <BackButton fallback="/rh" />
           <div>
-            <h1 className="text-xl font-bold font-display text-brand">Admissoes</h1>
+            <h1 className="text-xl font-bold font-display text-brand">Admissões</h1>
             <p className="text-sm text-gray-500 mt-0.5">{emAndamentoCount} em andamento</p>
           </div>
         </div>
@@ -113,7 +113,7 @@ export default function AdmissoesPage() {
           className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
-          Nova Admissao
+          Nova Admissão
         </Link>
       </div>
 
@@ -172,10 +172,10 @@ export default function AdmissoesPage() {
         <div className="text-center py-12 text-gray-400">Carregando...</div>
       ) : filtered.length === 0 ? (
         <EmptyState
-          titulo={tab === 'em_andamento' ? 'Nenhuma admissao em andamento' : 'Nenhuma admissao encontrada'}
-          descricao="Cadastre um funcionario e inicie o processo de admissao."
+          titulo={tab === 'em_andamento' ? 'Nenhuma admissão em andamento' : 'Nenhuma admissão encontrada'}
+          descricao="Cadastre um funcionário e inicie o processo de admissão."
           icone={<UserPlus className="w-12 h-12" />}
-          acao={{ label: 'Nova Admissao', href: '/rh/admissoes/wizard' }}
+          acao={{ label: 'Nova Admissão', href: '/rh/admissoes/wizard' }}
         />
       ) : (
         <div className="space-y-3">

@@ -329,7 +329,7 @@ export default function AdmissaoWizardPage() {
     // Update employee status
     await supabase.from('funcionarios').update({ status: 'disponivel' }).eq('id', id)
 
-    toast.show('Admissao concluida!')
+    toast.show('Admissão concluída!')
     router.push(`/funcionarios/${id}`)
   }
 
@@ -354,11 +354,11 @@ export default function AdmissaoWizardPage() {
         <span className="text-gray-300">/</span>
         <Link href={`/funcionarios/${id}`} className="text-gray-400 hover:text-gray-600">{func?.nome}</Link>
         <span className="text-gray-300">/</span>
-        <span className="font-medium">Admissao</span>
+        <span className="font-medium">Admissão</span>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h1 className="text-lg font-bold font-display text-brand mb-1">Wizard de Admissao</h1>
+        <h1 className="text-lg font-bold font-display text-brand mb-1">Wizard de Admissão</h1>
         <p className="text-sm text-gray-500 mb-4">{func?.nome} — {func?.cargo}</p>
 
         {/* Progress Bar */}
@@ -641,7 +641,7 @@ export default function AdmissaoWizardPage() {
           )}
           {etapa === 5 && (
             <button type="button" onClick={handleFinalizar} disabled={saving} className="px-5 py-2.5 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50">
-              {saving ? 'Finalizando...' : 'Finalizar Admissao'}
+              {saving ? 'Finalizando...' : 'Finalizar Admissão'}
             </button>
           )}
           <button type="button" onClick={() => saveStep(etapa)} disabled={saving} className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm text-gray-500 hover:bg-gray-50 disabled:opacity-50">

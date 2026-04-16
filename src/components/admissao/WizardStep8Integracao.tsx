@@ -117,7 +117,7 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
         .eq('workflow_id', workflowId)
         .eq('ativo', true)
 
-      toast.success('Admissao concluida com sucesso!')
+      toast.success('Admissão concluída com sucesso!')
       onComplete()
     } catch {
       toast.error('Erro ao finalizar admissao')
@@ -219,7 +219,7 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
       {/* ─── Section 4: Summary ─── */}
       {canSubmit() && (
         <div className="p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-2">
-          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Resumo da Admissao</p>
+          <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Resumo da Admissão</p>
           <div className="space-y-1.5">
             <div className="flex justify-between text-sm">
               <span className="text-gray-500 flex items-center gap-1"><User className="w-3.5 h-3.5" /> Funcionario</span>
@@ -262,7 +262,7 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
         disabled={!canSubmit() || saving}
         className="w-full px-5 py-3 bg-green-600 text-white rounded-xl text-sm font-bold hover:bg-green-700 disabled:opacity-50 transition-colors"
       >
-        {saving ? 'Finalizando...' : 'Concluir Admissao'}
+        {saving ? 'Finalizando...' : 'Concluir Admissão'}
       </button>
     </div>
   )

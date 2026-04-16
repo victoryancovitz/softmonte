@@ -277,7 +277,7 @@ export default function WizardAdmissaoPage() {
         setStep(step + 1)
         toast.success(`${STEP_LABELS[step]} salvo!`)
       } else {
-        toast.success('Admissao concluida!')
+        toast.success('Admissão concluída!')
         router.push('/rh/admissoes')
       }
     }
@@ -366,7 +366,7 @@ export default function WizardAdmissaoPage() {
           <span className="text-sm font-black font-display text-brand tracking-wide">SOFTMONTE</span>
           <span className="text-gray-300">|</span>
           <span className="text-sm font-semibold text-gray-700 truncate max-w-[200px] sm:max-w-none">
-            Admissao de {nome}
+            Admissão de {nome}
           </span>
         </div>
         <button

@@ -357,7 +357,7 @@ export default function FeriasPage() {
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
               <SortableHeader label="Nome" field="nome" currentField={sortField} currentDir={sortDir} onSort={onSort} />
-              <SortableHeader label="Admissao" field="admissao" currentField={sortField} currentDir={sortDir} onSort={onSort} />
+              <SortableHeader label="Admissão" field="admissao" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Obra</th>
               <SortableHeader label="Dias Direito" field="diasDireito" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Progresso</th>

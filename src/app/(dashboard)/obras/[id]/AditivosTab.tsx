@@ -69,7 +69,7 @@ function fmtDate(d: string | null) {
   return new Date(d + 'T12:00').toLocaleDateString('pt-BR')
 }
 
-export default function AditivosTab({ obra, aditivos, composicao, onRefresh }: { obra: any; aditivos: any[]; composicao: any[]; onRefresh: () => void }) {
+export default function AditivosTab({ obra, aditivos: rawAditivos, composicao: rawComposicao, onRefresh }: { obra: any; aditivos: any[]; composicao: any[]; onRefresh: () => void }) {
   const supabase = createClient()
   const toast = useToast()
   const [showModal, setShowModal] = useState(false)
@@ -77,9 +77,12 @@ export default function AditivosTab({ obra, aditivos, composicao, onRefresh }: {
   const [approving, setApproving] = useState<string | null>(null)
   const [form, setForm] = useState<FormData>(emptyForm(obra))
 
+  const aditivos = rawAditivos ?? []
+  const composicao = rawComposicao ?? []
+
   const aprovados = aditivos.filter(a => a.status === 'aprovado' || a.status === 'executado')
   const funcoesAdicionadas = aprovados.filter(a => a.tipo === 'escopo_funcao').length
-  const valorContratualMes = composicao.reduce((s: number, c: any) => s + (Number(c.quantidade_contratada) * Number(c.horas_mes || 220) * Number(c.custo_hora_contratado || 0)), 0)
+  const valorContratualMes = composicao.reduce((s: number, c: any) => s + (Number(c.quantidade_contratada ?? 0) * Number(c.horas_mes || 220) * Number(c.custo_hora_contratado || 0)), 0)
 
   const openModal = useCallback(() => {
     setForm(emptyForm(obra))
@@ -239,25 +242,25 @@ export default function AditivosTab({ obra, aditivos, composicao, onRefresh }: {
                     {TIPO_LABEL[a.tipo] ?? a.tipo}
                   </span>
                 </div>
-                <p className="text-sm text-gray-700 mt-1">{a.descricao}</p>
+                <p className="text-sm text-gray-700 mt-1">{a.descricao ?? '—'}</p>
                 <div className="text-xs text-gray-400 mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-                  {a.funcao_nome && <span>Função: <strong className="text-gray-600">{a.funcao_nome}</strong></span>}
+                  {a.funcao_nome && <span>Função: <strong className="text-gray-600">{a.funcao_nome ?? '—'}</strong></span>}
                   {a.quantidade_anterior != null && a.quantidade_nova != null && (
-                    <span>Qty: {a.quantidade_anterior} → <strong className="text-gray-600">{a.quantidade_nova}</strong></span>
+                    <span>Qty: {Number(a.quantidade_anterior ?? 0)} → <strong className="text-gray-600">{Number(a.quantidade_nova ?? 0)}</strong></span>
                   )}
                   {a.tipo === 'prazo' && a.data_fim_anterior && (
                     <span>Prazo: {fmtDate(a.data_fim_anterior)} → <strong className="text-gray-600">{fmtDate(a.data_fim_nova)}</strong></span>
                   )}
                   {(a.tipo === 'preco' || a.tipo === 'reducao') && a.valor_anterior != null && (
-                    <span>Valor: {fmt(a.valor_anterior)} → <strong className="text-gray-600">{fmt(a.valor_novo)}</strong></span>
+                    <span>Valor: {fmt(Number(a.valor_anterior ?? 0))} → <strong className="text-gray-600">{fmt(Number(a.valor_novo ?? 0))}</strong></span>
                   )}
-                  {a.impacto_valor != null && Number(a.impacto_valor) !== 0 && (
-                    <span className={Number(a.impacto_valor) > 0 ? 'text-green-600' : 'text-red-600'}>
-                      Impacto: {Number(a.impacto_valor) > 0 ? '+' : ''}{fmt(a.impacto_valor)}
+                  {a.impacto_valor != null && Number(a.impacto_valor ?? 0) !== 0 && (
+                    <span className={Number(a.impacto_valor ?? 0) > 0 ? 'text-green-600' : 'text-red-600'}>
+                      Impacto: {Number(a.impacto_valor ?? 0) > 0 ? '+' : ''}{fmt(Number(a.impacto_valor ?? 0))}
                     </span>
                   )}
                   {a.data_solicitacao && <span>Solicitado: {fmtDate(a.data_solicitacao)}</span>}
-                  {a.aprovado_em && <span>Aprovado: {new Date(a.aprovado_em).toLocaleDateString('pt-BR')}{a.aprovado_por ? ` por ${a.aprovado_por}` : ''}</span>}
+                  {a.aprovado_em && <span>Aprovado: {a.aprovado_em ? new Date(a.aprovado_em).toLocaleDateString('pt-BR') : '—'}{a.aprovado_por ? ` por ${a.aprovado_por}` : ''}</span>}
                 </div>
               </div>
               {a.status === 'pendente' && (

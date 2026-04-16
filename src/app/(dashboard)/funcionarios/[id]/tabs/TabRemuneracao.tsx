@@ -170,8 +170,8 @@ export default function TabRemuneracao({
                 admissao: 'bg-blue-100 text-blue-700 border-blue-200',
               }
               const MOTIVO_L: Record<string, string> = {
-                admissao: 'Admissao', acordo_coletivo: 'Acordo coletivo', dissidio: 'Dissidio',
-                merito: 'Merito', promocao: 'Promocao', correcao: 'Correcao',
+                admissao: 'Admissão', acordo_coletivo: 'Acordo coletivo', dissidio: 'Dissídio',
+                merito: 'Mérito', promocao: 'Promoção', correcao: 'Correção',
                 reenquadramento: 'Reenquadramento', piso: 'Ajuste ao piso', outro: 'Outro',
               }
 

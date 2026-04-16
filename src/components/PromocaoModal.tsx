@@ -114,7 +114,7 @@ export default function PromocaoModal({ funcionario, funcoes, onClose }: Props) 
         .gte('created_at', new Date(Date.now() - 5000).toISOString())
 
       toast.success(
-        form.tipo_mudanca === 'promocao_cargo' ? 'Promocao registrada com sucesso'
+        form.tipo_mudanca === 'promocao_cargo' ? 'Promoção registrada com sucesso'
           : form.tipo_mudanca === 'mudanca_cargo' ? 'Mudanca de cargo registrada'
           : 'Reajuste salarial aplicado',
         'As alocacoes ativas foram atualizadas.'
@@ -135,7 +135,7 @@ export default function PromocaoModal({ funcionario, funcoes, onClose }: Props) 
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-gray-100">
           <div>
-            <h2 className="text-lg font-bold text-gray-900">Registrar Promocao / Reajuste</h2>
+            <h2 className="text-lg font-bold text-gray-900">Registrar Promoção / Reajuste</h2>
             <p className="text-xs text-gray-500 mt-0.5">{funcionario.nome_guerra || funcionario.nome}</p>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors">

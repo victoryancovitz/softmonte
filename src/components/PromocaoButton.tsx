@@ -18,7 +18,7 @@ export default function PromocaoButton({ funcionario, funcoes }: Props) {
         className="px-3 py-1.5 border border-green-200 text-green-700 rounded-lg text-xs font-semibold hover:bg-green-50 flex items-center gap-1"
       >
         <TrendingUp className="w-3.5 h-3.5" />
-        Registrar Promocao
+        Registrar Promoção
       </button>
       {open && (
         <PromocaoModal

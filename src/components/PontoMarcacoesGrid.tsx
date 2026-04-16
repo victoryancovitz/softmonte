@@ -606,7 +606,7 @@ export default function PontoMarcacoesGrid() {
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
-      <h2 className="text-sm font-bold text-brand mb-1">Marcacoes Brutas do Ponto</h2>
+      <h2 className="text-sm font-bold text-brand mb-1">Marcações Brutas do Ponto</h2>
       <p className="text-xs text-gray-500 mb-4">
         Todas as batidas importadas da Secullum, por funcionario e dia. Independente de obra.
         <span className="ml-1 text-brand font-medium">Clique em &quot;+ obra&quot; para atribuir a obra do dia.</span>

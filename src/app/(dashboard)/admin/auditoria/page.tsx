@@ -23,7 +23,7 @@ const TABELA_LABEL: Record<string, string> = {
   correcoes_salariais: 'Correcoes Salariais',
   desligamentos_workflow: 'Desligamentos',
   alocacoes: 'Alocacoes',
-  admissoes_workflow: 'Admissoes',
+  admissoes_workflow: 'Admissões',
   efetivo_diario: 'Efetivo Diario',
   hh_lancamentos: 'HH Lancamentos',
   folha_fechamentos: 'Folha',

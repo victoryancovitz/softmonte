@@ -179,7 +179,7 @@ export default function WizardStep6EPI({ funcionario, workflowId, onComplete }: 
   <div><span>CPF:</span> ${funcionario.cpf || '-'}</div>
   <div><span>Funcao:</span> ${funcionario.funcao_nome || funcionario.funcao || '-'}</div>
   <div><span>Matricula:</span> ${funcionario.matricula || '-'}</div>
-  <div><span>Data Admissao:</span> ${admissao}</div>
+  <div><span>Data Admissão:</span> ${admissao}</div>
   <div><span>Data Entrega:</span> ${dataEntrega ? new Date(dataEntrega + 'T12:00:00').toLocaleDateString('pt-BR') : today}</div>
 </div>
 <table>

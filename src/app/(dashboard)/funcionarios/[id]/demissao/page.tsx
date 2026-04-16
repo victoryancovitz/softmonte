@@ -535,7 +535,7 @@ export default function DemissaoWizardPage() {
                 <p className="text-xs text-green-600 font-semibold mb-1">Ferias Proporcionais</p>
                 <p className="text-xl font-bold text-green-800">{acerto.saldo_ferias} dia(s)</p>
                 <p className="text-[10px] text-green-500 mt-1">
-                  {func?.admissao ? `Admissao: ${formatDate(func.admissao)}` : 'Sem data de admissao'}
+                  {func?.admissao ? `Admissão: ${formatDate(func.admissao)}` : 'Sem data de admissão'}
                 </p>
               </div>
             </div>

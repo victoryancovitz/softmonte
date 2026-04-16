@@ -319,7 +319,7 @@ function HoleriteCard({ item, folha, empresa, fmt, num, fmtDate }: {
               <div className="font-medium text-gray-900">{func.matricula || '--'}</div>
             </div>
             <div>
-              <div className="text-gray-400 font-semibold uppercase text-[10px]">Admissao</div>
+              <div className="text-gray-400 font-semibold uppercase text-[10px]">Admissão</div>
               <div className="font-medium text-gray-900">{fmtDate(func.admissao)}</div>
             </div>
           </div>

@@ -322,7 +322,7 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
         setStep(step + 1)
         toast.success(`${STEP_LABELS[step]} salvo!`)
       } else {
-        toast.success('Admissao concluida!')
+        toast.success('Admissão concluída!')
         router.push('/rh/admissoes')
       }
     }
@@ -401,7 +401,7 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
       <div className="fixed inset-0 bg-gray-50 z-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-8 h-8 text-brand animate-spin" />
-          <p className="text-sm text-gray-500">Carregando admissao...</p>
+          <p className="text-sm text-gray-500">Carregando admissão...</p>
         </div>
       </div>
     )
@@ -417,7 +417,7 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
           <span className="text-sm font-black font-display text-brand tracking-wide">SOFTMONTE</span>
           <span className="text-gray-300">|</span>
           <span className="text-sm font-semibold text-gray-700 truncate max-w-[200px] sm:max-w-none">
-            Admissao de {nome}
+            Admissão de {nome}
           </span>
         </div>
         <button

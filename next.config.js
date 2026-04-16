@@ -20,6 +20,12 @@ const nextConfig = {
       { source: '/financeiro/fluxo', destination: '/financeiro/cashflow', permanent: true },
       { source: '/financeiro/margem', destination: '/financeiro/dre', permanent: true },
       { source: '/cadastros/clientes', destination: '/clientes', permanent: true },
+      { source: '/engenharia', destination: '/obras', permanent: false },
+      { source: '/compras', destination: '/almoxarifado', permanent: false },
+      { source: '/rh', destination: '/rh/admissoes', permanent: false },
+      { source: '/administrativo/funcionarios', destination: '/funcionarios', permanent: false },
+      { source: '/financeiro/forecast', destination: '/forecast', permanent: false },
+      { source: '/administrativo', destination: '/funcionarios', permanent: false },
     ]
   },
 }
