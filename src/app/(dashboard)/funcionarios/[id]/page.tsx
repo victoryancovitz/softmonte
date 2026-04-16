@@ -463,6 +463,31 @@ export default async function FuncionarioPage({ params, searchParams }: { params
           {f.motivo_saida && <span className="block text-xs mt-1">Motivo: <strong>{f.motivo_saida}</strong></span>}
         </div>
       )}
+      {f.status === 'inativo' && !isArquivado && (
+        <div className="mb-4 p-4 rounded-xl bg-gray-100 border-2 border-gray-300">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xl">🚫</span>
+            <div>
+              <strong className="text-gray-800">Funcionário desligado</strong>
+              {rescisao?.status === 'paga' && <span className="ml-2 text-[10px] px-2 py-0.5 bg-green-100 text-green-700 rounded-full font-semibold">Rescisão paga</span>}
+            </div>
+          </div>
+          {f.motivo_saida && <p className="text-xs text-gray-600 mb-3">Motivo: <strong>{f.motivo_saida}</strong></p>}
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/rh/admissoes/novo?funcionario_id=${f.id}`}
+              className="px-3 py-1.5 bg-blue-600 text-white text-xs font-bold rounded-lg hover:bg-blue-700">
+              Reabrir admissão
+            </Link>
+            {desligamento && (
+              <Link href={`/rh/desligamentos`}
+                className="px-3 py-1.5 border border-gray-300 text-gray-700 text-xs font-bold rounded-lg hover:bg-gray-50">
+                Ver desligamento
+              </Link>
+            )}
+            {/* Reativar sem processo: via SQL admin apenas (edge case) */}
+          </div>
+        </div>
+      )}
 
       {/* Override emergencial banner */}
       {overrideAtivo && (() => {
