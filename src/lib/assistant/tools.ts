@@ -76,6 +76,25 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
     },
   },
   {
+    name: 'navegar_para',
+    description:
+      'PREFERIDO: retorna um link de navegação para o wizard apropriado da plataforma. Use isso SEMPRE que o usuário pedir para realizar uma ação que tenha formulário na plataforma. Retorna um card clicável que o usuário confirma antes de abrir.',
+    input_schema: {
+      type: 'object',
+      properties: {
+        acao: {
+          type: 'string',
+          enum: ['admissao', 'desligamento', 'novo_funcionario', 'editar_funcionario', 'nova_obra', 'novo_bm', 'novo_rdo', 'nova_folha', 'novo_lancamento'],
+          description: 'Qual wizard/formulário abrir.',
+        },
+        funcionario_id: { type: 'string', description: 'UUID do funcionário (se aplicável).' },
+        obra_id: { type: 'string', description: 'UUID da obra (se aplicável).' },
+        descricao: { type: 'string', description: 'Texto curto explicando o que vai ser aberto (opcional).' },
+      },
+      required: ['acao'],
+    },
+  },
+  {
     name: 'atualizar_funcionario',
     description:
       'AÇÃO DE ESCRITA. Atualiza campos complementares de um funcionário já cadastrado (dados pessoais, bancários, EPI, endereço, prazos, ASO, etc.). Só execute APÓS confirmação. Sempre busque funcionario_id via buscar_funcionario antes de chamar. Envie APENAS os campos que mudam (patch parcial).',
@@ -269,6 +288,62 @@ export async function executeTool(
           }
         }
         return { ok: true, data: { funcionario: data } }
+      }
+
+      case 'navegar_para': {
+        const acao = String(input?.acao ?? '')
+        const fid = input?.funcionario_id ? String(input.funcionario_id) : null
+        const oid = input?.obra_id ? String(input.obra_id) : null
+
+        const LABELS: Record<string, string> = {
+          admissao: 'Abrir wizard de admissão',
+          desligamento: 'Abrir wizard de desligamento',
+          novo_funcionario: 'Abrir cadastro de novo funcionário',
+          editar_funcionario: 'Abrir edição do funcionário',
+          nova_obra: 'Abrir cadastro de nova obra',
+          novo_bm: 'Abrir novo BM',
+          novo_rdo: 'Abrir novo RDO',
+          nova_folha: 'Abrir fechamento de folha',
+          novo_lancamento: 'Abrir novo lançamento financeiro',
+        }
+
+        let url = ''
+        switch (acao) {
+          case 'admissao':
+            if (!fid) return { ok: false, error: 'funcionario_id obrigatório para admissão.' }
+            url = `/rh/admissoes/novo?funcionario_id=${fid}`; break
+          case 'desligamento':
+            if (!fid) return { ok: false, error: 'funcionario_id obrigatório para desligamento.' }
+            url = `/rh/desligamentos/novo?funcionario_id=${fid}`; break
+          case 'novo_funcionario':
+            url = '/funcionarios/novo'; break
+          case 'editar_funcionario':
+            if (!fid) return { ok: false, error: 'funcionario_id obrigatório.' }
+            url = `/funcionarios/${fid}/editar`; break
+          case 'nova_obra':
+            url = '/obras/nova'; break
+          case 'novo_bm':
+            if (!oid) return { ok: false, error: 'obra_id obrigatório para novo BM.' }
+            url = `/obras/${oid}/boletins/novo`; break
+          case 'novo_rdo':
+            if (!oid) return { ok: false, error: 'obra_id obrigatório para novo RDO.' }
+            url = `/obras/${oid}?tab=diario`; break
+          case 'nova_folha':
+            url = '/rh/folha'; break
+          case 'novo_lancamento':
+            url = '/financeiro?novo=1'; break
+          default:
+            return { ok: false, error: `Ação desconhecida: ${acao}` }
+        }
+        return {
+          ok: true,
+          data: {
+            type: 'navigation',
+            url,
+            label: LABELS[acao] ?? acao,
+            descricao: input?.descricao ?? null,
+          },
+        }
       }
 
       case 'atualizar_funcionario': {

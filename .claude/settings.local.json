@@ -208,7 +208,8 @@
       "Bash(vercel env:*)",
       "Bash(vercel --version)",
       "mcp__claude_ai_Vercel__get_deployment",
-      "Bash(grep -n \"^  \\)$\\\\|^}$\\\\|const inp = \" '/Users/victoryancovitz/softmonte-git/src/app/\\(dashboard\\)/obras/[id]/diario/RdoForm.tsx')"
+      "Bash(grep -n \"^  \\)$\\\\|^}$\\\\|const inp = \" '/Users/victoryancovitz/softmonte-git/src/app/\\(dashboard\\)/obras/[id]/diario/RdoForm.tsx')",
+      "mcp__claude_ai_Vercel__deploy_to_vercel"
     ]
   }
 }

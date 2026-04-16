@@ -12,6 +12,12 @@ type ActionBlock = {
   descricao: string
 }
 
+type NavigationBlock = {
+  url: string
+  label: string
+  descricao?: string | null
+}
+
 type Msg = {
   id: string
   role: 'user' | 'assistant'
@@ -19,6 +25,7 @@ type Msg = {
   actions?: ActionBlock[]
   toolStatus?: { name: string; status: 'running' | 'done' | 'error'; error?: string }[]
   files?: { name: string; size: number }[]
+  navigations?: NavigationBlock[]
 }
 
 const ACCEPTED_EXT = ['.pdf', '.xlsx', '.xls', '.png', '.jpg', '.jpeg']
@@ -198,6 +205,12 @@ export default function AIDrawer({ onClose }: Props) {
             if (idx >= 0 && data.status !== 'running') next[idx] = data
             else next.push(data)
             return { ...m, toolStatus: next }
+          }))
+        } else if (event === 'navigation') {
+          setMessages(prev => prev.map(m => {
+            if (m.id !== asstMsg.id) return m
+            const existing = m.navigations ?? []
+            return { ...m, navigations: [...existing, { url: data.url, label: data.label, descricao: data.descricao }] }
           }))
         } else if (event === 'error') {
           setMessages(prev => prev.map(m =>
@@ -379,6 +392,22 @@ export default function AIDrawer({ onClose }: Props) {
                     ))}
                   </div>
                 )}
+
+                {m.navigations && m.navigations.map((n, idx) => (
+                  <a
+                    key={`nav-${idx}`}
+                    href={n.url}
+                    onClick={() => { onClose() }}
+                    className="w-full border border-blue-200 bg-blue-50 rounded-xl p-3 text-sm hover:bg-blue-100 transition-colors block no-underline"
+                  >
+                    <div className="flex items-center gap-2 font-semibold text-blue-900">
+                      <span>🔗</span>
+                      <span>{n.label}</span>
+                    </div>
+                    {n.descricao && <div className="mt-1 text-xs text-gray-700">{n.descricao}</div>}
+                    <div className="mt-2 text-right text-xs font-semibold text-blue-700">Abrir →</div>
+                  </a>
+                ))}
 
                 {m.actions && m.actions.map((a, idx) => (
                   <div key={idx} className="w-full border border-amber-200 bg-amber-50 rounded-xl p-3 text-sm">

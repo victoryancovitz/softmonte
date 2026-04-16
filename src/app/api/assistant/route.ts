@@ -204,6 +204,10 @@ export async function POST(req: NextRequest) {
               status: result.ok ? 'done' : 'error',
               error: result.error,
             })
+            // Se foi navegar_para e deu certo, emite evento de navegação para o frontend
+            if (tu.name === 'navegar_para' && result.ok && result.data?.type === 'navigation') {
+              send('navigation', result.data)
+            }
             toolResults.push({
               type: 'tool_result',
               tool_use_id: tu.id,

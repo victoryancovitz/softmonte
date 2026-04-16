@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
-import { resetTotal } from '@/app/actions/reset'
+import { resetTotal, type DeleteLog } from '@/app/actions/reset'
 
 const KEPT_ITEMS = [
   'Configurações da empresa (empresa_config)',
@@ -36,13 +36,15 @@ export default function ResetPage() {
   const [resetting, setResetting] = useState(false)
   const [done, setDone] = useState(false)
   const [error, setError] = useState('')
+  const [log, setLog] = useState<DeleteLog[]>([])
+  const [contagensFinal, setContagensFinal] = useState<Record<string, number>>({})
 
   useEffect(() => {
     ;(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
-      const { data } = await supabase.from('profiles').select('role, nome, email').eq('id', user.id).single()
-      if (!data || data.role !== 'admin') { router.push('/'); return }
+      const { data } = await supabase.from('profiles').select('role, nome, email').eq('user_id', user.id).maybeSingle()
+      if (!data || !['admin', 'diretoria'].includes((data as any).role)) { router.push('/'); return }
       setProfile(data)
       setLoading(false)
     })()
@@ -58,8 +60,12 @@ export default function ResetPage() {
         setError(result.error)
         setResetting(false)
       } else {
+        setLog(result.log ?? [])
+        setContagensFinal(result.contagens_final ?? {})
         setDone(true)
         setResetting(false)
+        // Limpa wizard_hidden_until para setup wizard reaparecer
+        try { localStorage.removeItem('wizard_hidden_until') } catch {}
       }
     } catch (e: any) {
       setError(e?.message || 'Erro inesperado ao executar reset.')
@@ -77,30 +83,82 @@ export default function ResetPage() {
 
   // Success screen
   if (done) {
+    const totalDeletados = log.reduce((s, l) => s + l.deletados, 0)
+    const erros = log.filter(l => l.erro)
+    const linhasAfetadas = log.filter(l => l.deletados > 0 || l.erro)
+    const tudoZerado = Object.values(contagensFinal).every(v => v === 0)
     return (
       <div className="min-h-screen bg-[#1a0000] flex items-center justify-center p-4">
-        <div className="bg-[#2a0a0a] border border-red-800 rounded-2xl p-8 max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-green-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
-            <svg className="w-8 h-8 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
+        <div className="bg-[#2a0a0a] border border-red-800 rounded-2xl p-6 max-w-2xl w-full">
+          <div className="text-center mb-4">
+            <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3 ${tudoZerado ? 'bg-green-900/50' : 'bg-amber-900/50'}`}>
+              <svg className={`w-8 h-8 ${tudoZerado ? 'text-green-400' : 'text-amber-400'}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                {tudoZerado ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                )}
+              </svg>
+            </div>
+            <h2 className="text-xl font-bold text-white mb-1">
+              {tudoZerado ? '✅ Plataforma zerada com sucesso' : '⚠️ Reset concluído com ressalvas'}
+            </h2>
+            <p className="text-red-300 text-sm">
+              {totalDeletados} registros apagados em {linhasAfetadas.length} tabela(s).
+              {erros.length > 0 && ` ${erros.length} tabela(s) com erro.`}
+            </p>
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Reset concluído</h2>
-          <p className="text-red-300 text-sm mb-6">
-            Todos os dados operacionais foram removidos. O sistema está pronto para reconfiguração.
-          </p>
-          <button
-            onClick={() => router.push('/setup')}
-            className="w-full px-6 py-3 bg-red-700 hover:bg-red-600 text-white rounded-xl text-sm font-bold transition-colors"
-          >
-            Abrir Setup Wizard
-          </button>
-          <button
-            onClick={() => router.push('/')}
-            className="w-full mt-3 px-6 py-3 bg-transparent border border-red-800 text-red-300 hover:bg-red-900/30 rounded-xl text-sm font-medium transition-colors"
-          >
-            Voltar ao início
-          </button>
+
+          {/* Log detalhado */}
+          {linhasAfetadas.length > 0 && (
+            <div className="bg-black/30 rounded-lg p-3 max-h-64 overflow-y-auto mb-4 font-mono text-[11px]">
+              {linhasAfetadas.map(l => (
+                <div key={l.tabela} className="flex items-center gap-2 py-0.5">
+                  {l.erro ? (
+                    <span className="text-red-400">❌</span>
+                  ) : l.deletados > 0 ? (
+                    <span className="text-green-400">✅</span>
+                  ) : <span className="text-gray-500">·</span>}
+                  <span className={`${l.erro ? 'text-red-300' : 'text-red-200'}`}>{l.tabela}</span>
+                  <span className="text-red-400/60 ml-auto">
+                    {l.erro ? l.erro : `${l.deletados} linha${l.deletados !== 1 ? 's' : ''}`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Contagens finais */}
+          {Object.keys(contagensFinal).length > 0 && (
+            <div className="bg-black/30 rounded-lg p-3 mb-4">
+              <div className="text-[10px] font-bold text-red-400 uppercase mb-2">Verificação final</div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px] font-mono">
+                {Object.entries(contagensFinal).map(([k, v]) => (
+                  <div key={k} className="flex items-center justify-between">
+                    <span className="text-red-300">{k}</span>
+                    <span className={`font-bold ${v === 0 ? 'text-green-400' : 'text-amber-400'}`}>
+                      {v === 0 ? '✓ 0' : `⚠ ${v}`}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              onClick={() => router.push('/diretoria')}
+              className="flex-1 px-6 py-3 bg-red-700 hover:bg-red-600 text-white rounded-xl text-sm font-bold transition-colors"
+            >
+              Voltar ao painel
+            </button>
+            <button
+              onClick={() => router.push('/')}
+              className="px-6 py-3 bg-transparent border border-red-800 text-red-300 hover:bg-red-900/30 rounded-xl text-sm font-medium transition-colors"
+            >
+              Início
+            </button>
+          </div>
         </div>
       </div>
     )

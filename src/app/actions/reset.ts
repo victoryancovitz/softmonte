@@ -3,175 +3,193 @@
 import { createClient } from '@/lib/supabase-server'
 import { revalidatePath } from 'next/cache'
 
-async function safeDelete(supabase: any, table: string) {
-  try {
-    await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000')
-  } catch {} // table might not exist or be empty
+export type DeleteLog = {
+  tabela: string
+  deletados: number
+  erro: string | null
 }
 
-async function safeUpdate(supabase: any, table: string, updates: Record<string, any>, filterCol: string) {
-  try {
-    await supabase.from(table).update(updates).neq(filterCol, '00000000-0000-0000-0000-000000000000')
-  } catch {}
+export type ResetResult = {
+  success: boolean
+  error?: string
+  log?: DeleteLog[]
+  contagens_final?: Record<string, number>
 }
 
-export async function resetTotal(confirmation: string): Promise<{ success?: boolean; error?: string }> {
-  // 1. Validate confirmation string
-  if (confirmation !== 'ZERAR SOFTMONTE') {
-    return { error: 'Texto de confirmação inválido.' }
+// Tabelas agrupadas em ordem de apagado (filhos antes de pais)
+// Comentários ao lado indicam o grupo.
+const DELETE_ORDER: string[] = [
+  // Grupo 1 — logs e notificações (sem dependências de dados)
+  'ponto_dia_status',
+  'ponto_sync_log',
+  'ponto_marcacoes',
+  'ponto_registros',
+  'ponto_fechamentos',
+  'ofx_transacoes',
+  'ofx_imports',
+  'email_logs',
+  'notificacoes',
+  'backup_snapshots',
+
+  // Grupo 2 — diário de obra (todas as filhas antes de diario_obra)
+  'diario_ocorrencias',
+  'diario_historico',
+  'diario_fotos',
+  'diario_equipamentos',
+  'diario_atividades',
+  'diario_clima',
+  'diario_efetivo',
+  'diario_obra',
+
+  // Grupo 3 — RH: holerites, folha, banco horas, férias, faltas
+  'holerite_questionamentos',
+  'holerite_assinaturas',
+  'holerite_envios',
+  'folha_itens',
+  'folha_fechamentos',
+  'banco_horas',
+  'ferias',
+  'faltas',
+  'pagamentos_extras',
+  'correcoes_salariais',
+  'funcionario_historico_salarial',
+  'provisoes_funcionario',
+  'treinamentos_funcionarios',
+  'fichas_epi',
+  'documentos_gerados',
+  'documentos',
+  'vinculos_funcionario',
+  'rescisoes',
+  'desligamentos_workflow',
+  'admissoes_workflow',
+  'admissao_overrides',
+
+  // Grupo 4 — BMs / financeiro / forecast / efetivo
+  'bm_documentos',
+  'bm_itens',
+  'boletins_medicao',
+  'hh_lancamentos',
+  'efetivo_diario',
+  'forecast_contrato',
+  'transferencias',
+  'financeiro_lancamentos',
+  'divida_renegociacoes',
+  'divida_parcelas',
+  'passivos_nao_circulantes',
+  'ativos_fixos',
+
+  // Grupo 5 — obra: cronograma, documentos, aditivos, composição, alocações
+  'cronograma_etapas',
+  'obra_documentos',
+  'obra_contatos',
+  'aditivos',
+  'contrato_composicao',
+  'alocacoes',
+  'rnc',
+
+  // Grupo 6 — estoque / fornecedores / cotações
+  'estoque_movimentacoes',
+  'estoque_requisicao_itens',
+  'estoque_requisicoes',
+  'estoque_lotes',
+  'estoque_itens',
+  'requisicoes',
+  'cotacoes',
+  'fornecedores',
+
+  // Grupo 7 — auditoria (por último porque pode ter logs dos deletes)
+  'audit_log',
+
+  // Grupo 8 — entidades principais (depois de tudo limpo)
+  'funcionarios',
+  'obras',
+  'clientes',
+  'contas_correntes',
+]
+
+async function countTable(supabase: any, table: string): Promise<number> {
+  try {
+    const { count, error } = await supabase.from(table).select('*', { count: 'exact', head: true })
+    if (error) return 0
+    return count ?? 0
+  } catch {
+    return 0
+  }
+}
+
+async function deleteAll(supabase: any, table: string): Promise<DeleteLog> {
+  const before = await countTable(supabase, table)
+  if (before === 0) return { tabela: table, deletados: 0, erro: null }
+
+  try {
+    // DELETE com filtro que bate em qualquer linha (neq com id impossível)
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .neq('id', '00000000-0000-0000-0000-000000000000')
+    if (error) return { tabela: table, deletados: 0, erro: error.message }
+  } catch (e: any) {
+    return { tabela: table, deletados: 0, erro: e?.message ?? 'erro desconhecido' }
   }
 
-  // 2. Check user role
+  const after = await countTable(supabase, table)
+  return { tabela: table, deletados: Math.max(0, before - after), erro: null }
+}
+
+export async function resetTotal(confirmation: string): Promise<ResetResult> {
+  // 1. Confirmation
+  if (confirmation !== 'ZERAR SOFTMONTE') {
+    return { success: false, error: 'Texto de confirmação inválido.' }
+  }
+
   const supabase = createClient()
   const { data: { user }, error: authErr } = await supabase.auth.getUser()
   if (authErr || !user) {
-    return { error: 'Usuário não autenticado.' }
+    return { success: false, error: 'Usuário não autenticado.' }
   }
 
+  // 2. Role check via user_id (padrão Softmonte)
   const { data: profile } = await supabase
     .from('profiles')
     .select('role, nome')
-    .eq('id', user.id)
-    .single()
+    .eq('user_id', user.id)
+    .maybeSingle()
 
-  if (!profile || profile.role !== 'admin') {
-    return { error: 'Apenas administradores podem executar o reset total.' }
+  if (!profile || !['admin', 'diretoria'].includes((profile as any).role)) {
+    return { success: false, error: 'Apenas admin ou diretoria podem executar o reset total.' }
   }
 
-  // 3. Log the reset event
+  // 3. Nullify FKs circulares ANTES de qualquer delete
+  try {
+    await supabase.from('profiles').update({ funcionario_id: null }).not('funcionario_id', 'is', null)
+  } catch {}
+  try {
+    await supabase.from('contas_correntes').update({ socio_id: null }).not('socio_id', 'is', null)
+  } catch {}
+
+  // 4. Executar deletes em ordem
+  const log: DeleteLog[] = []
+  for (const table of DELETE_ORDER) {
+    const result = await deleteAll(supabase, table)
+    log.push(result)
+  }
+
+  // 5. Contagens finais das tabelas principais
+  const contagens_final: Record<string, number> = {}
+  for (const table of ['funcionarios', 'obras', 'clientes', 'admissoes_workflow', 'contrato_composicao', 'alocacoes', 'ponto_registros', 'diario_obra', 'boletins_medicao', 'financeiro_lancamentos']) {
+    contagens_final[table] = await countTable(supabase, table)
+  }
+
+  // 6. Log final no audit (após apagar tudo, cria entrada nova)
   try {
     await supabase.from('audit_log').insert({
       acao: 'RESET_TOTAL',
-      descricao: `Reset total executado por ${profile.nome || user.email} em ${new Date().toISOString()}`,
+      descricao: `Reset total executado por ${(profile as any).nome || user.email}`,
       usuario_id: user.id,
     })
-  } catch {} // audit_log might not exist
+  } catch {}
 
-  // 4. Delete all tables in FK order (deepest children first)
-
-  // Wave 1 — holerite / folha children
-  await safeDelete(supabase, 'holerite_questionamentos')
-  await safeDelete(supabase, 'holerite_assinaturas')
-  await safeDelete(supabase, 'holerite_envios')
-  await safeDelete(supabase, 'folha_itens')
-
-  // Wave 2 — BM children
-  await safeDelete(supabase, 'bm_documentos')
-  await safeDelete(supabase, 'bm_itens')
-
-  // Wave 3 — estoque children
-  await safeDelete(supabase, 'estoque_requisicao_itens')
-  await safeDelete(supabase, 'estoque_movimentacoes')
-
-  // Wave 4 — financeiro children
-  await safeDelete(supabase, 'ofx_transacoes')
-  await safeDelete(supabase, 'divida_parcelas')
-  await safeDelete(supabase, 'divida_renegociacoes')
-
-  // Wave 5 — RH extras
-  await safeDelete(supabase, 'pagamentos_extras')
-  await safeDelete(supabase, 'rescisoes')
-
-  // Wave 6 — ponto
-  await safeDelete(supabase, 'ponto_marcacoes')
-  await safeDelete(supabase, 'ponto_registros')
-  await safeDelete(supabase, 'ponto_dia_status')
-  await safeDelete(supabase, 'ponto_fechamentos')
-  await safeDelete(supabase, 'ponto_sync_log')
-
-  // Wave 7 — efetivo / banco horas / faltas
-  await safeDelete(supabase, 'efetivo_diario')
-  await safeDelete(supabase, 'banco_horas')
-  await safeDelete(supabase, 'hh_lancamentos')
-  await safeDelete(supabase, 'faltas')
-
-  // Wave 8 — workflows
-  await safeDelete(supabase, 'admissao_overrides')
-  await safeDelete(supabase, 'admissoes_workflow')
-  await safeDelete(supabase, 'desligamentos_workflow')
-
-  // Wave 9 — documentos / treinamentos / ferias
-  await safeDelete(supabase, 'treinamentos_funcionarios')
-  await safeDelete(supabase, 'ferias')
-  await safeDelete(supabase, 'documentos')
-  await safeDelete(supabase, 'documentos_gerados')
-
-  // Wave 10 — EPI / histórico salarial / provisões
-  await safeDelete(supabase, 'fichas_epi')
-  await safeDelete(supabase, 'funcionario_historico_salarial')
-  await safeDelete(supabase, 'provisoes_funcionario')
-
-  // Wave 11 — vínculos / transferências / correções
-  await safeDelete(supabase, 'vinculos_funcionario')
-  await safeDelete(supabase, 'transferencias')
-  await safeDelete(supabase, 'correcoes_salariais')
-
-  // Wave 12 — estoque parents
-  await safeDelete(supabase, 'estoque_requisicoes')
-  await safeDelete(supabase, 'estoque_lotes')
-  await safeDelete(supabase, 'estoque_itens')
-
-  // Wave 13 — folha / boletins
-  await safeDelete(supabase, 'folha_fechamentos')
-  await safeDelete(supabase, 'boletins_medicao')
-
-  // Wave 14 — obra children
-  await safeDelete(supabase, 'alocacoes')
-  await safeDelete(supabase, 'diario_obra')
-  await safeDelete(supabase, 'rnc')
-  await safeDelete(supabase, 'cronograma_etapas')
-  await safeDelete(supabase, 'forecast_contrato')
-
-  // Wave 15 — contratos
-  await safeDelete(supabase, 'contrato_composicao')
-  await safeDelete(supabase, 'aditivos')
-
-  // Wave 16 — financeiro parents
-  await safeDelete(supabase, 'financeiro_lancamentos')
-  await safeDelete(supabase, 'passivos_nao_circulantes')
-  await safeDelete(supabase, 'ativos_fixos')
-
-  // Wave 17 — OFX imports
-  await safeDelete(supabase, 'ofx_imports')
-
-  // Wave 18 — Nullify FK in profiles before deleting funcionarios
-  await safeUpdate(supabase, 'profiles', { funcionario_id: null }, 'id')
-
-  // Wave 19 — funcionarios
-  await safeDelete(supabase, 'funcionarios')
-
-  // Wave 20 — obras
-  await safeDelete(supabase, 'obras')
-
-  // Wave 21 — sócios (nullify FK in contas_correntes first)
-  await safeUpdate(supabase, 'contas_correntes', { socio_id: null }, 'id')
-  await safeDelete(supabase, 'socios')
-
-  // Wave 22 — contas correntes
-  await safeDelete(supabase, 'contas_correntes')
-
-  // Wave 23 — clientes / fornecedores
-  await safeDelete(supabase, 'clientes')
-  await safeDelete(supabase, 'fornecedores')
-
-  // Wave 24 — EPI kits / NR
-  await safeDelete(supabase, 'epi_kits_funcao')
-  await safeDelete(supabase, 'nr_obrigatorias_funcao')
-
-  // Wave 25 — tipos contrato
-  await safeDelete(supabase, 'tipos_contrato_composicao')
-  await safeDelete(supabase, 'tipos_contrato')
-
-  // Wave 26 — treinamentos / funções
-  await safeDelete(supabase, 'treinamentos_tipos')
-  await safeDelete(supabase, 'funcoes')
-
-  // Wave 27 — notificações / audit
-  await safeDelete(supabase, 'notificacoes')
-  await safeDelete(supabase, 'audit_log')
-
-  // 5. Revalidate everything
   revalidatePath('/', 'layout')
 
-  return { success: true }
+  return { success: true, log, contagens_final }
 }
