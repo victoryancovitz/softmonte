@@ -356,12 +356,12 @@ export default function WizardAdmissaoPage() {
     }
   }
 
-  const nome = formData.nome || 'Novo Funcionario'
+  const nome = formData.nome || 'Novo Funcionário'
 
   return (
-    <div className="fixed inset-0 bg-gray-50 z-50 flex flex-col">
+    <div className="fixed inset-0 bg-gray-50 z-50 flex flex-col h-screen">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3 bg-white border-b border-gray-200 flex-shrink-0">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-2 bg-white border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center gap-3">
           <span className="text-sm font-black font-display text-brand tracking-wide">SOFTMONTE</span>
           <span className="text-gray-300">|</span>
@@ -388,20 +388,20 @@ export default function WizardAdmissaoPage() {
       </div>
 
       {/* Content area */}
-      <main className="flex-1 overflow-y-auto">
-        <div className="max-w-4xl mx-auto p-4 sm:p-6 pb-28">
+      <main className="flex-1 overflow-y-auto min-h-0">
+        <div className="max-w-4xl mx-auto p-4 sm:p-6">
           <h2 className="text-lg font-bold font-display text-brand mb-1">
             {step}. {STEP_LABELS[step]}
           </h2>
           <p className="text-sm text-gray-500 mb-6">
-            Preencha os dados abaixo e clique em "Salvar e avancar" para continuar.
+            Preencha os dados abaixo e clique em &quot;Salvar e avançar&quot; para continuar.
           </p>
           {renderStep()}
         </div>
       </main>
 
-      {/* Fixed footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between z-10">
+      {/* Footer (in flex flow) */}
+      <footer className="flex-shrink-0 bg-white border-t border-gray-200 px-4 sm:px-6 py-3 flex items-center justify-between">
         <button
           type="button"
           onClick={() => step > 1 && setStep(step - 1)}
@@ -429,7 +429,7 @@ export default function WizardAdmissaoPage() {
             disabled={saving}
             className="flex items-center gap-1.5 px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50 transition-colors"
           >
-            {saving ? 'Salvando...' : step < 8 ? 'Salvar e avancar' : 'Concluir admissao'}
+            {saving ? 'Salvando...' : step < 8 ? 'Salvar e avançar' : 'Concluir admissão'}
             {step < 8 && <ChevronRight className="w-4 h-4" />}
           </button>
         </div>

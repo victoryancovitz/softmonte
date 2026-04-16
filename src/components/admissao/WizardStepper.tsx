@@ -24,7 +24,7 @@ interface Props {
 
 export default function WizardStepper({ currentStep, completedSteps, onStepClick }: Props) {
   return (
-    <nav className="w-full overflow-x-auto py-4 px-2">
+    <nav className="w-full overflow-x-auto py-2 px-2">
       <ol className="flex items-center justify-between min-w-[600px] max-w-4xl mx-auto">
         {STEPS.map((step, idx) => {
           const isCompleted = completedSteps.includes(step.num)
@@ -50,7 +50,7 @@ export default function WizardStepper({ currentStep, completedSteps, onStepClick
                 }`}
               >
                 <span
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-colors text-sm font-bold ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors text-sm font-bold ${
                     isCompleted
                       ? 'bg-green-500 text-white group-hover:bg-green-600'
                       : isCurrent
