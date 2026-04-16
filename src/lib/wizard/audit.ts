@@ -55,7 +55,7 @@ export async function runWizardAudit(): Promise<AuditResult> {
     // 6 - Funcionarios
     supabase.from('funcionarios').select('id', { count: 'exact', head: true }).is('deleted_at', null),
     // 7 - Admissoes concluidas
-    supabase.from('admissoes_workflow').select('id', { count: 'exact', head: true }).eq('status', 'concluido'),
+    supabase.from('admissoes_workflow').select('id', { count: 'exact', head: true }).eq('status', 'concluida'),
     // 7 - Admissoes bypass
     supabase.from('admissoes_workflow').select('id', { count: 'exact', head: true }).eq('status', 'bypass'),
     // 8 - Alocacoes
