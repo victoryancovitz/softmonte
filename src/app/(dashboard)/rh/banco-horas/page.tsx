@@ -80,6 +80,7 @@ export default function BancoHorasPage() {
   const [editingCell, setEditingCell] = useState<{ id: string; field: string } | null>(null)
   const [editValue, setEditValue] = useState('')
   const [fechando, setFechando] = useState(false)
+  const [showConfirmFechar, setShowConfirmFechar] = useState(false)
   const [busca, setBusca] = useState('')
   const [saldoFilter, setSaldoFilter] = useState<SaldoFilter>('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -194,11 +195,9 @@ export default function BancoHorasPage() {
     }
   }
 
-  async function fecharMes() {
+  async function executarFecharMes() {
     if (!obraId) return
-    const confirmed = window.confirm(`Fechar o mês de ${MESES[mes - 1]}/${ano} para esta obra? Esta ação não pode ser desfeita.`)
-    if (!confirmed) return
-
+    setShowConfirmFechar(false)
     setFechando(true)
     await supabase
       .from('banco_horas')
@@ -209,6 +208,11 @@ export default function BancoHorasPage() {
 
     setFechando(false)
     loadData()
+  }
+
+  function fecharMes() {
+    if (!obraId) return
+    setShowConfirmFechar(true)
   }
 
   // Filtered fallback rows
@@ -530,6 +534,25 @@ export default function BancoHorasPage() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {showConfirmFechar && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setShowConfirmFechar(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="p-5">
+              <h3 className="text-base font-bold text-amber-700 mb-2">⚠️ Fechar mês de {MESES[mes - 1]}/{ano}?</h3>
+              <p className="text-sm text-gray-600">Após fechado, os valores não poderão mais ser editados. Esta ação não pode ser desfeita.</p>
+            </div>
+            <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
+              <button onClick={() => setShowConfirmFechar(false)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancelar</button>
+              <button onClick={executarFecharMes}
+                className="px-5 py-2 bg-amber-600 text-white text-sm font-bold rounded-lg hover:bg-amber-700">
+                Fechar mês
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

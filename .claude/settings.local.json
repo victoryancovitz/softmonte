@@ -215,7 +215,8 @@
       "Bash(grep -n \"Historico\\\\|nao podera\\\\|nao pode\\\\|apos\\\\|Atrasado\\\\|Previsto\" /Users/victoryancovitz/softmonte-git/src/app/\\\\\\(dashboard\\\\\\)/funcionarios/[id]/tabs/TabRemuneracao.tsx)",
       "Bash(npx eslint:*)",
       "Bash(echo \"EXIT=$?\")",
-      "Bash(ls '/Users/victoryancovitz/softmonte-git/src/app/\\(dashboard\\)/cadastros/funcoes/')"
+      "Bash(ls '/Users/victoryancovitz/softmonte-git/src/app/\\(dashboard\\)/cadastros/funcoes/')",
+      "Bash(tail:*)"
     ]
   }
 }

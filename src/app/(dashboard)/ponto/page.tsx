@@ -66,7 +66,12 @@ export default function PontoPage() {
 
   useEffect(() => {
     supabase.from('obras').select('id,nome,modelo_cobranca,escala_entrada,escala_saida_seg_qui,escala_saida_sex,escala_almoco_minutos,escala_tolerancia_min,carga_horaria_dia').eq('status', 'ativo').is('deleted_at', null).order('nome')
-      .then(({ data }) => setObras(data ?? []))
+      .then(({ data }) => {
+        const lista = data ?? []
+        setObras(lista)
+        // Auto-seleciona se houver apenas uma obra
+        if (lista.length === 1 && !obraId) setObraId(lista[0].id)
+      })
     // Buscar role do usuário (profiles.user_id é a FK pra auth.users.id)
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
@@ -466,11 +471,17 @@ export default function PontoPage() {
       <div className="flex flex-wrap items-end gap-4 mb-6">
         <div>
           <label className="block text-xs font-semibold text-gray-600 mb-1">Obra</label>
-          <select value={obraId} onChange={e => setObraId(e.target.value)}
-            className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand min-w-[240px]">
-            <option value="">Selecione uma obra...</option>
-            {obras.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
-          </select>
+          {obras.length === 1 && obraId ? (
+            <div className="px-3 py-2.5 bg-brand/5 border border-brand/20 rounded-xl text-sm font-semibold text-brand min-w-[240px] flex items-center gap-2">
+              📍 {obras[0].nome}
+            </div>
+          ) : (
+            <select value={obraId} onChange={e => setObraId(e.target.value)}
+              className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand min-w-[240px]">
+              <option value="">Selecione uma obra...</option>
+              {obras.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
+            </select>
+          )}
         </div>
         <div>
           <label className="block text-xs font-semibold text-gray-600 mb-1">Mês</label>

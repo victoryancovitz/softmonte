@@ -61,6 +61,7 @@ export default function WizardDesligamentoPage() {
   const [step, setStep] = useState(1)
   const [saving, setSaving] = useState(false)
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
+  const [showConfirmFinal, setShowConfirmFinal] = useState(false)
 
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([])
   const [funcionarioId, setFuncionarioId] = useState(funcionarioIdParam)
@@ -531,10 +532,14 @@ export default function WizardDesligamentoPage() {
     }
   }
 
-  async function finalizarDesligamento() {
+  function finalizarDesligamento() {
     if (!workflowId || !funcionarioId) return
-    if (!window.confirm('Concluir desligamento? O funcionário será marcado como inativo e alocações serão encerradas.')) return
+    setShowConfirmFinal(true)
+  }
 
+  async function executarFinalizacao() {
+    if (!workflowId || !funcionarioId) return
+    setShowConfirmFinal(false)
     const dataSaida = dataPrevistaSaida || new Date().toISOString().split('T')[0]
 
     const { error: e1 } = await supabase.from('desligamentos_workflow').update({
@@ -571,12 +576,9 @@ export default function WizardDesligamentoPage() {
   }
 
   function handleClose() {
+    // Auto-salva rascunho se tiver dados; localStorage já persiste tudo
     if (funcionarioId && (tipo || dataPrevistaSaida)) {
-      if (!window.confirm('Deseja salvar o rascunho antes de sair?')) {
-        router.push('/rh/desligamentos')
-        return
-      }
-      handleSaveRascunho().then(() => router.push('/rh/desligamentos'))
+      handleSaveRascunho().then(() => router.push('/rh/desligamentos')).catch(() => router.push('/rh/desligamentos'))
     } else {
       router.push('/rh/desligamentos')
     }
@@ -1253,6 +1255,28 @@ export default function WizardDesligamentoPage() {
           </button>
         </div>
       </footer>
+
+      {showConfirmFinal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={() => setShowConfirmFinal(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-5">
+              <h3 className="text-base font-bold text-red-700 mb-2">⚠️ Concluir desligamento?</h3>
+              <p className="text-sm text-gray-700 mb-2">
+                <strong>{selectedFunc?.nome}</strong> será marcado como inativo e todas as alocações ativas serão encerradas.
+              </p>
+              <p className="text-xs text-gray-500">Esta ação pode ser revertida por um admin.</p>
+            </div>
+            <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
+              <button onClick={() => setShowConfirmFinal(false)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancelar</button>
+              <button onClick={executarFinalizacao}
+                className="px-5 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700">
+                Concluir desligamento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

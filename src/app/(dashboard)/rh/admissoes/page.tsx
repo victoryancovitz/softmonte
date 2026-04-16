@@ -113,7 +113,7 @@ export default function AdmissoesPage() {
           className="px-4 py-2 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
-          Nova Admissão
+          Admitir funcionário
         </Link>
       </div>
 
@@ -175,7 +175,7 @@ export default function AdmissoesPage() {
           titulo={tab === 'em_andamento' ? 'Nenhuma admissão em andamento' : 'Nenhuma admissão encontrada'}
           descricao="Cadastre um funcionário e inicie o processo de admissão."
           icone={<UserPlus className="w-12 h-12" />}
-          acao={{ label: 'Nova Admissão', href: '/rh/admissoes/wizard' }}
+          acao={{ label: 'Admitir funcionário', href: '/rh/admissoes/wizard' }}
         />
       ) : (
         <div className="space-y-3">

@@ -32,12 +32,27 @@ export function formatSupabaseError(error: any): string {
     return 'Um dos valores informados não é válido. Verifique os campos de seleção.'
   }
 
-  // RLS
-  if (msg.includes('row-level security') || msg.includes('new row violates')) {
+  // RLS / permissão
+  if (msg.includes('row-level security') || msg.includes('new row violates') || msg.includes('permission denied')) {
     return 'Você não tem permissão para realizar esta ação.'
   }
 
-  // Generic
-  if (msg.length > 0 && msg.length < 200) return msg
-  return 'Algo deu errado. Tente novamente ou entre em contato com o suporte.'
+  // Registro não encontrado
+  if (msg.includes('PGRST116') || msg.includes('0 rows') || msg.includes('JSON object requested')) {
+    return 'Nenhum registro encontrado.'
+  }
+
+  // JWT / sessão
+  if (msg.includes('JWT') || msg.includes('token') || msg.includes('expired')) {
+    return 'Sessão expirada. Faça login novamente.'
+  }
+
+  // Rede
+  if (msg.includes('network') || msg.includes('fetch') || msg.includes('Failed to fetch') || msg.includes('ECONNREFUSED')) {
+    return 'Erro de conexão. Verifique sua internet e tente novamente.'
+  }
+
+  // Generic — só retorna mensagem técnica se for curta e sem códigos hexadecimais
+  if (msg.length > 0 && msg.length < 120 && !/[0-9a-f]{8}-[0-9a-f]{4}/i.test(msg)) return msg
+  return 'Ocorreu um erro. Tente novamente ou contate o suporte.'
 }

@@ -70,6 +70,7 @@ export default function DesligamentosPage() {
   const [filtroStatus, setFiltroStatus] = useState('')
   const [filtroDe, setFiltroDe] = useState('')
   const [filtroAte, setFiltroAte] = useState('')
+  const [confirmConcluir, setConfirmConcluir] = useState<any | null>(null)
 
   useEffect(() => { loadData() }, [])
 
@@ -99,8 +100,11 @@ export default function DesligamentosPage() {
   }
 
   async function concluirDesligamento(desl: any) {
-    if (!window.confirm('Concluir este desligamento? O funcionario sera marcado como inativo e uma rescisão será criada automaticamente.')) return
+    setConfirmConcluir(desl)
+  }
 
+  async function executarConclusao(desl: any) {
+    setConfirmConcluir(null)
     const dataSaida = desl.data_prevista_saida || new Date().toISOString().split('T')[0]
 
     // Mapeia tipo_desligamento do workflow → tipo da tabela rescisoes
@@ -467,6 +471,28 @@ export default function DesligamentosPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {confirmConcluir && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setConfirmConcluir(null)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-5">
+              <h3 className="text-base font-bold text-red-700 mb-2">Concluir desligamento?</h3>
+              <p className="text-sm text-gray-700 mb-2">
+                <strong>{confirmConcluir.funcionarios?.nome}</strong> será marcado como inativo e uma rescisão será criada automaticamente.
+              </p>
+              <p className="text-xs text-gray-500">As alocações ativas serão encerradas. Esta ação pode ser revertida por admin.</p>
+            </div>
+            <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
+              <button onClick={() => setConfirmConcluir(null)}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancelar</button>
+              <button onClick={() => executarConclusao(confirmConcluir)}
+                className="px-5 py-2 bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700">
+                Concluir desligamento
+              </button>
+            </div>
           </div>
         </div>
       )}
