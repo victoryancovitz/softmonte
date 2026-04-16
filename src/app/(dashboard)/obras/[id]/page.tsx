@@ -615,7 +615,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
       )}
 
       {/* ===== ADITIVOS ===== */}
-      {activeTab === 'aditivos' && <AditivosTab obra={obra} aditivos={aditivosData ?? []} composicao={composicao ?? []} onRefresh={() => { /* server component — full page refresh */ if (typeof window !== 'undefined') window.location.reload() }} />}
+      {activeTab === 'aditivos' && <AditivosTab obra={obra} aditivos={aditivosData ?? []} composicao={composicao ?? []} />}
 
       {/* ===== CRONOGRAMA ===== */}
       {activeTab === 'cronograma' && <CronogramaTab obraId={params.id} />}

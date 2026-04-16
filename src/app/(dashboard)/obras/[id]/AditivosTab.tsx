@@ -83,13 +83,17 @@ function safeNum(v: any): number {
   return Number.isFinite(n) ? n : 0
 }
 
-export default function AditivosTab({ obra, aditivos: rawAditivos, composicao: rawComposicao, onRefresh }: { obra: any; aditivos: any[]; composicao: any[]; onRefresh: () => void }) {
+export default function AditivosTab({ obra, aditivos: rawAditivos, composicao: rawComposicao }: { obra: any; aditivos: any[]; composicao: any[] }) {
   const supabase = createClient()
   const toast = useToast()
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving] = useState(false)
   const [approving, setApproving] = useState<string | null>(null)
   const [form, setForm] = useState<FormData>(emptyForm(obra))
+
+  const refresh = () => {
+    if (typeof window !== 'undefined') window.location.reload()
+  }
 
   const aditivos = Array.isArray(rawAditivos) ? rawAditivos : []
   const composicao = Array.isArray(rawComposicao) ? rawComposicao : []
@@ -171,13 +175,13 @@ export default function AditivosTab({ obra, aditivos: rawAditivos, composicao: r
       if (error) throw error
       toast.success('Aditivo criado com sucesso', `Aditivo #${nextNumero} salvo como pendente`)
       setShowModal(false)
-      onRefresh()
+      refresh()
     } catch (err: any) {
       toast.error('Erro ao salvar aditivo', err.message)
     } finally {
       setSaving(false)
     }
-  }, [form, aditivos, obra, composicao, supabase, toast, onRefresh])
+  }, [form, aditivos, obraSafe, composicao, supabase, toast])
 
   const handleAprovar = useCallback(async (aditivo: any) => {
     setApproving(aditivo.id)
@@ -213,13 +217,13 @@ export default function AditivosTab({ obra, aditivos: rawAditivos, composicao: r
       }
 
       toast.success('Aditivo aprovado', `Aditivo #${aditivo.numero} aprovado com sucesso`)
-      onRefresh()
+      refresh()
     } catch (err: any) {
       toast.error('Erro ao aprovar aditivo', err.message)
     } finally {
       setApproving(null)
     }
-  }, [supabase, obra, toast, onRefresh])
+  }, [supabase, obraSafe, toast])
 
   return (
     <div>
