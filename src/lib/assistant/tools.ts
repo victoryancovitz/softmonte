@@ -76,6 +76,46 @@ export const ASSISTANT_TOOLS: ToolDef[] = [
     },
   },
   {
+    name: 'atualizar_funcionario',
+    description:
+      'AÇÃO DE ESCRITA. Atualiza campos complementares de um funcionário já cadastrado (dados pessoais, bancários, EPI, endereço, prazos, ASO, etc.). Só execute APÓS confirmação. Sempre busque funcionario_id via buscar_funcionario antes de chamar. Envie APENAS os campos que mudam (patch parcial).',
+    input_schema: {
+      type: 'object',
+      properties: {
+        funcionario_id: { type: 'string', description: 'UUID do funcionário.' },
+        re_matricula: { type: 'string', description: 'RE / matrícula interna.' },
+        id_ponto: { type: 'string', description: 'ID biométrico / Dixi.' },
+        data_nascimento: { type: 'string', description: 'YYYY-MM-DD.' },
+        pis: { type: 'string' },
+        rg: { type: 'string' },
+        rg_data_expedicao: { type: 'string', description: 'YYYY-MM-DD.' },
+        telefone: { type: 'string' },
+        naturalidade: { type: 'string', description: 'Cidade-UF.' },
+        estado_civil: { type: 'string', description: 'solteiro|casado|divorciado|viuvo|uniao_estavel' },
+        nome_mae: { type: 'string' },
+        nome_pai: { type: 'string' },
+        raca_cor: { type: 'string', description: 'preta|branca|parda|amarela|indigena' },
+        titulo_eleitor: { type: 'string' },
+        banco: { type: 'string' },
+        banco_agencia: { type: 'string' },
+        banco_conta: { type: 'string' },
+        pix: { type: 'string' },
+        tamanho_bota: { type: 'string' },
+        tamanho_uniforme: { type: 'string', description: 'P|M|G|GG|XGG' },
+        endereco_logradouro: { type: 'string' },
+        endereco_cidade: { type: 'string' },
+        endereco_cep: { type: 'string' },
+        prazo_experiencia_1: { type: 'string', description: 'YYYY-MM-DD.' },
+        prazo_experiencia_2: { type: 'string', description: 'YYYY-MM-DD.' },
+        aso_admissional: { type: 'string', description: 'YYYY-MM-DD.' },
+        aso_demissional: { type: 'string', description: 'YYYY-MM-DD.' },
+        data_integracao: { type: 'string', description: 'YYYY-MM-DD.' },
+        situacao: { type: 'string', description: 'ativo|disponivel|alocado|afastado|inativo|demitido' },
+      },
+      required: ['funcionario_id'],
+    },
+  },
+  {
     name: 'lancar_falta',
     description:
       'AÇÃO DE ESCRITA. Registra falta/afastamento de um funcionário em uma data. Só execute APÓS confirmação.',
@@ -229,6 +269,94 @@ export async function executeTool(
           }
         }
         return { ok: true, data: { funcionario: data } }
+      }
+
+      case 'atualizar_funcionario': {
+        const id = String(input?.funcionario_id ?? '').trim()
+        if (!id) return { ok: false, error: 'funcionario_id é obrigatório.' }
+
+        // Mapeamento spec → colunas reais
+        const patch: Record<string, any> = {}
+        const setIf = (col: string, v: any) => {
+          if (v !== undefined && v !== null && v !== '') patch[col] = v
+        }
+
+        setIf('matricula', input.re_matricula)
+        setIf('id_ponto', input.id_ponto)
+        setIf('data_nascimento', input.data_nascimento)
+        setIf('pis', input.pis)
+        setIf('re', input.rg) // coluna `re` armazena RG
+        setIf('rg_data_expedicao', input.rg_data_expedicao)
+        setIf('telefone', input.telefone)
+        setIf('naturalidade', input.naturalidade)
+        setIf('estado_civil', input.estado_civil)
+        setIf('nome_mae', input.nome_mae)
+        setIf('nome_pai', input.nome_pai)
+        setIf('raca_cor', input.raca_cor)
+        setIf('titulo_eleitor', input.titulo_eleitor)
+        setIf('banco', input.banco)
+        setIf('pix', input.pix)
+        setIf('tamanho_bota', input.tamanho_bota)
+        setIf('tamanho_uniforme', input.tamanho_uniforme)
+        setIf('endereco', input.endereco_logradouro)
+        setIf('cidade_endereco', input.endereco_cidade)
+        setIf('cep', input.endereco_cep)
+        setIf('prazo1', input.prazo_experiencia_1)
+        setIf('prazo2', input.prazo_experiencia_2)
+        setIf('aso_admissional', input.aso_admissional)
+        setIf('aso_demissional', input.aso_demissional)
+        setIf('data_integracao', input.data_integracao)
+
+        // Combina agência + conta em "agencia_conta"
+        if (input.banco_agencia || input.banco_conta) {
+          const ag = String(input.banco_agencia ?? '').trim()
+          const cc = String(input.banco_conta ?? '').trim()
+          patch.agencia_conta = [ag, cc].filter(Boolean).join(' / ')
+        }
+
+        // Mapeia situacao → enum status
+        if (input.situacao) {
+          const s = String(input.situacao).toLowerCase().trim()
+          const map: Record<string, string> = {
+            ativo: 'disponivel',
+            disponivel: 'disponivel',
+            alocado: 'alocado',
+            afastado: 'afastado',
+            inativo: 'inativo',
+            demitido: 'inativo',
+          }
+          const mapped = map[s]
+          if (mapped) patch.status = mapped
+        }
+
+        if (Object.keys(patch).length === 0) {
+          return { ok: false, error: 'Nenhum campo para atualizar.' }
+        }
+
+        const { data: { user } } = await supabase.auth.getUser()
+        patch.updated_by = user?.id ?? null
+        patch.updated_at = new Date().toISOString()
+
+        const { data, error } = await supabase
+          .from('funcionarios')
+          .update(patch)
+          .eq('id', id)
+          .is('deleted_at', null)
+          .select('id, nome')
+          .single()
+        if (error) return { ok: false, error: error.message }
+
+        // Remove campos de auditoria do retorno
+        delete patch.updated_by
+        delete patch.updated_at
+        return {
+          ok: true,
+          data: {
+            funcionario: data,
+            campos_atualizados: Object.keys(patch),
+            total: Object.keys(patch).length,
+          },
+        }
       }
 
       case 'lancar_falta': {
