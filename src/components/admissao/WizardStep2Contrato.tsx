@@ -1,23 +1,34 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 
 interface Props {
   data: any
   onChange: (field: string, value: any) => void
   errors: Record<string, string>
   funcoes: any[]
+  obras?: any[]
 }
 
 const TIPO_VINCULO_OPTIONS = [
-  { value: 'experiencia_45_45', label: 'Experiencia 45+45 dias' },
-  { value: 'experiencia_30_60', label: 'Experiencia 30+60 dias' },
-  { value: 'experiencia_90', label: 'Experiencia 90 dias' },
-  { value: 'determinado_6m', label: 'Determinado 6 meses' },
-  { value: 'determinado_12m', label: 'Determinado 12 meses' },
-  { value: 'indeterminado', label: 'Indeterminado (CLT)' },
-  { value: 'temporario', label: 'Temporario' },
+  { value: 'indeterminado', label: 'CLT — Efetivo (Indeterminado)' },
+  { value: 'experiencia_45_45', label: 'Experiência 45+45 dias' },
+  { value: 'experiencia_30_60', label: 'Experiência 30+60 dias' },
+  { value: 'experiencia_90', label: 'Experiência 90 dias' },
+  { value: 'determinado_6m', label: 'Contrato determinado 6 meses' },
+  { value: 'determinado_12m', label: 'Contrato determinado 12 meses' },
+  { value: 'temporario', label: 'Temporário' },
+  { value: 'estagio', label: 'Estagiário' },
+  { value: 'pj', label: 'PJ' },
+  { value: 'terceirizado', label: 'Terceirizado' },
 ]
+
+function addDias(iso: string, dias: number): string {
+  if (!iso) return ''
+  const d = new Date(iso + 'T12:00')
+  d.setDate(d.getDate() + dias)
+  return d.toISOString().slice(0, 10)
+}
 
 const TAMANHO_UNIFORME = ['PP', 'P', 'M', 'G', 'GG', 'XG', 'XXG']
 const TAMANHO_BOTA = Array.from({ length: 11 }, (_, i) => String(36 + i))
@@ -44,7 +55,7 @@ function fmtR(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-export default function WizardStep2Contrato({ data, onChange, errors, funcoes }: Props) {
+export default function WizardStep2Contrato({ data, onChange, errors, funcoes, obras = [] }: Props) {
   function handleFuncaoChange(funcaoId: string) {
     onChange('funcao_id', funcaoId)
     const funcao = funcoes.find((f: any) => f.id === funcaoId)
@@ -52,6 +63,21 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes }:
       if (funcao.cargo) onChange('cargo', funcao.cargo)
       if (funcao.salario_base != null) onChange('salario_base', funcao.salario_base)
       if (funcao.insalubridade_pct != null) onChange('insalubridade_pct', funcao.insalubridade_pct)
+    }
+  }
+
+  function handleTipoVinculoChange(tipo: string) {
+    onChange('tipo_vinculo', tipo)
+    // Auto-preenche prazos de experiência com base na data de admissão (P5)
+    if (!data.admissao) return
+    if (tipo === 'experiencia_45_45') {
+      onChange('prazo1', addDias(data.admissao, 45))
+      onChange('prazo2', addDias(data.admissao, 90))
+    } else if (tipo === 'experiencia_30_60') {
+      onChange('prazo1', addDias(data.admissao, 30))
+      onChange('prazo2', addDias(data.admissao, 90))
+    } else if (tipo === 'experiencia_90') {
+      onChange('prazo1', addDias(data.admissao, 90))
     }
   }
 
@@ -77,19 +103,48 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes }:
 
   return (
     <div className="space-y-6">
+      {/* Obra de alocação */}
+      <section>
+        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">
+          Obra de Alocação
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Obra" required error={errors.obra_id}>
+            <select
+              value={data.obra_id ?? ''}
+              onChange={e => onChange('obra_id', e.target.value)}
+              className={inp + ' bg-white'}
+            >
+              <option value="">Selecione a obra...</option>
+              {obras.map((o: any) => (
+                <option key={o.id} value={o.id}>{o.nome}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="Data de início na obra">
+            <input
+              type="date"
+              value={data.data_inicio_obra ?? data.admissao ?? today}
+              onChange={e => onChange('data_inicio_obra', e.target.value)}
+              className={inp}
+            />
+          </Field>
+        </div>
+      </section>
+
       {/* Funcao e cargo */}
       <section>
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">
-          Funcao e Cargo
+          Função e Cargo
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Funcao" required error={errors.funcao_id}>
+          <Field label="Função" required error={errors.funcao_id}>
             <select
               value={data.funcao_id ?? ''}
               onChange={e => handleFuncaoChange(e.target.value)}
               className={inp + ' bg-white'}
             >
-              <option value="">Selecione a funcao...</option>
+              <option value="">Selecione a função...</option>
               {funcoes.map((f: any) => (
                 <option key={f.id} value={f.id}>
                   {f.nome || f.cargo} {f.salario_base ? `— ${fmtR(f.salario_base)}` : ''}
@@ -98,7 +153,7 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes }:
             </select>
           </Field>
 
-          <Field label="Cargo" required error={errors.cargo}>
+          <Field label="Cargo" error={errors.cargo}>
             <input
               type="text"
               value={data.cargo ?? ''}
@@ -107,7 +162,7 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes }:
             />
           </Field>
 
-          <Field label="Matricula" required error={errors.matricula}>
+          <Field label="Matrícula" error={errors.matricula}>
             <input
               type="text"
               value={data.matricula ?? ''}
@@ -116,7 +171,7 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes }:
             />
           </Field>
 
-          <Field label="ID Ponto (Secullum)" required error={errors.id_ponto}>
+          <Field label="ID Ponto (Secullum)" error={errors.id_ponto}>
             <input
               type="text"
               inputMode="numeric"
@@ -128,13 +183,13 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes }:
         </div>
       </section>
 
-      {/* Remuneracao */}
+      {/* Remuneração */}
       <section>
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">
-          Remuneracao
+          Remuneração
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Salario base (R$/mes)" required error={errors.salario_base}>
+          <Field label="Salário base (R$/mês)" error={errors.salario_base}>
             <input
               type="number"
               step="0.01"
@@ -152,9 +207,9 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes }:
               className={inp + ' bg-white'}
             >
               <option value="0">Nenhuma (0%)</option>
-              <option value="10">Grau minimo (10%)</option>
-              <option value="20">Grau medio (20%)</option>
-              <option value="40">Grau maximo (40%)</option>
+              <option value="10">Grau mínimo (10%)</option>
+              <option value="20">Grau médio (20%)</option>
+              <option value="40">Grau máximo (40%)</option>
             </select>
           </Field>
 
@@ -169,7 +224,7 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes }:
             </select>
           </Field>
 
-          <Field label="Horas/mes" error={errors.horas_mes}>
+          <Field label="Horas/mês" error={errors.horas_mes}>
             <input
               type="number"
               step="0.5"
@@ -205,13 +260,13 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes }:
       {/* Vinculo */}
       <section>
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">
-          Vinculo
+          Vínculo
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Tipo de vinculo" required error={errors.tipo_vinculo}>
+          <Field label="Tipo de vínculo" error={errors.tipo_vinculo}>
             <select
               value={data.tipo_vinculo ?? ''}
-              onChange={e => onChange('tipo_vinculo', e.target.value)}
+              onChange={e => handleTipoVinculoChange(e.target.value)}
               className={inp + ' bg-white'}
             >
               <option value="">Selecione...</option>
@@ -221,7 +276,7 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes }:
             </select>
           </Field>
 
-          <Field label="Data de admissao" required error={errors.admissao}>
+          <Field label="Data de admissão" required error={errors.admissao}>
             <input
               type="date"
               value={data.admissao ?? today}
@@ -230,7 +285,7 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes }:
             />
           </Field>
 
-          <Field label="Tamanho uniforme" required error={errors.tamanho_uniforme}>
+          <Field label="Tamanho uniforme" error={errors.tamanho_uniforme}>
             <select
               value={data.tamanho_uniforme ?? ''}
               onChange={e => onChange('tamanho_uniforme', e.target.value)}
@@ -243,7 +298,7 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes }:
             </select>
           </Field>
 
-          <Field label="Tamanho bota" required error={errors.tamanho_bota}>
+          <Field label="Tamanho bota" error={errors.tamanho_bota}>
             <select
               value={data.tamanho_bota ?? ''}
               onChange={e => onChange('tamanho_bota', e.target.value)}

@@ -143,7 +143,7 @@ export default function WizardStep1Pessoal({ data, onChange, errors }: Props) {
           </select>
         </Field>
 
-        <Field label="Nome da mae" required error={errors.nome_mae}>
+        <Field label="Nome da mãe" error={errors.nome_mae}>
           <input
             type="text"
             value={data.nome_mae ?? ''}
@@ -173,7 +173,7 @@ export default function WizardStep1Pessoal({ data, onChange, errors }: Props) {
 
       {/* Right column */}
       <div className="space-y-4">
-        <Field label="Telefone" required error={errors.telefone}>
+        <Field label="Telefone" error={errors.telefone}>
           <input
             type="text"
             inputMode="tel"
@@ -194,7 +194,7 @@ export default function WizardStep1Pessoal({ data, onChange, errors }: Props) {
           />
         </Field>
 
-        <Field label="Endereco" required error={errors.endereco}>
+        <Field label="Endereço" error={errors.endereco}>
           <input
             type="text"
             value={data.endereco ?? ''}
@@ -204,7 +204,7 @@ export default function WizardStep1Pessoal({ data, onChange, errors }: Props) {
           />
         </Field>
 
-        <Field label="Cidade" required error={errors.cidade_endereco}>
+        <Field label="Cidade" error={errors.cidade_endereco}>
           <input
             type="text"
             value={data.cidade_endereco ?? ''}
@@ -226,12 +226,27 @@ export default function WizardStep1Pessoal({ data, onChange, errors }: Props) {
           </select>
         </Field>
 
-        <Field label="CEP" required error={errors.cep}>
+        <Field label="CEP" error={errors.cep}>
           <input
             type="text"
             inputMode="numeric"
             value={data.cep ?? ''}
             onChange={e => onChange('cep', maskCEP(e.target.value))}
+            onBlur={async e => {
+              const cep = e.target.value.replace(/\D/g, '')
+              if (cep.length !== 8) return
+              try {
+                const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+                const j = await res.json()
+                if (j.erro) return
+                if (j.logradouro || j.bairro) {
+                  const endereco = [j.logradouro, j.bairro].filter(Boolean).join(', ')
+                  if (endereco) onChange('endereco', endereco)
+                }
+                if (j.localidade) onChange('cidade_endereco', j.localidade)
+                if (j.uf) onChange('uf', j.uf)
+              } catch { /* silent */ }
+            }}
             className={inp}
             placeholder="00000-000"
           />

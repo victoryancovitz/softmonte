@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { formatSupabaseError } from '@/lib/errors'
@@ -16,47 +16,70 @@ import WizardStep7Uniforme from '@/components/admissao/WizardStep7Uniforme'
 import WizardStep8Integracao from '@/components/admissao/WizardStep8Integracao'
 import { X, ChevronLeft, ChevronRight, Save } from 'lucide-react'
 
-const STEP_LABELS = ['', 'Pessoal', 'Contrato', 'CTPS/Banco', 'ASO', 'NRs', 'EPI', 'Uniforme', 'Integracao']
+const STEP_LABELS = ['', 'Pessoal', 'Contrato', 'CTPS/Banco', 'ASO', 'NRs', 'EPI', 'Uniforme', 'Integração']
 
-// Required fields per step
+// Campos MÍNIMOS para avançar (P2)
 const REQUIRED_FIELDS: Record<number, string[]> = {
-  1: ['nome', 'data_nascimento', 'cpf', 'nome_mae', 'telefone', 'endereco', 'cidade_endereco', 'cep'],
-  2: ['funcao_id', 'cargo', 'matricula', 'id_ponto', 'salario_base', 'tipo_vinculo', 'admissao', 'tamanho_uniforme', 'tamanho_bota'],
-  3: ['ctps_numero', 'ctps_serie', 'ctps_uf', 'banco'],
-  4: ['aso_data_exame', 'aso_data_vencimento'],
+  1: ['nome', 'cpf', 'data_nascimento'],
+  2: ['funcao_id', 'admissao', 'obra_id'],
+  3: [],
+  4: [],
+}
+
+// Campos RECOMENDADOS (alerta amarelo, não bloqueia)
+const RECOMMENDED_FIELDS: Record<number, string[]> = {
+  1: ['endereco', 'cep', 'cidade_endereco', 'nome_mae', 'pis', 're'],
+  2: ['cargo', 'matricula', 'id_ponto', 'salario_base', 'tipo_vinculo', 'tamanho_uniforme', 'tamanho_bota'],
+  3: ['ctps_numero', 'banco'],
+  4: ['aso_data_exame'],
 }
 
 const FIELD_LABELS: Record<string, string> = {
   nome: 'Nome completo', data_nascimento: 'Data de nascimento', cpf: 'CPF',
-  nome_mae: 'Nome da mae', telefone: 'Telefone', endereco: 'Endereco',
-  cidade_endereco: 'Cidade', cep: 'CEP', funcao_id: 'Funcao',
-  cargo: 'Cargo', matricula: 'Matricula', id_ponto: 'ID Ponto',
-  salario_base: 'Salario base', tipo_vinculo: 'Tipo de vinculo',
-  admissao: 'Data de admissao', tamanho_uniforme: 'Tamanho uniforme',
-  tamanho_bota: 'Tamanho bota', ctps_numero: 'Numero CTPS',
-  ctps_serie: 'Serie CTPS', ctps_uf: 'UF CTPS', banco: 'Banco',
+  nome_mae: 'Nome da mãe', telefone: 'Telefone', endereco: 'Endereço',
+  cidade_endereco: 'Cidade', cep: 'CEP', funcao_id: 'Função',
+  obra_id: 'Obra',
+  cargo: 'Cargo', matricula: 'Matrícula', id_ponto: 'ID Ponto',
+  salario_base: 'Salário base', tipo_vinculo: 'Tipo de vínculo',
+  admissao: 'Data de admissão', tamanho_uniforme: 'Tamanho uniforme',
+  tamanho_bota: 'Tamanho bota', ctps_numero: 'Número CTPS',
+  ctps_serie: 'Série CTPS', ctps_uf: 'UF CTPS', banco: 'Banco',
   aso_data_exame: 'Data do exame', aso_data_vencimento: 'Data de vencimento',
+  pis: 'PIS/NIS', re: 'RG',
 }
+
+const LS_KEY = 'wizard_admissao_draft'
 
 export default function WizardAdmissaoPage() {
   const supabase = createClient()
   const router = useRouter()
+  const searchParams = useSearchParams()
   const toast = useToast()
+  const preFuncId = searchParams.get('funcionario_id')
 
   const [step, setStep] = useState(1)
-  const [formData, setFormData] = useState<Record<string, any>>({
-    horas_mes: 220,
-    vt_mensal: 198,
-    vr_diario: 35,
-    va_mensal: 400,
-    plano_saude_mensal: 0,
-    admissao: new Date().toISOString().slice(0, 10),
+  const [formData, setFormData] = useState<Record<string, any>>(() => {
+    // Restaurar draft do localStorage se existir (P1)
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem(LS_KEY)
+        if (saved) return JSON.parse(saved)
+      } catch {}
+    }
+    return {
+      horas_mes: 220,
+      vt_mensal: 198,
+      vr_diario: 35,
+      va_mensal: 400,
+      plano_saude_mensal: 0,
+      admissao: new Date().toISOString().slice(0, 10),
+    }
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [funcoes, setFuncoes] = useState<any[]>([])
   const [obras, setObras] = useState<any[]>([])
-  const [funcionarioId, setFuncionarioId] = useState<string | null>(null)
+  const [funcionarioId, setFuncionarioId] = useState<string | null>(preFuncId)
   const [workflowId, setWorkflowId] = useState<string | null>(null)
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
 
@@ -70,6 +93,28 @@ export default function WizardAdmissaoPage() {
     supabase.from('obras').select('id, nome').eq('status', 'ativo').is('deleted_at', null).order('nome')
       .then(({ data }) => setObras(data ?? []))
   }, [])
+
+  // Carrega dados do funcionário se veio da URL (P17)
+  useEffect(() => {
+    if (!preFuncId) return
+    (async () => {
+      const { data: f } = await supabase.from('funcionarios').select('*').eq('id', preFuncId).maybeSingle()
+      if (f) {
+        setFormData((prev: Record<string, any>) => ({ ...prev, ...f }))
+        // Buscar workflow em andamento
+        const { data: wf } = await supabase.from('admissoes_workflow')
+          .select('id').eq('funcionario_id', preFuncId)
+          .in('status', ['em_andamento', 'pendente'])
+          .order('created_at', { ascending: false }).limit(1).maybeSingle()
+        if (wf?.id) setWorkflowId(wf.id)
+      }
+    })()
+  }, [preFuncId])
+
+  // Persiste draft no localStorage (P1)
+  useEffect(() => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(formData)) } catch {}
+  }, [formData])
 
   const handleChange = useCallback((field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -85,15 +130,24 @@ export default function WizardAdmissaoPage() {
 
   function validate(stepNum: number): boolean {
     const required = REQUIRED_FIELDS[stepNum] ?? []
+    const recommended = RECOMMENDED_FIELDS[stepNum] ?? []
     const errs: Record<string, string> = {}
     for (const field of required) {
       const val = formData[field]
       if (val === undefined || val === null || val === '') {
-        errs[field] = `${FIELD_LABELS[field] || field} e obrigatorio`
+        errs[field] = `${FIELD_LABELS[field] || field} é obrigatório`
       }
     }
     setErrors(errs)
-    return Object.keys(errs).length === 0
+    if (Object.keys(errs).length > 0) return false
+
+    // Avisa sobre recomendados mas permite avançar
+    const faltando = recommended.filter(f => !formData[f])
+    if (faltando.length > 0) {
+      const labels = faltando.map(f => FIELD_LABELS[f] || f).join(', ')
+      toast.warning('Dados incompletos', `Complete depois no perfil: ${labels}`)
+    }
+    return true
   }
 
   async function handleFileUpload(file: File): Promise<string | null> {
@@ -277,9 +331,77 @@ export default function WizardAdmissaoPage() {
         setStep(step + 1)
         toast.success(`${STEP_LABELS[step]} salvo!`)
       } else {
-        toast.success('Admissão concluída!')
-        router.push('/rh/admissoes')
+        await concluirAdmissao()
       }
+    }
+  }
+
+  async function concluirAdmissao() {
+    if (!funcionarioId) { toast.error('Funcionário não encontrado'); return }
+    setSaving(true)
+    try {
+      const obraId = formData.obra_id || null
+      const dataInicio = formData.data_inicio_obra || formData.admissao || new Date().toISOString().slice(0, 10)
+
+      // 1. Status: alocado se tem obra, senão disponivel
+      const novoStatus = obraId ? 'alocado' : 'disponivel'
+      await supabase.from('funcionarios').update({ status: novoStatus }).eq('id', funcionarioId)
+
+      // 2. Criar alocação se tiver obra
+      if (obraId) {
+        const { data: existing } = await supabase.from('alocacoes')
+          .select('id').eq('funcionario_id', funcionarioId).eq('obra_id', obraId).eq('ativo', true).maybeSingle()
+        if (!existing) {
+          await supabase.from('alocacoes').insert({
+            funcionario_id: funcionarioId,
+            obra_id: obraId,
+            data_inicio: dataInicio,
+            ativo: true,
+          })
+        }
+      }
+
+      // 3. Fechar workflow
+      if (workflowId) {
+        await supabase.from('admissoes_workflow').update({
+          status: 'concluida',
+          concluida_em: new Date().toISOString(),
+        }).eq('id', workflowId)
+      }
+
+      // 4. Notificar diretoria
+      try {
+        const obraNome = obras.find((o: any) => o.id === obraId)?.nome
+        const titulo = obraNome
+          ? `✅ ${formData.nome} admitido em ${obraNome}`
+          : `✅ ${formData.nome} admitido`
+        // Busca usuários de diretoria/admin pra notificar
+        const { data: destinatarios } = await supabase.from('profiles')
+          .select('user_id').in('role', ['admin', 'diretoria'])
+        for (const d of destinatarios ?? []) {
+          if ((d as any).user_id) {
+            await supabase.from('notificacoes').insert({
+              destinatario_id: (d as any).user_id,
+              tipo: 'info',
+              titulo,
+              mensagem: `Admissão concluída por meio do wizard`,
+              ref_tabela: 'funcionarios',
+              ref_id: funcionarioId,
+              lida: false,
+            })
+          }
+        }
+      } catch { /* notificação não é crítica */ }
+
+      // 5. Limpa draft
+      try { localStorage.removeItem(LS_KEY) } catch {}
+
+      toast.success('Admissão concluída!', 'Funcionário cadastrado com sucesso.')
+      router.push(`/funcionarios/${funcionarioId}`)
+    } catch (e: any) {
+      toast.error('Erro ao concluir admissão', e?.message ?? '')
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -323,7 +445,8 @@ export default function WizardAdmissaoPage() {
   }
 
   function handleStepClick(s: number) {
-    if (completedSteps.includes(s)) {
+    // Permite navegar pra qualquer etapa já completada ou pra etapa anterior à atual (P16)
+    if (completedSteps.includes(s) || s < step) {
       setStep(s)
     }
   }
@@ -333,7 +456,7 @@ export default function WizardAdmissaoPage() {
       case 1:
         return <WizardStep1Pessoal data={formData} onChange={handleChange} errors={errors} />
       case 2:
-        return <WizardStep2Contrato data={formData} onChange={handleChange} errors={errors} funcoes={funcoes} />
+        return <WizardStep2Contrato data={formData} onChange={handleChange} errors={errors} funcoes={funcoes} obras={obras} />
       case 3:
         return <WizardStep3CtpsBanco data={formData} onChange={handleChange} errors={errors} />
       case 4:
