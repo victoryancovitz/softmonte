@@ -240,6 +240,7 @@ export default function NovoFuncionarioPage() {
       tamanho_bota: form.tamanho_bota || null,
       tamanho_uniforme: form.tamanho_uniforme || null,
       re: form.re || null,
+      status: 'pendente',
     }).select('id').single()
 
     if (insertError) {

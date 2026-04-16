@@ -43,7 +43,7 @@ export interface Funcionario {
   admissao: string | null
   prazo1: string | null
   prazo2: string | null
-  status: 'disponivel' | 'alocado' | 'afastado' | 'inativo'
+  status: 'pendente' | 'em_admissao' | 'disponivel' | 'alocado' | 'afastado' | 'inativo'
   tipo_vinculo: string | null
   salario_base: number | null
   horas_mes: number | null

@@ -8,9 +8,21 @@ import { useToast } from '@/components/Toast'
 import { TIPO_VINCULO } from '@/lib/formatters'
 
 const STATUS_COLOR: Record<string, string> = {
-  disponivel: 'bg-green-100 text-green-700',
-  alocado:    'bg-blue-100 text-blue-700',
-  inativo:    'bg-red-100 text-red-700',
+  pendente:    'bg-amber-100 text-amber-700',
+  em_admissao: 'bg-violet-100 text-violet-700',
+  disponivel:  'bg-green-100 text-green-700',
+  alocado:     'bg-blue-100 text-blue-700',
+  afastado:    'bg-orange-100 text-orange-700',
+  inativo:     'bg-red-100 text-red-700',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  pendente:    'Aguardando admissão',
+  em_admissao: 'Em admissão',
+  disponivel:  'Disponível',
+  alocado:     'Alocado',
+  afastado:    'Afastado',
+  inativo:     'Inativo',
 }
 
 const ALERTA_BADGE: Record<string, { label: string; cls: string }> = {
@@ -71,7 +83,7 @@ export default function FuncionariosView({
         const o = JSON.parse(saved)
         if (o.q) { setQ(o.q); setSearchInput(o.q) }
         // Só restaurar status válidos
-        const validStatus = ['', 'ativos', 'alocado', 'disponivel', 'inativo']
+        const validStatus = ['', 'ativos', 'pendente', 'em_admissao', 'alocado', 'disponivel', 'afastado', 'inativo']
         if (o.status && validStatus.includes(o.status)) setStatus(o.status)
         if (o.cargo) setCargo(o.cargo)
         if (o.admDe) setAdmDe(o.admDe)
@@ -233,8 +245,11 @@ export default function FuncionariosView({
             className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
             <option value="">Todos</option>
             <option value="ativos">Ativos</option>
+            <option value="pendente">Aguardando admissão</option>
+            <option value="em_admissao">Em admissão</option>
             <option value="disponivel">Disponível</option>
             <option value="alocado">Alocado</option>
+            <option value="afastado">Afastado</option>
             <option value="inativo">Desligados</option>
           </select>
           <select value={cargo} onChange={e => setCargo(e.target.value)}
@@ -341,7 +356,7 @@ export default function FuncionariosView({
                       </span>
                     ) : (
                       <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>
-                        {f.status === 'disponivel' ? 'Disponível' : f.status}
+                        {STATUS_LABEL[f.status] ?? f.status}
                       </span>
                     )}
                   </div>

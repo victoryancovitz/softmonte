@@ -132,7 +132,7 @@ export default function WizardAdmissaoPage() {
         cidade_endereco: formData.cidade_endereco || null,
         cep: formData.cep || null,
         cargo: 'PENDENTE',
-        status: 'inativo',
+        status: 'em_admissao',
       }
 
       if (funcionarioId) {

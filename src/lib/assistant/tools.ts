@@ -244,7 +244,7 @@ export async function executeTool(
           admissao: input.data_admissao,
           salario_base: input.salario_base,
           id_ponto: input.id_ponto ?? null,
-          status: 'disponivel',
+          status: 'pendente',
         }
         const { data, error } = await supabase
           .from('funcionarios')
@@ -318,6 +318,8 @@ export async function executeTool(
         if (input.situacao) {
           const s = String(input.situacao).toLowerCase().trim()
           const map: Record<string, string> = {
+            pendente: 'pendente',
+            em_admissao: 'em_admissao',
             ativo: 'disponivel',
             disponivel: 'disponivel',
             alocado: 'alocado',

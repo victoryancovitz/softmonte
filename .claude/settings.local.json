@@ -203,7 +203,10 @@
       "Bash(sort -t'|' -k4)",
       "Bash(git diff:*)",
       "Bash(find /Users/victoryancovitz/softmonte-git/src -type f -name *dias* -o -name *util*)",
-      "Bash(find /Users/victoryancovitz/softmonte-git -type f -name *forecast* -o -name *horas*)"
+      "Bash(find /Users/victoryancovitz/softmonte-git -type f -name *forecast* -o -name *horas*)",
+      "Bash(echo \"exit=$?\")",
+      "Bash(vercel env:*)",
+      "Bash(vercel --version)"
     ]
   }
 }

@@ -29,10 +29,21 @@ const TAB_ICONS = {
 }
 
 const STATUS_COLOR: Record<string, string> = {
+  pendente: 'bg-amber-100 text-amber-700 border-amber-200',
+  em_admissao: 'bg-violet-100 text-violet-700 border-violet-200',
   disponivel: 'bg-green-100 text-green-700 border-green-200',
   alocado: 'bg-blue-100 text-blue-700 border-blue-200',
   afastado: 'bg-yellow-100 text-yellow-700 border-yellow-200',
   inativo: 'bg-gray-100 text-gray-500 border-gray-200',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  pendente: 'Aguardando admissão',
+  em_admissao: 'Em admissão',
+  disponivel: 'Disponível',
+  alocado: 'Alocado',
+  afastado: 'Afastado',
+  inativo: 'Inativo',
 }
 
 export default async function FuncionarioPage({ params, searchParams }: { params: { id: string }, searchParams: { from?: string, workflow_id?: string, step?: string } }) {
@@ -342,7 +353,7 @@ export default async function FuncionarioPage({ params, searchParams }: { params
               <span className="text-xs text-gray-500">Matrícula {f.matricula || '—'}</span>
               <span className="text-gray-300">·</span>
               <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold border ${STATUS_COLOR[f.status] ?? 'bg-gray-100'}`}>
-                {(f.status || '').toUpperCase()}
+                {(STATUS_LABEL[f.status] ?? f.status ?? '').toUpperCase()}
               </span>
               {alocacoesAtivas.map((a: any) => (
                 <Link key={a.id} href={`/obras/${a.obra_id}`}
@@ -399,7 +410,19 @@ export default async function FuncionarioPage({ params, searchParams }: { params
       </div>
 
       {/* Banners / alerts */}
-      {!admissao && f.status !== 'inativo' && (
+      {f.status === 'pendente' && !isArquivado && (
+        <Link href={`/rh/admissoes/novo?funcionario_id=${f.id}`}
+          className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-center justify-between gap-3 hover:bg-amber-100 transition-colors">
+          <div className="text-sm">
+            <strong className="text-amber-800">⚠️ Admissão pendente</strong>
+            <span className="text-amber-700 text-xs ml-2">Clique para iniciar o processo de admissão.</span>
+          </div>
+          <span className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-bold flex-shrink-0">
+            Iniciar admissão →
+          </span>
+        </Link>
+      )}
+      {!admissao && !['pendente', 'inativo'].includes(f.status) && (
         <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-between gap-3">
           <div className="text-sm">
             <strong className="text-blue-800">Sem processo de admissão</strong>

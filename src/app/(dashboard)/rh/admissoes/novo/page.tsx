@@ -88,8 +88,12 @@ export default function NovaAdmissaoPage() {
       setSaving(false)
       return
     }
-    if (['disponivel', 'alocado', 'afastado'].includes((freshFunc as any).status)) {
-      setError(`Funcionário já está ativo (${(freshFunc as any).status}). Não é possível abrir nova admissão para quem já foi admitido.`)
+    if (['disponivel', 'alocado', 'em_admissao'].includes((freshFunc as any).status)) {
+      const s = (freshFunc as any).status
+      const msg = s === 'em_admissao'
+        ? 'Este funcionário já está em processo de admissão.'
+        : `Funcionário já está ativo (${s}). Não é possível abrir nova admissão para quem já foi admitido.`
+      setError(msg)
       setSaving(false)
       return
     }
@@ -136,6 +140,9 @@ export default function NovaAdmissaoPage() {
       setSaving(false)
       return
     }
+
+    // Marcar funcionário como em admissão
+    await supabase.from('funcionarios').update({ status: 'em_admissao' }).eq('id', funcId)
 
     toast.success('Admissão criada!', `${selectedFunc?.nome ?? 'Funcionário'} — processo iniciado`)
     router.push('/rh/admissoes')
