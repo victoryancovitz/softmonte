@@ -57,9 +57,9 @@ export default function PromocaoModal({ funcionario, funcoes, onClose }: Props) 
   }
 
   async function handleSave() {
-    if (!form.data_efetivo) { toast.error('Data efetiva obrigatoria'); return }
-    if (salarioNovo <= 0) { toast.error('Salario novo invalido'); return }
-    if (!isReajuste && !form.cargo_novo.trim()) { toast.error('Cargo obrigatorio'); return }
+    if (!form.data_efetivo) { toast.error('Data efetiva obrigatória'); return }
+    if (salarioNovo <= 0) { toast.error('Salário novo inválido'); return }
+    if (!isReajuste && !form.cargo_novo.trim()) { toast.error('Cargo obrigatório'); return }
 
     setSaving(true)
     try {
@@ -115,9 +115,9 @@ export default function PromocaoModal({ funcionario, funcoes, onClose }: Props) 
 
       toast.success(
         form.tipo_mudanca === 'promocao_cargo' ? 'Promoção registrada com sucesso'
-          : form.tipo_mudanca === 'mudanca_cargo' ? 'Mudanca de cargo registrada'
+          : form.tipo_mudanca === 'mudanca_cargo' ? 'Mudança de cargo registrada'
           : 'Reajuste salarial aplicado',
-        'As alocacoes ativas foram atualizadas.'
+        'As alocações ativas foram atualizadas.'
       )
       onClose()
     } catch (e: any) {
@@ -146,18 +146,18 @@ export default function PromocaoModal({ funcionario, funcoes, onClose }: Props) 
         <div className="p-5 space-y-4">
           {/* Situacao atual */}
           <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
-            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Situacao atual</h3>
+            <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Situação atual</h3>
             <div className="grid grid-cols-3 gap-3 text-xs">
               <div>
                 <div className="text-[10px] text-gray-400">Cargo</div>
                 <div className="font-semibold text-gray-800">{funcionario.cargo || '—'}</div>
               </div>
               <div>
-                <div className="text-[10px] text-gray-400">Salario</div>
+                <div className="text-[10px] text-gray-400">Salário</div>
                 <div className="font-semibold text-gray-800">{salarioAtual > 0 ? fmtR(salarioAtual) : '—'}</div>
               </div>
               <div>
-                <div className="text-[10px] text-gray-400">Horas/mes</div>
+                <div className="text-[10px] text-gray-400">Horas/mês</div>
                 <div className="font-semibold text-gray-800">{funcionario.horas_mes || 220}h</div>
               </div>
             </div>
@@ -165,7 +165,7 @@ export default function PromocaoModal({ funcionario, funcoes, onClose }: Props) 
 
           {/* Tipo de mudanca */}
           <div>
-            <label className="block text-[10px] font-semibold text-gray-600 mb-1">Tipo de mudanca</label>
+            <label className="block text-[10px] font-semibold text-gray-600 mb-1">Tipo de mudança</label>
             <select
               value={form.tipo_mudanca}
               onChange={e => setForm({ ...form, tipo_mudanca: e.target.value })}
@@ -189,29 +189,41 @@ export default function PromocaoModal({ funcionario, funcoes, onClose }: Props) 
             />
           </div>
 
-          {/* Cargo novo (hidden if reajuste) */}
+          {/* Função nova (hidden if reajuste) */}
           {!isReajuste && (
-            <div>
-              <label className="block text-[10px] font-semibold text-gray-600 mb-1">Novo cargo (funcao)</label>
-              <select
-                value={form.funcao_id_novo}
-                onChange={e => handleFuncaoChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
-              >
-                <option value="">Selecionar funcao...</option>
-                {funcoes.map((fn: any) => (
-                  <option key={fn.id} value={fn.id}>{fn.nome}</option>
-                ))}
-              </select>
-              {form.cargo_novo && (
-                <p className="text-[10px] text-gray-400 mt-1">Cargo: {form.cargo_novo}</p>
-              )}
-            </div>
+            <>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-600 mb-1">Nova função (cadastro mestre)</label>
+                <select
+                  value={form.funcao_id_novo}
+                  onChange={e => handleFuncaoChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                >
+                  <option value="">Selecionar função...</option>
+                  {funcoes.map((fn: any) => (
+                    <option key={fn.id} value={fn.id}>{fn.nome}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-600 mb-1">Novo cargo (CTPS)</label>
+                <input
+                  type="text"
+                  value={form.cargo_novo}
+                  onChange={e => setForm({ ...form, cargo_novo: e.target.value })}
+                  placeholder="Texto que aparece na CTPS e documentos"
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                />
+                <p className="text-[10px] text-gray-400 mt-1">
+                  ℹ️ Pré-preenchido pela função, mas pode ser diferente da função interna.
+                </p>
+              </div>
+            </>
           )}
 
           {/* Salario novo */}
           <div>
-            <label className="block text-[10px] font-semibold text-gray-600 mb-1">Novo salario</label>
+            <label className="block text-[10px] font-semibold text-gray-600 mb-1">Novo salário</label>
             <input
               type="number"
               step="0.01"
@@ -230,7 +242,7 @@ export default function PromocaoModal({ funcionario, funcoes, onClose }: Props) 
           {/* Horas/mes */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-semibold text-gray-600 mb-1">Horas/mes</label>
+              <label className="block text-[10px] font-semibold text-gray-600 mb-1">Horas/mês</label>
               <input
                 type="number"
                 value={form.horas_mes_novo}
@@ -254,12 +266,12 @@ export default function PromocaoModal({ funcionario, funcoes, onClose }: Props) 
 
           {/* Motivo */}
           <div>
-            <label className="block text-[10px] font-semibold text-gray-600 mb-1">Motivo / observacao</label>
+            <label className="block text-[10px] font-semibold text-gray-600 mb-1">Motivo / observação</label>
             <input
               type="text"
               value={form.motivo}
               onChange={e => setForm({ ...form, motivo: e.target.value })}
-              placeholder="Ex: Promovido a encarregado apos avaliacao"
+              placeholder="Ex: Promovido a encarregado após avaliação"
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white"
             />
           </div>
@@ -268,9 +280,9 @@ export default function PromocaoModal({ funcionario, funcoes, onClose }: Props) 
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl flex gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
             <div className="text-[11px] text-amber-800 leading-relaxed">
-              <strong>Atencion:</strong> Esta acao vai atualizar o cadastro do funcionario (cargo, salario, insalubridade),
-              registrar no historico salarial e atualizar o cargo em todas as alocacoes ativas.
-              A mudanca reflete imediatamente na folha de pagamento.
+              <strong>Atenção:</strong> Esta ação vai atualizar o cadastro do funcionário (cargo, salário, insalubridade),
+              registrar no histórico salarial e atualizar o cargo em todas as alocações ativas.
+              A mudança reflete imediatamente na folha de pagamento.
             </div>
           </div>
         </div>
@@ -286,7 +298,7 @@ export default function PromocaoModal({ funcionario, funcoes, onClose }: Props) 
             className="px-4 py-2 bg-brand text-white text-xs font-bold rounded-lg hover:bg-brand-dark disabled:opacity-50 flex items-center gap-1.5"
           >
             {saving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-            Salvar alteracoes
+            Salvar alterações
           </button>
         </div>
       </div>

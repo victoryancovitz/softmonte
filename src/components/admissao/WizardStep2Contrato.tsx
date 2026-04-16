@@ -1,7 +1,10 @@
 'use client'
 
-import { useMemo, useEffect } from 'react'
+import { useMemo, useEffect, useState } from 'react'
 import { calcularDescontosCLT } from '@/lib/clt'
+import { createClient } from '@/lib/supabase'
+import { useToast } from '@/components/Toast'
+import { Plus, X } from 'lucide-react'
 
 interface Props {
   data: any
@@ -56,7 +59,48 @@ function fmtR(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-export default function WizardStep2Contrato({ data, onChange, errors, funcoes, obras = [] }: Props) {
+export default function WizardStep2Contrato({ data, onChange, errors, funcoes: funcoesProp, obras = [] }: Props) {
+  const supabase = createClient()
+  const toast = useToast()
+  const [funcoesLocal, setFuncoesLocal] = useState<any[]>(funcoesProp || [])
+  const [showModalFuncao, setShowModalFuncao] = useState(false)
+  const [savingFuncao, setSavingFuncao] = useState(false)
+  const [novaFuncao, setNovaFuncao] = useState({
+    nome: '', salario_base: '', insalubridade: '0', periculosidade: '0',
+    jornada_horas_mes: '220',
+  })
+
+  // Sincronizar lista de funções quando prop mudar
+  useEffect(() => { setFuncoesLocal(funcoesProp || []) }, [funcoesProp])
+  const funcoes = funcoesLocal
+
+  async function criarFuncao() {
+    if (!novaFuncao.nome.trim()) { toast.warning('Informe o nome da função'); return }
+    setSavingFuncao(true)
+    try {
+      const payload: any = {
+        nome: novaFuncao.nome.toUpperCase().trim(),
+        salario_base: novaFuncao.salario_base ? Number(novaFuncao.salario_base) : null,
+        insalubridade_pct_padrao: Number(novaFuncao.insalubridade) || 0,
+        periculosidade_pct_padrao: Number(novaFuncao.periculosidade) || 0,
+        jornada_horas_mes: Number(novaFuncao.jornada_horas_mes) || 220,
+        ativo: true,
+      }
+      const { data: inserted, error } = await supabase
+        .from('funcoes').insert(payload).select('*').single()
+      if (error) throw error
+      setFuncoesLocal(prev => [...prev, inserted].sort((a, b) => (a.nome ?? '').localeCompare(b.nome ?? '')))
+      handleFuncaoChange(inserted.id)
+      toast.success('Função criada', inserted.nome)
+      setShowModalFuncao(false)
+      setNovaFuncao({ nome: '', salario_base: '', insalubridade: '0', periculosidade: '0', jornada_horas_mes: '220' })
+    } catch (e: any) {
+      toast.error('Erro ao criar função', e?.message ?? '')
+    } finally {
+      setSavingFuncao(false)
+    }
+  }
+
   function handleFuncaoChange(funcaoId: string) {
     onChange('funcao_id', funcaoId)
     const funcao = funcoes.find((f: any) => f.id === funcaoId)
@@ -162,18 +206,28 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes, o
         </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Função" required error={errors.funcao_id}>
-            <select
-              value={data.funcao_id ?? ''}
-              onChange={e => handleFuncaoChange(e.target.value)}
-              className={inp + ' bg-white'}
-            >
-              <option value="">Selecione a função...</option>
-              {funcoes.map((f: any) => (
-                <option key={f.id} value={f.id}>
-                  {f.nome || f.cargo} {f.salario_base ? `— ${fmtR(f.salario_base)}` : ''}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select
+                value={data.funcao_id ?? ''}
+                onChange={e => handleFuncaoChange(e.target.value)}
+                className={inp + ' bg-white flex-1'}
+              >
+                <option value="">Selecione a função...</option>
+                {funcoes.map((f: any) => (
+                  <option key={f.id} value={f.id}>
+                    {f.nome || f.cargo} {f.salario_base ? `— ${fmtR(f.salario_base)}` : ''}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setShowModalFuncao(true)}
+                title="Criar nova função"
+                className="w-10 h-[42px] flex items-center justify-center border border-brand text-brand rounded-xl hover:bg-brand/5 flex-shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
           </Field>
 
           <Field label="Cargo" error={errors.cargo}>
@@ -183,6 +237,9 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes, o
               onChange={e => onChange('cargo', e.target.value)}
               className={inp}
             />
+            <p className="text-[10px] text-gray-400 mt-1">
+              ℹ️ O cargo aparece na CTPS e documentos. Pode ser diferente da função interna.
+            </p>
           </Field>
 
           <Field label="Matrícula" error={errors.matricula}>
@@ -371,6 +428,74 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes, o
           </Field>
         </div>
       </section>
+
+      {/* Modal — Criar nova função */}
+      {showModalFuncao && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={() => !savingFuncao && setShowModalFuncao(false)}>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-base font-bold text-brand">Nova Função</h3>
+              <button onClick={() => setShowModalFuncao(false)} disabled={savingFuncao} className="text-gray-400 hover:text-gray-600">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <div>
+                <label className={lbl}>Nome da função *</label>
+                <input type="text" value={novaFuncao.nome}
+                  onChange={e => setNovaFuncao(p => ({ ...p, nome: e.target.value }))}
+                  placeholder="Ex: CALDEIREIRO OFFSHORE"
+                  className={inp} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className={lbl}>Salário base (R$)</label>
+                  <input type="number" step="0.01" value={novaFuncao.salario_base}
+                    onChange={e => setNovaFuncao(p => ({ ...p, salario_base: e.target.value }))}
+                    placeholder="0,00"
+                    className={inp} />
+                </div>
+                <div>
+                  <label className={lbl}>Horas/mês</label>
+                  <input type="number" value={novaFuncao.jornada_horas_mes}
+                    onChange={e => setNovaFuncao(p => ({ ...p, jornada_horas_mes: e.target.value }))}
+                    className={inp} />
+                </div>
+                <div>
+                  <label className={lbl}>Insalubridade</label>
+                  <select value={novaFuncao.insalubridade}
+                    onChange={e => setNovaFuncao(p => ({ ...p, insalubridade: e.target.value }))}
+                    className={inp + ' bg-white'}>
+                    <option value="0">Nenhuma (0%)</option>
+                    <option value="10">Grau mínimo (10%)</option>
+                    <option value="20">Grau médio (20%)</option>
+                    <option value="40">Grau máximo (40%)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className={lbl}>Periculosidade</label>
+                  <select value={novaFuncao.periculosidade}
+                    onChange={e => setNovaFuncao(p => ({ ...p, periculosidade: e.target.value }))}
+                    className={inp + ' bg-white'}>
+                    <option value="0">Não</option>
+                    <option value="30">Sim (30%)</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-100 flex justify-end gap-2">
+              <button onClick={() => setShowModalFuncao(false)} disabled={savingFuncao}
+                className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50">
+                Cancelar
+              </button>
+              <button onClick={criarFuncao} disabled={savingFuncao || !novaFuncao.nome.trim()}
+                className="px-5 py-2 bg-brand text-white text-sm font-bold rounded-lg hover:bg-brand-dark disabled:opacity-50">
+                {savingFuncao ? 'Criando...' : 'Criar função'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

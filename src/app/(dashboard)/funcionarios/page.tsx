@@ -5,10 +5,10 @@ import FuncionariosView from '@/components/FuncionariosView'
 export default async function FuncionariosPage() {
   const supabase = createClient()
 
-  // Carrega apenas funcionários ativos (não deletados)
+  // Carrega apenas funcionários ativos (não deletados) + join com funcoes
   const { data: all } = await supabase
     .from('funcionarios')
-    .select('*')
+    .select('*, funcoes(nome)')
     .is('deleted_at', null)
     .order('nome')
 

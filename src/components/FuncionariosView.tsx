@@ -153,7 +153,7 @@ export default function FuncionariosView({
     if (status === 'inativo') result = result.filter(f => f.deleted_at != null)
     else if (status === 'ativos') result = result.filter(f => f.deleted_at == null && (f.status === 'alocado' || f.status === 'disponivel'))
     else if (status) result = result.filter(f => f.status === status && f.deleted_at == null)
-    if (cargo) result = result.filter(f => f.cargo === cargo)
+    if (cargo) result = result.filter(f => f.cargo === cargo || f.funcoes?.nome === cargo)
     if (admDe) result = result.filter(f => f.admissao && f.admissao >= admDe)
     if (admAte) result = result.filter(f => f.admissao && f.admissao <= admAte)
     if (obraAtual) result = result.filter(f => obraAtualMap[f.id]?.id === obraAtual)
@@ -363,7 +363,9 @@ export default function FuncionariosView({
                   <div className="font-semibold text-sm text-gray-900 group-hover:text-brand transition-colors">{f.nome_guerra ?? f.nome}</div>
                   {f.nome_guerra && <div className="text-[10px] text-gray-400 truncate">{f.nome}</div>}
                   <div className="text-xs text-gray-500 mt-0.5">
-                    {f.cargo}
+                    <span title={f.funcoes?.nome ? `Função interna: ${f.funcoes.nome}` : 'Sem função vinculada'}>
+                      {f.cargo || <span className="italic text-gray-400">sem cargo</span>}
+                    </span>
                     {f.id_ponto ? ` · ID ${f.id_ponto}` : f.matricula ? ` · Mat ${f.matricula}` : ''}
                     {!f.id_ponto && !desligado && <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 font-semibold" title="Sem marcações importadas do Secullum">Sem ID Ponto</span>}
                   </div>
@@ -457,7 +459,7 @@ export default function FuncionariosView({
                           {f.nome_guerra && <span className="ml-1 text-[10px] text-gray-400 font-normal">({f.nome})</span>}
                         </Link>
                       </td>
-                      <td className="px-4 py-3 text-gray-600">{f.cargo}</td>
+                      <td className="px-4 py-3 text-gray-600" title={f.funcoes?.nome ? `Função interna: ${f.funcoes.nome}` : ''}>{f.cargo}</td>
                       <td className="px-4 py-3 text-gray-500 text-xs">{f.admissao ? new Date(f.admissao+'T12:00').toLocaleDateString('pt-BR') : '—'}</td>
                       <td className={`px-4 py-3 text-xs font-medium ${vencido ? 'text-red-600' : alerta ? 'text-amber-600' : 'text-gray-500'}`}>
                         {p1 ? p1.toLocaleDateString('pt-BR') : '—'}

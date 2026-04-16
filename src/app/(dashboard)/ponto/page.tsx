@@ -97,7 +97,7 @@ export default function PontoPage() {
     // 1. Funcionários alocados ativos
     const { data: alocacoes } = await supabase
       .from('alocacoes')
-      .select('funcionarios(id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao,data_inicio_ponto)')
+      .select('funcionarios(id,nome,nome_guerra,cargo,funcao_id,matricula,id_ponto,deleted_at,admissao,data_inicio_ponto)')
       .eq('obra_id', obraId)
       .eq('ativo', true)
 
@@ -110,7 +110,7 @@ export default function PontoPage() {
     //    (admissão antes ou durante o período visível)
     const { data: deleted } = await supabase
       .from('funcionarios')
-      .select('id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao,data_inicio_ponto')
+      .select('id,nome,nome_guerra,cargo,funcao_id,matricula,id_ponto,deleted_at,admissao,data_inicio_ponto')
       .not('deleted_at', 'is', null)
       .lte('admissao', dateEnd)
     for (const d of deleted ?? []) {
@@ -122,7 +122,7 @@ export default function PontoPage() {
     // 3. Qualquer funcionário (ativo ou deletado) que já tem efetivo_diario nesta obra
     const { data: comPonto } = await supabase
       .from('efetivo_diario')
-      .select('funcionario_id, funcionarios(id,nome,nome_guerra,cargo,matricula,id_ponto,deleted_at,admissao,data_inicio_ponto)')
+      .select('funcionario_id, funcionarios(id,nome,nome_guerra,cargo,funcao_id,matricula,id_ponto,deleted_at,admissao,data_inicio_ponto)')
       .eq('obra_id', obraId)
     for (const r of (comPonto ?? []) as any[]) {
       if (r.funcionarios && !ids.has(r.funcionarios.id)) {
@@ -173,22 +173,32 @@ export default function PontoPage() {
     })
     setGrid(g)
 
-    // Fetch limites de HH por função (contrato_composicao)
+    // Fetch limites de HH por função (contrato_composicao) — indexa por nome E por funcao_id
     const { data: composicao } = await supabase
       .from('contrato_composicao')
-      .select('funcao_nome, quantidade_contratada, carga_horaria_dia, horas_mes')
+      .select('funcao_id, funcao_nome, quantidade_contratada, carga_horaria_dia, horas_mes')
       .eq('obra_id', obraId)
       .eq('ativo', true)
     const limites: Record<string, { qtd: number; hh_dia: number }> = {}
     ;(composicao ?? []).forEach((c: any) => {
       const chave = (c.funcao_nome || '').toUpperCase()
+      const qtd = Number(c.quantidade_contratada) || 0
+      const hhDia = qtd * (Number(c.carga_horaria_dia) || 9)
+      // Indexa por nome (retrocompat)
       if (limites[chave]) {
-        limites[chave].qtd += Number(c.quantidade_contratada)
-        limites[chave].hh_dia += Number(c.quantidade_contratada) * Number(c.carga_horaria_dia || 9)
-      } else {
-        limites[chave] = {
-          qtd: Number(c.quantidade_contratada),
-          hh_dia: Number(c.quantidade_contratada) * Number(c.carga_horaria_dia || 9),
+        limites[chave].qtd += qtd
+        limites[chave].hh_dia += hhDia
+      } else if (chave) {
+        limites[chave] = { qtd, hh_dia: hhDia }
+      }
+      // Indexa por funcao_id com prefixo para não colidir com nomes
+      if (c.funcao_id) {
+        const keyId = `__id__${c.funcao_id}`
+        if (limites[keyId]) {
+          limites[keyId].qtd += qtd
+          limites[keyId].hh_dia += hhDia
+        } else {
+          limites[keyId] = { qtd, hh_dia: hhDia }
         }
       }
     })
@@ -306,19 +316,25 @@ export default function PontoPage() {
 
   function calcExcedentes(dia: number): Record<string, { presentes: number; limite: number; excedente: number }> {
     if (Object.keys(limitesPorFuncao).length === 0) return {}
-    const contagemPorCargo: Record<string, number> = {}
+    // Prioriza funcao_id para cruzamento; fallback por cargo (texto)
+    const contagem: Record<string, { key: string; label: string; count: number }> = {}
     funcionarios.forEach(f => {
       const c = grid[f.id]?.[dia]
       if (c && c.efetivo_id && !c.falta_id) {
-        const cargo = (f.cargo || '').toUpperCase()
-        contagemPorCargo[cargo] = (contagemPorCargo[cargo] || 0) + 1
+        const cargoLabel = (f.cargo || 'OUTROS').toUpperCase()
+        // Se funcionário tem funcao_id, usa como chave (mais preciso)
+        const key = f.funcao_id
+          ? `__id__${f.funcao_id}`
+          : cargoLabel
+        if (!contagem[key]) contagem[key] = { key, label: cargoLabel, count: 0 }
+        contagem[key].count++
       }
     })
     const resultado: Record<string, { presentes: number; limite: number; excedente: number }> = {}
-    for (const [cargo, presentes] of Object.entries(contagemPorCargo)) {
-      const limite = limitesPorFuncao[cargo]
-      if (limite && presentes > limite.qtd) {
-        resultado[cargo] = { presentes, limite: limite.qtd, excedente: presentes - limite.qtd }
+    for (const entry of Object.values(contagem)) {
+      const limite = limitesPorFuncao[entry.key]
+      if (limite && entry.count > limite.qtd) {
+        resultado[entry.label] = { presentes: entry.count, limite: limite.qtd, excedente: entry.count - limite.qtd }
       }
     }
     return resultado

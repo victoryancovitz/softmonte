@@ -212,7 +212,10 @@
       "mcp__claude_ai_Vercel__deploy_to_vercel",
       "Bash(grep -n \"Funcionario\\\\|Medico\\\\|Devolucao\\\\|Demissional\" /Users/victoryancovitz/softmonte-git/src/app/\\\\\\(dashboard\\\\\\)/funcionarios/[id]/admissao/page.tsx)",
       "Bash(grep -n \"Funcionario\\\\|Medico\\\\|Devolucao\\\\|Demissional\\\\|Historico\" /Users/victoryancovitz/softmonte-git/src/app/\\\\\\(dashboard\\\\\\)/funcionarios/[id]/demissao/page.tsx)",
-      "Bash(grep -n \"Historico\\\\|nao podera\\\\|nao pode\\\\|apos\\\\|Atrasado\\\\|Previsto\" /Users/victoryancovitz/softmonte-git/src/app/\\\\\\(dashboard\\\\\\)/funcionarios/[id]/tabs/TabRemuneracao.tsx)"
+      "Bash(grep -n \"Historico\\\\|nao podera\\\\|nao pode\\\\|apos\\\\|Atrasado\\\\|Previsto\" /Users/victoryancovitz/softmonte-git/src/app/\\\\\\(dashboard\\\\\\)/funcionarios/[id]/tabs/TabRemuneracao.tsx)",
+      "Bash(npx eslint:*)",
+      "Bash(echo \"EXIT=$?\")",
+      "Bash(ls '/Users/victoryancovitz/softmonte-git/src/app/\\(dashboard\\)/cadastros/funcoes/')"
     ]
   }
 }
