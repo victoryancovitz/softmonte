@@ -246,6 +246,15 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
     router.refresh()
   }
 
+  function handleRestaurarAssistentes() {
+    try {
+      localStorage.removeItem('wizard_hidden_until')
+      sessionStorage.removeItem('pwa-dismissed')
+    } catch {}
+    setAvatarOpen(false)
+    window.location.reload()
+  }
+
   function toggleGroup(label: string) {
     setOpenGroup(prev => prev === label ? null : label)
   }
@@ -367,6 +376,10 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
                       className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
                       <span className="text-gray-400">{ic.manual}</span> Manual do usuário
                     </Link>
+                    <button onClick={handleRestaurarAssistentes}
+                      className="w-full flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors text-left">
+                      <span className="text-gray-400">🧙</span> Restaurar assistentes
+                    </button>
                     <Link href="/configuracoes" onClick={() => setAvatarOpen(false)}
                       className="flex items-center gap-2.5 px-4 py-2 text-[13px] text-gray-700 hover:bg-[#c8960c]/5 transition-colors">
                       <span className="text-gray-400">{ic.config}</span> Empresa / Configurações
@@ -469,6 +482,10 @@ export default function Topbar({ profile }: { profile: Profile | null }) {
                   className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
                   <span className="text-gray-400">{ic.manual}</span> Manual
                 </Link>
+                <button onClick={handleRestaurarAssistentes}
+                  className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 text-left">
+                  <span className="text-gray-400">🧙</span> Restaurar assistentes
+                </button>
                 <Link href="/configuracoes" onClick={() => setAvatarOpen(false)}
                   className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50">
                   <span className="text-gray-400">{ic.config}</span> Configurações
