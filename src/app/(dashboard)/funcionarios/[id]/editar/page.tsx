@@ -93,7 +93,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
       matricula: form.matricula || null, id_ponto: form.id_ponto || null,
       cargo: form.cargo,
       turno: form.turno, status: form.status,
-      re: form.re || null, cpf: form.cpf || null, pis: form.pis || null,
+      re: form.re || null, cpf: form.cpf ? form.cpf.replace(/\D/g, '') : null, pis: form.pis || null,
       telefone: form.telefone || null,
       naturalidade: form.naturalidade || null,
       estado_civil: form.estado_civil || null,

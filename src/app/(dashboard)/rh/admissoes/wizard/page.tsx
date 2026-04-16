@@ -117,7 +117,7 @@ export default function WizardAdmissaoPage() {
       const funcRecord: Record<string, any> = {
         nome: formData.nome,
         data_nascimento: formData.data_nascimento || null,
-        cpf: formData.cpf || null,
+        cpf: formData.cpf ? formData.cpf.replace(/\D/g, '') : null,
         re: formData.re || null,
         pis: formData.pis || null,
         naturalidade: formData.naturalidade || null,

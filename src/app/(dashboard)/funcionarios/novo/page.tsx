@@ -215,7 +215,7 @@ export default function NovoFuncionarioPage() {
       nome_guerra: form.nome_guerra?.trim() || null,
       matricula: form.matricula?.trim() || null,
       id_ponto: form.id_ponto?.trim() || null,
-      cpf: form.cpf || null,
+      cpf: form.cpf ? form.cpf.replace(/\D/g, '') : null,
       data_nascimento: form.data_nascimento || null,
       funcao_id: form.funcao_id || null,
       cargo: form.cargo.trim().toUpperCase() || 'OUTROS',
