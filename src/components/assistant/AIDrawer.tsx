@@ -18,6 +18,24 @@ type Msg = {
   content: string
   actions?: ActionBlock[]
   toolStatus?: { name: string; status: 'running' | 'done' | 'error'; error?: string }[]
+  files?: { name: string; size: number }[]
+}
+
+const ACCEPTED_EXT = ['.pdf', '.xlsx', '.xls', '.png', '.jpg', '.jpeg']
+const MAX_FILE_MB = 10
+
+function fileIcon(name: string): string {
+  const lower = name.toLowerCase()
+  if (lower.endsWith('.pdf')) return '\uD83D\uDCC4' // 📄
+  if (lower.endsWith('.xlsx') || lower.endsWith('.xls')) return '\uD83D\uDCCA' // 📊
+  if (/\.(png|jpe?g|gif|webp)$/.test(lower)) return '\uD83D\uDDBC\uFE0F' // 🖼️
+  return '\uD83D\uDCCE' // 📎
+}
+
+function fmtSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 const SUGESTOES = [
@@ -55,8 +73,11 @@ export default function AIDrawer({ onClose }: Props) {
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [pendingFiles, setPendingFiles] = useState<File[]>([])
+  const [dragOver, setDragOver] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -73,17 +94,52 @@ export default function AIDrawer({ onClose }: Props) {
   const clearChat = () => {
     abortRef.current?.abort()
     setMessages([])
+    setPendingFiles([])
     setLoading(false)
   }
 
-  const send = useCallback(async (text: string) => {
-    const trimmed = text.trim()
-    if (!trimmed || loading) return
+  const addFiles = (list: FileList | File[]) => {
+    const arr = Array.from(list)
+    const valid: File[] = []
+    const rejected: string[] = []
+    for (const f of arr) {
+      const lower = f.name.toLowerCase()
+      const okExt = ACCEPTED_EXT.some(ext => lower.endsWith(ext))
+      const okSize = f.size <= MAX_FILE_MB * 1024 * 1024
+      if (!okExt) { rejected.push(`${f.name} (tipo não suportado)`); continue }
+      if (!okSize) { rejected.push(`${f.name} (> ${MAX_FILE_MB}MB)`); continue }
+      valid.push(f)
+    }
+    if (rejected.length) {
+      alert('Ignorados:\n' + rejected.join('\n'))
+    }
+    if (valid.length) {
+      setPendingFiles(prev => [...prev, ...valid])
+    }
+  }
 
-    const userMsg: Msg = { id: newId(), role: 'user', content: trimmed }
+  const removePending = (idx: number) => {
+    setPendingFiles(prev => prev.filter((_, i) => i !== idx))
+  }
+
+  const send = useCallback(async (text: string, files: File[] = []) => {
+    const trimmed = text.trim()
+    const hasText = !!trimmed
+    const hasFiles = files.length > 0
+    if (!hasText && !hasFiles) return
+    if (loading) return
+
+    const effectiveText = hasText ? trimmed : 'Analise este documento'
+    const userMsg: Msg = {
+      id: newId(),
+      role: 'user',
+      content: effectiveText,
+      files: hasFiles ? files.map(f => ({ name: f.name, size: f.size })) : undefined,
+    }
     const asstMsg: Msg = { id: newId(), role: 'assistant', content: '', toolStatus: [] }
     setMessages(prev => [...prev, userMsg, asstMsg])
     setInput('')
+    setPendingFiles([])
     setLoading(true)
 
     const ctrl = new AbortController()
@@ -95,12 +151,20 @@ export default function AIDrawer({ onClose }: Props) {
         content: m.content,
       }))
 
-      const res = await fetch('/api/assistant', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: historyForServer }),
-        signal: ctrl.signal,
-      })
+      let res: Response
+      if (hasFiles) {
+        const fd = new FormData()
+        fd.append('messages', JSON.stringify(historyForServer))
+        for (const f of files) fd.append('files', f, f.name)
+        res = await fetch('/api/assistant', { method: 'POST', body: fd, signal: ctrl.signal })
+      } else {
+        res = await fetch('/api/assistant', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ messages: historyForServer }),
+          signal: ctrl.signal,
+        })
+      }
 
       if (!res.ok || !res.body) {
         const errText = await res.text().catch(() => 'Erro no servidor.')
@@ -199,10 +263,30 @@ export default function AIDrawer({ onClose }: Props) {
         aria-hidden
       />
       <aside
-        className="fixed top-0 left-0 z-50 h-full w-full sm:w-[480px] bg-white shadow-2xl flex flex-col"
+        className="fixed top-0 left-0 z-50 h-full w-full sm:w-[480px] bg-white shadow-2xl flex flex-col relative"
         role="dialog"
         aria-label="Assistente Softmonte"
+        onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setDragOver(true) }}
+        onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOver(true) }}
+        onDragLeave={(e) => {
+          e.preventDefault(); e.stopPropagation()
+          // Só desativa se saiu do aside, não se passou entre filhos
+          if (e.currentTarget === e.target) setDragOver(false)
+        }}
+        onDrop={(e) => {
+          e.preventDefault(); e.stopPropagation(); setDragOver(false)
+          if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files)
+        }}
       >
+        {dragOver && (
+          <div className="absolute inset-0 z-[60] bg-[#00215B]/80 flex items-center justify-center pointer-events-none">
+            <div className="text-white text-center">
+              <div className="text-5xl mb-2">{'\uD83D\uDCCE'}</div>
+              <div className="text-lg font-semibold">Solte para enviar</div>
+              <div className="text-xs text-white/70 mt-1">PDF, Excel, PNG ou JPG (máx {MAX_FILE_MB}MB)</div>
+            </div>
+          </div>
+        )}
         <header className="flex-shrink-0 px-4 py-3 border-b border-gray-100 flex items-center justify-between" style={{ backgroundColor: '#00215B' }}>
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-full bg-white/10 flex items-center justify-center text-lg">{'\u2728'}</div>
@@ -256,6 +340,17 @@ export default function AIDrawer({ onClose }: Props) {
           {messages.map(m => (
             <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               <div className={`max-w-[85%] flex flex-col gap-2 ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+                {m.files && m.files.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    {m.files.map((f, i) => (
+                      <div key={i} className="inline-flex items-center gap-2 text-xs bg-white border border-gray-200 rounded-lg px-2.5 py-1.5">
+                        <span>{fileIcon(f.name)}</span>
+                        <span className="font-medium text-gray-800 truncate max-w-[220px]">{f.name}</span>
+                        <span className="text-gray-400">({fmtSize(f.size)})</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 <div
                   className={`px-3.5 py-2.5 text-sm leading-relaxed whitespace-pre-wrap rounded-2xl ${
                     m.role === 'user'
@@ -330,27 +425,66 @@ export default function AIDrawer({ onClose }: Props) {
         </div>
 
         <footer className="flex-shrink-0 p-3 border-t border-gray-100 bg-white">
-          <div className="flex items-end gap-2 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 focus-within:border-[#00215B] focus-within:ring-2 focus-within:ring-[#00215B]/20">
+          {pendingFiles.length > 0 && (
+            <div className="mb-2 flex flex-col gap-1.5">
+              {pendingFiles.map((f, i) => (
+                <div key={i} className="flex items-center gap-2 bg-blue-50 border border-blue-100 rounded-lg px-2.5 py-1.5 text-xs">
+                  <span>{fileIcon(f.name)}</span>
+                  <span className="font-medium text-gray-800 truncate flex-1">{f.name}</span>
+                  <span className="text-gray-400">{fmtSize(f.size)}</span>
+                  <button
+                    type="button"
+                    onClick={() => removePending(i)}
+                    className="text-gray-400 hover:text-red-600 px-1"
+                    title="Remover"
+                  >
+                    {'\u2715'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept={ACCEPTED_EXT.join(',')}
+            onChange={e => {
+              if (e.target.files) addFiles(e.target.files)
+              e.target.value = ''
+            }}
+            className="hidden"
+          />
+          <div className="flex items-end gap-2 bg-gray-50 border border-gray-200 rounded-xl px-2 py-1.5 focus-within:border-[#00215B] focus-within:ring-2 focus-within:ring-[#00215B]/20">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={loading}
+              className="w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-200 flex items-center justify-center disabled:opacity-40 flex-shrink-0"
+              title="Anexar arquivo (PDF, Excel, imagem)"
+            >
+              {'\uD83D\uDCCE'}
+            </button>
             <textarea
               value={input}
               onChange={e => setInput(e.target.value)}
               onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                   e.preventDefault()
-                  send(input)
+                  send(input, pendingFiles)
                 }
               }}
-              placeholder="Pergunte algo ou peça uma ação..."
+              placeholder={pendingFiles.length > 0 ? 'Mensagem opcional...' : 'Pergunte algo ou peça uma ação...'}
               rows={1}
               disabled={loading}
-              className="flex-1 bg-transparent text-sm outline-none resize-none placeholder-gray-400 leading-relaxed py-1"
+              className="flex-1 bg-transparent text-sm outline-none resize-none placeholder-gray-400 leading-relaxed py-1.5"
               style={{ maxHeight: 120 }}
             />
             <button
               type="button"
-              onClick={() => send(input)}
-              disabled={!input.trim() || loading}
-              className="w-8 h-8 rounded-lg text-white flex items-center justify-center disabled:opacity-40"
+              onClick={() => send(input, pendingFiles)}
+              disabled={(!input.trim() && pendingFiles.length === 0) || loading}
+              className="w-8 h-8 rounded-lg text-white flex items-center justify-center disabled:opacity-40 flex-shrink-0"
               style={{ backgroundColor: '#00215B' }}
               title="Enviar"
             >

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
+import * as XLSX from 'xlsx'
 import { requireRoleApi } from '@/lib/require-role'
 import { rateLimit } from '@/lib/rate-limit'
 import { createClient } from '@/lib/supabase-server'
@@ -12,10 +13,71 @@ export const dynamic = 'force-dynamic'
 const MODEL = 'claude-sonnet-4-6'
 const MAX_TOKENS = 2048
 const MAX_ITERATIONS = 8
+const MAX_FILE_BYTES = 10 * 1024 * 1024 // 10MB
 
 type ClientMessage = {
   role: 'user' | 'assistant'
   content: string
+}
+
+type AttachmentBlock =
+  | { type: 'document'; source: { type: 'base64'; media_type: string; data: string } }
+  | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } }
+  | { type: 'text'; text: string }
+
+async function fileToBlock(file: File): Promise<AttachmentBlock | null> {
+  if (file.size > MAX_FILE_BYTES) return null
+  const buf = Buffer.from(await file.arrayBuffer())
+  const name = file.name || 'arquivo'
+  const type = (file.type || '').toLowerCase()
+
+  // Excel → converter para texto
+  if (
+    type.includes('spreadsheet') ||
+    type.includes('excel') ||
+    name.toLowerCase().endsWith('.xlsx') ||
+    name.toLowerCase().endsWith('.xls')
+  ) {
+    try {
+      const wb = XLSX.read(buf, { type: 'buffer' })
+      const partes: string[] = [`[Arquivo Excel: ${name}]`]
+      for (const sheetName of wb.SheetNames) {
+        const sheet = wb.Sheets[sheetName]
+        const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false })
+        partes.push(`\n--- Aba: ${sheetName} ---\n${csv}`)
+      }
+      return { type: 'text', text: partes.join('\n') }
+    } catch (e: any) {
+      return { type: 'text', text: `[Falha ao ler Excel ${name}: ${e?.message ?? 'erro'}]` }
+    }
+  }
+
+  // PDF
+  if (type === 'application/pdf' || name.toLowerCase().endsWith('.pdf')) {
+    return {
+      type: 'document',
+      source: { type: 'base64', media_type: 'application/pdf', data: buf.toString('base64') },
+    }
+  }
+
+  // Imagens
+  if (type.startsWith('image/')) {
+    const media =
+      type === 'image/jpg' ? 'image/jpeg' :
+      (['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(type) ? type : 'image/jpeg')
+    return {
+      type: 'image',
+      source: { type: 'base64', media_type: media, data: buf.toString('base64') },
+    }
+  }
+
+  // Fallback: texto
+  try {
+    const text = buf.toString('utf-8')
+    return { type: 'text', text: `[Arquivo: ${name}]\n${text.slice(0, 100_000)}` }
+  } catch {
+    return null
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -43,14 +105,35 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  let body: { messages?: ClientMessage[] }
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'JSON inválido.' }, { status: 400 })
+  let history: ClientMessage[] = []
+  let attachments: AttachmentBlock[] = []
+
+  const ct = req.headers.get('content-type') ?? ''
+  if (ct.includes('multipart/form-data')) {
+    try {
+      const form = await req.formData()
+      const messagesJson = form.get('messages')
+      if (typeof messagesJson === 'string') {
+        const parsed = JSON.parse(messagesJson)
+        if (Array.isArray(parsed)) history = parsed
+      }
+      const files = form.getAll('files').filter((f): f is File => f instanceof File)
+      for (const f of files) {
+        const block = await fileToBlock(f)
+        if (block) attachments.push(block)
+      }
+    } catch (e: any) {
+      return NextResponse.json({ error: 'FormData inválido: ' + (e?.message ?? '') }, { status: 400 })
+    }
+  } else {
+    try {
+      const body = await req.json()
+      if (Array.isArray(body?.messages)) history = body.messages
+    } catch {
+      return NextResponse.json({ error: 'JSON inválido.' }, { status: 400 })
+    }
   }
 
-  const history = Array.isArray(body.messages) ? body.messages : []
   if (history.length === 0) {
     return NextResponse.json({ error: 'Envie ao menos uma mensagem.' }, { status: 400 })
   }
@@ -62,6 +145,20 @@ export async function POST(req: NextRequest) {
     role: m.role,
     content: m.content,
   }))
+
+  // Se houver anexos, injetar no último turno do usuário como content blocks
+  if (attachments.length > 0) {
+    const last = convo[convo.length - 1]
+    if (last?.role === 'user') {
+      const textBlock = typeof last.content === 'string' && last.content.trim()
+        ? last.content.trim()
+        : 'Analise este documento.'
+      last.content = [
+        ...attachments,
+        { type: 'text', text: textBlock },
+      ] as any
+    }
+  }
 
   const encoder = new TextEncoder()
   const stream = new ReadableStream<Uint8Array>({

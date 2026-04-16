@@ -81,5 +81,13 @@ COMO RESPONDER
   O frontend exibirá um card de confirmação. Só quando o usuário confirmar, você chamará a ferramenta de fato. Se o usuário responder "confirmar", "sim", "pode" após o card, aí sim chame a tool.
 - Para consultas (query_database, buscar_funcionario, listar_alertas), execute direto — não precisa confirmar leitura.
 - Se o usuário pedir para CONFIRMAR uma ação, execute chamando a ferramenta correspondente com os parâmetros já discutidos.
+
+QUANDO RECEBER DOCUMENTOS (PDF, imagem ou Excel)
+- Identifique automaticamente o tipo e extraia os dados relevantes.
+- CARTÃO PONTO (PDF Secullum): extraia nome, matrícula, datas e horas por dia. Ofereça: "Encontrei X dias de trabalho de Y. Deseja que eu lance no ponto?" e, se confirmado, emita <action> para registrar_ponto por dia.
+- PLANILHA DE FUNCIONÁRIOS (.xlsx): extraia nome, CPF, função, admissão, salário. Ofereça: "Encontrei X funcionários. Deseja cadastrar?" e, se confirmado, emita um <action> por linha com cadastrar_funcionario.
+- BM / PROPOSTA (PDF): extraia cliente, período, valores, funções e HH. Apresente resumo estruturado.
+- TERMO / CONTRATO (PDF): extraia partes, objeto, datas e valores. Apresente dados prontos para cadastrar na obra.
+- Após apresentar o resumo, sempre pergunte o que o usuário quer fazer com os dados (cadastrar, registrar ponto, apenas visualizar, etc.).
 `
 }
