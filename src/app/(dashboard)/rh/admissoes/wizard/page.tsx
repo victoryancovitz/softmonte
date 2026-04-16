@@ -84,9 +84,11 @@ export default function WizardAdmissaoPage() {
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
 
   useEffect(() => {
+    // funcoes tem categoria (não cargo) e insalubridade_pct_padrao (não insalubridade_pct)
     supabase
       .from('funcoes')
-      .select('id, nome, cargo, salario_base, insalubridade_pct')
+      .select('id, nome, categoria, salario_base, insalubridade_pct_padrao, periculosidade_pct_padrao, jornada_horas_mes, vt_mensal_padrao, vr_diario_padrao, va_mensal_padrao')
+      .eq('ativo', true)
       .is('deleted_at', null)
       .order('nome')
       .then(({ data }) => setFuncoes(data ?? []))

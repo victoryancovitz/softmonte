@@ -188,10 +188,19 @@ export default function NovaObraWizardPage() {
       }
       // Salvar composição de funções (se houver)
       if (composicao.length > 0) {
+        // Busca funcao_id por nome para cruzar com EPI/NR/etc
+        const { data: todasFuncoes } = await supabase.from('funcoes')
+          .select('id, nome').eq('ativo', true)
+        const funcMap = new Map<string, string>()
+        ;(todasFuncoes ?? []).forEach((f: any) => {
+          funcMap.set(String(f.nome).toUpperCase().trim(), f.id)
+        })
+
         const compRows = composicao
           .filter(c => c.funcao_nome.trim())
           .map(c => ({
             obra_id: obra.id,
+            funcao_id: funcMap.get(c.funcao_nome.toUpperCase().trim()) ?? null,
             funcao_nome: c.funcao_nome.toUpperCase().trim(),
             quantidade_contratada: c.quantidade,
             carga_horaria_dia: c.carga_horaria_dia,

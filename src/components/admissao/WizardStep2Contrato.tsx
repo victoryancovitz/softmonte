@@ -60,9 +60,15 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes, o
     onChange('funcao_id', funcaoId)
     const funcao = funcoes.find((f: any) => f.id === funcaoId)
     if (funcao) {
-      if (funcao.cargo) onChange('cargo', funcao.cargo)
+      // Pré-preenche cargo com o nome da função
+      if (funcao.nome && !data.cargo) onChange('cargo', funcao.nome)
       if (funcao.salario_base != null) onChange('salario_base', funcao.salario_base)
-      if (funcao.insalubridade_pct != null) onChange('insalubridade_pct', funcao.insalubridade_pct)
+      if (funcao.insalubridade_pct_padrao != null) onChange('insalubridade_pct', funcao.insalubridade_pct_padrao)
+      if (funcao.periculosidade_pct_padrao != null) onChange('periculosidade_pct', funcao.periculosidade_pct_padrao)
+      if (funcao.jornada_horas_mes != null) onChange('horas_mes', funcao.jornada_horas_mes)
+      if (funcao.vt_mensal_padrao != null) onChange('vt_mensal', funcao.vt_mensal_padrao)
+      if (funcao.vr_diario_padrao != null) onChange('vr_diario', funcao.vr_diario_padrao)
+      if (funcao.va_mensal_padrao != null) onChange('va_mensal', funcao.va_mensal_padrao)
     }
   }
 

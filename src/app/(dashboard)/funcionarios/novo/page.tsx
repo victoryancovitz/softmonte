@@ -607,25 +607,26 @@ export default function NovoFuncionarioPage() {
                   {form.nome.trim().split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase() || '??'}
                 </span>
               </div>
-              <h2 className="text-lg font-bold font-display text-brand">Funcionario cadastrado!</h2>
+              <h2 className="text-lg font-bold font-display text-brand">Funcionário cadastrado!</h2>
               <p className="text-sm text-gray-500 mt-1">{form.nome.trim().toUpperCase()} — {form.cargo || 'Sem cargo'}</p>
+              <p className="text-xs text-amber-700 mt-2 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1 inline-block">⚠️ Status: Aguardando admissão</p>
             </div>
 
             <div className="space-y-3 mb-6">
               <button
-                onClick={() => router.push(`/rh/admissoes/novo?funcionario_id=${savedId}`)}
+                onClick={() => router.push(`/rh/admissoes/wizard?funcionario_id=${savedId}`)}
                 className="w-full p-4 rounded-xl border-2 border-brand bg-brand/5 hover:bg-brand/10 transition-colors text-left group"
               >
-                <p className="text-sm font-bold text-brand group-hover:underline">Iniciar processo de admissao agora</p>
-                <p className="text-xs text-gray-500 mt-0.5">Documentos, exame admissional, EPI, eSocial...</p>
+                <p className="text-sm font-bold text-brand group-hover:underline">Completar admissão agora →</p>
+                <p className="text-xs text-gray-500 mt-0.5">Wizard completo: documentos, exame, EPI, NRs, eSocial</p>
               </button>
 
               <button
                 onClick={() => router.push(`/funcionarios/${savedId}`)}
                 className="w-full p-4 rounded-xl border border-gray-200 hover:bg-gray-50 transition-colors text-left"
               >
-                <p className="text-sm font-semibold text-gray-700">Ver perfil do funcionario</p>
-                <p className="text-xs text-gray-400 mt-0.5">Visualizar dados cadastrados</p>
+                <p className="text-sm font-semibold text-gray-700">Ver perfil do funcionário</p>
+                <p className="text-xs text-gray-400 mt-0.5">Visualizar dados cadastrados (admissão depois)</p>
               </button>
             </div>
 

@@ -61,12 +61,19 @@ export default function WizardStep5NRs({ funcionario, workflowId, onComplete }: 
 
   async function loadNRs() {
     setLoading(true)
-    const { data } = await supabase
+    // Se não tem funcao_id ainda (etapa 2 não preenchida), busca só as obrigatórias para todos
+    const funcaoId = funcionario.funcao_id
+    let query = supabase
       .from('nr_obrigatorias_funcao')
       .select('*')
-      .or(`funcao_id.eq.${funcionario.funcao_id},obrigatoria_todas.eq.true`)
       .eq('ativo', true)
       .order('ordem')
+    if (funcaoId) {
+      query = query.or(`funcao_id.eq.${funcaoId},obrigatoria_todas.eq.true`)
+    } else {
+      query = query.eq('obrigatoria_todas', true)
+    }
+    const { data } = await query
 
     const list: NR[] = (data ?? []).map((r: any) => ({
       id: r.id,
