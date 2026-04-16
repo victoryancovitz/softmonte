@@ -12,9 +12,13 @@ interface ExportInput {
   atividades: Array<{ item?: number; projeto?: string; local?: string; encarregado?: string; pt?: string; descricao?: string; total_hh?: number }>
   fotos: Array<{ numero: number; legenda: string; url: string }>
   equipamentos: Array<{ descricao: string; quantidade: number }>
+  ocorrencias?: Array<{ tipo: string; descricao: string; responsavel?: string; impacto_hh?: number; acao_tomada?: string; gera_claim?: boolean }>
   obsContratada: string
   obsFiscalizacao: string
   totalHH: number
+  historico?: Array<{ status_de?: string | null; status_para: string; feito_por_nome?: string; feito_em?: string }>
+  assinaturaResp?: { nome: string; cargo: string; url: string; em: string } | null
+  assinaturaFiscal?: { nome: string; empresa: string; url: string; em: string } | null
 }
 
 const esc = (s: any) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -88,14 +92,62 @@ export function exportarRdoPDF(d: ExportInput) {
     ${equipHTML}
     ${fotosHTML}
 
+    ${d.ocorrencias && d.ocorrencias.length > 0 ? `
+      <h3 style="margin-top:16px;color:#c00;">Ocorrências / Impedimentos</h3>
+      <table style="border:1px solid #c00;">
+        <thead style="background:#fee;"><tr><th>Tipo</th><th>Descrição</th><th>Responsável</th><th>Impacto HH</th><th>Ação</th><th>Claim</th></tr></thead>
+        <tbody>
+          ${d.ocorrencias.map(o => `<tr>
+            <td>${esc(o.tipo)}</td>
+            <td>${esc(o.descricao ?? '—')}</td>
+            <td>${esc(o.responsavel ?? '—')}</td>
+            <td>${o.impacto_hh ?? 0}h</td>
+            <td>${esc(o.acao_tomada ?? '—')}</td>
+            <td>${o.gera_claim ? '⚠ Sim' : '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    ` : ''}
+
     <h3 style="margin-top:16px;">Observações</h3>
     <p><strong>Contratada:</strong> ${esc(d.obsContratada || '—').replace(/\n/g, '<br/>')}</p>
     <p><strong>Fiscalização:</strong> ${esc(d.obsFiscalizacao || '—').replace(/\n/g, '<br/>')}</p>
 
-    <div style="display:flex;justify-content:space-between;margin-top:60px;font-size:10px;">
-      <div style="border-top:1px solid #000;padding-top:4px;width:45%;text-align:center;">Responsável Tecnomonte</div>
-      <div style="border-top:1px solid #000;padding-top:4px;width:45%;text-align:center;">Fiscalização</div>
+    <div style="display:flex;justify-content:space-between;margin-top:40px;font-size:10px;gap:20px;">
+      <div style="width:48%;text-align:center;">
+        <div style="border:1px solid #ddd;padding:8px;min-height:80px;">
+          ${d.assinaturaResp ? `<img src="${esc(d.assinaturaResp.url)}" style="max-height:60px;" />` : '<span style="color:#999;">Não assinado</span>'}
+        </div>
+        <div style="border-top:1px solid #000;padding-top:4px;margin-top:4px;">
+          <strong>CONTRATADA (Tecnomonte)</strong>
+          ${d.assinaturaResp ? `<br/><span style="font-size:9px;">${esc(d.assinaturaResp.nome)} · ${esc(d.assinaturaResp.cargo)}<br/>${new Date(d.assinaturaResp.em).toLocaleString('pt-BR')}</span>` : ''}
+        </div>
+      </div>
+      <div style="width:48%;text-align:center;">
+        <div style="border:1px solid #ddd;padding:8px;min-height:80px;">
+          ${d.assinaturaFiscal ? `<img src="${esc(d.assinaturaFiscal.url)}" style="max-height:60px;" />` : '<span style="color:#999;">Não assinado</span>'}
+        </div>
+        <div style="border-top:1px solid #000;padding-top:4px;margin-top:4px;">
+          <strong>FISCALIZAÇÃO (Cliente)</strong>
+          ${d.assinaturaFiscal ? `<br/><span style="font-size:9px;">${esc(d.assinaturaFiscal.nome)} · ${esc(d.assinaturaFiscal.empresa)}<br/>${new Date(d.assinaturaFiscal.em).toLocaleString('pt-BR')}</span>` : ''}
+        </div>
+      </div>
     </div>
+
+    ${d.historico && d.historico.length > 0 ? `
+      <h3 style="margin-top:24px;font-size:10px;color:#666;">Histórico de aprovação</h3>
+      <table style="font-size:8px;">
+        <thead><tr><th>De</th><th>Para</th><th>Por</th><th>Em</th></tr></thead>
+        <tbody>
+          ${d.historico.map(h => `<tr>
+            <td>${esc(h.status_de ?? '—')}</td>
+            <td>${esc(h.status_para)}</td>
+            <td>${esc(h.feito_por_nome ?? '—')}</td>
+            <td>${h.feito_em ? new Date(h.feito_em).toLocaleString('pt-BR') : '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    ` : ''}
   `
 
   const html = gerarPDFHTML({

@@ -206,7 +206,9 @@
       "Bash(find /Users/victoryancovitz/softmonte-git -type f -name *forecast* -o -name *horas*)",
       "Bash(echo \"exit=$?\")",
       "Bash(vercel env:*)",
-      "Bash(vercel --version)"
+      "Bash(vercel --version)",
+      "mcp__claude_ai_Vercel__get_deployment",
+      "Bash(grep -n \"^  \\)$\\\\|^}$\\\\|const inp = \" '/Users/victoryancovitz/softmonte-git/src/app/\\(dashboard\\)/obras/[id]/diario/RdoForm.tsx')"
     ]
   }
 }
