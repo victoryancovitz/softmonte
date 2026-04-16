@@ -216,7 +216,8 @@
       "Bash(npx eslint:*)",
       "Bash(echo \"EXIT=$?\")",
       "Bash(ls '/Users/victoryancovitz/softmonte-git/src/app/\\(dashboard\\)/cadastros/funcoes/')",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(grep -n \"</footer>\\\\|{showConfirmFinal\\\\|^    </div>\\\\|^  \\)$\" '/Users/victoryancovitz/softmonte-git/src/app/\\(dashboard\\)/rh/desligamentos/novo/wizard/page.tsx')"
     ]
   }
 }

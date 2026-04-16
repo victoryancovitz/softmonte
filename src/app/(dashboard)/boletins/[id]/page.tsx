@@ -103,13 +103,19 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
   // Group items by funcao for subtotals
   function getGroupedItems() {
     const funcoes: string[] = []
-    bmItens.forEach(i => { if (!funcoes.includes(i.funcao_nome)) funcoes.push(i.funcao_nome) })
-    return funcoes.map(f => ({
-      funcao: f,
-      items: bmItens.filter(i => i.funcao_nome === f),
-      subtotal: bmItens.filter(i => i.funcao_nome === f).reduce((s, i) => s + Number(i.valor_total ?? 0), 0),
-      subtotalHH: bmItens.filter(i => i.funcao_nome === f).reduce((s, i) => s + Number(i.hh_total ?? 0), 0),
-    }))
+    bmItens.forEach(i => {
+      const norm = (i.funcao_nome || '').toUpperCase().trim()
+      if (norm && !funcoes.includes(norm)) funcoes.push(norm)
+    })
+    return funcoes.map(f => {
+      const matches = bmItens.filter(i => (i.funcao_nome || '').toUpperCase().trim() === f)
+      return {
+        funcao: f,
+        items: matches,
+        subtotal: matches.reduce((s, i) => s + Number(i.valor_total ?? 0), 0),
+        subtotalHH: matches.reduce((s, i) => s + Number(i.hh_total ?? 0), 0),
+      }
+    })
   }
 
   function calcItemTotal(item: any) {
@@ -254,7 +260,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       tipo: 'envio_bm',
       destinatarios: emails,
       assunto: `BM ${String(bm.numero).padStart(2,'0')} - ${bm.obras.nome}`,
-      status: 'mailto_aberto',
+      status: 'enviado',
     })
     if (logErr) console.error('Falha ao registrar email_log:', logErr)
     setMailtoAberto(true)
@@ -342,7 +348,7 @@ export default function BMDetailPage({ params }: { params: { id: string } }) {
       nome: `BM ${String(bm.numero).padStart(2,'0')} — ${bm.obras.nome}`,
       categoria: 'Receita HH Homem-Hora',
       valor: valor,
-      status: 'em_aberto',
+      status: 'aberto',
       data_competencia: bm.data_fim,
       origem: 'bm_aprovado',
     })

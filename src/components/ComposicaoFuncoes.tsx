@@ -6,6 +6,7 @@ import { Plus, Trash2, Save, AlertTriangle } from 'lucide-react'
 
 type Linha = {
   id?: string
+  funcao_id?: string | null
   funcao_nome: string
   quantidade_contratada: number
   carga_horaria_dia: number
@@ -17,34 +18,57 @@ type Linha = {
   isDirty?: boolean
 }
 
-export default function ComposicaoFuncoes({ obraId }: { obraId: string }) {
+type Props = {
+  obraId: string
+  funcoes?: { id: string; nome: string }[]
+}
+
+export default function ComposicaoFuncoes({ obraId, funcoes: funcoesProp }: Props) {
   const [linhas, setLinhas] = useState<Linha[]>([])
-  const [funcoes, setFuncoes] = useState<{ id: string; nome: string }[]>([])
+  const [funcoes, setFuncoes] = useState<{ id: string; nome: string }[]>(funcoesProp ?? [])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const supabase = createClient()
   const toast = useToast()
 
+  // Se funcoes vieram via prop, usa dropdown <select>; senão, mantém input text (retrocompat)
+  const useDropdown = Array.isArray(funcoesProp)
+
   useEffect(() => {
     loadData()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [obraId])
+
+  // Sincroniza funcoes da prop se mudar
+  useEffect(() => {
+    if (funcoesProp) setFuncoes(funcoesProp)
+  }, [funcoesProp])
 
   async function loadData() {
     setLoading(true)
-    const [{ data: comp }, { data: funcs }] = await Promise.all([
+    const promises: any[] = [
       supabase.from('contrato_composicao')
         .select('*')
         .eq('obra_id', obraId)
         .eq('ativo', true)
         .order('funcao_nome'),
-      supabase.from('funcoes')
-        .select('id, nome')
-        .is('deleted_at', null)
-        .order('nome'),
-    ])
+    ]
+    // Só busca funcoes internamente se não vieram via prop
+    if (!funcoesProp) {
+      promises.push(
+        supabase.from('funcoes')
+          .select('id, nome')
+          .is('deleted_at', null)
+          .order('nome')
+      )
+    }
+    const results = await Promise.all(promises)
+    const comp = results[0]?.data
+    const funcs = !funcoesProp ? results[1]?.data : null
 
     setLinhas((comp ?? []).map((c: any) => ({
       id: c.id,
+      funcao_id: c.funcao_id ?? null,
       funcao_nome: c.funcao_nome,
       quantidade_contratada: c.quantidade_contratada ?? 1,
       carga_horaria_dia: Number(c.carga_horaria_dia ?? 8),
@@ -53,12 +77,15 @@ export default function ComposicaoFuncoes({ obraId }: { obraId: string }) {
       custo_hora_extra_100: Number(c.custo_hora_extra_100 ?? 0),
       ativo: true,
     })))
-    setFuncoes((funcs ?? []) as { id: string; nome: string }[])
+    if (!funcoesProp) {
+      setFuncoes((funcs ?? []) as { id: string; nome: string }[])
+    }
     setLoading(false)
   }
 
   function addLinha() {
     setLinhas(prev => [...prev, {
+      funcao_id: null,
       funcao_nome: '',
       quantidade_contratada: 1,
       carga_horaria_dia: 8,
@@ -69,6 +96,20 @@ export default function ComposicaoFuncoes({ obraId }: { obraId: string }) {
       isNew: true,
       isDirty: true,
     }])
+  }
+
+  function selectFuncao(idx: number, funcaoId: string) {
+    setLinhas(prev => {
+      const next = [...prev]
+      const f = funcoes.find(x => x.id === funcaoId)
+      next[idx] = {
+        ...next[idx],
+        funcao_id: funcaoId || null,
+        funcao_nome: f ? f.nome : '',
+        isDirty: true,
+      }
+      return next
+    })
   }
 
   function updateLinha(idx: number, field: keyof Linha, value: any) {
@@ -122,6 +163,7 @@ export default function ComposicaoFuncoes({ obraId }: { obraId: string }) {
         // Insert
         const { error } = await supabase.from('contrato_composicao').insert({
           obra_id: obraId,
+          funcao_id: l.funcao_id ?? null,
           funcao_nome: l.funcao_nome.toUpperCase().trim(),
           quantidade_contratada: l.quantidade_contratada,
           carga_horaria_dia: l.carga_horaria_dia,
@@ -142,6 +184,7 @@ export default function ComposicaoFuncoes({ obraId }: { obraId: string }) {
         // Update
         const { error } = await supabase.from('contrato_composicao')
           .update({
+            funcao_id: l.funcao_id ?? null,
             funcao_nome: l.funcao_nome.toUpperCase().trim(),
             quantidade_contratada: l.quantidade_contratada,
             carga_horaria_dia: l.carga_horaria_dia,
@@ -209,19 +252,32 @@ export default function ComposicaoFuncoes({ obraId }: { obraId: string }) {
                   <tr key={realIdx} className={`border-b border-gray-50 ${l.isDirty ? 'bg-amber-50/30' : ''}`}>
                     <td className="px-2 py-1.5">
                       {l.isNew ? (
-                        <div className="flex gap-1">
-                          <input
-                            list="funcoes-list"
-                            type="text"
-                            value={l.funcao_nome}
-                            onChange={e => updateLinha(realIdx, 'funcao_nome', e.target.value)}
-                            placeholder="Selecione ou digite..."
-                            className="w-full px-2 py-1 border border-gray-200 rounded text-xs uppercase"
-                          />
-                          <datalist id="funcoes-list">
-                            {funcoes.map(f => <option key={f.id} value={f.nome} />)}
-                          </datalist>
-                        </div>
+                        useDropdown ? (
+                          <select
+                            value={l.funcao_id ?? ''}
+                            onChange={e => selectFuncao(realIdx, e.target.value)}
+                            className="w-full px-2 py-1 border border-gray-200 rounded text-xs bg-white"
+                          >
+                            <option value="">Selecione...</option>
+                            {funcoes.map(f => (
+                              <option key={f.id} value={f.id}>{f.nome}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div className="flex gap-1">
+                            <input
+                              list="funcoes-list"
+                              type="text"
+                              value={l.funcao_nome}
+                              onChange={e => updateLinha(realIdx, 'funcao_nome', e.target.value)}
+                              placeholder="Selecione ou digite..."
+                              className="w-full px-2 py-1 border border-gray-200 rounded text-xs uppercase"
+                            />
+                            <datalist id="funcoes-list">
+                              {funcoes.map(f => <option key={f.id} value={f.nome} />)}
+                            </datalist>
+                          </div>
+                        )
                       ) : (
                         <span className="font-medium text-gray-800">{l.funcao_nome}</span>
                       )}

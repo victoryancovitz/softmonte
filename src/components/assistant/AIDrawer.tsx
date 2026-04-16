@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface Props {
+  open: boolean
+  minimized: boolean
+  messages: Msg[]
+  onMessagesChange: (msgs: Msg[] | ((prev: Msg[]) => Msg[])) => void
   onClose: () => void
+  onMinimize: () => void
 }
 
 type ActionBlock = {
@@ -76,8 +81,15 @@ function newId() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36)
 }
 
-export default function AIDrawer({ onClose }: Props) {
-  const [messages, setMessages] = useState<Msg[]>([])
+export default function AIDrawer({ open, minimized, messages, onMessagesChange, onClose, onMinimize }: Props) {
+  // Wrapper para manter API interna setMessages(updater | value)
+  const setMessages = (updater: Msg[] | ((prev: Msg[]) => Msg[])) => {
+    if (typeof updater === 'function') {
+      onMessagesChange(updater)
+    } else {
+      onMessagesChange(updater)
+    }
+  }
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
@@ -85,6 +97,16 @@ export default function AIDrawer({ onClose }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const abortRef = useRef<AbortController | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const visible = open && !minimized
+
+  // Bloquear scroll do body enquanto drawer está visível
+  useEffect(() => {
+    if (!visible) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [visible])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -269,7 +291,7 @@ export default function AIDrawer({ onClose }: Props) {
   }
 
   return (
-    <>
+    <div className={visible ? '' : 'hidden'} aria-hidden={!visible}>
       <div
         className="fixed inset-0 z-40 bg-black/30"
         onClick={onClose}
@@ -316,6 +338,16 @@ export default function AIDrawer({ onClose }: Props) {
               className="w-8 h-8 rounded-lg text-white/80 hover:bg-white/10 flex items-center justify-center text-sm"
             >
               {'\uD83D\uDDD1'}
+            </button>
+            <button
+              type="button"
+              onClick={onMinimize}
+              title="Minimizar (conversa fica salva)"
+              className="w-8 h-8 rounded-lg text-white/80 hover:bg-white/10 flex items-center justify-center"
+            >
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <rect x="2" y="7" width="12" height="2" rx="1"/>
+              </svg>
             </button>
             <button
               type="button"
@@ -525,7 +557,7 @@ export default function AIDrawer({ onClose }: Props) {
           </p>
         </footer>
       </aside>
-    </>
+    </div>
   )
 }
 

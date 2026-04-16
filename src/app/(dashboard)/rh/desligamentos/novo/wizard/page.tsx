@@ -671,7 +671,8 @@ export default function WizardDesligamentoPage() {
   const nome = selectedFunc?.nome ?? 'Funcionário'
 
   return (
-    <div className="fixed inset-0 bg-gray-50 z-50 flex flex-col h-screen">
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4 sm:p-6 md:p-8">
+      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 bg-white border-b border-gray-200 flex-shrink-0">
         <div className="flex items-center gap-3">
@@ -1277,6 +1278,7 @@ export default function WizardDesligamentoPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   )
 }

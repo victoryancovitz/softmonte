@@ -46,6 +46,7 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
   const [savingTemplate, setSavingTemplate] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [funcoes, setFuncoes] = useState<{ id: string; nome: string }[]>([])
   const router = useRouter()
   const supabase = createClient()
   const toast = useToast()
@@ -107,6 +108,16 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
       setLoading(false)
     })
   }, [params.id])
+
+  useEffect(() => {
+    supabase.from('funcoes')
+      .select('id, nome')
+      .is('deleted_at', null)
+      .order('nome')
+      .then(({ data }) => {
+        setFuncoes((data ?? []) as { id: string; nome: string }[])
+      })
+  }, [])
 
   function set(field: string, value: any) { setForm((f: any) => ({ ...f, [field]: value })) }
 
@@ -535,7 +546,7 @@ export default function EditarObraPage({ params }: { params: { id: string } }) {
           {/* === COMPOSIÇÃO DE FUNÇÕES === */}
           {form.modelo_cobranca && form.modelo_cobranca.startsWith('hh') && (
             <section>
-              <ComposicaoFuncoes obraId={params.id} />
+              <ComposicaoFuncoes obraId={params.id} funcoes={funcoes} />
             </section>
           )}
 
