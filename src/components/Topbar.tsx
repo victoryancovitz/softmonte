@@ -91,7 +91,7 @@ const NAV_GROUPS: NavGroupDef[] = [
 ]
 
 // Submenus por módulo — aparecem como tabs horizontais abaixo do Topbar
-export interface ModuleTab { href: string; label: string; match?: string[] }
+export interface ModuleTab { href: string; label: string; match?: string[]; secondary?: boolean }
 export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
   {
     // Módulo Diretoria
@@ -103,24 +103,26 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
     ],
   },
   {
-    // Módulo Administrativo
+    // Módulo Administrativo — 5 principais + "Mais ▾" com secundárias
     groupPaths: ['/funcionarios', '/rh/', '/alocacao', '/ponto', '/faltas', '/documentos', '/rastreio', '/rh/vencimentos', '/relatorios/absenteismo'],
     tabs: [
+      // PRINCIPAIS — fluxo operacional diário
       { href: '/funcionarios', label: 'Funcionários', match: ['/funcionarios'] },
       { href: '/rh/admissoes', label: 'Admissões' },
-      { href: '/rh/treinamentos', label: 'Treinamentos NR' },
-      { href: '/rh/ferias', label: 'Férias' },
-      { href: '/rh/banco-horas', label: 'Banco de Horas' },
-      { href: '/rh/folha', label: 'Folha' },
-      { href: '/rh/correcoes', label: 'Correções' },
-      { href: '/rh/pagamentos-extras', label: 'Pagamentos Extras' },
-      { href: '/rh/desligamentos', label: 'Desligamentos', match: ['/rh/desligamentos', '/rh/rescisoes'] },
-      { href: '/alocacao', label: 'Alocação' },
       { href: '/ponto', label: 'Ponto' },
-      { href: '/faltas', label: 'Faltas', match: ['/faltas', '/relatorios/absenteismo'] },
-      { href: '/relatorios/absenteismo', label: 'Absenteísmo' },
-      { href: '/documentos', label: 'Documentos' },
-      { href: '/rh/vencimentos', label: 'Vencimentos', match: ['/rh/vencimentos', '/rastreio'] },
+      { href: '/rh/folha', label: 'Folha' },
+      { href: '/rh/desligamentos', label: 'Desligamentos', match: ['/rh/desligamentos', '/rh/rescisoes'] },
+      // SECUNDÁRIAS — acessíveis via "Mais ▾"
+      { href: '/rh/treinamentos', label: 'Treinamentos NR', secondary: true },
+      { href: '/rh/ferias', label: 'Férias', secondary: true },
+      { href: '/rh/banco-horas', label: 'Banco de Horas', secondary: true },
+      { href: '/rh/correcoes', label: 'Correções', secondary: true },
+      { href: '/rh/pagamentos-extras', label: 'Pagamentos Extras', secondary: true },
+      { href: '/alocacao', label: 'Alocação', secondary: true },
+      { href: '/faltas', label: 'Faltas', match: ['/faltas', '/relatorios/absenteismo'], secondary: true },
+      { href: '/relatorios/absenteismo', label: 'Absenteísmo', secondary: true },
+      { href: '/documentos', label: 'Documentos', secondary: true },
+      { href: '/rh/vencimentos', label: 'Vencimentos', match: ['/rh/vencimentos', '/rastreio'], secondary: true },
     ],
   },
   {
