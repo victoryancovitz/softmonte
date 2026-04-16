@@ -53,7 +53,7 @@ export default function ForecastPage() {
     setSaving(true)
     try {
       const { data: composicao } = await supabase.from('contrato_composicao')
-        .select('quantidade_contratada, horas_mes, custo_hora_contratado')
+        .select('funcao_id, funcao_nome, quantidade_contratada, horas_mes, custo_hora_contratado')
         .eq('obra_id', obra.obra_id).eq('ativo', true)
       if (!composicao || composicao.length === 0) { toast.error('Obra sem composição de funções cadastrada.'); setSaving(false); return }
 
