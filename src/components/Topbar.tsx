@@ -104,7 +104,7 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
   },
   {
     // Módulo Administrativo — 5 principais + "Mais ▾" com secundárias
-    groupPaths: ['/funcionarios', '/rh/', '/alocacao', '/ponto', '/faltas', '/documentos', '/rastreio', '/rh/vencimentos', '/relatorios/absenteismo'],
+    groupPaths: ['/funcionarios', '/rh/', '/alocacao', '/ponto', '/faltas', '/documentos', '/rastreio', '/rh/vencimentos', '/relatorios/absenteismo', '/rh/whatsapp'],
     tabs: [
       // PRINCIPAIS — fluxo operacional diário
       { href: '/funcionarios', label: 'Funcionários', match: ['/funcionarios'] },
@@ -123,6 +123,7 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/relatorios/absenteismo', label: 'Absenteísmo', secondary: true },
       { href: '/documentos', label: 'Documentos', secondary: true },
       { href: '/rh/vencimentos', label: 'Vencimentos', match: ['/rh/vencimentos', '/rastreio'], secondary: true },
+      { href: '/rh/whatsapp', label: 'WhatsApp', secondary: true },
     ],
   },
   {
