@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase-server'
 import Link from 'next/link'
+import { GitMerge } from 'lucide-react'
 
 export default async function CadastrosPage() {
   const supabase = createClient()
@@ -123,6 +124,21 @@ export default async function CadastrosPage() {
             </Link>
           ))}
         </div>
+      </div>
+      {/* Zona de perigo */}
+      <div className="mt-8 p-5 bg-red-50 rounded-xl border-2 border-red-200">
+        <h3 className="text-sm font-bold text-red-700 font-display mb-2 flex items-center gap-2">
+          <GitMerge className="w-4 h-4" />
+          Zona de perigo
+        </h3>
+        <p className="text-xs text-red-600 mb-3">
+          Mescle cadastros duplicados transferindo todos os vinculos para um unico registro.
+        </p>
+        <Link href="/cadastros/merge"
+          className="inline-flex items-center gap-1.5 text-xs font-bold px-4 py-2 bg-red-600 text-white rounded-xl hover:bg-red-700 transition-all">
+          <GitMerge className="w-3.5 h-3.5" />
+          Mesclar cadastros duplicados
+        </Link>
       </div>
     </div>
   )
