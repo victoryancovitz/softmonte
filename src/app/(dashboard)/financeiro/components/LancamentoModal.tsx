@@ -8,12 +8,15 @@ const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', curren
 const CATEGORIAS_RECEITA = ['Faturamento HH', 'Serviços', 'Outras receitas']
 const CATEGORIAS_DESPESA = ['Folha de Pagamento', 'Encargos', 'Aluguel', 'Materiais', 'Compras', 'Impostos', 'Honorários', 'Despesas Financeiras', 'Amortização de Empréstimos', 'Depreciação', 'Custo dos Serviços Prestados', 'Outras despesas']
 
+const CC_TIPO_LABEL: Record<string, string> = { obra: 'Obra', suporte_obra: 'Suporte Obra', administrativo: 'Administrativo', equipamento: 'Equipamento' }
+
 const FORM_INITIAL = {
   tipo: 'despesa',
   nome: '',
   fornecedor: '',
   categoria: '',
   centro_custo: '',
+  centro_custo_id: '',
   valor: '',
   data_competencia: new Date().toISOString().slice(0, 7) + '-01',
   data_vencimento: '',
@@ -55,6 +58,12 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
   const [salvando, setSalvando] = useState(false)
   const [avisoSimilar, setAvisoSimilar] = useState<string | null>(null)
   const [uploadingAnexo, setUploadingAnexo] = useState(false)
+  const [centrosCusto, setCentrosCusto] = useState<any[]>([])
+
+  // Load centros de custo
+  useEffect(() => {
+    supabase.from('centros_custo').select('id, codigo, nome, tipo').is('deleted_at', null).eq('ativo', true).order('codigo').then(({ data }) => setCentrosCusto(data ?? []))
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset form when modal opens/closes or editingLanc changes
   useEffect(() => {
@@ -67,6 +76,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
         fornecedor: editingLanc.fornecedor || '',
         categoria: editingLanc.categoria || '',
         centro_custo: editingLanc.centro_custo || '',
+        centro_custo_id: editingLanc.centro_custo_id || '',
         valor: String(editingLanc.valor || ''),
         data_competencia: editingLanc.data_competencia || new Date().toISOString().slice(0, 7) + '-01',
         data_vencimento: editingLanc.data_vencimento || '',
@@ -167,6 +177,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
           valor: valorNum,
           categoria: modalForm.categoria || null,
           centro_custo: modalForm.centro_custo || null,
+          centro_custo_id: modalForm.centro_custo_id || null,
           obra_id: modalForm.obra_id || null,
           conta_id: modalForm.conta_id || null,
           data_competencia: modalForm.data_competencia || null,
@@ -193,6 +204,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
             fornecedor: modalForm.fornecedor || null,
             valor: valorParcela, categoria: modalForm.categoria || null,
             centro_custo: modalForm.centro_custo || null,
+            centro_custo_id: modalForm.centro_custo_id || null,
             obra_id: modalForm.obra_id || null, conta_id: modalForm.conta_id || null,
             data_competencia: modalForm.data_competencia || null,
             data_vencimento: venc.toISOString().slice(0, 10),
@@ -221,6 +233,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
             fornecedor: modalForm.fornecedor || null,
             valor: valorNum, categoria: modalForm.categoria || null,
             centro_custo: modalForm.centro_custo || null,
+            centro_custo_id: modalForm.centro_custo_id || null,
             obra_id: modalForm.obra_id || null, conta_id: modalForm.conta_id || null,
             data_competencia: comp.toISOString().slice(0, 10),
             data_vencimento: venc.toISOString().slice(0, 10),
@@ -244,6 +257,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
           fornecedor: modalForm.fornecedor || null,
           categoria: modalForm.categoria || null,
           centro_custo: modalForm.centro_custo || null,
+          centro_custo_id: modalForm.centro_custo_id || null,
           obra_id: modalForm.obra_id || null,
           conta_id: modalForm.conta_id || null,
           data_competencia: modalForm.data_competencia || null,
@@ -376,8 +390,30 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Centro de custo</label>
-                <input value={modalForm.centro_custo} onChange={e => setModalForm(f => ({ ...f, centro_custo: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Ex: ADM, Obra X..." />
+                {centrosCusto.length > 0 ? (
+                  <select value={modalForm.centro_custo_id} onChange={e => {
+                    const ccId = e.target.value
+                    const cc = centrosCusto.find(c => c.id === ccId)
+                    setModalForm(f => ({ ...f, centro_custo_id: ccId, centro_custo: cc ? `${cc.codigo} — ${cc.nome}` : '' }))
+                  }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                    <option value="">Selecionar...</option>
+                    {Object.entries(
+                      centrosCusto.reduce((acc: Record<string, any[]>, cc) => {
+                        const t = cc.tipo || 'outros'
+                        if (!acc[t]) acc[t] = []
+                        acc[t].push(cc)
+                        return acc
+                      }, {})
+                    ).map(([tipo, ccs]) => (
+                      <optgroup key={tipo} label={CC_TIPO_LABEL[tipo] || tipo}>
+                        {ccs.map((cc: any) => <option key={cc.id} value={cc.id}>{cc.codigo} — {cc.nome}</option>)}
+                      </optgroup>
+                    ))}
+                  </select>
+                ) : (
+                  <input value={modalForm.centro_custo} onChange={e => setModalForm(f => ({ ...f, centro_custo: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Ex: ADM, Obra X..." />
+                )}
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Obra</label>

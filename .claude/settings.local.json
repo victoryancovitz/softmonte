@@ -221,7 +221,8 @@
       "Bash(find /Users/victoryancovitz/softmonte-git/src/app -path *portal* -name page.tsx -o -path *portal* -name layout.tsx)",
       "Bash(grep -r \"setShowDeleteModal\" /Users/victoryancovitz/softmonte-git/src/app/\\\\\\(dashboard\\\\\\)/boletins/[id]/page.tsx)",
       "Bash(ls '/Users/victoryancovitz/softmonte-git/src/app/\\(dashboard\\)/rh/')",
-      "Bash(/dev/null echo:*)"
+      "Bash(/dev/null echo:*)",
+      "Bash('/Users/victoryancovitz/softmonte-git/.env.local')"
     ]
   }
 }

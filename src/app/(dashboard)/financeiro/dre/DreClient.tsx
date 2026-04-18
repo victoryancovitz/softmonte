@@ -12,7 +12,7 @@ const statusColor: Record<string, string> = {
   atencao: 'bg-amber-100 text-amber-700', critico: 'bg-red-100 text-red-700',
 }
 
-type Tab = 'margem' | 'dre' | 'oficial' | 'bp' | 'dfc'
+type Tab = 'margem' | 'dre' | 'oficial' | 'bp' | 'dfc' | 'por_cc'
 type Granularidade = 'mensal' | 'trimestral' | 'semestral' | 'anual' | 'acumulado'
 
 export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, contasSaldo }: {
@@ -156,6 +156,7 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
   const tabs: { key: Tab; label: string }[] = [
     { key: 'margem', label: 'Margem por Contrato' },
     { key: 'dre', label: 'DRE Consolidado' },
+    { key: 'por_cc', label: 'Por CC' },
     { key: 'oficial', label: 'DRE Oficial' },
     { key: 'bp', label: 'Balanço Patrimonial' },
     { key: 'dfc', label: 'Fluxo de Caixa' },
@@ -340,6 +341,77 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
           </table>
         </div>
       )}
+
+      {/* ══ POR CENTRO DE CUSTO ══ */}
+      {tab === 'por_cc' && (() => {
+        const CC_TIPO_COLORS: Record<string, string> = { obra: 'bg-blue-100 text-blue-700', administrativo: 'bg-purple-100 text-purple-700', suporte_obra: 'bg-amber-100 text-amber-700', equipamento: 'bg-gray-100 text-gray-600' }
+        const filtered = lancamentos.filter((l: any) => {
+          const year = l.data_competencia?.slice(0, 4)
+          return year && Number(year) === anoFiltro
+        })
+
+        type CCRow = { cc_id: string; cc_label: string; cc_tipo: string; receita: number; despesa: number }
+        const byCC: Record<string, CCRow> = {}
+        filtered.forEach((l: any) => {
+          const ccId = l.centro_custo_id || 'sem_cc'
+          const ccLabel = l.centros_custo ? `${l.centros_custo.codigo} — ${l.centros_custo.nome}` : l.centro_custo || 'Sem CC'
+          const ccTipo = l.centros_custo?.tipo || ''
+          if (!byCC[ccId]) byCC[ccId] = { cc_id: ccId, cc_label: ccLabel, cc_tipo: ccTipo, receita: 0, despesa: 0 }
+          const v = Number(l.valor || 0)
+          if (l.tipo === 'receita' && l.natureza !== 'financiamento') byCC[ccId].receita += v
+          else if (l.tipo === 'despesa' && !l.is_provisao) byCC[ccId].despesa += v
+        })
+        const rows = Object.values(byCC).sort((a, b) => (b.receita - b.despesa) - (a.receita - a.despesa))
+        const totRec = rows.reduce((s, r) => s + r.receita, 0)
+        const totDesp = rows.reduce((s, r) => s + r.despesa, 0)
+        const totRes = totRec - totDesp
+
+        return (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-700">Resultado por Centro de Custo — {anoFiltro}</h3>
+              <select value={anoFiltro} onChange={e => setAnoFiltro(Number(e.target.value))}
+                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700">
+                {anosDisponiveis.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-gray-100 bg-gray-50">
+                {['Centro de Custo', 'Tipo', 'Receitas', 'Despesas', 'Resultado', 'Margem %'].map(h => (
+                  <th key={h} className="text-right first:text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {rows.length > 0 ? rows.map(r => {
+                  const res = r.receita - r.despesa
+                  const margem = r.receita > 0 ? (res / r.receita * 100) : r.despesa > 0 ? -100 : 0
+                  return (
+                    <tr key={r.cc_id} className="border-b border-gray-50 hover:bg-gray-50/80">
+                      <td className="px-4 py-2.5 font-medium text-left">{r.cc_label}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        {r.cc_tipo ? <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${CC_TIPO_COLORS[r.cc_tipo] || 'bg-gray-100 text-gray-600'}`}>{r.cc_tipo.replace(/_/g, ' ')}</span> : <span className="text-gray-300">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-green-600">{r.receita > 0 ? fmt(r.receita) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right text-red-600">{r.despesa > 0 ? fmt(r.despesa) : '—'}</td>
+                      <td className={`px-4 py-2.5 text-right font-bold ${res >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(res)}</td>
+                      <td className={`px-4 py-2.5 text-right font-bold ${margem >= 0 ? 'text-green-700' : 'text-red-700'}`}>{r.receita > 0 || r.despesa > 0 ? `${margem.toFixed(1)}%` : '—'}</td>
+                    </tr>
+                  )
+                }) : <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400">Sem lancamentos para o periodo.</td></tr>}
+                {rows.length > 0 && (
+                  <tr className="bg-gray-50 font-bold border-t border-gray-200">
+                    <td className="px-4 py-3 text-left" colSpan={2}>TOTAL</td>
+                    <td className="px-4 py-3 text-right text-green-700">{fmt(totRec)}</td>
+                    <td className="px-4 py-3 text-right text-red-700">{fmt(totDesp)}</td>
+                    <td className={`px-4 py-3 text-right ${totRes >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(totRes)}</td>
+                    <td className={`px-4 py-3 text-right ${totRec > 0 && totRes / totRec >= 0 ? 'text-green-700' : 'text-red-700'}`}>{totRec > 0 ? `${(totRes / totRec * 100).toFixed(1)}%` : '—'}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )
+      })()}
 
       {/* ══ DRE OFICIAL ══ */}
       {tab === 'oficial' && (

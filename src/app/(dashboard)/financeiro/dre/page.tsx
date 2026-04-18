@@ -10,7 +10,7 @@ export default async function DrePage() {
     supabase.from('vw_dre_obra').select('*').limit(500),
     supabase.from('vw_dre_obra_mes').select('*').limit(500),
     supabase.from('vw_custo_funcionario').select('*'),
-    supabase.from('financeiro_lancamentos').select('*').is('deleted_at', null).order('data_competencia').limit(5000),
+    supabase.from('financeiro_lancamentos').select('*, centros_custo(codigo, nome, tipo)').is('deleted_at', null).order('data_competencia').limit(5000),
     supabase.from('empresa_config').select('regime_tributario, aliquota_simples_efetiva, aliquota_iss, aliquota_pis, aliquota_cofins, aliquota_ir, aliquota_csll, capital_social').limit(1),
     supabase.from('vw_contas_saldo').select('*'),
   ])

@@ -46,6 +46,10 @@ export default function CustosFixosPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+  const [gerarModal, setGerarModal] = useState(false)
+  const [gerarMes, setGerarMes] = useState(String(new Date().getMonth() + 1))
+  const [gerarAno, setGerarAno] = useState(String(new Date().getFullYear()))
+  const [gerando, setGerando] = useState(false)
 
   // Form
   const [ccId, setCcId] = useState('')
@@ -191,6 +195,25 @@ export default function CustosFixosPage() {
     }
   }
 
+  async function gerarLancamentos() {
+    setGerando(true)
+    try {
+      const resp = await fetch('/api/cc/gerar-lancamentos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mes: Number(gerarMes), ano: Number(gerarAno) }),
+      })
+      const data = await resp.json()
+      if (!resp.ok) throw new Error(data.error || 'Erro ao gerar lancamentos')
+      toast.success(`${data.gerados} lancamento(s) gerado(s). ${data.ja_existiam} ja existiam.`)
+      setGerarModal(false)
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Erro ao gerar lancamentos')
+    } finally {
+      setGerando(false)
+    }
+  }
+
   function toggleGroup(id: string) {
     setExpanded(prev => {
       const next = new Set(prev)
@@ -213,12 +236,20 @@ export default function CustosFixosPage() {
             </p>
           </div>
         </div>
-        <button
-          onClick={openCreate}
-          className="flex items-center gap-1.5 px-4 py-2 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-dark"
-        >
-          <Plus className="w-4 h-4" /> Novo Custo Fixo
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setGerarModal(true)}
+            className="flex items-center gap-1.5 px-4 py-2 border border-amber-300 bg-amber-50 text-amber-700 rounded-xl text-sm font-semibold hover:bg-amber-100"
+          >
+            Gerar Lancamentos do Mes
+          </button>
+          <button
+            onClick={openCreate}
+            className="flex items-center gap-1.5 px-4 py-2 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-dark"
+          >
+            <Plus className="w-4 h-4" /> Novo Custo Fixo
+          </button>
+        </div>
       </div>
 
       {/* Busca */}
@@ -401,6 +432,43 @@ export default function CustosFixosPage() {
                 className="px-5 py-2 bg-brand text-white rounded-xl text-sm font-semibold hover:bg-brand-dark disabled:opacity-50"
               >
                 {saving ? 'Salvando...' : editId ? 'Salvar Alterações' : 'Criar Custo Fixo'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Gerar Lancamentos */}
+      {gerarModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <h2 className="text-base font-bold text-gray-800">Gerar Lancamentos</h2>
+              <button onClick={() => setGerarModal(false)} className="p-1 rounded-lg hover:bg-gray-100">
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-gray-600">Gerar lancamentos financeiros a partir dos custos fixos com &quot;gerar lancamento automatico&quot; ativado.</p>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Mes</label>
+                  <select value={gerarMes} onChange={e => setGerarMes(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm">
+                    {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>{String(i + 1).padStart(2, '0')}</option>)}
+                  </select>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Ano</label>
+                  <select value={gerarAno} onChange={e => setGerarAno(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm">
+                    {[2025, 2026, 2027].map(y => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 p-5 border-t border-gray-100">
+              <button onClick={() => setGerarModal(false)} className="px-4 py-2 text-sm text-gray-600 hover:bg-gray-100 rounded-xl">Cancelar</button>
+              <button onClick={gerarLancamentos} disabled={gerando} className="px-5 py-2 bg-amber-500 text-white rounded-xl text-sm font-semibold hover:bg-amber-600 disabled:opacity-50">
+                {gerando ? 'Gerando...' : 'Gerar Lancamentos'}
               </button>
             </div>
           </div>

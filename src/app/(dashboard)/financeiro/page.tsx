@@ -61,6 +61,8 @@ function FinanceiroPage() {
   const [showFiltros, setShowFiltros] = useState(false)
   const [advFilters, setAdvFilters] = useState<FilterState>({ ...FILTER_INITIAL })
   const [alertasCoerencia, setAlertasCoerencia] = useState<string[]>([])
+  const [filtroCCId, setFiltroCCId] = useState('')
+  const [centrosCusto, setCentrosCusto] = useState<any[]>([])
   const [page, setPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const PAGE_SIZE = 50
@@ -87,6 +89,7 @@ function FinanceiroPage() {
     supabase.from('obras').select('id,nome,conta_recebimento_id,conta_pagamento_id').is('deleted_at', null).order('nome').then(({ data }) => setObras(data ?? []))
     supabase.from('contas_correntes').select('id,nome,banco,is_padrao,proprietario,saldo_atual').eq('ativo', true).is('deleted_at', null).order('is_padrao', { ascending: false }).order('nome').then(({ data }) => setContas((data ?? []).filter((c: any) => c.proprietario !== 'socio')))
     supabase.from('fornecedores').select('id, nome').is('deleted_at', null).order('nome').then(({ data }) => setFornecedores(data ?? []))
+    supabase.from('centros_custo').select('id, codigo, nome, tipo').is('deleted_at', null).eq('ativo', true).order('codigo').then(({ data }) => setCentrosCusto(data ?? []))
   }, [])
 
   useEffect(() => {
@@ -127,7 +130,7 @@ function FinanceiroPage() {
 
   async function loadData() {
     setLoading(true)
-    let q = supabase.from('financeiro_lancamentos').select('*, obras(nome)', { count: 'exact' }).is('deleted_at', null).order('data_competencia')
+    let q = supabase.from('financeiro_lancamentos').select('*, obras(nome), centros_custo(codigo, nome, tipo)', { count: 'exact' }).is('deleted_at', null).order('data_competencia')
     if (obraId && obraId !== 'all') q = q.eq('obra_id', obraId)
     if (!showProvisões) q = q.eq('is_provisao', false)
     q = q.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
@@ -222,6 +225,7 @@ function FinanceiroPage() {
     if (statusTab === 'vencidos' && !(l.status === 'em_aberto' && l.data_vencimento && l.data_vencimento < hoje)) return false
     if (statusTab === 'pago' && l.status !== 'pago') return false
     // Advanced filters
+    if (filtroCCId && l.centro_custo_id !== filtroCCId && !(l.centro_custo || '').toLowerCase().includes((centrosCusto.find(c => c.id === filtroCCId)?.nome || '').toLowerCase())) return false
     if (advFilters.categoria && l.categoria !== advFilters.categoria) return false
     if (advFilters.centroCusto && !(l.centro_custo || '').toLowerCase().includes(advFilters.centroCusto.toLowerCase())) return false
     if (advFilters.fornecedor && !(l.fornecedor || '').toLowerCase().includes(advFilters.fornecedor.toLowerCase())) return false
@@ -250,6 +254,11 @@ function FinanceiroPage() {
             className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
             <option value="all">Todas as obras</option>
             {obras.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
+          </select>
+          <select value={filtroCCId} onChange={e => setFiltroCCId(e.target.value)}
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+            <option value="">Todos os CCs</option>
+            {centrosCusto.map(cc => <option key={cc.id} value={cc.id}>{cc.codigo} — {cc.nome}</option>)}
           </select>
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
             <input type="checkbox" checked={showProvisões} onChange={e => { setShowProvisões(e.target.checked); setPage(1) }}
@@ -496,7 +505,7 @@ function FinanceiroPage() {
                     return <input type="checkbox" checked={selected.size > 0 && selected.size === idsVisiveis.length && idsVisiveis.length > 0} onChange={() => toggleTodos(idsVisiveis)} className="rounded border-gray-300 text-brand focus:ring-brand cursor-pointer" />
                   })()}
                 </th>
-                {['Data','Descrição','Fornecedor','Obra','Tipo','Valor','Status',''].map(h => (
+                {['Data','Descrição','Fornecedor','Obra','CC','Tipo','Valor','Status',''].map(h => (
                   <th key={h} className="text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -534,6 +543,15 @@ function FinanceiroPage() {
                   </td>
                   <td className="px-4 py-2.5 text-gray-500 text-xs truncate max-w-[120px]">{l.fornecedor || '—'}</td>
                   <td className="px-4 py-2.5 text-gray-500 text-xs">{l.obras?.nome || '—'}</td>
+                  <td className="px-4 py-2.5">
+                    {(() => {
+                      const ccCode = l.centros_custo?.codigo ?? l.centro_custo ?? null
+                      if (!ccCode) return <span className="text-gray-300 text-xs">—</span>
+                      const ccTipo = l.centros_custo?.tipo
+                      const ccColors: Record<string, string> = { obra: 'bg-blue-100 text-blue-700', administrativo: 'bg-purple-100 text-purple-700', suporte_obra: 'bg-amber-100 text-amber-700', equipamento: 'bg-gray-100 text-gray-600' }
+                      return <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${ccColors[ccTipo] || 'bg-gray-100 text-gray-600'}`} title={l.centros_custo ? `${l.centros_custo.codigo} — ${l.centros_custo.nome}` : l.centro_custo}>{ccCode}</span>
+                    })()}
+                  </td>
                   <td className="px-4 py-2.5">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${l.tipo === 'receita' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                       {l.tipo === 'receita' ? 'Receita' : 'Despesa'}
