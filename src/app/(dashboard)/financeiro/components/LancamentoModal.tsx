@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -390,30 +391,23 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Centro de custo</label>
-                {centrosCusto.length > 0 ? (
-                  <select value={modalForm.centro_custo_id} onChange={e => {
-                    const ccId = e.target.value
-                    const cc = centrosCusto.find(c => c.id === ccId)
-                    setModalForm(f => ({ ...f, centro_custo_id: ccId, centro_custo: cc ? `${cc.codigo} — ${cc.nome}` : '' }))
-                  }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                    <option value="">Selecionar...</option>
-                    {Object.entries(
-                      centrosCusto.reduce((acc: Record<string, any[]>, cc) => {
-                        const t = cc.tipo || 'outros'
-                        if (!acc[t]) acc[t] = []
-                        acc[t].push(cc)
-                        return acc
-                      }, {})
-                    ).map(([tipo, ccs]) => (
-                      <optgroup key={tipo} label={CC_TIPO_LABEL[tipo] || tipo}>
-                        {ccs.map((cc: any) => <option key={cc.id} value={cc.id}>{cc.codigo} — {cc.nome}</option>)}
-                      </optgroup>
-                    ))}
-                  </select>
-                ) : (
-                  <input value={modalForm.centro_custo} onChange={e => setModalForm(f => ({ ...f, centro_custo: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Ex: ADM, Obra X..." />
-                )}
+                <QuickCreateSelect
+                  type="centro_custo"
+                  value={modalForm.centro_custo_id}
+                  onChange={(id, label) => {
+                    const cc = centrosCusto.find(c => c.id === id)
+                    setModalForm(f => ({ ...f, centro_custo_id: id, centro_custo: cc ? `${cc.codigo} — ${cc.nome}` : label }))
+                  }}
+                  options={centrosCusto.map(cc => ({
+                    id: cc.id,
+                    label: `${cc.codigo} — ${cc.nome}`,
+                    group: CC_TIPO_LABEL[cc.tipo] || cc.tipo,
+                  }))}
+                  placeholder="Selecionar..."
+                  onCreated={(id, label) => {
+                    setCentrosCusto(prev => [...prev, { id, codigo: '', nome: label, tipo: 'obra' }])
+                  }}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Obra</label>

@@ -7,6 +7,7 @@ import { useToast } from '@/components/Toast'
 import SearchInput from '@/components/SearchInput'
 import EmptyState from '@/components/ui/EmptyState'
 import { ChevronDown, ChevronRight, DollarSign, Pencil, Plus, Trash2, X } from 'lucide-react'
+import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 import { fmt } from '@/lib/cores'
 
 /* ═══ Types ═══ */
@@ -335,16 +336,19 @@ export default function CustosFixosPage() {
               {/* Centro de Custo */}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Centro de Custo *</label>
-                <select
+                <QuickCreateSelect
+                  type="centro_custo"
                   value={ccId}
-                  onChange={e => setCcId(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white"
-                >
-                  <option value="">Selecione...</option>
-                  {ccList.map(c => (
-                    <option key={c.id} value={c.id}>{c.codigo} — {c.nome}</option>
-                  ))}
-                </select>
+                  onChange={(id) => setCcId(id)}
+                  options={ccList.map(c => ({
+                    id: c.id,
+                    label: `${c.codigo} — ${c.nome}`,
+                  }))}
+                  placeholder="Selecione..."
+                  onCreated={(id, label) => {
+                    setCcList(prev => [...prev, { id, codigo: '', nome: label }])
+                  }}
+                />
               </div>
 
               {/* Nome */}

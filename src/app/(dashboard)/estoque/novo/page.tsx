@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
+import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 
 interface CC {
   id: string
@@ -92,38 +93,30 @@ export default function NovoItemPage() {
               </select></div>
           </div>
 
-          {/* Depósito — select de CC com fallback para input texto */}
+          {/* Deposito — select de CC com QuickCreate */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Depósito / Centro de Custo</label>
-            {depositoCCs.length > 0 ? (
-              <div className="space-y-2">
-                <select
-                  value={form.centro_custo_id}
-                  onChange={e => handleCcChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white"
-                >
-                  <option value="">Selecionar centro de custo...</option>
-                  {depositoCCs.map(c => (
-                    <option key={c.id} value={c.id}>{c.codigo} — {c.nome}</option>
-                  ))}
-                </select>
-                {!form.centro_custo_id && (
-                  <input
-                    type="text"
-                    value={form.deposito}
-                    onChange={e => set('deposito', e.target.value)}
-                    placeholder="Ou digite o nome do depósito"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                  />
-                )}
-              </div>
-            ) : (
+            <label className="block text-sm font-medium text-gray-700 mb-1">Deposito / Centro de Custo</label>
+            <QuickCreateSelect
+              type="centro_custo"
+              value={form.centro_custo_id}
+              onChange={(id, label) => handleCcChange(id)}
+              options={depositoCCs.map(c => ({
+                id: c.id,
+                label: `${c.codigo} — ${c.nome}`,
+              }))}
+              placeholder="Selecionar centro de custo..."
+              context={{ tipo: 'suporte_obra' }}
+              onCreated={(id, label) => {
+                setCcList(prev => [...prev, { id, codigo: '', nome: label }])
+              }}
+            />
+            {!form.centro_custo_id && (
               <input
                 type="text"
                 value={form.deposito}
                 onChange={e => set('deposito', e.target.value)}
-                placeholder="Ex: Almoxarifado A"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                placeholder="Ou digite o nome do deposito"
+                className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
               />
             )}
           </div>
