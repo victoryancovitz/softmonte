@@ -6,13 +6,17 @@ import DreClient from './DreClient'
 export default async function DrePage() {
   const supabase = createClient()
 
-  const [{ data: dre }, { data: dreMes }, { data: custos }, { data: lancamentos }, { data: empresaArr }, { data: contasSaldo }] = await Promise.all([
+  const [{ data: dre }, { data: dreMes }, { data: custos }, { data: lancamentos }, { data: empresaArr }, { data: contasSaldo }, { data: ccsAdm }, { data: obrasAtivas }, { data: rateioConfigArr }, { data: distribuicoes }] = await Promise.all([
     supabase.from('vw_dre_obra').select('*').limit(500),
     supabase.from('vw_dre_obra_mes').select('*').limit(500),
     supabase.from('vw_custo_funcionario').select('*'),
-    supabase.from('financeiro_lancamentos').select('*, centros_custo(codigo, nome, tipo)').is('deleted_at', null).order('data_competencia').limit(5000),
+    supabase.from('financeiro_lancamentos').select('*, centros_custo(codigo, nome, tipo, obra_id)').is('deleted_at', null).order('data_competencia').limit(5000),
     supabase.from('empresa_config').select('regime_tributario, aliquota_simples_efetiva, aliquota_iss, aliquota_pis, aliquota_cofins, aliquota_ir, aliquota_csll, capital_social').limit(1),
     supabase.from('vw_contas_saldo').select('*'),
+    supabase.from('centros_custo').select('id, codigo, nome, tipo').eq('tipo', 'administrativo').eq('ativo', true),
+    supabase.from('obras').select('id, nome, data_inicio, data_fim, status').in('status', ['em_andamento', 'planejamento']),
+    supabase.from('cc_rateio_config').select('*').order('created_at', { ascending: false }).limit(1),
+    supabase.from('movimentacoes_societarias').select('*').eq('tipo', 'distribuicao_lucro'),
   ])
   const empresa = (empresaArr ?? [])[0] ?? { regime_tributario: 'lucro_presumido', capital_social: 100000, aliquota_iss: 0.02, aliquota_pis: 0.0065, aliquota_cofins: 0.03, aliquota_ir: 0.048, aliquota_csll: 0.0288 }
 
@@ -43,6 +47,10 @@ export default async function DrePage() {
         lancamentos={lancamentos ?? []}
         empresa={empresa}
         contasSaldo={contasSaldo ?? []}
+        ccsAdm={ccsAdm ?? []}
+        obrasAtivas={obrasAtivas ?? []}
+        rateioConfig={(rateioConfigArr ?? [])[0] ?? null}
+        distribuicoes={distribuicoes ?? []}
       />
     </div>
   )

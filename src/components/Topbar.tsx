@@ -173,6 +173,7 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/cc/estrutura', label: 'Estrutura', match: ['/cc/estrutura'] },
       { href: '/cc/equipamentos', label: 'Equipamentos', match: ['/cc/equipamentos'] },
       { href: '/cc/custos-fixos', label: 'Custos Fixos', match: ['/cc/custos-fixos'] },
+      { href: '/cc/rateio', label: 'Rateio', match: ['/cc/rateio'] },
     ],
   },
 ]

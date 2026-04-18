@@ -1,6 +1,7 @@
 'use client'
 import { useState, useMemo } from 'react'
-import { TrendingUp, Users, ChevronDown, ChevronUp } from 'lucide-react'
+import { TrendingUp, Users, ChevronDown, ChevronUp, Settings } from 'lucide-react'
+import Link from 'next/link'
 
 const MESES = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 const fmt = (v: number | null) => v != null ? Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'
@@ -12,11 +13,12 @@ const statusColor: Record<string, string> = {
   atencao: 'bg-amber-100 text-amber-700', critico: 'bg-red-100 text-red-700',
 }
 
-type Tab = 'margem' | 'dre' | 'oficial' | 'bp' | 'dfc' | 'por_cc'
+type Tab = 'margem' | 'dre' | 'por_obra' | 'obra_rateio' | 'sga' | 'consolidada' | 'oficial' | 'bp' | 'dfc' | 'por_cc'
 type Granularidade = 'mensal' | 'trimestral' | 'semestral' | 'anual' | 'acumulado'
 
-export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, contasSaldo }: {
+export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, contasSaldo, ccsAdm, obrasAtivas, rateioConfig, distribuicoes }: {
   dre: any[]; dreMes: any[]; custos: any[]; lancamentos: any[]; empresa: any; contasSaldo: any[]
+  ccsAdm?: any[]; obrasAtivas?: any[]; rateioConfig?: any; distribuicoes?: any[]
 }) {
   const [expandido, setExpandido] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('margem')
@@ -156,6 +158,10 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
   const tabs: { key: Tab; label: string }[] = [
     { key: 'margem', label: 'Margem por Contrato' },
     { key: 'dre', label: 'DRE Consolidado' },
+    { key: 'por_obra', label: 'Por Obra' },
+    { key: 'obra_rateio', label: 'Obra + Rateio' },
+    { key: 'sga', label: 'Matriz / SG&A' },
+    { key: 'consolidada', label: 'Consolidada' },
     { key: 'por_cc', label: 'Por CC' },
     { key: 'oficial', label: 'DRE Oficial' },
     { key: 'bp', label: 'Balanço Patrimonial' },
@@ -341,6 +347,400 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
           </table>
         </div>
       )}
+
+      {/* ══ POR OBRA ══ */}
+      {tab === 'por_obra' && (() => {
+        const filtered = lancamentos.filter((l: any) => {
+          const year = l.data_competencia?.slice(0, 4)
+          return year && Number(year) === anoFiltro
+        })
+
+        type ObraRow = { obra_id: string; nome: string; receita: number; cpvCampo: number; suporte: number }
+        const byObra: Record<string, ObraRow> = {}
+
+        filtered.forEach((l: any) => {
+          const obraId = l.obra_id || 'sem_obra'
+          const nome = l.obra_nome || l.obra || 'Sem obra'
+          const ccTipo = l.centros_custo?.tipo || ''
+
+          if (!byObra[obraId]) byObra[obraId] = { obra_id: obraId, nome, receita: 0, cpvCampo: 0, suporte: 0 }
+          const v = Number(l.valor || 0)
+
+          if (l.tipo === 'receita' && l.natureza !== 'financiamento') {
+            byObra[obraId].receita += v
+          } else if (l.tipo === 'despesa' && !l.is_provisao) {
+            if (ccTipo === 'suporte_obra') {
+              // Suporte vai para a obra vinculada ao CC
+              const ccObraId = l.centros_custo?.obra_id || obraId
+              const key = ccObraId || obraId
+              if (!byObra[key]) byObra[key] = { obra_id: key, nome: nome, receita: 0, cpvCampo: 0, suporte: 0 }
+              byObra[key].suporte += v
+            } else if (ccTipo !== 'administrativo') {
+              byObra[obraId].cpvCampo += v
+            }
+          }
+        })
+
+        const rows = Object.values(byObra).sort((a, b) => b.receita - a.receita)
+        const totRec = rows.reduce((s, r) => s + r.receita, 0)
+        const totCpv = rows.reduce((s, r) => s + r.cpvCampo, 0)
+        const totSup = rows.reduce((s, r) => s + r.suporte, 0)
+        const totRes = totRec - totCpv - totSup
+
+        return (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-700">DRE Por Obra — {anoFiltro}</h3>
+              <select value={anoFiltro} onChange={e => setAnoFiltro(Number(e.target.value))}
+                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700">
+                {anosDisponiveis.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-gray-100 bg-gray-50">
+                {['Obra', 'Receita', 'CPV Campo', 'Suporte', 'Resultado', 'Margem %'].map(h => (
+                  <th key={h} className="text-right first:text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {rows.length > 0 ? rows.map(r => {
+                  const res = r.receita - r.cpvCampo - r.suporte
+                  const margem = r.receita > 0 ? (res / r.receita * 100) : r.cpvCampo > 0 || r.suporte > 0 ? -100 : 0
+                  return (
+                    <tr key={r.obra_id} className="border-b border-gray-50 hover:bg-gray-50/80">
+                      <td className="px-4 py-2.5 font-medium text-left">{r.nome}{r.obra_id === 'sem_obra' && <span className="ml-1 text-gray-400 text-[10px]">(sem vínculo)</span>}</td>
+                      <td className="px-4 py-2.5 text-right text-green-600">{r.receita > 0 ? fmt(r.receita) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right text-red-600">{r.cpvCampo > 0 ? fmt(r.cpvCampo) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right text-amber-600">{r.suporte > 0 ? fmt(r.suporte) : '—'}</td>
+                      <td className={`px-4 py-2.5 text-right font-bold ${res >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(res)}</td>
+                      <td className={`px-4 py-2.5 text-right font-bold ${margem >= 0 ? 'text-green-700' : 'text-red-700'}`}>{r.receita > 0 || r.cpvCampo > 0 ? `${margem.toFixed(1)}%` : '—'}</td>
+                    </tr>
+                  )
+                }) : <tr><td colSpan={6} className="px-4 py-10 text-center text-gray-400">Sem lançamentos para o período.</td></tr>}
+                {rows.length > 0 && (
+                  <tr className="bg-gray-50 font-bold border-t border-gray-200">
+                    <td className="px-4 py-3 text-left">TOTAL</td>
+                    <td className="px-4 py-3 text-right text-green-700">{fmt(totRec)}</td>
+                    <td className="px-4 py-3 text-right text-red-700">{fmt(totCpv)}</td>
+                    <td className="px-4 py-3 text-right text-amber-700">{fmt(totSup)}</td>
+                    <td className={`px-4 py-3 text-right ${totRes >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(totRes)}</td>
+                    <td className={`px-4 py-3 text-right ${totRec > 0 && totRes / totRec >= 0 ? 'text-green-700' : 'text-red-700'}`}>{totRec > 0 ? `${(totRes / totRec * 100).toFixed(1)}%` : '—'}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )
+      })()}
+
+      {/* ══ OBRA + RATEIO ══ */}
+      {tab === 'obra_rateio' && (() => {
+        const filtered = lancamentos.filter((l: any) => {
+          const year = l.data_competencia?.slice(0, 4)
+          return year && Number(year) === anoFiltro
+        })
+
+        // Calcular total SG&A (lançamentos em CCs administrativos)
+        const totalSGA = filtered.filter((l: any) => l.tipo === 'despesa' && !l.is_provisao && l.centros_custo?.tipo === 'administrativo')
+          .reduce((s: number, l: any) => s + Number(l.valor || 0), 0)
+
+        type ObraRow = { obra_id: string; nome: string; receita: number; cpv: number; suporte: number; diasRestantes: number }
+        const byObra: Record<string, ObraRow> = {}
+
+        filtered.forEach((l: any) => {
+          const obraId = l.obra_id || 'sem_obra'
+          const nome = l.obra_nome || l.obra || 'Sem obra'
+          const ccTipo = l.centros_custo?.tipo || ''
+
+          if (!byObra[obraId]) byObra[obraId] = { obra_id: obraId, nome, receita: 0, cpv: 0, suporte: 0, diasRestantes: 0 }
+          const v = Number(l.valor || 0)
+
+          if (l.tipo === 'receita' && l.natureza !== 'financiamento') {
+            byObra[obraId].receita += v
+          } else if (l.tipo === 'despesa' && !l.is_provisao && ccTipo !== 'administrativo') {
+            if (ccTipo === 'suporte_obra') {
+              byObra[obraId].suporte += v
+            } else {
+              byObra[obraId].cpv += v
+            }
+          }
+        })
+
+        // Calcular dias restantes para cada obra
+        const hoje = new Date()
+        ;(obrasAtivas ?? []).forEach((o: any) => {
+          if (byObra[o.id]) {
+            const fim = o.data_fim ? new Date(o.data_fim) : null
+            byObra[o.id].diasRestantes = fim ? Math.max(0, Math.ceil((fim.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24))) : 0
+          }
+        })
+
+        const rows = Object.values(byObra).filter(r => r.obra_id !== 'sem_obra').sort((a, b) => b.receita - a.receita)
+        const semObra = byObra['sem_obra']
+        const totalRecObras = rows.reduce((s, r) => s + r.receita, 0)
+        const totalDiasRest = rows.reduce((s, r) => s + r.diasRestantes, 0)
+
+        // Método de rateio
+        const metodo = rateioConfig?.metodo || 'sem_rateio'
+        const manuais: Record<string, number> = rateioConfig?.definicoes_manuais || {}
+
+        const getRateio = (r: ObraRow): number => {
+          if (metodo === 'sem_rateio') return 0
+          if (metodo === 'por_receita') {
+            const pctObra = totalRecObras > 0 ? r.receita / totalRecObras : 0
+            return totalSGA * pctObra
+          }
+          if (metodo === 'por_tempo_remanescente') {
+            const pctObra = totalDiasRest > 0 ? r.diasRestantes / totalDiasRest : 0
+            return totalSGA * pctObra
+          }
+          if (metodo === 'manual') {
+            const pctObra = Number(manuais[r.obra_id] || 0) / 100
+            return totalSGA * pctObra
+          }
+          return 0
+        }
+
+        const totRec = rows.reduce((s, r) => s + r.receita, 0)
+        const totCpv = rows.reduce((s, r) => s + r.cpv, 0)
+        const totSup = rows.reduce((s, r) => s + r.suporte, 0)
+        const totRateio = rows.reduce((s, r) => s + getRateio(r), 0)
+        const totResReal = totRec - totCpv - totSup - totRateio
+
+        const METODO_LABELS: Record<string, string> = {
+          sem_rateio: 'Sem Rateio',
+          por_receita: 'Por Receita',
+          por_hh: 'Por HH',
+          por_tempo_remanescente: 'Por Tempo Restante',
+          manual: 'Manual',
+        }
+
+        return (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700">DRE Obra + Rateio Overhead — {anoFiltro}</h3>
+                <p className="text-[11px] text-gray-400 mt-0.5">Método: {METODO_LABELS[metodo] || metodo} | SG&A total: {fmt(totalSGA)}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <select value={anoFiltro} onChange={e => setAnoFiltro(Number(e.target.value))}
+                  className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700">
+                  {anosDisponiveis.map(y => <option key={y} value={y}>{y}</option>)}
+                </select>
+                <Link href="/cc/rateio" className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium border border-gray-200 rounded-lg hover:bg-gray-50 text-gray-600">
+                  <Settings className="w-3.5 h-3.5" /> Configurar Rateio
+                </Link>
+              </div>
+            </div>
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-gray-100 bg-gray-50">
+                {['Obra', 'Receita', 'CPV', 'Suporte', 'Rateio', 'Resultado Real', 'Margem Real'].map(h => (
+                  <th key={h} className="text-right first:text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {rows.length > 0 ? rows.map(r => {
+                  const rateio = getRateio(r)
+                  const resReal = r.receita - r.cpv - r.suporte - rateio
+                  const margemReal = r.receita > 0 ? (resReal / r.receita * 100) : 0
+                  return (
+                    <tr key={r.obra_id} className="border-b border-gray-50 hover:bg-gray-50/80">
+                      <td className="px-4 py-2.5 font-medium text-left">{r.nome}</td>
+                      <td className="px-4 py-2.5 text-right text-green-600">{r.receita > 0 ? fmt(r.receita) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right text-red-600">{r.cpv > 0 ? fmt(r.cpv) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right text-amber-600">{r.suporte > 0 ? fmt(r.suporte) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right text-purple-600">{rateio > 0 ? fmt(rateio) : '—'}</td>
+                      <td className={`px-4 py-2.5 text-right font-bold ${resReal >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(resReal)}</td>
+                      <td className={`px-4 py-2.5 text-right font-bold ${margemReal >= 0 ? 'text-green-700' : 'text-red-700'}`}>{r.receita > 0 ? `${margemReal.toFixed(1)}%` : '—'}</td>
+                    </tr>
+                  )
+                }) : <tr><td colSpan={7} className="px-4 py-10 text-center text-gray-400">Sem lançamentos para o período.</td></tr>}
+                {semObra && (
+                  <tr className="border-b border-gray-50 bg-amber-50/30">
+                    <td className="px-4 py-2.5 font-medium text-left text-gray-400">Sem obra</td>
+                    <td className="px-4 py-2.5 text-right text-green-600">{semObra.receita > 0 ? fmt(semObra.receita) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right text-red-600">{semObra.cpv > 0 ? fmt(semObra.cpv) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right text-amber-600">{semObra.suporte > 0 ? fmt(semObra.suporte) : '—'}</td>
+                    <td className="px-4 py-2.5 text-right text-gray-400">—</td>
+                    <td className={`px-4 py-2.5 text-right font-bold ${(semObra.receita - semObra.cpv - semObra.suporte) >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(semObra.receita - semObra.cpv - semObra.suporte)}</td>
+                    <td className="px-4 py-2.5 text-right text-gray-400">—</td>
+                  </tr>
+                )}
+                {rows.length > 0 && (
+                  <tr className="bg-gray-50 font-bold border-t border-gray-200">
+                    <td className="px-4 py-3 text-left">TOTAL</td>
+                    <td className="px-4 py-3 text-right text-green-700">{fmt(totRec)}</td>
+                    <td className="px-4 py-3 text-right text-red-700">{fmt(totCpv)}</td>
+                    <td className="px-4 py-3 text-right text-amber-700">{fmt(totSup)}</td>
+                    <td className="px-4 py-3 text-right text-purple-700">{fmt(totRateio)}</td>
+                    <td className={`px-4 py-3 text-right ${totResReal >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(totResReal)}</td>
+                    <td className={`px-4 py-3 text-right ${totRec > 0 && totResReal / totRec >= 0 ? 'text-green-700' : 'text-red-700'}`}>{totRec > 0 ? `${(totResReal / totRec * 100).toFixed(1)}%` : '—'}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )
+      })()}
+
+      {/* ══ MATRIZ / SG&A ══ */}
+      {tab === 'sga' && (() => {
+        const CC_TIPO_COLORS: Record<string, string> = { obra: 'bg-blue-100 text-blue-700', administrativo: 'bg-purple-100 text-purple-700', suporte_obra: 'bg-amber-100 text-amber-700', equipamento: 'bg-gray-100 text-gray-600' }
+        const filtered = lancamentos.filter((l: any) => {
+          const year = l.data_competencia?.slice(0, 4)
+          return year && Number(year) === anoFiltro
+        })
+
+        // Apenas lançamentos administrativos + sem CC/obra
+        type SGARow = { cc_id: string; cc_label: string; receita: number; despesa: number }
+        const byCC: Record<string, SGARow> = {}
+
+        filtered.forEach((l: any) => {
+          const ccTipo = l.centros_custo?.tipo || ''
+          const isAdm = ccTipo === 'administrativo'
+          const semCCeObra = !l.centro_custo_id && !l.obra_id
+
+          if (!isAdm && !semCCeObra) return
+
+          const ccId = l.centro_custo_id || 'nao_classificado'
+          const ccLabel = l.centros_custo ? `${l.centros_custo.codigo} — ${l.centros_custo.nome}` : (semCCeObra ? 'Não classificados' : 'Sem CC')
+
+          if (!byCC[ccId]) byCC[ccId] = { cc_id: ccId, cc_label: ccLabel, receita: 0, despesa: 0 }
+          const v = Number(l.valor || 0)
+
+          if (l.tipo === 'receita' && l.natureza !== 'financiamento') byCC[ccId].receita += v
+          else if (l.tipo === 'despesa' && !l.is_provisao) byCC[ccId].despesa += v
+        })
+
+        const rows = Object.values(byCC).sort((a, b) => b.despesa - a.despesa)
+        const totRec = rows.reduce((s, r) => s + r.receita, 0)
+        const totDesp = rows.reduce((s, r) => s + r.despesa, 0)
+        const totRes = totRec - totDesp
+
+        return (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+            <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700">Matriz / SG&A — {anoFiltro}</h3>
+                <p className="text-[11px] text-gray-400 mt-0.5">Receitas da matriz + despesas SG&A por centro de custo administrativo</p>
+              </div>
+              <select value={anoFiltro} onChange={e => setAnoFiltro(Number(e.target.value))}
+                className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700">
+                {anosDisponiveis.map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <table className="w-full text-sm">
+              <thead><tr className="border-b border-gray-100 bg-gray-50">
+                {['Centro de Custo', 'Receitas', 'Despesas SG&A', 'Resultado'].map(h => (
+                  <th key={h} className="text-right first:text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {rows.length > 0 ? rows.map(r => {
+                  const res = r.receita - r.despesa
+                  return (
+                    <tr key={r.cc_id} className={`border-b border-gray-50 hover:bg-gray-50/80 ${r.cc_id === 'nao_classificado' ? 'bg-amber-50/30' : ''}`}>
+                      <td className="px-4 py-2.5 font-medium text-left">{r.cc_label}</td>
+                      <td className="px-4 py-2.5 text-right text-green-600">{r.receita > 0 ? fmt(r.receita) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right text-red-600">{r.despesa > 0 ? fmt(r.despesa) : '—'}</td>
+                      <td className={`px-4 py-2.5 text-right font-bold ${res >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(res)}</td>
+                    </tr>
+                  )
+                }) : <tr><td colSpan={4} className="px-4 py-10 text-center text-gray-400">Sem lançamentos administrativos para o período.</td></tr>}
+                {rows.length > 0 && (
+                  <tr className="bg-gray-50 font-bold border-t border-gray-200">
+                    <td className="px-4 py-3 text-left">TOTAL SG&A</td>
+                    <td className="px-4 py-3 text-right text-green-700">{fmt(totRec)}</td>
+                    <td className="px-4 py-3 text-right text-red-700">{fmt(totDesp)}</td>
+                    <td className={`px-4 py-3 text-right ${totRes >= 0 ? 'text-green-700' : 'text-red-700'}`}>{fmt(totRes)}</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )
+      })()}
+
+      {/* ══ CONSOLIDADA ══ */}
+      {tab === 'consolidada' && (() => {
+        // Classificação expandida
+        const filtered = lancamentos.filter((l: any) => !l.is_provisao)
+        const recBruta = filtered.filter((l: any) => l.tipo === 'receita' && l.natureza !== 'financiamento').reduce((s: number, l: any) => s + Number(l.valor), 0)
+
+        // CPV Campo: despesas em CCs tipo obra ou suporte_obra
+        const cpvCampo = filtered.filter((l: any) => l.tipo === 'despesa' && (l.centros_custo?.tipo === 'obra' || l.centros_custo?.tipo === 'suporte_obra' || (!l.centros_custo?.tipo && l.obra_id && (l.origem === 'folha_fechamento' || l.categoria?.toLowerCase().includes('folha'))))).reduce((s: number, l: any) => s + Number(l.valor), 0)
+
+        const lucroBrutoC = recBruta - deducoes - cpvCampo
+
+        // SG&A: despesas em CCs administrativos
+        const sgaTotal = filtered.filter((l: any) => l.tipo === 'despesa' && l.centros_custo?.tipo === 'administrativo').reduce((s: number, l: any) => s + Number(l.valor), 0)
+
+        const ebitdaC = lucroBrutoC - sgaTotal
+
+        // Desp financeiras
+        const despFinC = filtered.filter((l: any) => l.tipo === 'despesa' && (l.categoria === 'Despesas Financeiras' || l.categoria === 'Amortização de Empréstimos')).reduce((s: number, l: any) => s + Number(l.valor), 0)
+
+        const lairC = ebitdaC - despFinC
+        const lucroLiquidoC = lairC - irpjVal - csllVal
+
+        // Distribuições
+        const totalDistribuicoes = (distribuicoes ?? []).reduce((s: number, d: any) => s + Math.abs(Number(d.valor || 0)), 0)
+        const lucroRetido = lucroLiquidoC - totalDistribuicoes
+
+        return (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+            <table className="w-full">
+              <thead><tr className="border-b border-gray-200 bg-gray-50">
+                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Descrição</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase w-36">Valor</th>
+                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase w-20">AV%</th>
+              </tr></thead>
+              <tbody>
+                <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Receita</td></tr>
+                <DreLine label="Receita Bruta de Serviços" valor={recBruta} base={recBruta} indent />
+                <DreLine label="(=) RECEITA BRUTA" valor={recBruta} base={recBruta} bold />
+
+                <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Deduções</td></tr>
+                {isSimples ? (
+                  <DreLine label={`Simples Nacional (${(Number(empresa?.aliquota_simples_efetiva || 0.06) * 100).toFixed(0)}%)`} valor={simplesVal} base={recBruta} indent negative />
+                ) : (<>
+                  <DreLine label="ISS" valor={issVal} base={recBruta} indent negative />
+                  <DreLine label="PIS" valor={pisVal} base={recBruta} indent negative />
+                  <DreLine label="COFINS" valor={cofinsVal} base={recBruta} indent negative />
+                </>)}
+
+                <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Custo dos Serviços</td></tr>
+                <DreLine label="(-) CPV Campo (MO + insumos de obra)" valor={cpvCampo} base={recBruta} indent negative />
+                <DreLine label="(=) LUCRO BRUTO" valor={lucroBrutoC} base={recBruta} bold />
+
+                <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Despesas Operacionais</td></tr>
+                <DreLine label="(-) SG&A (Despesas Administrativas)" valor={sgaTotal} base={recBruta} indent negative />
+                <DreLine label="(=) EBITDA" valor={ebitdaC} base={recBruta} bold />
+
+                {despFinC > 0 && (<>
+                  <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Resultado Financeiro</td></tr>
+                  <DreLine label="(-) Despesas Financeiras" valor={despFinC} base={recBruta} indent negative />
+                </>)}
+                <DreLine label="(=) LAIR" valor={lairC} base={recBruta} bold />
+
+                {!isSimples && (<>
+                  <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-gray-400 uppercase tracking-wider">Tributos sobre o Lucro</td></tr>
+                  <DreLine label="IRPJ" valor={irpjVal} base={recBruta} indent negative />
+                  <DreLine label="CSLL" valor={csllVal} base={recBruta} indent negative />
+                </>)}
+                <DreLine label="(=) LUCRO LÍQUIDO" valor={lucroLiquidoC} base={recBruta} bold />
+
+                <tr><td colSpan={3} className="px-4 pt-4 pb-1 text-[10px] font-bold text-brand/70 uppercase tracking-wider border-t-2 border-brand/10">Destinação do Resultado</td></tr>
+                <DreLine label="(-) Distribuição de Lucros" valor={totalDistribuicoes} base={recBruta} indent negative />
+                <DreLine label="(=) LUCRO RETIDO" valor={lucroRetido} base={recBruta} bold />
+              </tbody>
+            </table>
+            <div className="px-4 py-3 border-t border-gray-100 text-[10px] text-gray-400 italic">
+              DRE consolidada expandida com separação CPV Campo / SG&A. Aproximação gerencial.
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ══ POR CENTRO DE CUSTO ══ */}
       {tab === 'por_cc' && (() => {
