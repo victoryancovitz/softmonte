@@ -222,7 +222,8 @@
       "Bash(grep -r \"setShowDeleteModal\" /Users/victoryancovitz/softmonte-git/src/app/\\\\\\(dashboard\\\\\\)/boletins/[id]/page.tsx)",
       "Bash(ls '/Users/victoryancovitz/softmonte-git/src/app/\\(dashboard\\)/rh/')",
       "Bash(/dev/null echo:*)",
-      "Bash('/Users/victoryancovitz/softmonte-git/.env.local')"
+      "Bash('/Users/victoryancovitz/softmonte-git/.env.local')",
+      "Bash(find /Users/victoryancovitz/softmonte-git/src -name \"*.tsx\" ! -path \"*/node_modules/*\" -exec grep -l \"FormData\\\\|FileReader\\\\|upload\\\\|storage\" {})"
     ]
   }
 }

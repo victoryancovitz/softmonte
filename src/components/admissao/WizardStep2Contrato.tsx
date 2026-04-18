@@ -179,7 +179,7 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes: f
         </h3>
         {/* Toggle obra vs adm */}
         <div className="flex border border-gray-200 rounded-xl overflow-hidden mb-4 w-fit">
-          <button type="button" onClick={() => { setTipoAlocacao('obra'); onChange('centro_custo_id', '') }}
+          <button type="button" onClick={() => { setTipoAlocacao('obra'); onChange('centro_custo_id', ''); onChange('obra_id', '') }}
             className={`px-4 py-2 text-xs font-semibold transition-all ${tipoAlocacao === 'obra' ? 'bg-brand text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
             Obra de campo
           </button>

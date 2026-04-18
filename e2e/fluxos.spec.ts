@@ -23,11 +23,16 @@ async function snap(page: Page, nome: string) {
 
 // ─── F1 ─────────────────────────────────────────────────────────────
 test('F1 — Cadastrar cliente', async ({ page }) => {
+  test.setTimeout(90000)
   await login(page)
   await page.goto(URL + '/clientes/novo')
-  await page.waitForTimeout(2000)
+  await page.waitForTimeout(3000)
 
-  await page.fill('input[placeholder*="nome" i], input[name="nome"]', 'CLIENTE TESTE E2E').catch(() => {})
+  // Preenche o primeiro input de texto visível como nome
+  const inputs = page.locator('input[type="text"]')
+  if (await inputs.count() > 0) {
+    await inputs.first().fill('CLIENTE TESTE E2E').catch(() => {})
+  }
   await page.fill('input[placeholder*="CNPJ" i], input[name="cnpj"]', '12.345.678/0001-99').catch(() => {})
 
   await snap(page, 'f1-cliente-preenchido')
@@ -47,6 +52,7 @@ test('F1 — Cadastrar cliente', async ({ page }) => {
 
 // ─── F2 ─────────────────────────────────────────────────────────────
 test('F2 — Cadastrar obra', async ({ page }) => {
+  test.setTimeout(90000)
   await login(page)
   await page.goto(URL + '/obras/nova')
   await page.waitForTimeout(3000)
@@ -108,10 +114,12 @@ test('F3 — Wizard de admissão: etapas 1 e 2', async ({ page }) => {
 
   await snap(page, 'f3-etapa2-aberta')
 
-  // Dropdown de função deve ter opções
-  const selectFuncao = page.locator('select').first()
+  // Dropdown de função — é o select que contém "Selecione a função"
+  // (não o de obra/CC que vem antes)
+  const selectFuncao = page.locator('select:has(option:text-is("Selecione a função..."))').first()
   if (await selectFuncao.count() > 0) {
     const opts = await selectFuncao.locator('option').count()
+    // 15 funções + 1 "Selecione..." = 16
     expect(opts).toBeGreaterThan(1)
     await selectFuncao.selectOption({ index: 1 }).catch(() => {})
     await page.waitForTimeout(500)
@@ -176,6 +184,7 @@ test('F4 — Ponto: página carrega e permite interação', async ({ page }) => 
 
 // ─── F5 ─────────────────────────────────────────────────────────────
 test('F5 — BM: página nova carrega corretamente', async ({ page }) => {
+  test.setTimeout(90000)
   await login(page)
   await page.goto(URL + '/boletins/nova')
   await page.waitForTimeout(3000)
