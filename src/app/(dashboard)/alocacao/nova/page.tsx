@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import { Search, Check, Users } from 'lucide-react'
+import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 
 type Func = { id: string; nome: string; cargo: string | null; status: string | null; deleted_at: string | null }
 type AtivaMap = Record<string, { id: string; obra_nome: string; cargo_na_obra: string | null; data_inicio: string | null }[]>
@@ -256,11 +257,20 @@ export default function NovaAlocacaoPage() {
           {/* Obra */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Obra *</label>
-            <select required value={form.obra_id} onChange={e => setForm(f => ({ ...f, obra_id: e.target.value }))}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
-              <option value="">Selecione a obra...</option>
-              {obras.map((o: any) => <option key={o.id} value={o.id}>{o.nome} — {o.cliente}</option>)}
-            </select>
+            <QuickCreateSelect
+              type="obra"
+              value={form.obra_id}
+              onChange={(id, label) => {
+                setForm(f => ({ ...f, obra_id: id }))
+                // Atualizar lista local se nova obra foi criada
+                if (id && !obras.find((o: any) => o.id === id)) {
+                  setObras(prev => [...prev, { id, nome: label, cliente: '' }])
+                }
+              }}
+              options={obras.map((o: any) => ({ id: o.id, label: `${o.nome}${o.cliente ? ` — ${o.cliente}` : ''}` }))}
+              placeholder="Selecione a obra..."
+              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand"
+            />
           </div>
 
           {/* Sub-CC da obra (opcional) */}
