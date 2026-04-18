@@ -80,6 +80,15 @@ const NAV_GROUPS: NavGroupDef[] = [
     ],
   },
   {
+    label: 'CC',
+    links: [
+      { href: '/cc', label: 'Mapa', icon: ic.obras },
+      { href: '/cc/estrutura', label: 'Estrutura', icon: ic.cad },
+      { href: '/cc/equipamentos', label: 'Equipamentos', icon: ic.stock },
+      { href: '/cc/custos-fixos', label: 'Custos Fixos', icon: ic.fin },
+    ],
+  },
+  {
     label: 'Cadastros',
     links: [
       { href: '/cadastros', label: 'Visão Geral', icon: ic.cad },
@@ -156,6 +165,16 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/compras/pedidos', label: 'Pedidos' },
     ],
   },
+  {
+    // Módulo Centros de Custo
+    groupPaths: ['/cc'],
+    tabs: [
+      { href: '/cc', label: 'Mapa', match: ['/cc'] },
+      { href: '/cc/estrutura', label: 'Estrutura', match: ['/cc/estrutura'] },
+      { href: '/cc/equipamentos', label: 'Equipamentos', match: ['/cc/equipamentos'] },
+      { href: '/cc/custos-fixos', label: 'Custos Fixos', match: ['/cc/custos-fixos'] },
+    ],
+  },
 ]
 
 // Map every link path to its group and label for breadcrumb generation
@@ -170,7 +189,8 @@ MODULE_TABS.forEach(mod => {
   const groupLabel = mod.groupPaths.includes('/funcionarios') ? 'Administrativo'
     : mod.groupPaths.includes('/financeiro') ? 'Financeiro'
     : mod.groupPaths.includes('/obras') ? 'Engenharia'
-    : mod.groupPaths.includes('/estoque') ? 'Compras' : ''
+    : mod.groupPaths.includes('/estoque') ? 'Compras'
+    : mod.groupPaths.includes('/cc') ? 'CC' : ''
   mod.tabs.forEach(t => {
     if (!PATH_MAP[t.href]) PATH_MAP[t.href] = { group: groupLabel, label: t.label }
   })
