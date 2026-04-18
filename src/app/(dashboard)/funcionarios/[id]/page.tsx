@@ -48,7 +48,7 @@ const STATUS_LABEL: Record<string, string> = {
 
 export default async function FuncionarioPage({ params, searchParams }: { params: { id: string }, searchParams: { from?: string, workflow_id?: string, step?: string } }) {
   const supabase = createClient()
-  const { data: f } = await supabase.from('funcionarios').select('*').eq('id', params.id).single()
+  const { data: f } = await supabase.from('funcionarios').select('*, centros_custo(id, codigo, nome, tipo)').eq('id', params.id).single()
   if (!f) notFound()
   const isArquivado = f.deleted_at !== null
   const role = await getRole()
@@ -364,6 +364,16 @@ export default async function FuncionarioPage({ params, searchParams }: { params
               {alocacoesAtivas.length > 1 && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700" title="Funcionário alocado em múltiplas obras">
                   ⚡ MULTI ({alocacoesAtivas.length})
+                </span>
+              )}
+              {(f as any).centros_custo && (
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                  (f as any).centros_custo.tipo === 'obra' ? 'bg-blue-100 text-blue-700' :
+                  (f as any).centros_custo.tipo === 'administrativo' ? 'bg-violet-100 text-violet-700' :
+                  (f as any).centros_custo.tipo === 'suporte_obra' ? 'bg-amber-100 text-amber-700' :
+                  'bg-gray-100 text-gray-600'
+                }`}>
+                  {(f as any).centros_custo.codigo} — {(f as any).centros_custo.nome}
                 </span>
               )}
               {f.nao_renovar && <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">⚠ NÃO RENOVAR</span>}

@@ -8,7 +8,7 @@ export default async function FuncionariosPage() {
   // Carrega apenas funcionários ativos (não deletados) + join com funcoes
   const { data: all } = await supabase
     .from('funcionarios')
-    .select('*, funcoes(nome)')
+    .select('*, funcoes(nome), centros_custo(id, codigo, nome, tipo)')
     .is('deleted_at', null)
     .order('nome')
 

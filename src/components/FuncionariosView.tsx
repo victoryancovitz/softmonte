@@ -7,6 +7,13 @@ import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { TIPO_VINCULO } from '@/lib/formatters'
 
+const CC_BADGE_COLOR: Record<string, string> = {
+  obra: 'bg-blue-100 text-blue-700',
+  administrativo: 'bg-violet-100 text-violet-700',
+  suporte_obra: 'bg-amber-100 text-amber-700',
+  equipamento: 'bg-gray-100 text-gray-600',
+}
+
 const STATUS_COLOR: Record<string, string> = {
   pendente:    'bg-amber-100 text-amber-700',
   em_admissao: 'bg-violet-100 text-violet-700',
@@ -68,8 +75,16 @@ export default function FuncionariosView({
   const [admAte, setAdmAte] = useState(sp.get('adm_ate') ?? '')
   const [obraAtual, setObraAtual] = useState(sp.get('obra') ?? '')
   const [tipoVinculo, setTipoVinculo] = useState(sp.get('vinculo') ?? '')
+  const [filtroCC, setFiltroCC] = useState(sp.get('cc') ?? '')
+  const [ccList, setCcList] = useState<any[]>([])
   const [sortField, setSortField] = useState<string | null>(sp.get('sort') ?? 'nome')
   const [sortDir, setSortDir] = useState<SortDir>((sp.get('dir') as SortDir) ?? 'asc')
+
+  // Load CCs for filter dropdown
+  useEffect(() => {
+    supabase.from('centros_custo').select('id, codigo, nome, tipo').is('deleted_at', null).eq('ativo', true).order('codigo')
+      .then(({ data }) => setCcList(data ?? []))
+  }, [])
 
   // Restore from localStorage
   useEffect(() => {
@@ -90,6 +105,7 @@ export default function FuncionariosView({
         if (o.admAte) setAdmAte(o.admAte)
         if (o.obraAtual) setObraAtual(o.obraAtual)
         if (o.tipoVinculo) setTipoVinculo(o.tipoVinculo)
+        if (o.filtroCC) setFiltroCC(o.filtroCC)
         if (o.sortField) setSortField(o.sortField)
         if (o.sortDir) setSortDir(o.sortDir)
       } catch {}
@@ -117,14 +133,15 @@ export default function FuncionariosView({
     if (admAte) params.set('adm_ate', admAte)
     if (obraAtual) params.set('obra', obraAtual)
     if (tipoVinculo) params.set('vinculo', tipoVinculo)
+    if (filtroCC) params.set('cc', filtroCC)
     if (sortField && sortField !== 'nome') params.set('sort', sortField)
     if (sortDir && sortDir !== 'asc') params.set('dir', sortDir)
     const qs = params.toString()
     router.replace(qs ? `/funcionarios?${qs}` : '/funcionarios', { scroll: false })
     if (typeof window !== 'undefined') {
-      localStorage.setItem('funcionarios_filters', JSON.stringify({ q, status, cargo, admDe, admAte, obraAtual, tipoVinculo, sortField, sortDir }))
+      localStorage.setItem('funcionarios_filters', JSON.stringify({ q, status, cargo, admDe, admAte, obraAtual, tipoVinculo, filtroCC, sortField, sortDir }))
     }
-  }, [q, status, cargo, admDe, admAte, obraAtual, tipoVinculo, sortField, sortDir])
+  }, [q, status, cargo, admDe, admAte, obraAtual, tipoVinculo, filtroCC, sortField, sortDir])
 
   function toggleSort(field: string) {
     if (sortField === field) {
@@ -158,8 +175,9 @@ export default function FuncionariosView({
     if (admAte) result = result.filter(f => f.admissao && f.admissao <= admAte)
     if (obraAtual) result = result.filter(f => obraAtualMap[f.id]?.id === obraAtual)
     if (tipoVinculo) result = result.filter(f => f.tipo_vinculo === tipoVinculo)
+    if (filtroCC) result = result.filter(f => f.centro_custo_id === filtroCC)
     return applySort(result, sortField, sortDir, ['matricula'])
-  }, [funcs, q, status, cargo, admDe, admAte, obraAtual, tipoVinculo, sortField, sortDir, obraAtualMap])
+  }, [funcs, q, status, cargo, admDe, admAte, obraAtual, tipoVinculo, filtroCC, sortField, sortDir, obraAtualMap])
 
   // Pagination
   const PAGE_SIZE = 30
@@ -168,12 +186,12 @@ export default function FuncionariosView({
   const paginatedFiltered = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   // Reset page when filters change
-  useEffect(() => { setPage(1) }, [q, status, cargo, admDe, admAte, obraAtual, tipoVinculo, sortField, sortDir])
+  useEffect(() => { setPage(1) }, [q, status, cargo, admDe, admAte, obraAtual, tipoVinculo, filtroCC, sortField, sortDir])
 
-  const hasFilter = q || status || cargo || admDe || admAte || obraAtual || tipoVinculo
+  const hasFilter = q || status || cargo || admDe || admAte || obraAtual || tipoVinculo || filtroCC
 
   function clearFilters() {
-    setQ(''); setSearchInput(''); setStatus(''); setCargo(''); setAdmDe(''); setAdmAte(''); setObraAtual(''); setTipoVinculo('')
+    setQ(''); setSearchInput(''); setStatus(''); setCargo(''); setAdmDe(''); setAdmAte(''); setObraAtual(''); setTipoVinculo(''); setFiltroCC('')
     setSortField('nome'); setSortDir('asc')
     if (typeof window !== 'undefined') localStorage.removeItem('funcionarios_filters')
     router.replace('/funcionarios', { scroll: false })
@@ -269,6 +287,13 @@ export default function FuncionariosView({
             <option value="">Todos os vínculos</option>
             {Object.entries(TIPO_VINCULO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
           </select>
+          {ccList.length > 0 && (
+            <select value={filtroCC} onChange={e => setFiltroCC(e.target.value)}
+              className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+              <option value="">Todos os CCs</option>
+              {ccList.map(cc => <option key={cc.id} value={cc.id}>{cc.codigo} — {cc.nome}</option>)}
+            </select>
+          )}
           <div className="flex border border-gray-200 rounded-lg overflow-hidden flex-shrink-0">
             <button onClick={() => setView('cards')}
               className={`px-3 py-2 text-xs font-medium transition-all ${view === 'cards' ? 'bg-brand text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
@@ -369,6 +394,14 @@ export default function FuncionariosView({
                     {f.id_ponto ? ` · ID ${f.id_ponto}` : f.matricula ? ` · Mat ${f.matricula}` : ''}
                     {!f.id_ponto && !desligado && <span className="ml-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-600 font-semibold" title="Sem marcações importadas do Secullum">Sem ID Ponto</span>}
                   </div>
+                  {f.centros_custo && (
+                    <div className="mt-1">
+                      <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${CC_BADGE_COLOR[f.centros_custo.tipo] ?? 'bg-gray-100 text-gray-600'}`}>
+                        {f.centros_custo.codigo}
+                      </span>
+                      <span className="text-[10px] text-gray-400 ml-1">{f.centros_custo.nome}</span>
+                    </div>
+                  )}
                   {desligado && (
                     <div className="mt-2 pt-2 border-t border-gray-100 text-[10px] text-red-600 font-medium">
                       Desligado em {new Date(f.deleted_at).toLocaleDateString('pt-BR')}
@@ -421,6 +454,7 @@ export default function FuncionariosView({
                   <SortableHeader label="Admissão" field="admissao" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="1º Período" field="prazo1" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
                   <SortableHeader label="Status" field="status" currentField={sortField} currentDir={sortDir} onSort={toggleSort} />
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Lotação</th>
                   <th className="px-4 py-3"></th>
                 </tr>
               </thead>
@@ -481,6 +515,18 @@ export default function FuncionariosView({
                         {!desligado && !Number(f.salario_base) && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem salário</span>}
                         {!desligado && !f.funcao_id && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem função</span>}
                         </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        {f.centros_custo ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-semibold ${CC_BADGE_COLOR[f.centros_custo.tipo] ?? 'bg-gray-100 text-gray-600'}`}>
+                              {f.centros_custo.codigo}
+                            </span>
+                            <span className="text-xs text-gray-500 truncate max-w-[120px]">{f.centros_custo.nome}</span>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-300">--</span>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right">
                         <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 transition-opacity">

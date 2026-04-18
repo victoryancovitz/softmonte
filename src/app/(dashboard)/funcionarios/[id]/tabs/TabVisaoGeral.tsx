@@ -67,6 +67,24 @@ export default function TabVisaoGeral({ f, alocacoes, fmtD }: TabVisaoGeralProps
         </div>
       </div>
 
+      {/* Lotação CC */}
+      {f.centros_custo && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Lotação</h2>
+          <div className="flex items-center gap-2">
+            <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${
+              f.centros_custo.tipo === 'obra' ? 'bg-blue-100 text-blue-700' :
+              f.centros_custo.tipo === 'administrativo' ? 'bg-violet-100 text-violet-700' :
+              f.centros_custo.tipo === 'suporte_obra' ? 'bg-amber-100 text-amber-700' :
+              'bg-gray-100 text-gray-600'
+            }`}>
+              {f.centros_custo.codigo}
+            </span>
+            <span className="text-sm text-gray-700 font-medium">{f.centros_custo.nome}</span>
+          </div>
+        </div>
+      )}
+
       {/* Alocações */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Obras e alocações</h2>

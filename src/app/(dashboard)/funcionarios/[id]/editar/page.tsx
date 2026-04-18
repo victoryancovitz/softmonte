@@ -13,6 +13,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
   const [form, setForm] = useState<any>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [ccsAdm, setCcsAdm] = useState<any[]>([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const router = useRouter()
@@ -26,9 +27,13 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
   useEffect(() => {
     ;(async () => {
       try {
-        const { data, error } = await supabase.from('funcionarios').select('*').eq('id', params.id).single()
+        const [{ data, error }, { data: ccs }] = await Promise.all([
+          supabase.from('funcionarios').select('*').eq('id', params.id).single(),
+          supabase.from('centros_custo').select('id, codigo, nome, tipo').eq('tipo', 'administrativo').eq('ativo', true).is('deleted_at', null).order('codigo'),
+        ])
         if (error) throw error
         if (data) setForm(data)
+        setCcsAdm(ccs ?? [])
       } catch (e: any) {
         setError('Erro ao carregar funcionário: ' + (e?.message || 'desconhecido'))
       } finally {
@@ -122,6 +127,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
       outros_beneficios: parseFloat(form.outros_beneficios) || 0,
       horas_mes: parseFloat(form.horas_mes) || 220,
       custo_hora: custoHora > 0 ? custoHora : null,
+      centro_custo_id: form.centro_custo_id || null,
       nao_renovar: !!form.nao_renovar,
       observacao_renovacao: form.observacao_renovacao || null,
     }).eq('id', params.id)
@@ -323,6 +329,23 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
                 <input type="text" value={form.tamanho_bota ?? ''} onChange={e => set('tamanho_bota', e.target.value)} className={inp}/></div>
               <div data-field="tamanho_uniforme"><label className={lbl}>Tamanho Uniforme <span className="text-gray-400 font-normal">(Compras)</span></label>
                 <input type="text" value={form.tamanho_uniforme ?? ''} onChange={e => set('tamanho_uniforme', e.target.value)} className={inp}/></div>
+            </div>
+          </section>
+
+          {/* Lotação Administrativa */}
+          <section>
+            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Lotação Administrativa</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={lbl}>Centro de Custo</label>
+                <select value={form.centro_custo_id ?? ''} onChange={e => set('centro_custo_id', e.target.value)} className={inp + ' bg-white'}>
+                  <option value="">Nenhum (alocação por obra)</option>
+                  {ccsAdm.map((cc: any) => (
+                    <option key={cc.id} value={cc.id}>{cc.codigo} — {cc.nome}</option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-gray-400 mt-1">Para funcionarios administrativos que nao sao alocados em obra.</p>
+              </div>
             </div>
           </section>
 

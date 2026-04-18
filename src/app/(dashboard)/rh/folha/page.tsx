@@ -131,7 +131,15 @@ export default function FolhaPage() {
 
           // 5) Buscar dados individuais dos funcionarios (ANTES dos itens)
           const funcIds = custosValidos.map((c: any) => c.funcionario_id)
-          const { data: funcsData } = await supabase.from('funcionarios').select('id, salario_base, adiantamento_pct, insalubridade_pct, periculosidade_pct, vt_mensal, dependentes_ir').in('id', funcIds)
+          const { data: funcsData } = await supabase.from('funcionarios').select('id, salario_base, adiantamento_pct, insalubridade_pct, periculosidade_pct, vt_mensal, dependentes_ir, centro_custo_id').in('id', funcIds)
+
+          // Buscar CC da obra (fallback para funcionários sem centro_custo_id)
+          let ccObra: any = null
+          {
+            const { data: ccObraData } = await supabase.from('centros_custo')
+              .select('id, codigo, nome').eq('obra_id', form.obra_id).eq('tipo', 'obra').is('deleted_at', null).limit(1).maybeSingle()
+            ccObra = ccObraData
+          }
           const funcMap: Record<string, any> = {}
           ;(funcsData ?? []).forEach((f: any) => { funcMap[f.id] = f })
 
@@ -180,10 +188,21 @@ export default function FolhaPage() {
 
           const lancamentosParaInserir: any[] = []
           for (const c of custosValidos) {
-            const adiantPct = Number(funcMap[c.funcionario_id]?.adiantamento_pct ?? 40) / 100
+            const func = funcMap[c.funcionario_id] || {}
+            const adiantPct = Number(func.adiantamento_pct ?? 40) / 100
             const salLiquido = Number(c.salario_liquido_empresa || 0)
             const vlAdiant = Math.round(salLiquido * adiantPct * 100) / 100
             const vlSaldo = Math.round((Number(c.custo_real_mes || 0) - vlAdiant) * 100) / 100
+
+            // Resolve CC: funcionário tem direto, senão usa CC da obra
+            const ccId = func.centro_custo_id || ccObra?.id || null
+            const ccTexto = func.centro_custo_id
+              ? null  // será resolvido pelo join no financeiro
+              : ccObra ? `${ccObra.codigo} — ${ccObra.nome}` : null
+
+            const ccFields: Record<string, any> = {}
+            if (ccId) ccFields.centro_custo_id = ccId
+            if (ccTexto) ccFields.centro_custo = ccTexto
 
             lancamentosParaInserir.push({
               obra_id: form.obra_id, funcionario_id: c.funcionario_id,
@@ -192,6 +211,7 @@ export default function FolhaPage() {
               valor: vlAdiant, status: 'em_aberto', data_competencia: compBase,
               data_vencimento: dtAdiantamento, origem: 'folha_fechamento', is_provisao: false,
               created_by: user?.id ?? null,
+              ...ccFields,
             })
             lancamentosParaInserir.push({
               obra_id: form.obra_id, funcionario_id: c.funcionario_id,
@@ -200,6 +220,7 @@ export default function FolhaPage() {
               valor: vlSaldo, status: 'em_aberto', data_competencia: compBase,
               data_vencimento: data_pg, origem: 'folha_fechamento', is_provisao: false,
               created_by: user?.id ?? null,
+              ...ccFields,
             })
           }
           // Provisao agregada

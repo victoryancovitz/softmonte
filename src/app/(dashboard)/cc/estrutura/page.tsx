@@ -45,6 +45,8 @@ export default function EstruturaAdmPage() {
   const toast = useToast()
 
   const [ccs, setCcs] = useState<CC[]>([])
+  const [funcsPorCC, setFuncsPorCC] = useState<Record<string, any[]>>({})
+  const [expandedCC, setExpandedCC] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [busca, setBusca] = useState('')
   const [modalOpen, setModalOpen] = useState(false)
@@ -69,6 +71,23 @@ export default function EstruturaAdmPage() {
       .is('deleted_at', null)
       .order('codigo')
     setCcs(data ?? [])
+
+    // Load funcionários alocados por CC
+    if (data && data.length > 0) {
+      const ccIds = data.map(c => c.id)
+      const { data: funcs } = await supabase
+        .from('funcionarios')
+        .select('id, nome, cargo, centro_custo_id')
+        .in('centro_custo_id', ccIds)
+        .is('deleted_at', null)
+        .order('nome')
+      const map: Record<string, any[]> = {}
+      for (const f of funcs ?? []) {
+        if (!map[f.centro_custo_id]) map[f.centro_custo_id] = []
+        map[f.centro_custo_id].push(f)
+      }
+      setFuncsPorCC(map)
+    }
     setLoading(false)
   }
 
@@ -200,7 +219,10 @@ export default function EstruturaAdmPage() {
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2">
-          {filtered.map(cc => (
+          {filtered.map(cc => {
+            const funcsCC = funcsPorCC[cc.id] ?? []
+            const isExpanded = expandedCC === cc.id
+            return (
             <div key={cc.id} className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-sm transition-shadow">
               <div className="flex items-start justify-between gap-2 mb-2">
                 <div className="flex-1 min-w-0">
@@ -211,6 +233,9 @@ export default function EstruturaAdmPage() {
                         {SUBTIPO_LABEL[cc.subtipo] ?? cc.subtipo}
                       </span>
                     )}
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                      {funcsCC.length} func.
+                    </span>
                   </div>
                   <h3 className="text-sm font-bold text-gray-800 truncate">{cc.nome}</h3>
                 </div>
@@ -225,11 +250,36 @@ export default function EstruturaAdmPage() {
               <div className="flex items-center gap-4 text-xs text-gray-500">
                 {cc.localizacao && <span>{cc.localizacao}</span>}
                 {cc.custo_mensal_estimado ? (
-                  <span className="font-medium text-violet-600">{fmt(cc.custo_mensal_estimado)}/mês</span>
+                  <span className="font-medium text-violet-600">{fmt(cc.custo_mensal_estimado)}/mes</span>
                 ) : null}
               </div>
+              {/* Funcionários */}
+              <button
+                onClick={() => setExpandedCC(isExpanded ? null : cc.id)}
+                className="mt-2 text-[11px] text-brand hover:underline font-semibold"
+              >
+                {isExpanded ? 'Ocultar funcionarios' : `Ver funcionarios (${funcsCC.length})`}
+              </button>
+              {isExpanded && (
+                <div className="mt-2 pt-2 border-t border-gray-100 space-y-1.5">
+                  {funcsCC.length > 0 ? funcsCC.map((func: any) => (
+                    <a key={func.id} href={`/funcionarios/${func.id}`} className="flex items-center gap-2 py-1 hover:bg-gray-50 rounded-lg px-1 transition-colors">
+                      <div className="w-6 h-6 rounded-full bg-brand/10 text-brand text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                        {func.nome?.split(' ').map((n: string) => n[0]).slice(0, 2).join('').toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-gray-800 truncate">{func.nome}</div>
+                        {func.cargo && <div className="text-[10px] text-gray-400">{func.cargo}</div>}
+                      </div>
+                    </a>
+                  )) : (
+                    <p className="text-xs text-gray-400 italic py-2">Nenhum funcionario neste departamento.</p>
+                  )}
+                </div>
+              )}
             </div>
-          ))}
+            )
+          })}
         </div>
       )}
 

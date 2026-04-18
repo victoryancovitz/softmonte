@@ -12,6 +12,7 @@ interface Props {
   errors: Record<string, string>
   funcoes: any[]
   obras?: any[]
+  ccsAdm?: any[]
 }
 
 const TIPO_VINCULO_OPTIONS = [
@@ -59,9 +60,10 @@ function fmtR(v: number) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
-export default function WizardStep2Contrato({ data, onChange, errors, funcoes: funcoesProp, obras = [] }: Props) {
+export default function WizardStep2Contrato({ data, onChange, errors, funcoes: funcoesProp, obras = [], ccsAdm = [] }: Props) {
   const supabase = createClient()
   const toast = useToast()
+  const [tipoAlocacao, setTipoAlocacao] = useState<'obra' | 'adm'>(data.centro_custo_id && !data.obra_id ? 'adm' : 'obra')
   const [funcoesLocal, setFuncoesLocal] = useState<any[]>(funcoesProp || [])
   const [showModalFuncao, setShowModalFuncao] = useState(false)
   const [savingFuncao, setSavingFuncao] = useState(false)
@@ -170,32 +172,60 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes: f
 
   return (
     <div className="space-y-6">
-      {/* Obra de alocação */}
+      {/* Alocação */}
       <section>
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">
-          Obra de Alocação
+          Alocação
         </h3>
+        {/* Toggle obra vs adm */}
+        <div className="flex border border-gray-200 rounded-xl overflow-hidden mb-4 w-fit">
+          <button type="button" onClick={() => { setTipoAlocacao('obra'); onChange('centro_custo_id', '') }}
+            className={`px-4 py-2 text-xs font-semibold transition-all ${tipoAlocacao === 'obra' ? 'bg-brand text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+            Obra de campo
+          </button>
+          <button type="button" onClick={() => { setTipoAlocacao('adm'); onChange('obra_id', '') }}
+            className={`px-4 py-2 text-xs font-semibold transition-all ${tipoAlocacao === 'adm' ? 'bg-brand text-white' : 'bg-white text-gray-500 hover:bg-gray-50'}`}>
+            Administrativo
+          </button>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Obra" required error={errors.obra_id}>
-            <select
-              value={data.obra_id ?? ''}
-              onChange={e => onChange('obra_id', e.target.value)}
-              className={inp + ' bg-white'}
-            >
-              <option value="">Selecione a obra...</option>
-              {obras.map((o: any) => (
-                <option key={o.id} value={o.id}>{o.nome}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Data de início na obra">
-            <input
-              type="date"
-              value={data.data_inicio_obra ?? data.admissao ?? today}
-              onChange={e => onChange('data_inicio_obra', e.target.value)}
-              className={inp}
-            />
-          </Field>
+          {tipoAlocacao === 'obra' ? (
+            <>
+              <Field label="Obra" required error={errors.obra_id}>
+                <select
+                  value={data.obra_id ?? ''}
+                  onChange={e => onChange('obra_id', e.target.value)}
+                  className={inp + ' bg-white'}
+                >
+                  <option value="">Selecione a obra...</option>
+                  {obras.map((o: any) => (
+                    <option key={o.id} value={o.id}>{o.nome}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Data de inicio na obra">
+                <input
+                  type="date"
+                  value={data.data_inicio_obra ?? data.admissao ?? today}
+                  onChange={e => onChange('data_inicio_obra', e.target.value)}
+                  className={inp}
+                />
+              </Field>
+            </>
+          ) : (
+            <Field label="Centro de Custo Administrativo" required error={errors.centro_custo_id}>
+              <select
+                value={data.centro_custo_id ?? ''}
+                onChange={e => onChange('centro_custo_id', e.target.value)}
+                className={inp + ' bg-white'}
+              >
+                <option value="">Selecione o CC...</option>
+                {ccsAdm.map((cc: any) => (
+                  <option key={cc.id} value={cc.id}>{cc.codigo} — {cc.nome}</option>
+                ))}
+              </select>
+            </Field>
+          )}
         </div>
       </section>
 

@@ -21,7 +21,7 @@ const STEP_LABELS = ['', 'Pessoal', 'Contrato', 'CTPS/Banco', 'ASO', 'NRs', 'EPI
 // Campos MÍNIMOS para avançar (P2)
 const REQUIRED_FIELDS: Record<number, string[]> = {
   1: ['nome', 'cpf', 'data_nascimento'],
-  2: ['funcao_id', 'admissao', 'obra_id'],
+  2: ['funcao_id', 'admissao'],
   3: [],
   4: [],
 }
@@ -79,6 +79,7 @@ export default function WizardAdmissaoPage() {
   const [saving, setSaving] = useState(false)
   const [funcoes, setFuncoes] = useState<any[]>([])
   const [obras, setObras] = useState<any[]>([])
+  const [ccsAdm, setCcsAdm] = useState<any[]>([])
   const [funcionarioId, setFuncionarioId] = useState<string | null>(preFuncId)
   const [workflowId, setWorkflowId] = useState<string | null>(null)
   const [completedSteps, setCompletedSteps] = useState<number[]>([])
@@ -94,6 +95,8 @@ export default function WizardAdmissaoPage() {
       .then(({ data }) => setFuncoes(data ?? []))
     supabase.from('obras').select('id, nome').eq('status', 'ativo').is('deleted_at', null).order('nome')
       .then(({ data }) => setObras(data ?? []))
+    supabase.from('centros_custo').select('id, codigo, nome, tipo').eq('tipo', 'administrativo').eq('ativo', true).is('deleted_at', null).order('codigo')
+      .then(({ data }) => setCcsAdm(data ?? []))
   }, [])
 
   // Carrega dados do funcionário se veio da URL (P17)
@@ -139,6 +142,10 @@ export default function WizardAdmissaoPage() {
       if (val === undefined || val === null || val === '') {
         errs[field] = `${FIELD_LABELS[field] || field} é obrigatório`
       }
+    }
+    // Step 2: precisa de obra_id OU centro_custo_id
+    if (stepNum === 2 && !formData.obra_id && !formData.centro_custo_id) {
+      errs.obra_id = 'Selecione uma obra ou centro de custo administrativo'
     }
     setErrors(errs)
     if (Object.keys(errs).length > 0) return false
@@ -261,6 +268,7 @@ export default function WizardAdmissaoPage() {
         const custoEmp = bruto + bruto * 0.374 + bruto * 0.21
         const hm = parseFloat(formData.horas_mes) || 220
         update.custo_hora = hm > 0 ? Math.round(custoEmp / hm * 100) / 100 : null
+        update.centro_custo_id = formData.centro_custo_id || null
       } else if (step === 3) {
         update.ctps_numero = formData.ctps_numero || null
         update.ctps_serie = formData.ctps_serie || null
@@ -343,13 +351,16 @@ export default function WizardAdmissaoPage() {
     setSaving(true)
     try {
       const obraId = formData.obra_id || null
+      const ccId = formData.centro_custo_id || null
       const dataInicio = formData.data_inicio_obra || formData.admissao || new Date().toISOString().slice(0, 10)
 
-      // 1. Status: alocado se tem obra, senão disponivel
+      // 1. Status: alocado se tem obra, disponivel se adm/sem obra
       const novoStatus = obraId ? 'alocado' : 'disponivel'
-      await supabase.from('funcionarios').update({ status: novoStatus }).eq('id', funcionarioId)
+      const funcUpdate: Record<string, any> = { status: novoStatus }
+      if (ccId && !obraId) funcUpdate.centro_custo_id = ccId
+      await supabase.from('funcionarios').update(funcUpdate).eq('id', funcionarioId)
 
-      // 2. Criar alocação se tiver obra
+      // 2. Criar alocação se tiver obra (não cria para CC adm)
       if (obraId) {
         const { data: existing } = await supabase.from('alocacoes')
           .select('id').eq('funcionario_id', funcionarioId).eq('obra_id', obraId).eq('ativo', true).maybeSingle()
@@ -458,7 +469,7 @@ export default function WizardAdmissaoPage() {
       case 1:
         return <WizardStep1Pessoal data={formData} onChange={handleChange} errors={errors} />
       case 2:
-        return <WizardStep2Contrato data={formData} onChange={handleChange} errors={errors} funcoes={funcoes} obras={obras} />
+        return <WizardStep2Contrato data={formData} onChange={handleChange} errors={errors} funcoes={funcoes} obras={obras} ccsAdm={ccsAdm} />
       case 3:
         return <WizardStep3CtpsBanco data={formData} onChange={handleChange} errors={errors} />
       case 4:
