@@ -12,8 +12,15 @@ const CAT_COLOR: Record<string, string> = {
   Consumivel: 'bg-purple-100 text-purple-700',
 }
 
-export default function EstoqueTable({ itens }: { itens: any[] }) {
+interface CC {
+  id: string
+  codigo: string
+  nome: string
+}
+
+export default function EstoqueTable({ itens, centrosCusto = [] }: { itens: any[]; centrosCusto?: CC[] }) {
   const [busca, setBusca] = useState('')
+  const [filtroCc, setFiltroCc] = useState('')
   const [sortField, setSortField] = useState<string | null>(null)
   const [sortDir, setSortDir] = useState<SortDir>(null)
 
@@ -35,16 +42,33 @@ export default function EstoqueTable({ itens }: { itens: any[] }) {
         i.nome?.toLowerCase().includes(q) ||
         i.codigo?.toLowerCase().includes(q) ||
         i.categoria?.toLowerCase().includes(q) ||
-        i.deposito?.toLowerCase().includes(q)
+        (i.centros_custo?.nome ?? i.deposito ?? '').toLowerCase().includes(q)
       )
     }
+    if (filtroCc) {
+      result = result.filter(i => i.centro_custo_id === filtroCc)
+    }
     return applySort(result, sortField, sortDir, ['quantidade', 'quantidade_minima'])
-  }, [itens, busca, sortField, sortDir])
+  }, [itens, busca, filtroCc, sortField, sortDir])
 
   return (
     <>
-      <div className="mb-4">
-        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar item..." />
+      <div className="mb-4 flex items-center gap-3 flex-wrap">
+        <div className="flex-1 min-w-[200px] max-w-sm">
+          <SearchInput value={busca} onChange={setBusca} placeholder="Buscar item..." />
+        </div>
+        {centrosCusto.length > 0 && (
+          <select
+            value={filtroCc}
+            onChange={e => setFiltroCc(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand"
+          >
+            <option value="">Todos os depósitos</option>
+            {centrosCusto.map(c => (
+              <option key={c.id} value={c.id}>{c.codigo} — {c.nome}</option>
+            ))}
+          </select>
+        )}
       </div>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
         <table className="w-full text-sm">
@@ -53,7 +77,7 @@ export default function EstoqueTable({ itens }: { itens: any[] }) {
               <SortableHeader label="Codigo" field="codigo" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Nome" field="nome" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Categoria" field="categoria" currentField={sortField} currentDir={sortDir} onSort={onSort} />
-              <SortableHeader label="Deposito" field="deposito" currentField={sortField} currentDir={sortDir} onSort={onSort} />
+              <SortableHeader label="Depósito / CC" field="deposito" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Qtd. Atual" field="quantidade" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Qtd. Minima" field="quantidade_minima" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
@@ -63,6 +87,8 @@ export default function EstoqueTable({ itens }: { itens: any[] }) {
           <tbody>
             {filtered.length > 0 ? filtered.map((i: any) => {
               const critico = Number(i.quantidade) <= Number(i.quantidade_minima ?? 0)
+              const ccNome = i.centros_custo?.nome ?? null
+              const deposito = ccNome ?? i.deposito ?? '—'
               return (
                 <tr key={i.id} className={`border-b border-gray-50 hover:bg-gray-50/80 group ${critico ? 'bg-amber-50/30' : ''}`}>
                   <td className="px-4 py-3 text-gray-400 font-mono text-xs">{i.codigo}</td>
@@ -70,7 +96,10 @@ export default function EstoqueTable({ itens }: { itens: any[] }) {
                   <td className="px-4 py-3">
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${CAT_COLOR[i.categoria] ?? 'bg-gray-100 text-gray-600'}`}>{i.categoria}</span>
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{i.deposito ?? '—'}</td>
+                  <td className="px-4 py-3 text-gray-500">
+                    {i.centros_custo?.codigo && <span className="text-xs font-mono text-gray-400 mr-1">{i.centros_custo.codigo}</span>}
+                    {deposito}
+                  </td>
                   <td className={`px-4 py-3 font-bold text-lg font-display ${critico ? 'text-red-600' : 'text-brand'}`}>
                     {Number(i.quantidade).toFixed(0)} <span className="text-xs font-normal text-gray-400">{i.unidade}</span>
                   </td>

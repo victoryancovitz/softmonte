@@ -4,7 +4,10 @@ import EstoqueTable from './EstoqueTable'
 
 export default async function EstoquePage() {
   const supabase = createClient()
-  const { data: itens } = await supabase.from('estoque_itens').select('*').is('deleted_at', null).order('categoria').order('nome')
+  const [{ data: itens }, { data: centrosCusto }] = await Promise.all([
+    supabase.from('estoque_itens').select('*, centros_custo(id, codigo, nome)').is('deleted_at', null).order('categoria').order('nome'),
+    supabase.from('centros_custo').select('id, codigo, nome').is('deleted_at', null).eq('ativo', true).order('codigo'),
+  ])
 
   const criticos = itens?.filter((i: any) => Number(i.quantidade) <= Number(i.quantidade_minima ?? 0)) ?? []
   const totalItens = itens?.length ?? 0
@@ -26,7 +29,7 @@ export default async function EstoquePage() {
         </div>
       )}
 
-      <EstoqueTable itens={itens ?? []} />
+      <EstoqueTable itens={itens ?? []} centrosCusto={centrosCusto ?? []} />
     </div>
   )
 }

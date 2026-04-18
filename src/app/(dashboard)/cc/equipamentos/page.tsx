@@ -6,7 +6,7 @@ import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
 import SearchInput from '@/components/SearchInput'
 import EmptyState from '@/components/ui/EmptyState'
-import { Package, ArrowRightLeft, X } from 'lucide-react'
+import { Package, ArrowRightLeft, X, Clock } from 'lucide-react'
 import { fmt } from '@/lib/cores'
 
 /* ═══ Types ═══ */
@@ -29,6 +29,21 @@ interface CC {
   nome: string
 }
 
+interface HistoricoItem {
+  id: string
+  ativo_id: string
+  cc_origem: { codigo: string; nome: string } | null
+  cc_destino: { codigo: string; nome: string } | null
+  tipo: string | null
+  data_inicio: string | null
+  data_fim: string | null
+  dias_uso: number | null
+  custo_dia: number | null
+  custo_total: number | null
+  observacao: string | null
+  created_at: string | null
+}
+
 const STATUS_BADGE: Record<string, string> = {
   em_uso:       'bg-blue-100 text-blue-700',
   disponivel:   'bg-green-100 text-green-700',
@@ -41,6 +56,18 @@ const STATUS_LABEL: Record<string, string> = {
   disponivel: 'Disponível',
   manutencao: 'Manutenção',
   inativo: 'Inativo',
+}
+
+const TIPO_BADGE: Record<string, string> = {
+  definitiva: 'bg-blue-100 text-blue-700',
+  temporaria: 'bg-amber-100 text-amber-700',
+  requisicao: 'bg-purple-100 text-purple-700',
+}
+
+const TIPO_LABEL: Record<string, string> = {
+  definitiva: 'Transferência',
+  temporaria: 'Temporária',
+  requisicao: 'Requisição',
 }
 
 /* ═══ Component ═══ */
@@ -64,6 +91,11 @@ export default function EquipamentosPage() {
   const [dtFim, setDtFim] = useState('')
   const [custoDia, setCustoDia] = useState('')
   const [obs, setObs] = useState('')
+
+  // Histórico drawer
+  const [historicoAtivo, setHistoricoAtivo] = useState<Equipamento | null>(null)
+  const [historico, setHistorico] = useState<HistoricoItem[]>([])
+  const [loadingHistorico, setLoadingHistorico] = useState(false)
 
   async function load() {
     setLoading(true)
@@ -143,6 +175,25 @@ export default function EquipamentosPage() {
     setModalOpen(false)
   }
 
+  async function carregarHistorico(eq: Equipamento) {
+    setHistoricoAtivo(eq)
+    setLoadingHistorico(true)
+    setHistorico([])
+    try {
+      const { data, error } = await supabase
+        .from('cc_equipamentos_alocacao')
+        .select('id, ativo_id, tipo, data_inicio, data_fim, dias_uso, custo_dia, custo_total, observacao, created_at, cc_origem:cc_origem_id(codigo, nome), cc_destino:cc_destino_id(codigo, nome)')
+        .eq('ativo_id', eq.id)
+        .order('created_at', { ascending: false })
+      if (error) throw error
+      setHistorico((data ?? []) as unknown as HistoricoItem[])
+    } catch (err: any) {
+      toast.error('Erro ao carregar histórico.')
+    } finally {
+      setLoadingHistorico(false)
+    }
+  }
+
   async function handleTransfer() {
     if (!selectedEquip || !ccDestino || !dtInicio) {
       toast.warning('Preencha CC de destino e data de início.')
@@ -150,10 +201,19 @@ export default function EquipamentosPage() {
     }
     setSaving(true)
     try {
-      // INSERT alocação
+      // Encerrar alocação anterior aberta (data_fim IS NULL)
+      const today = new Date().toISOString().slice(0, 10)
+      await supabase
+        .from('cc_equipamentos_alocacao')
+        .update({ data_fim: today })
+        .eq('ativo_id', selectedEquip.id)
+        .is('data_fim', null)
+
+      // INSERT alocação com cc_origem e cc_destino
       const { error: e1 } = await supabase.from('cc_equipamentos_alocacao').insert({
         ativo_id: selectedEquip.id,
-        centro_custo_id: ccDestino,
+        cc_origem_id: selectedEquip.centro_custo_id ?? null,
+        cc_destino_id: ccDestino,
         tipo: tipoTransf,
         data_inicio: dtInicio,
         data_fim: dtFim || null,
@@ -247,7 +307,14 @@ export default function EquipamentosPage() {
                       <span className="text-xs text-gray-300">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 flex items-center gap-1">
+                    <button
+                      onClick={() => carregarHistorico(eq)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/5 transition-colors"
+                      title="Histórico"
+                    >
+                      <Clock className="w-4 h-4" />
+                    </button>
                     <button
                       onClick={() => openTransfer(eq)}
                       className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/5 transition-colors"
@@ -260,6 +327,85 @@ export default function EquipamentosPage() {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Drawer Histórico */}
+      {historicoAtivo && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Overlay */}
+          <div className="flex-1 bg-black/30" onClick={() => setHistoricoAtivo(null)} />
+          {/* Drawer */}
+          <div className="w-[420px] max-w-full bg-white shadow-xl flex flex-col h-full">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
+              <div>
+                <h2 className="text-base font-bold text-gray-800">Histórico de Movimentações</h2>
+                <p className="text-xs text-gray-500 mt-0.5">{historicoAtivo.patrimonio ?? ''} — {historicoAtivo.nome}</p>
+              </div>
+              <button onClick={() => setHistoricoAtivo(null)} className="p-1 rounded-lg hover:bg-gray-100">
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-5">
+              {loadingHistorico ? (
+                <p className="text-sm text-gray-400 text-center py-8">Carregando...</p>
+              ) : historico.length === 0 ? (
+                <p className="text-sm text-gray-400 text-center py-8">Nenhuma movimentação registrada.</p>
+              ) : (
+                <div className="relative">
+                  {/* Linha vertical */}
+                  <div className="absolute left-3 top-2 bottom-2 border-l-2 border-gray-200" />
+                  <div className="space-y-4">
+                    {historico.map((h, idx) => {
+                      const tipo = h.tipo ?? 'definitiva'
+                      return (
+                        <div key={h.id} className="relative pl-8">
+                          {/* Dot na timeline */}
+                          <div className={`absolute left-1.5 top-1.5 w-3 h-3 rounded-full border-2 border-white ${idx === 0 ? 'bg-brand' : 'bg-gray-300'}`} />
+                          <div className="bg-gray-50 rounded-xl p-3 space-y-1.5">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${TIPO_BADGE[tipo] ?? 'bg-gray-100 text-gray-500'}`}>
+                                {TIPO_LABEL[tipo] ?? tipo}
+                              </span>
+                              {h.created_at && (
+                                <span className="text-[10px] text-gray-400">{formatDate(h.created_at.slice(0, 10))}</span>
+                              )}
+                            </div>
+                            <div className="text-sm text-gray-700">
+                              {h.cc_origem ? (
+                                <span className="text-xs text-gray-400">
+                                  <span className="font-mono">{h.cc_origem.codigo}</span> {h.cc_origem.nome}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-300">Sem origem</span>
+                              )}
+                              <span className="mx-1.5 text-gray-300">&rarr;</span>
+                              {h.cc_destino ? (
+                                <span className="text-xs font-medium text-gray-700">
+                                  <span className="font-mono">{h.cc_destino.codigo}</span> {h.cc_destino.nome}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-300">—</span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-3 text-[11px] text-gray-500 flex-wrap">
+                              <span>{formatDate(h.data_inicio)} — {formatDate(h.data_fim)}</span>
+                              {h.dias_uso != null && <span>{h.dias_uso} dia{h.dias_uso !== 1 ? 's' : ''}</span>}
+                              {h.custo_dia != null && <span>{fmt(h.custo_dia)}/dia</span>}
+                              {h.custo_total != null && <span className="font-semibold">{fmt(h.custo_total)}</span>}
+                            </div>
+                            {h.observacao && (
+                              <p className="text-[11px] text-gray-400 italic">{h.observacao}</p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
 

@@ -75,7 +75,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
     { data: contasCorrentes },
   ] = await Promise.all([
     supabase.from('obras').select('*').eq('id', params.id).is('deleted_at', null).maybeSingle(),
-    supabase.from('alocacoes').select('*, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao)').eq('obra_id', params.id).eq('ativo', true).order('data_inicio'),
+    supabase.from('alocacoes').select('*, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao), centros_custo:centro_custo_id(id, codigo, nome)').eq('obra_id', params.id).eq('ativo', true).order('data_inicio'),
     supabase.from('boletins_medicao').select('*').eq('obra_id', params.id).is('deleted_at', null).order('numero'),
     getRole(),
     supabase.from('efetivo_diario').select('id, data, tipo_dia, funcionario_id, observacao, funcionarios(nome)').eq('obra_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
@@ -448,6 +448,12 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
                           <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-purple-100 text-purple-700"
                                 title={`Também alocado em: ${multiMap[f?.id].map(m => m.obra_nome).join(', ')}`}>
                             ⚡ Multi ({multiMap[f?.id].length + 1})
+                          </span>
+                        )}
+                        {(a as any).centros_custo && (
+                          <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-gray-100 text-gray-600"
+                                title={`CC: ${(a as any).centros_custo.codigo} — ${(a as any).centros_custo.nome}`}>
+                            CC {(a as any).centros_custo.codigo}
                           </span>
                         )}
                         <span className="text-[10px] text-green-600 bg-green-50 px-2 py-0.5 rounded font-semibold">Ativo</span>

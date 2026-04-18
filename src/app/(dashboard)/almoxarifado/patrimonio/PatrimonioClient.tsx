@@ -8,20 +8,28 @@ import { fmt } from '@/lib/cores'
 
 const CATEGORIAS = ['Ferramenta', 'Equipamento', 'Veículo', 'Mobiliário', 'TI', 'Outro']
 
+interface CCOption {
+  id: string
+  codigo: string
+  nome: string
+}
+
 interface Props {
   ativos: any[]
   obras: any[]
   funcionarios: any[]
   proximoPat: number
+  centrosCusto?: CCOption[]
 }
 
-export default function PatrimonioClient({ ativos, obras, funcionarios, proximoPat }: Props) {
+export default function PatrimonioClient({ ativos, obras, funcionarios, proximoPat, centrosCusto = [] }: Props) {
   const supabase = createClient()
   const toast = useToast()
 
   const [showCadastro, setShowCadastro] = useState(false)
   const [showDepreciacao, setShowDepreciacao] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [filtroCc, setFiltroCc] = useState('')
 
   const padPat = (n: number) => `PAT-${String(n).padStart(5, '0')}`
 
@@ -260,6 +268,22 @@ export default function PatrimonioClient({ ativos, obras, funcionarios, proximoP
         </div>
       )}
 
+      {/* Filtro por CC */}
+      {centrosCusto.length > 0 && (
+        <div className="mb-4">
+          <select
+            value={filtroCc}
+            onChange={e => setFiltroCc(e.target.value)}
+            className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand"
+          >
+            <option value="">Todos os centros de custo</option>
+            {centrosCusto.map(c => (
+              <option key={c.id} value={c.id}>{c.codigo} — {c.nome}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Tabela de Ativos */}
       {ativos.length === 0 ? (
         <EmptyState titulo="Nenhum ativo cadastrado" descricao="Cadastre ferramentas, equipamentos e bens patrimoniais." icone={<Wrench className="w-10 h-10" />} />
@@ -267,16 +291,26 @@ export default function PatrimonioClient({ ativos, obras, funcionarios, proximoP
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="bg-gray-50 border-b border-gray-100">
-              {['TAG', 'Nome', 'Categoria', 'Valor Aquisição', 'Depr. Acum.', 'Valor Líquido', 'Status', 'Responsável'].map(h => (
+              {['TAG', 'Nome', 'Categoria', 'Localização (CC)', 'Valor Aquisição', 'Depr. Acum.', 'Valor Líquido', 'Status', 'Responsável'].map(h => (
                 <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
               ))}
             </tr></thead>
             <tbody>
-              {ativos.map((a: any) => (
+              {(filtroCc ? ativos.filter((a: any) => a.centro_custo_id === filtroCc) : ativos).map((a: any) => (
                 <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono text-xs">{a.numero_patrimonio || '—'}</td>
                   <td className="px-4 py-3 font-medium">{a.nome}</td>
                   <td className="px-4 py-3 text-xs text-gray-500">{a.categoria || '—'}</td>
+                  <td className="px-4 py-3 text-gray-600">
+                    {a.centros_custo ? (
+                      <>
+                        <span className="text-xs font-mono text-gray-400 mr-1">{a.centros_custo.codigo}</span>
+                        {a.centros_custo.nome}
+                      </>
+                    ) : (
+                      <span className="text-gray-300">—</span>
+                    )}
+                  </td>
                   <td className="px-4 py-3">{fmt(a.valor_aquisicao)}</td>
                   <td className="px-4 py-3 text-red-600">{fmt(a.depreciacao_acumulada)}</td>
                   <td className="px-4 py-3 font-semibold">{fmt(Number(a.valor_aquisicao) - Number(a.depreciacao_acumulada || 0))}</td>

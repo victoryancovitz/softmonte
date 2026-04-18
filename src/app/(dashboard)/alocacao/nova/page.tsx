@@ -8,6 +8,7 @@ import { Search, Check, Users } from 'lucide-react'
 
 type Func = { id: string; nome: string; cargo: string | null; status: string | null; deleted_at: string | null }
 type AtivaMap = Record<string, { id: string; obra_nome: string; cargo_na_obra: string | null; data_inicio: string | null }[]>
+type SubCC = { id: string; codigo: string; nome: string }
 
 export default function NovaAlocacaoPage() {
   const [funcionarios, setFuncionarios] = useState<Func[]>([])
@@ -17,8 +18,10 @@ export default function NovaAlocacaoPage() {
   const [busca, setBusca] = useState('')
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
   const [form, setForm] = useState({
-    obra_id: '', data_inicio: '', data_fim: '',
+    obra_id: '', data_inicio: '', data_fim: '', centro_custo_id: '',
   })
+  const [subCCs, setSubCCs] = useState<SubCC[]>([])
+  const [loadingSubCCs, setLoadingSubCCs] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [resultados, setResultados] = useState<{ nome: string; ok: boolean; msg?: string }[] | null>(null)
@@ -32,11 +35,11 @@ export default function NovaAlocacaoPage() {
     setFuncionarios((data as Func[]) ?? [])
   }
 
-  useEffect(() => { loadFuncionarios() }, [incluirArquivados])
+  useEffect(() => { loadFuncionarios() }, [incluirArquivados]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     supabase.from('obras').select('id,nome,cliente').eq('status', 'ativo').is('deleted_at', null).order('nome')
       .then(({ data }) => setObras(data ?? []))
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Carrega mapa de alocações ativas de todos funcionários visíveis (para badge "já alocado")
   useEffect(() => {
@@ -63,10 +66,50 @@ export default function NovaAlocacaoPage() {
         setAtivasMap(map)
       } catch (e: any) {
         console.error('[alocacao/nova] erro carregando ativasMap:', e)
-        // Não bloqueia a UI — apenas não exibe os badges informativos
       }
     })()
-  }, [funcionarios])
+  }, [funcionarios]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Carrega sub-CCs ao selecionar obra
+  useEffect(() => {
+    if (!form.obra_id) {
+      setSubCCs([])
+      setForm(f => ({ ...f, centro_custo_id: '' }))
+      return
+    }
+    setLoadingSubCCs(true)
+    ;(async () => {
+      try {
+        // Buscar o CC da obra
+        const { data: ccObra } = await supabase
+          .from('centros_custo')
+          .select('id')
+          .eq('obra_id', form.obra_id)
+          .is('deleted_at', null)
+          .limit(1)
+          .maybeSingle()
+
+        if (ccObra) {
+          // Buscar sub-CCs (filhos do CC da obra)
+          const { data: filhos } = await supabase
+            .from('centros_custo')
+            .select('id, codigo, nome')
+            .eq('parent_id', ccObra.id)
+            .is('deleted_at', null)
+            .eq('ativo', true)
+            .order('codigo')
+          setSubCCs(filhos ?? [])
+        } else {
+          setSubCCs([])
+        }
+      } catch {
+        setSubCCs([])
+      } finally {
+        setLoadingSubCCs(false)
+      }
+    })()
+    setForm(f => ({ ...f, centro_custo_id: '' }))
+  }, [form.obra_id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const funcionariosFiltrados = useMemo(() => {
     const s = busca.trim().toLowerCase()
@@ -153,6 +196,7 @@ export default function NovaAlocacaoPage() {
         cargo_na_obra: f.cargo || null,
         data_inicio: form.data_inicio || new Date().toISOString().slice(0, 10),
         data_fim: form.data_fim || null,
+        centro_custo_id: form.centro_custo_id || null,
         ativo: true,
       })
       if (insErr) {
@@ -218,6 +262,29 @@ export default function NovaAlocacaoPage() {
               {obras.map((o: any) => <option key={o.id} value={o.id}>{o.nome} — {o.cliente}</option>)}
             </select>
           </div>
+
+          {/* Sub-CC da obra (opcional) */}
+          {form.obra_id && subCCs.length > 0 && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                Sub-CC <span className="text-gray-400 font-normal">(opcional)</span>
+              </label>
+              <select
+                value={form.centro_custo_id}
+                onChange={e => setForm(f => ({ ...f, centro_custo_id: e.target.value }))}
+                className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand"
+              >
+                <option value="">Nenhum (CC geral da obra)</option>
+                {subCCs.map(cc => (
+                  <option key={cc.id} value={cc.id}>{cc.codigo} — {cc.nome}</option>
+                ))}
+              </select>
+              <p className="text-[11px] text-gray-400 mt-1">Alocar funcionário em um centro de custo específico dentro da obra.</p>
+            </div>
+          )}
+          {form.obra_id && loadingSubCCs && (
+            <p className="text-xs text-gray-400">Carregando sub-CCs...</p>
+          )}
 
           {/* Funcionários — multi-select */}
           <div>

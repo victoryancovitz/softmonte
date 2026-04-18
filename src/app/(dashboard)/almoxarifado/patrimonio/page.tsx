@@ -5,10 +5,11 @@ import PatrimonioClient from './PatrimonioClient'
 
 export default async function PatrimonioPage() {
   const supabase = createClient()
-  const [{ data: ativos }, { data: obras }, { data: funcionarios }] = await Promise.all([
-    supabase.from('ativos_fixos').select('*, obras(nome), funcionarios(nome)').is('deleted_at', null).order('created_at', { ascending: false }),
+  const [{ data: ativos }, { data: obras }, { data: funcionarios }, { data: centrosCusto }] = await Promise.all([
+    supabase.from('ativos_fixos').select('*, obras(nome), funcionarios(nome), centros_custo:centro_custo_id(id, codigo, nome)').is('deleted_at', null).order('created_at', { ascending: false }),
     supabase.from('obras').select('id, nome').eq('status', 'ativo').is('deleted_at', null).order('nome'),
     supabase.from('funcionarios').select('id, nome').is('deleted_at', null).order('nome'),
+    supabase.from('centros_custo').select('id, codigo, nome').is('deleted_at', null).eq('ativo', true).order('codigo'),
   ])
 
   // Next PAT number
@@ -28,7 +29,7 @@ export default async function PatrimonioPage() {
       <h1 className="text-xl font-bold font-display text-brand mb-1">Patrimônio (Ativos Fixos)</h1>
       <p className="text-sm text-gray-500 mb-6">Ferramentas, equipamentos e bens com depreciação controlada.</p>
 
-      <PatrimonioClient ativos={ativos ?? []} obras={obras ?? []} funcionarios={funcionarios ?? []} proximoPat={maxPat + 1} />
+      <PatrimonioClient ativos={ativos ?? []} obras={obras ?? []} funcionarios={funcionarios ?? []} proximoPat={maxPat + 1} centrosCusto={centrosCusto ?? []} />
     </div>
   )
 }
