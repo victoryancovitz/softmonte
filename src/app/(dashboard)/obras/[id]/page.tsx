@@ -12,6 +12,7 @@ import RncTab from './RncTab'
 import AditivosTab from './AditivosTab'
 import { formatStatus } from '@/lib/formatters'
 import ContasBancariasObra from './ContasBancariasObra'
+import CriarCCButton from './CriarCCButton'
 import { fmt } from '@/lib/cores'
 
 const TIPOS_DOC_OBRA = [
@@ -86,6 +87,21 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
   ])
 
   if (!obra) notFound()
+
+  // Centro de Custo da obra
+  const { data: ccObra } = await supabase
+    .from('centros_custo')
+    .select('id, codigo, nome, tipo')
+    .eq('obra_id', params.id)
+    .eq('tipo', 'obra')
+    .is('deleted_at', null)
+    .maybeSingle()
+  const { data: subCCs } = ccObra
+    ? await supabase.from('centros_custo').select('id, codigo, nome, subtipo').eq('parent_id', ccObra.id).is('deleted_at', null).order('codigo')
+    : { data: [] }
+  const { data: custosFixosCC } = ccObra
+    ? await supabase.from('cc_custos_fixos').select('id, nome, valor').eq('centro_custo_id', ccObra.id).eq('ativo', true)
+    : { data: [] }
 
   // Deduplicar alocações por funcionario_id (manter a mais antiga, já ordenado ASC)
   const alocadosUnicos: any[] = Object.values(
@@ -330,6 +346,50 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               </div>
             </div>
           )}
+
+          {/* Centro de Custo */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-700">Centro de Custo</h3>
+              {ccObra && (
+                <Link href={`/cc`} className="text-xs text-brand hover:underline">Ver no mapa →</Link>
+              )}
+            </div>
+            {ccObra ? (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs bg-blue-50 text-blue-700 px-2 py-0.5 rounded">{ccObra.codigo}</span>
+                  <span className="text-sm text-gray-700">{ccObra.nome}</span>
+                </div>
+                {(subCCs ?? []).length > 0 && (
+                  <div className="pl-3 border-l-2 border-gray-100 space-y-1">
+                    {(subCCs ?? []).map((sub: any) => (
+                      <div key={sub.id} className="flex items-center gap-2 text-xs text-gray-500">
+                        <span className="font-mono bg-gray-50 px-1.5 py-0.5 rounded">{sub.codigo}</span>
+                        <span>{sub.nome}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {(custosFixosCC ?? []).length > 0 && (
+                  <div className="pt-2 border-t border-gray-50">
+                    <p className="text-xs text-gray-400 mb-1">Custos fixos</p>
+                    {(custosFixosCC ?? []).map((cf: any) => (
+                      <div key={cf.id} className="flex justify-between text-xs text-gray-500">
+                        <span>{cf.nome}</span>
+                        <span>{fmt(Number(cf.valor))}/mês</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-3">
+                <p className="text-xs text-gray-400 mb-2">Nenhum centro de custo vinculado</p>
+                <CriarCCButton obraId={params.id} obraNome={obra.nome} dataInicio={obra.data_inicio} />
+              </div>
+            )}
+          </div>
 
           {/* Contas Bancárias do Contrato */}
           <ContasBancariasObra obraId={obra.id} contaRecebimentoId={obra.conta_recebimento_id} contaPagamentoId={obra.conta_pagamento_id} contas={contasCorrentes ?? []} />
