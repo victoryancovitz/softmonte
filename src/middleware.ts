@@ -29,9 +29,13 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/reset-password') ||
     pathname.startsWith('/convite')
   const isApiRoute = pathname.startsWith('/api/')
+  const isPublicApi = pathname.startsWith('/api/auth/register') ||
+    pathname.startsWith('/api/whatsapp/webhook') ||
+    pathname.startsWith('/api/whatsapp/confirmar') ||
+    pathname.startsWith('/api/health')
   const isPortalRoute = pathname.startsWith('/portal')
 
-  if (!user && !isAuthPage) {
+  if (!user && !isAuthPage && !isPublicApi) {
     // Rotas /api/* retornam 401 JSON em vez de redirect HTML pra /login,
     // pra clientes fetch receberem erro tratável.
     if (isApiRoute) {
