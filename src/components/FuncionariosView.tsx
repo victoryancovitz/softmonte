@@ -384,6 +384,9 @@ export default function FuncionariosView({
                         {STATUS_LABEL[f.status] ?? f.status}
                       </span>
                     )}
+                    {f.cadastro_completo === false && (
+                      <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium" title="Faltam dados: endereço, email ou celular">⚠ Incompleto</span>
+                    )}
                   </div>
                   <div className="font-semibold text-sm text-gray-900 group-hover:text-brand transition-colors">{f.nome_guerra ?? f.nome}</div>
                   {f.nome_guerra && <div className="text-[10px] text-gray-400 truncate">{f.nome}</div>}
@@ -512,6 +515,7 @@ export default function FuncionariosView({
                           </span>
                         )}
                         {!desligado && !f.cpf && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem CPF</span>}
+                        {!desligado && f.cadastro_completo === false && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-amber-50 text-amber-600" title="Faltam dados obrigatórios">⚠ Cadastro</span>}
                         {!desligado && !Number(f.salario_base) && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem salário</span>}
                         {!desligado && !f.funcao_id && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem função</span>}
                         </div>
