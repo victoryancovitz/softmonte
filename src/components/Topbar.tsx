@@ -78,6 +78,7 @@ const NAV_GROUPS: NavGroupDef[] = [
       { href: '/forecast', label: 'Forecast', icon: ic.report },
       { href: '/financeiro/dividas', label: 'Dívidas', icon: ic.fin },
       { href: '/financeiro/pendencias', label: 'Pendências', icon: ic.fin },
+      { href: '/financeiro/conciliacao', label: 'Conciliação', icon: ic.fin },
     ],
   },
   {
@@ -145,6 +146,7 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/forecast', label: 'Forecast' },
       { href: '/financeiro/dividas', label: 'Dívidas', match: ['/financeiro/dividas'] },
       { href: '/financeiro/pendencias', label: 'Pendências', match: ['/financeiro/pendencias'] },
+      { href: '/financeiro/conciliacao', label: 'Conciliação', match: ['/financeiro/conciliacao'] },
     ],
   },
   {

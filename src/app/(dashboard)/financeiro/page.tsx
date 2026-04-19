@@ -65,7 +65,9 @@ function FinanceiroPage() {
   const [centrosCusto, setCentrosCusto] = useState<any[]>([])
   const [page, setPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
-  const PAGE_SIZE = 500
+  const PAGE_SIZE = 100
+  const [filtroAno, setFiltroAno] = useState(new Date().getFullYear().toString())
+  const [filtroMes, setFiltroMes] = useState('todos')
 
   const toggleSelect = (id: string) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleTodos = (ids: string[]) => setSelected(prev => prev.size === ids.length ? new Set() : new Set(ids))
@@ -94,7 +96,7 @@ function FinanceiroPage() {
 
   useEffect(() => {
     loadData()
-  }, [obraId, showProvisões, page])
+  }, [obraId, showProvisões, page, filtroAno, filtroMes])
 
   function verificarCoerencia(dados: any[]): string[] {
     const alertas: string[] = []
@@ -130,9 +132,22 @@ function FinanceiroPage() {
 
   async function loadData() {
     setLoading(true)
-    let q = supabase.from('financeiro_lancamentos').select('*, obras(nome), centros_custo(codigo, nome, tipo)', { count: 'exact' }).is('deleted_at', null).order('data_competencia')
+    let q = supabase.from('financeiro_lancamentos').select('*, obras(nome), centros_custo(codigo, nome, tipo)', { count: 'exact' }).is('deleted_at', null).order('data_competencia', { ascending: false })
     if (obraId && obraId !== 'all') q = q.eq('obra_id', obraId)
     if (!showProvisões) q = q.eq('is_provisao', false)
+    // Filtros de período
+    if (filtroAno !== 'todos') {
+      const ano = Number(filtroAno)
+      if (filtroMes !== 'todos') {
+        const mes = Number(filtroMes)
+        const inicio = `${ano}-${String(mes).padStart(2, '0')}-01`
+        const fimDate = new Date(ano, mes, 0) // último dia do mês
+        const fim = `${ano}-${String(mes).padStart(2, '0')}-${String(fimDate.getDate()).padStart(2, '0')}`
+        q = q.gte('data_competencia', inicio).lte('data_competencia', fim)
+      } else {
+        q = q.gte('data_competencia', `${ano}-01-01`).lte('data_competencia', `${ano}-12-31`)
+      }
+    }
     q = q.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data, count } = await q
     setLancamentos(data ?? [])
@@ -259,6 +274,20 @@ function FinanceiroPage() {
             className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
             <option value="">Todos os CCs</option>
             {centrosCusto.map(cc => <option key={cc.id} value={cc.id}>{cc.codigo} — {cc.nome}</option>)}
+          </select>
+          <select value={filtroAno} onChange={e => { setFiltroAno(e.target.value); setPage(1) }}
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+            <option value="todos">Todos os anos</option>
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+          </select>
+          <select value={filtroMes} onChange={e => { setFiltroMes(e.target.value); setPage(1) }}
+            className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
+            <option value="todos">Todos os meses</option>
+            {['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'].map((m, i) => (
+              <option key={i+1} value={String(i+1)}>{m}</option>
+            ))}
           </select>
           <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
             <input type="checkbox" checked={showProvisões} onChange={e => { setShowProvisões(e.target.checked); setPage(1) }}
