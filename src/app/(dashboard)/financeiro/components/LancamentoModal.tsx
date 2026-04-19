@@ -36,6 +36,11 @@ const FORM_INITIAL = {
   is_recorrente: false,
   frequencia: 'mensal',
   total_ocorrencias: 12,
+  alertar_dias_antes: 7,
+  variacao_max_pct: 20,
+  juros_dia_padrao_pct: 0.033,
+  multa_padrao_pct: 2,
+  valor_previsto: '',
 }
 
 interface LancamentoModalProps {
@@ -96,6 +101,11 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
         is_recorrente: false,
         frequencia: 'mensal',
         total_ocorrencias: 12,
+        alertar_dias_antes: editingLanc.alertar_dias_antes ?? 7,
+        variacao_max_pct: editingLanc.variacao_max_pct ?? 20,
+        juros_dia_padrao_pct: editingLanc.juros_dia_padrao_pct ?? 0.033,
+        multa_padrao_pct: editingLanc.multa_padrao_pct ?? 2,
+        valor_previsto: editingLanc.valor_previsto ? String(editingLanc.valor_previsto) : '',
       })
     } else {
       setEditingId(null)
@@ -171,6 +181,16 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
 
       // EDIT mode
       if (editingId) {
+        // Check variacao if valor_previsto exists and valor changed
+        if (modalForm.valor_previsto && Number(modalForm.valor_previsto) > 0) {
+          const variacaoPct = Math.abs((valorNum - Number(modalForm.valor_previsto)) / Number(modalForm.valor_previsto) * 100)
+          if (variacaoPct > (modalForm.variacao_max_pct ?? 20)) {
+            const confirmar = window.confirm(
+              `O valor (${fmt(valorNum)}) variou ${variacaoPct.toFixed(1)}% em relacao ao previsto (${fmt(Number(modalForm.valor_previsto))}), acima do limite de ${modalForm.variacao_max_pct ?? 20}%. Deseja salvar mesmo assim?`
+            )
+            if (!confirmar) { setSalvando(false); return }
+          }
+        }
         const { error } = await supabase.from('financeiro_lancamentos').update({
           tipo: modalForm.tipo,
           nome: modalForm.nome,
@@ -188,6 +208,8 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
           numero_documento: modalForm.numero_documento || null,
           anexo_url: modalForm.anexo_url || null,
           updated_by: user?.id ?? null,
+          juros_dia_padrao_pct: modalForm.juros_dia_padrao_pct ?? 0.033,
+          multa_padrao_pct: modalForm.multa_padrao_pct ?? 2,
         }).eq('id', editingId)
         if (error) { toast.error('Erro: ' + error.message); setSalvando(false); return }
         toast.success('Lancamento atualizado')
@@ -215,41 +237,43 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
             parcela_grupo_id: grupoId, intervalo_parcelas_dias: modalForm.intervalo_parcelas_dias,
             numero_documento: modalForm.numero_documento || null,
             anexo_url: modalForm.anexo_url || null,
+            juros_dia_padrao_pct: modalForm.juros_dia_padrao_pct ?? 0.033,
+            multa_padrao_pct: modalForm.multa_padrao_pct ?? 2,
           }
         })
         const { error } = await supabase.from('financeiro_lancamentos').insert(rows)
         if (error) { toast.error('Erro: ' + error.message); setSalvando(false); return }
         toast.success(`${modalForm.parcela_total} parcelas criadas`)
       }
-      // RECORRENTE mode
+      // RECORRENTE mode — create only the current month's entry (cron handles future ones)
       else if (modalForm.is_recorrente) {
         const grupoId = crypto.randomUUID()
         const baseVenc = modalForm.data_vencimento || new Date().toISOString().slice(0, 10)
-        const rows = Array.from({ length: modalForm.total_ocorrencias }, (_, i) => {
-          const venc = new Date(baseVenc + 'T12:00')
-          venc.setDate(venc.getDate() + i * frequenciaDias)
-          const comp = new Date(venc)
-          return {
-            tipo: modalForm.tipo, nome: modalForm.nome,
-            fornecedor: modalForm.fornecedor || null,
-            valor: valorNum, categoria: modalForm.categoria || null,
-            centro_custo: modalForm.centro_custo || null,
-            centro_custo_id: modalForm.centro_custo_id || null,
-            obra_id: modalForm.obra_id || null, conta_id: modalForm.conta_id || null,
-            data_competencia: comp.toISOString().slice(0, 10),
-            data_vencimento: venc.toISOString().slice(0, 10),
-            observacao: modalForm.observacao || null, is_provisao: modalForm.is_provisao,
-            origem: 'manual', status: 'em_aberto', created_by: user?.id ?? null,
-            is_parcelado: true, parcela_numero: i + 1, parcela_total: modalForm.total_ocorrencias,
-            parcela_grupo_id: grupoId, intervalo_parcelas_dias: frequenciaDias,
-            numero_documento: modalForm.numero_documento || null,
-            anexo_url: modalForm.anexo_url || null,
-            is_recorrente: true,
-          }
-        })
-        const { error } = await supabase.from('financeiro_lancamentos').insert(rows)
+        const row = {
+          tipo: modalForm.tipo, nome: modalForm.nome,
+          fornecedor: modalForm.fornecedor || null,
+          valor: valorNum, valor_previsto: valorNum,
+          categoria: modalForm.categoria || null,
+          centro_custo: modalForm.centro_custo || null,
+          centro_custo_id: modalForm.centro_custo_id || null,
+          obra_id: modalForm.obra_id || null, conta_id: modalForm.conta_id || null,
+          data_competencia: modalForm.data_competencia || null,
+          data_vencimento: baseVenc,
+          observacao: modalForm.observacao || null, is_provisao: modalForm.is_provisao,
+          origem: 'manual', status: 'em_aberto', created_by: user?.id ?? null,
+          is_recorrente: true, frequencia: modalForm.frequencia,
+          parcela_numero: 1, parcela_total: modalForm.total_ocorrencias,
+          parcela_grupo_id: grupoId, intervalo_parcelas_dias: frequenciaDias,
+          numero_documento: modalForm.numero_documento || null,
+          anexo_url: modalForm.anexo_url || null,
+          alertar_dias_antes: modalForm.alertar_dias_antes ?? 7,
+          variacao_max_pct: modalForm.variacao_max_pct ?? 20,
+          juros_dia_padrao_pct: modalForm.juros_dia_padrao_pct ?? 0.033,
+          multa_padrao_pct: modalForm.multa_padrao_pct ?? 2,
+        }
+        const { error } = await supabase.from('financeiro_lancamentos').insert(row)
         if (error) { toast.error('Erro: ' + error.message); setSalvando(false); return }
-        toast.success(`${modalForm.total_ocorrencias} lancamentos recorrentes criados`)
+        toast.success(`Lancamento recorrente criado (${modalForm.frequencia}, 1/${modalForm.total_ocorrencias})`)
       }
       // SIMPLE mode
       else {
@@ -267,6 +291,8 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
           origem: 'manual', status: 'em_aberto', created_by: user?.id ?? null,
           numero_documento: modalForm.numero_documento || null,
           anexo_url: modalForm.anexo_url || null,
+          juros_dia_padrao_pct: modalForm.juros_dia_padrao_pct ?? 0.033,
+          multa_padrao_pct: modalForm.multa_padrao_pct ?? 2,
         })
         if (error) { toast.error('Erro: ' + error.message); setSalvando(false); return }
         toast.success('Lancamento criado')
@@ -467,81 +493,114 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="NF-e, OS, boleto..." />
               </div>
 
-              {/* Parcelamento */}
-              <div className="border border-gray-200 rounded-xl p-4">
-                <label className="flex items-center gap-2 text-sm cursor-pointer mb-2">
-                  <input type="checkbox" checked={modalForm.is_parcelado} onChange={e => setModalForm(f => ({ ...f, is_parcelado: e.target.checked, is_recorrente: false }))}
-                    className="rounded border-gray-300 text-brand" />
-                  <span className="font-medium">Parcelado</span>
-                </label>
-                {modalForm.is_parcelado && (
-                  <div className="space-y-3 mt-2">
-                    <div className="flex gap-3">
+              {/* Recorrência */}
+              <details className="border border-gray-200 rounded-xl overflow-hidden">
+                <summary className="px-4 py-3 bg-gray-50 cursor-pointer text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <input type="checkbox" checked={modalForm.is_recorrente} onChange={e => { e.stopPropagation(); setModalForm(f => ({ ...f, is_recorrente: e.target.checked, is_parcelado: false })) }} className="rounded" />
+                  Recorrencia
+                </summary>
+                {modalForm.is_recorrente && (
+                  <div className="px-4 py-3 space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[10px] text-gray-400 mb-0.5">Parcelas</label>
-                        <select value={modalForm.parcela_total} onChange={e => setModalForm(f => ({ ...f, parcela_total: Number(e.target.value) }))}
-                          className="px-2 py-1 border border-gray-200 rounded text-sm">
-                          {[1,2,3,4,5,6,7,8,9,10,11,12,18,24,36].map(n => <option key={n} value={n}>{n}x</option>)}
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Frequencia</label>
+                        <select name="frequencia" value={modalForm.frequencia || 'mensal'} onChange={e => setModalForm(f => ({ ...f, frequencia: e.target.value }))} className="w-full px-3 py-2 border rounded-lg text-sm">
+                          <option value="semanal">Semanal</option>
+                          <option value="quinzenal">Quinzenal</option>
+                          <option value="mensal">Mensal</option>
+                          <option value="anual">Anual</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-[10px] text-gray-400 mb-0.5">Intervalo</label>
-                        <select value={modalForm.intervalo_parcelas_dias} onChange={e => setModalForm(f => ({ ...f, intervalo_parcelas_dias: Number(e.target.value) }))}
-                          className="px-2 py-1 border border-gray-200 rounded text-sm">
-                          <option value={7}>Semanal</option>
-                          <option value={15}>Quinzenal</option>
-                          <option value={30}>Mensal</option>
-                          <option value={60}>Bimestral</option>
-                          <option value={90}>Trimestral</option>
-                        </select>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Total de ocorrencias</label>
+                        <input type="number" name="total_ocorrencias" min="1" value={modalForm.total_ocorrencias || ''} onChange={e => setModalForm(f => ({ ...f, total_ocorrencias: Number(e.target.value) || 12 }))} placeholder="∞" className="w-full px-3 py-2 border rounded-lg text-sm" />
                       </div>
                     </div>
-                    {modalForm.parcela_total > 1 && Number(modalForm.valor) > 0 && (
-                      <div className="bg-gray-50 rounded-lg p-2.5 text-xs space-y-1">
-                        <div className="font-semibold text-gray-700">{modalForm.parcela_total}x de {fmt(Math.round(Number(modalForm.valor) / modalForm.parcela_total * 100) / 100)}</div>
-                        {previewParcelas.length > 0 && (
-                          <div className="text-gray-500">
-                            Vencimentos: {previewParcelas.join(', ')}{modalForm.parcela_total > 6 ? '...' : ''}
-                          </div>
-                        )}
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Alertar N dias antes</label>
+                        <input type="number" name="alertar_dias_antes" value={modalForm.alertar_dias_antes ?? 7} onChange={e => setModalForm(f => ({ ...f, alertar_dias_antes: Number(e.target.value) }))} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Variacao max (%)</label>
+                        <input type="number" name="variacao_max_pct" value={modalForm.variacao_max_pct ?? 20} onChange={e => setModalForm(f => ({ ...f, variacao_max_pct: Number(e.target.value) }))} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </details>
+
+              {/* Parcelamento */}
+              <details className="border border-gray-200 rounded-xl overflow-hidden">
+                <summary className="px-4 py-3 bg-gray-50 cursor-pointer text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <input type="checkbox" checked={modalForm.is_parcelado} onChange={e => { e.stopPropagation(); setModalForm(f => ({ ...f, is_parcelado: e.target.checked, is_recorrente: false })) }} className="rounded" />
+                  Parcelamento
+                </summary>
+                {modalForm.is_parcelado && (
+                  <div className="px-4 py-3 space-y-3">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">N° parcelas</label>
+                        <input type="number" name="parcela_total" min="2" value={modalForm.parcela_total || ''} onChange={e => setModalForm(f => ({ ...f, parcela_total: Number(e.target.value) || 1 }))} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Intervalo (dias)</label>
+                        <input type="number" name="intervalo_parcelas_dias" value={modalForm.intervalo_parcelas_dias ?? 30} onChange={e => setModalForm(f => ({ ...f, intervalo_parcelas_dias: Number(e.target.value) || 30 }))} className="w-full px-3 py-2 border rounded-lg text-sm" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Valor/parcela</label>
+                        <div className="px-3 py-2 bg-gray-100 rounded-lg text-sm text-gray-700">
+                          {modalForm.parcela_total && Number(modalForm.valor) > 0 ? `R$ ${(Number(modalForm.valor) / Number(modalForm.parcela_total)).toFixed(2)}` : '\u2014'}
+                        </div>
+                      </div>
+                    </div>
+                    {modalForm.parcela_total && Number(modalForm.parcela_total) > 1 && Number(modalForm.valor) > 0 && modalForm.data_vencimento && (
+                      <div className="bg-gray-50 rounded-lg p-3 max-h-40 overflow-y-auto">
+                        <div className="text-xs font-semibold text-gray-500 mb-2">Preview das parcelas:</div>
+                        {Array.from({length: Math.min(Number(modalForm.parcela_total), 12)}).map((_, i) => {
+                          const d = new Date(modalForm.data_vencimento + 'T12:00')
+                          d.setDate(d.getDate() + i * Number(modalForm.intervalo_parcelas_dias || 30))
+                          return (
+                            <div key={i} className="flex justify-between text-xs text-gray-600 py-0.5">
+                              <span>{i+1}/{modalForm.parcela_total}</span>
+                              <span>{d.toLocaleDateString('pt-BR')}</span>
+                              <span>R$ {(Number(modalForm.valor) / Number(modalForm.parcela_total)).toFixed(2)}</span>
+                            </div>
+                          )
+                        })}
+                        {Number(modalForm.parcela_total) > 12 && <div className="text-xs text-gray-400 mt-1">...e mais {Number(modalForm.parcela_total) - 12} parcelas</div>}
                       </div>
                     )}
                   </div>
                 )}
-              </div>
+              </details>
 
-              {/* Recorrencia */}
-              <div className="border border-gray-200 rounded-xl p-4">
-                <label className="flex items-center gap-2 text-sm cursor-pointer mb-2">
-                  <input type="checkbox" checked={modalForm.is_recorrente} onChange={e => setModalForm(f => ({ ...f, is_recorrente: e.target.checked, is_parcelado: false }))}
-                    className="rounded border-gray-300 text-brand" />
-                  <span className="font-medium">Recorrente (gera automaticamente)</span>
-                </label>
-                {modalForm.is_recorrente && (
-                  <div className="flex gap-3 mt-2">
+              {/* Juros e Multa */}
+              <details className="border border-gray-200 rounded-xl overflow-hidden">
+                <summary className="px-4 py-3 bg-gray-50 cursor-pointer text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  Juros e multa por atraso
+                </summary>
+                <div className="px-4 py-3 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] text-gray-400 mb-0.5">Frequencia</label>
-                      <select value={modalForm.frequencia} onChange={e => setModalForm(f => ({ ...f, frequencia: e.target.value }))}
-                        className="px-2 py-1 border border-gray-200 rounded text-sm">
-                        <option value="semanal">Semanal</option>
-                        <option value="quinzenal">Quinzenal</option>
-                        <option value="mensal">Mensal</option>
-                        <option value="bimestral">Bimestral</option>
-                        <option value="trimestral">Trimestral</option>
-                        <option value="semestral">Semestral</option>
-                        <option value="anual">Anual</option>
-                      </select>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Juros por dia (%)</label>
+                      <input type="number" name="juros_dia_padrao_pct" step="0.001" value={modalForm.juros_dia_padrao_pct ?? 0.033} onChange={e => setModalForm(f => ({ ...f, juros_dia_padrao_pct: Number(e.target.value) }))} className="w-full px-3 py-2 border rounded-lg text-sm" />
                     </div>
                     <div>
-                      <label className="block text-[10px] text-gray-400 mb-0.5">Total de ocorrencias</label>
-                      <select value={modalForm.total_ocorrencias} onChange={e => setModalForm(f => ({ ...f, total_ocorrencias: Number(e.target.value) }))}
-                        className="px-2 py-1 border border-gray-200 rounded text-sm">
-                        {[3,6,12,24,36,48,60].map(n => <option key={n} value={n}>{n}x</option>)}
-                      </select>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Multa fixa (%)</label>
+                      <input type="number" name="multa_padrao_pct" step="0.1" value={modalForm.multa_padrao_pct ?? 2} onChange={e => setModalForm(f => ({ ...f, multa_padrao_pct: Number(e.target.value) }))} className="w-full px-3 py-2 border rounded-lg text-sm" />
                     </div>
                   </div>
-                )}
-              </div>
+                  {Number(modalForm.valor) > 0 && (
+                    <div className="bg-amber-50 rounded-lg p-3 text-xs text-amber-800">
+                      <div className="font-semibold mb-1">Preview de atraso:</div>
+                      <div>5 dias: +R$ {(Number(modalForm.valor) * Number(modalForm.juros_dia_padrao_pct || 0.033) / 100 * 5 + Number(modalForm.valor) * Number(modalForm.multa_padrao_pct || 2) / 100).toFixed(2)}</div>
+                      <div>15 dias: +R$ {(Number(modalForm.valor) * Number(modalForm.juros_dia_padrao_pct || 0.033) / 100 * 15 + Number(modalForm.valor) * Number(modalForm.multa_padrao_pct || 2) / 100).toFixed(2)}</div>
+                      <div>30 dias: +R$ {(Number(modalForm.valor) * Number(modalForm.juros_dia_padrao_pct || 0.033) / 100 * 30 + Number(modalForm.valor) * Number(modalForm.multa_padrao_pct || 2) / 100).toFixed(2)}</div>
+                    </div>
+                  )}
+                </div>
+              </details>
             </div>
           )}
 
