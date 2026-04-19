@@ -337,8 +337,10 @@ export default function NovoBMPage() {
         datas = Array.from(new Set<string>(allArr)).sort()
       }
 
-      if (!perFuncao[cargoKey]) perFuncao[cargoKey] = { cargo, funcao_id: g.func.funcao_id ?? null, funcs: [], horasReais: { normais: 0, he50: 0, he100: 0 } }
-      perFuncao[cargoKey].funcs.push({
+      // Agrupar por funcao_id+cargo para evitar conflito quando mesmo cargo tem funcao_id diferente
+      const groupKey = g.func.funcao_id ? `${g.func.funcao_id}|${cargoKey}` : cargoKey
+      if (!perFuncao[groupKey]) perFuncao[groupKey] = { cargo, funcao_id: g.func.funcao_id ?? null, funcs: [], horasReais: { normais: 0, he50: 0, he100: 0 } }
+      perFuncao[groupKey].funcs.push({
         id: g.func.id,
         nome: g.func.nome_guerra ?? g.func.nome,
         dias_normais, dias_he70, dias_he100, datas,
@@ -347,9 +349,9 @@ export default function NovoBMPage() {
         hh_he70_real: Math.round(g.horas.he50 * 100) / 100,
         hh_he100_real: Math.round(g.horas.he100 * 100) / 100,
       })
-      perFuncao[cargoKey].horasReais.normais += g.horas.normais
-      perFuncao[cargoKey].horasReais.he50 += g.horas.he50
-      perFuncao[cargoKey].horasReais.he100 += g.horas.he100
+      perFuncao[groupKey].horasReais.normais += g.horas.normais
+      perFuncao[groupKey].horasReais.he50 += g.horas.he50
+      perFuncao[groupKey].horasReais.he100 += g.horas.he100
     })
 
     // Step 3: build rows - one per função

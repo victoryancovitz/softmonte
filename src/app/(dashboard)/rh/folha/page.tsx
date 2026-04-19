@@ -247,7 +247,12 @@ export default function FolhaPage() {
             total_provisionado_mes: Number(c.provisoes_valor || 0),
             saldo_anterior: 0, decimo_pago: 0, ferias_pagas: 0, fgts_rescisao_pago: 0,
           }))
-          await supabase.from('provisoes_funcionario').upsert(provisoesRows, { onConflict: 'funcionario_id,ano,mes' })
+          // Upsert provisões em lotes de 50 para evitar timeout em obras grandes
+          for (let i = 0; i < provisoesRows.length; i += 50) {
+            const batch = provisoesRows.slice(i, i + 50)
+            const { error: provisErr } = await supabase.from('provisoes_funcionario').upsert(batch, { onConflict: 'funcionario_id,ano,mes' })
+            if (provisErr) throw new Error('Falha ao salvar provisões: ' + provisErr.message)
+          }
 
           const { error: updFFErr } = await supabase.from('folha_fechamentos').update({ lancamentos_gerados: lancamentosParaInserir.length }).eq('id', ff.id)
           if (updFFErr) throw new Error('Falha ao marcar folha como lancada: ' + updFFErr.message)

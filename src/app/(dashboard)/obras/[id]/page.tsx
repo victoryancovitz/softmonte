@@ -112,11 +112,13 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
     }, {})
   )
 
-  // Buscar todos os funcionários que já tiveram efetivo_diario nesta obra (incluindo desligados)
+  // Buscar funcionários que tiveram efetivo_diario nesta obra (últimos 6 meses + desligados)
+  const seisMesesAtras = new Date(Date.now() - 180 * 86400000).toISOString().split('T')[0]
   const { data: comPontoData } = await supabase
     .from('efetivo_diario')
     .select('funcionario_id, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao)')
     .eq('obra_id', params.id)
+    .gte('data', seisMesesAtras)
   const funcsComPontoMap: Record<string, any> = {}
   ;((comPontoData ?? []) as any[]).forEach((r: any) => {
     if (r.funcionarios) funcsComPontoMap[r.funcionarios.id] = r.funcionarios
