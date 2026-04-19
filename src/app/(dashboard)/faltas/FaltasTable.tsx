@@ -85,7 +85,7 @@ export default function FaltasTable({ rows }: { rows: any[] }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  <SortableHeader label="Funcionario" field="funcionario_nome" currentField={sortField} currentDir={sortDir} onSort={onSort} />
+                  <SortableHeader label="Funcionário" field="funcionario_nome" currentField={sortField} currentDir={sortDir} onSort={onSort} />
                   <SortableHeader label="Obra" field="obra_nome" currentField={sortField} currentDir={sortDir} onSort={onSort} />
                   <SortableHeader label="Data" field="data" currentField={sortField} currentDir={sortDir} onSort={onSort} />
                   <SortableHeader label="Tipo" field="tipo" currentField={sortField} currentDir={sortDir} onSort={onSort} />

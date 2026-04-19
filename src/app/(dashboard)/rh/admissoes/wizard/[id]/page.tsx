@@ -409,7 +409,7 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
     )
   }
 
-  const nome = formData.nome || 'Funcionario'
+  const nome = formData.nome || 'Funcionário'
 
   return (
     <div className="fixed inset-0 bg-gray-50 z-50 flex flex-col">

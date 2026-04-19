@@ -147,7 +147,7 @@ export default function FolhaDetalhePage() {
           <table className="w-full text-sm no-print">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {['Funcionario', 'Dias', 'Desc.', 'Bruto', 'Descontos', 'Liquido', ''].map(h => (
+                {['Funcionário', 'Dias', 'Desc.', 'Bruto', 'Descontos', 'Líquido', ''].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">{h}</th>
                 ))}
               </tr>

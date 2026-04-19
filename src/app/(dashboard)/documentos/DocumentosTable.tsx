@@ -79,9 +79,9 @@ export default function DocumentosTable({ docs, role }: { docs: any[]; role: str
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
-              <SortableHeader label="Funcionario" field="funcionario_nome" currentField={sortField} currentDir={sortDir} onSort={onSort} />
+              <SortableHeader label="Funcionário" field="funcionario_nome" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Tipo" field="tipo" currentField={sortField} currentDir={sortDir} onSort={onSort} />
-              <SortableHeader label="Emissao" field="emissao" currentField={sortField} currentDir={sortDir} onSort={onSort} />
+              <SortableHeader label="Emissão" field="emissao" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Vencimento" field="vencimento" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Status" field="dias" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Arquivo</th>

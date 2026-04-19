@@ -278,7 +278,7 @@ export default function PontoMesGrid({ obraId, mes, ano, onCellClick }: Props) {
         <table className="w-full text-xs border-collapse">
           <thead>
             <tr className="bg-gray-50">
-              <th className="text-left px-3 py-2 text-gray-600 font-semibold sticky left-0 bg-gray-50 z-10 min-w-[180px] border-r border-gray-200">Funcionario</th>
+              <th className="text-left px-3 py-2 text-gray-600 font-semibold sticky left-0 bg-gray-50 z-10 min-w-[180px] border-r border-gray-200">Funcionário</th>
               {days.map(d => {
                 const weekend = isWeekend(ano, mes, d)
                 const dow = getDayOfWeek(ano, mes, d)

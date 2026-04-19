@@ -50,7 +50,7 @@ export default function HHTable({ lancamentos, role }: { lancamentos: any[]; rol
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
-              <SortableHeader label="Funcionario" field="funcionario_nome" currentField={sortField} currentDir={sortDir} onSort={onSort} />
+              <SortableHeader label="Funcionário" field="funcionario_nome" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Obra" field="obra_nome" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="H.Normais" field="horas_normais" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="H.Extras" field="horas_extras" currentField={sortField} currentDir={sortDir} onSort={onSort} />

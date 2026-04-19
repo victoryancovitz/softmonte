@@ -63,7 +63,7 @@ export default function AlocacaoView({ ativas, role }: AlocacaoViewProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100">
-              {['Funcionario','Cargo','Obra','Cliente','Desde',''].map(h => (
+              {['Funcionário','Cargo','Obra','Cliente','Desde',''].map(h => (
                 <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
               ))}
             </tr>

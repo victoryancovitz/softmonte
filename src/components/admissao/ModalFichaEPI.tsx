@@ -600,7 +600,7 @@ export default function ModalFichaEPI({ funcionario, workflowId, onClose, onSucc
 
               <div className="text-left p-4 rounded-xl bg-gray-50 border border-gray-200 space-y-1.5">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-500">Funcionario</span>
+                  <span className="text-gray-500">Funcionário</span>
                   <span className="font-medium text-gray-800">{funcionario.nome}</span>
                 </div>
                 <div className="flex justify-between text-sm">

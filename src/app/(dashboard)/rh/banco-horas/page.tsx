@@ -476,7 +476,7 @@ export default function BancoHorasPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50">
-                {['Funcionario', 'Cargo', 'HH Contrato', 'HH Trabalhado', 'HH Extras', 'HH Faltas', 'HH Compensadas', 'Saldo Mes', 'Saldo Acumulado', 'Status'].map(h => (
+                {['Funcionário', 'Cargo', 'HH Contrato', 'HH Trabalhado', 'HH Extras', 'HH Faltas', 'HH Compensadas', 'Saldo Mês', 'Saldo Acumulado', 'Status'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
