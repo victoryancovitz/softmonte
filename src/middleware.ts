@@ -26,7 +26,8 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   const isAuthPage = pathname.startsWith('/login') ||
     pathname.startsWith('/forgot-password') ||
-    pathname.startsWith('/reset-password')
+    pathname.startsWith('/reset-password') ||
+    pathname.startsWith('/convite')
   const isApiRoute = pathname.startsWith('/api/')
   const isPortalRoute = pathname.startsWith('/portal')
 

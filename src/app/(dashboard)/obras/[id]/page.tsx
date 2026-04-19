@@ -59,49 +59,20 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
   const supabase = createClient()
   const activeTab = searchParams.tab ?? 'geral'
 
-  const trintaDiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
   const hoje = new Date()
 
+  // ── Base queries (always needed for header/sidebar) ──
   const [
     { data: obra },
     { data: alocados },
-    { data: boletins },
     role,
-    { data: efetivo },
-    { data: lancamentos },
-    { data: composicao },
-    { data: aditivosData },
-    { data: transferencias },
-    { data: contasCorrentes },
   ] = await Promise.all([
     supabase.from('obras').select('*').eq('id', params.id).is('deleted_at', null).maybeSingle(),
     supabase.from('alocacoes').select('*, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao), centros_custo:centro_custo_id(id, codigo, nome)').eq('obra_id', params.id).eq('ativo', true).order('data_inicio'),
-    supabase.from('boletins_medicao').select('*').eq('obra_id', params.id).is('deleted_at', null).order('numero'),
     getRole(),
-    supabase.from('efetivo_diario').select('id, data, tipo_dia, funcionario_id, observacao, funcionarios(nome)').eq('obra_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
-    supabase.from('financeiro_lancamentos').select('*').eq('obra_id', params.id).is('deleted_at', null).order('data_competencia', { ascending: false }),
-    supabase.from('contrato_composicao').select('*').eq('obra_id', params.id).order('funcao_nome'),
-    supabase.from('aditivos').select('*').eq('obra_id', params.id).order('numero'),
-    supabase.from('transferencias').select('*, funcionarios(nome)').eq('obra_origem_id', params.id).order('data_transferencia', { ascending: false }),
-    supabase.from('contas_correntes').select('id, nome, banco').eq('ativo', true).is('deleted_at', null).order('is_padrao', { ascending: false }).order('nome'),
   ])
 
   if (!obra) notFound()
-
-  // Centro de Custo da obra
-  const { data: ccObra } = await supabase
-    .from('centros_custo')
-    .select('id, codigo, nome, tipo')
-    .eq('obra_id', params.id)
-    .eq('tipo', 'obra')
-    .is('deleted_at', null)
-    .maybeSingle()
-  const { data: subCCs } = ccObra
-    ? await supabase.from('centros_custo').select('id, codigo, nome, subtipo').eq('parent_id', ccObra.id).is('deleted_at', null).order('codigo')
-    : { data: [] }
-  const { data: custosFixosCC } = ccObra
-    ? await supabase.from('cc_custos_fixos').select('id, nome, valor').eq('centro_custo_id', ccObra.id).eq('ativo', true)
-    : { data: [] }
 
   // Deduplicar alocações por funcionario_id (manter a mais antiga, já ordenado ASC)
   const alocadosUnicos: any[] = Object.values(
@@ -111,73 +82,159 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
       return map
     }, {})
   )
-
-  // Buscar funcionários que tiveram efetivo_diario nesta obra (últimos 6 meses + desligados)
-  const seisMesesAtras = new Date(Date.now() - 180 * 86400000).toISOString().split('T')[0]
-  const { data: comPontoData } = await supabase
-    .from('efetivo_diario')
-    .select('funcionario_id, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao)')
-    .eq('obra_id', params.id)
-    .gte('data', seisMesesAtras)
-  const funcsComPontoMap: Record<string, any> = {}
-  ;((comPontoData ?? []) as any[]).forEach((r: any) => {
-    if (r.funcionarios) funcsComPontoMap[r.funcionarios.id] = r.funcionarios
-  })
-
-  // Separar em ativos (com alocação ativa) e desligados (sem alocação ativa, mas com ponto registrado ou soft-deleted)
   const ativosIds = new Set(alocadosUnicos.map((a: any) => a.funcionarios?.id).filter(Boolean))
-  const desligados = Object.values(funcsComPontoMap).filter((f: any) => !ativosIds.has(f.id))
 
-  // Todos os funcionários do efetivo: alocados + com registro de efetivo_diario (sem duplicatas)
-  const efetivoFuncsMap: Record<string, any> = {}
-  alocadosUnicos.forEach((a: any) => {
-    if (a.funcionarios) efetivoFuncsMap[a.funcionarios.id] = a.funcionarios
-  })
-  Object.entries(funcsComPontoMap).forEach(([id, f]) => {
-    if (!efetivoFuncsMap[id]) efetivoFuncsMap[id] = f
-  })
+  // ── Tab-specific queries (lazy-loaded) ──
 
-  // Detecta funcionários com multi-alocação (alocados também em OUTRAS obras ativas)
-  const funcIdsAlocados = Array.from(ativosIds)
-  let multiMap: Record<string, { obra_id: string; obra_nome: string }[]> = {}
-  if (funcIdsAlocados.length > 0) {
-    const { data: outras } = await supabase
-      .from('alocacoes')
-      .select('funcionario_id, obra_id, obras(nome)')
-      .in('funcionario_id', funcIdsAlocados)
-      .eq('ativo', true)
-      .neq('obra_id', params.id)
-    ;(outras ?? []).forEach((r: any) => {
-      if (!multiMap[r.funcionario_id]) multiMap[r.funcionario_id] = []
-      multiMap[r.funcionario_id].push({ obra_id: r.obra_id, obra_nome: r.obras?.nome || '' })
-    })
+  // geral tab: composicao, contasCorrentes, aditivosData, boletins, ccObra
+  let boletins: any[] | null = null
+  let composicao: any[] | null = null
+  let aditivosData: any[] | null = null
+  let contasCorrentes: any[] | null = null
+  let ccObra: any = null
+  let subCCs: any[] | null = []
+  let custosFixosCC: any[] | null = []
+
+  if (activeTab === 'geral') {
+    const [
+      { data: _boletins },
+      { data: _composicao },
+      { data: _aditivosData },
+      { data: _contasCorrentes },
+      { data: _ccObra },
+    ] = await Promise.all([
+      supabase.from('boletins_medicao').select('*').eq('obra_id', params.id).is('deleted_at', null).order('numero'),
+      supabase.from('contrato_composicao').select('*').eq('obra_id', params.id).order('funcao_nome'),
+      supabase.from('aditivos').select('*').eq('obra_id', params.id).order('numero'),
+      supabase.from('contas_correntes').select('id, nome, banco').eq('ativo', true).is('deleted_at', null).order('is_padrao', { ascending: false }).order('nome'),
+      supabase.from('centros_custo').select('id, codigo, nome, tipo').eq('obra_id', params.id).eq('tipo', 'obra').is('deleted_at', null).maybeSingle(),
+    ])
+    boletins = _boletins
+    composicao = _composicao
+    aditivosData = _aditivosData
+    contasCorrentes = _contasCorrentes
+    ccObra = _ccObra
+
+    if (ccObra) {
+      const [{ data: _subCCs }, { data: _custosFixosCC }] = await Promise.all([
+        supabase.from('centros_custo').select('id, codigo, nome, subtipo').eq('parent_id', ccObra.id).is('deleted_at', null).order('codigo'),
+        supabase.from('cc_custos_fixos').select('id, nome, valor').eq('centro_custo_id', ccObra.id).eq('ativo', true),
+      ])
+      subCCs = _subCCs
+      custosFixosCC = _custosFixosCC
+    }
   }
 
-  // Fetch documentos for allocated funcionarios
-  const funcIds = Array.from(ativosIds)
-  const { data: documentos } = funcIds.length > 0
-    ? await supabase.from('documentos').select('*, funcionarios(nome)').in('funcionario_id', funcIds).is('deleted_at', null).order('vencimento', { ascending: true })
-    : { data: [] as any[] }
+  // equipe tab: comPontoData, documentos, multiMap
+  let funcsComPontoMap: Record<string, any> = {}
+  let desligados: any[] = []
+  let docsComDias: any[] = []
+  let multiMap: Record<string, { obra_id: string; obra_nome: string }[]> = {}
 
-  // Efetivo grouped by date
-  const efetivoByDate: Record<string, { count: number; registros: any[] }> = {}
-  ;(efetivo ?? []).forEach((e: any) => {
-    if (!efetivoByDate[e.data]) efetivoByDate[e.data] = { count: 0, registros: [] }
-    efetivoByDate[e.data].count++
-    efetivoByDate[e.data].registros.push(e)
-  })
-  const efetivoSorted = Object.entries(efetivoByDate).sort(([a], [b]) => b.localeCompare(a))
+  if (activeTab === 'equipe' || activeTab === 'documentos') {
+    const seisMesesAtras = new Date(Date.now() - 180 * 86400000).toISOString().split('T')[0]
+    const funcIds = Array.from(ativosIds)
 
-  // Financeiro summary
-  const totalReceita = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita').reduce((s: number, l: any) => s + Number(l.valor), 0)
-  const totalDespesa = (lancamentos ?? []).filter((l: any) => l.tipo === 'despesa').reduce((s: number, l: any) => s + Number(l.valor), 0)
-  const margem = totalReceita - totalDespesa
+    const [{ data: comPontoData }, { data: documentos }] = await Promise.all([
+      supabase.from('efetivo_diario').select('funcionario_id, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao)').eq('obra_id', params.id).gte('data', seisMesesAtras),
+      funcIds.length > 0
+        ? supabase.from('documentos').select('*, funcionarios(nome)').in('funcionario_id', funcIds).is('deleted_at', null).order('vencimento', { ascending: true })
+        : Promise.resolve({ data: [] as any[] }),
+    ])
 
-  // Documentos with dias
-  const docsComDias = (documentos ?? []).map((d: any) => ({
-    ...d,
-    dias: d.vencimento ? Math.ceil((new Date(d.vencimento + 'T12:00').getTime() - hoje.getTime()) / 86400000) : null,
-  }))
+    ;((comPontoData ?? []) as any[]).forEach((r: any) => {
+      if (r.funcionarios) funcsComPontoMap[r.funcionarios.id] = r.funcionarios
+    })
+    desligados = Object.values(funcsComPontoMap).filter((f: any) => !ativosIds.has(f.id))
+
+    docsComDias = (documentos ?? []).map((d: any) => ({
+      ...d,
+      dias: d.vencimento ? Math.ceil((new Date(d.vencimento + 'T12:00').getTime() - hoje.getTime()) / 86400000) : null,
+    }))
+
+    if (activeTab === 'equipe') {
+      const funcIdsAlocados = Array.from(ativosIds)
+      if (funcIdsAlocados.length > 0) {
+        const { data: outras } = await supabase
+          .from('alocacoes')
+          .select('funcionario_id, obra_id, obras(nome)')
+          .in('funcionario_id', funcIdsAlocados)
+          .eq('ativo', true)
+          .neq('obra_id', params.id)
+        ;(outras ?? []).forEach((r: any) => {
+          if (!multiMap[r.funcionario_id]) multiMap[r.funcionario_id] = []
+          multiMap[r.funcionario_id].push({ obra_id: r.obra_id, obra_nome: r.obras?.nome || '' })
+        })
+      }
+    }
+  }
+
+  // efetivo tab: efetivo, comPontoData (for efetivoFuncsMap)
+  let efetivoFuncsMap: Record<string, any> = {}
+  let efetivoSorted: [string, { count: number; registros: any[] }][] = []
+
+  if (activeTab === 'efetivo') {
+    const trintaDiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
+    const seisMesesAtras = new Date(Date.now() - 180 * 86400000).toISOString().split('T')[0]
+
+    const [{ data: efetivo }, { data: comPontoData }] = await Promise.all([
+      supabase.from('efetivo_diario').select('id, data, tipo_dia, funcionario_id, observacao, funcionarios(nome)').eq('obra_id', params.id).gte('data', trintaDiasAtras).order('data', { ascending: false }),
+      supabase.from('efetivo_diario').select('funcionario_id, funcionarios(id, nome, nome_guerra, cargo, matricula, id_ponto, status, deleted_at, admissao)').eq('obra_id', params.id).gte('data', seisMesesAtras),
+    ])
+
+    const _funcsComPontoMap: Record<string, any> = {}
+    ;((comPontoData ?? []) as any[]).forEach((r: any) => {
+      if (r.funcionarios) _funcsComPontoMap[r.funcionarios.id] = r.funcionarios
+    })
+
+    alocadosUnicos.forEach((a: any) => {
+      if (a.funcionarios) efetivoFuncsMap[a.funcionarios.id] = a.funcionarios
+    })
+    Object.entries(_funcsComPontoMap).forEach(([id, f]) => {
+      if (!efetivoFuncsMap[id]) efetivoFuncsMap[id] = f
+    })
+
+    // Also set funcsComPontoMap for the template
+    funcsComPontoMap = _funcsComPontoMap
+
+    const efetivoByDate: Record<string, { count: number; registros: any[] }> = {}
+    ;(efetivo ?? []).forEach((e: any) => {
+      if (!efetivoByDate[e.data]) efetivoByDate[e.data] = { count: 0, registros: [] }
+      efetivoByDate[e.data].count++
+      efetivoByDate[e.data].registros.push(e)
+    })
+    efetivoSorted = Object.entries(efetivoByDate).sort(([a], [b]) => b.localeCompare(a))
+  }
+
+  // boletins tab
+  if (activeTab === 'boletins') {
+    const { data: _boletins } = await supabase.from('boletins_medicao').select('*').eq('obra_id', params.id).is('deleted_at', null).order('numero')
+    boletins = _boletins
+  }
+
+  // financeiro tab
+  let lancamentos: any[] | null = null
+  let totalReceita = 0
+  let totalDespesa = 0
+  let margem = 0
+
+  if (activeTab === 'financeiro') {
+    const { data: _lancamentos } = await supabase.from('financeiro_lancamentos').select('*').eq('obra_id', params.id).is('deleted_at', null).order('data_competencia', { ascending: false })
+    lancamentos = _lancamentos
+    totalReceita = (lancamentos ?? []).filter((l: any) => l.tipo === 'receita').reduce((s: number, l: any) => s + Number(l.valor), 0)
+    totalDespesa = (lancamentos ?? []).filter((l: any) => l.tipo === 'despesa').reduce((s: number, l: any) => s + Number(l.valor), 0)
+    margem = totalReceita - totalDespesa
+  }
+
+  // aditivos tab
+  if (activeTab === 'aditivos') {
+    const [{ data: _aditivosData }, { data: _composicao }] = await Promise.all([
+      supabase.from('aditivos').select('*').eq('obra_id', params.id).order('numero'),
+      supabase.from('contrato_composicao').select('*').eq('obra_id', params.id).order('funcao_nome'),
+    ])
+    aditivosData = _aditivosData
+    composicao = _composicao
+  }
 
   const aditivosPendentes = (aditivosData ?? []).filter((a: any) => a.status === 'pendente').length
 

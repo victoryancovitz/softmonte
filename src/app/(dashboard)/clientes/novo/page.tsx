@@ -87,11 +87,11 @@ export default function NovoClientePage() {
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Identificação</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="col-span-1 sm:col-span-2"><label className={lbl}>Nome *</label>
-                <input required type="text" value={form.nome} onChange={e => set('nome', e.target.value)} className={inp} /></div>
+                <input required type="text" name="nome" value={form.nome} onChange={e => set('nome', e.target.value)} className={inp} /></div>
               <div className="col-span-1 sm:col-span-2"><label className={lbl}>Razão social</label>
-                <input type="text" value={form.razao_social} onChange={e => set('razao_social', e.target.value)} className={inp} /></div>
+                <input type="text" name="razao_social" value={form.razao_social} onChange={e => set('razao_social', e.target.value)} className={inp} /></div>
               <div><label className={lbl}>CNPJ</label>
-                <input type="text" value={form.cnpj} onChange={e => set('cnpj', e.target.value)} className={inp} placeholder="00.000.000/0000-00" /></div>
+                <input type="text" name="cnpj" value={form.cnpj} onChange={e => set('cnpj', e.target.value)} className={inp} placeholder="00.000.000/0000-00" /></div>
             </div>
           </section>
 
@@ -100,11 +100,11 @@ export default function NovoClientePage() {
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Endereço</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="col-span-1 sm:col-span-2"><label className={lbl}>Endereço</label>
-                <input type="text" value={form.endereco} onChange={e => set('endereco', e.target.value)} className={inp} /></div>
+                <input type="text" name="endereco" value={form.endereco} onChange={e => set('endereco', e.target.value)} className={inp} /></div>
               <div><label className={lbl}>Cidade</label>
-                <input type="text" value={form.cidade} onChange={e => set('cidade', e.target.value)} className={inp} /></div>
+                <input type="text" name="cidade" value={form.cidade} onChange={e => set('cidade', e.target.value)} className={inp} /></div>
               <div><label className={lbl}>Estado</label>
-                <input type="text" value={form.estado} onChange={e => set('estado', e.target.value)} className={inp} placeholder="SP" /></div>
+                <input type="text" name="estado" value={form.estado} onChange={e => set('estado', e.target.value)} className={inp} placeholder="SP" /></div>
             </div>
           </section>
 
@@ -113,13 +113,13 @@ export default function NovoClientePage() {
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Emails</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="col-span-1 sm:col-span-2"><label className={lbl}>Email principal</label>
-                <input type="email" value={form.email_principal} onChange={e => set('email_principal', e.target.value)} className={inp} /></div>
+                <input type="email" name="email_principal" value={form.email_principal} onChange={e => set('email_principal', e.target.value)} className={inp} /></div>
               <div><label className={lbl}>Email medição</label>
-                <input type="email" value={form.email_medicao} onChange={e => set('email_medicao', e.target.value)} className={inp} /></div>
+                <input type="email" name="email_medicao" value={form.email_medicao} onChange={e => set('email_medicao', e.target.value)} className={inp} /></div>
               <div><label className={lbl}>Email fiscal</label>
-                <input type="email" value={form.email_fiscal} onChange={e => set('email_fiscal', e.target.value)} className={inp} /></div>
+                <input type="email" name="email_fiscal" value={form.email_fiscal} onChange={e => set('email_fiscal', e.target.value)} className={inp} /></div>
               <div><label className={lbl}>Email RH</label>
-                <input type="email" value={form.email_rh} onChange={e => set('email_rh', e.target.value)} className={inp} /></div>
+                <input type="email" name="email_rh" value={form.email_rh} onChange={e => set('email_rh', e.target.value)} className={inp} /></div>
             </div>
           </section>
 
@@ -138,13 +138,13 @@ export default function NovoClientePage() {
                   </button>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div><label className={lbl}>Nome</label>
-                      <input type="text" value={contato.nome} onChange={e => updateContato(i, 'nome', e.target.value)} className={inp} /></div>
+                      <input type="text" name={`contato_nome_${i}`} value={contato.nome} onChange={e => updateContato(i, 'nome', e.target.value)} className={inp} /></div>
                     <div><label className={lbl}>Função</label>
-                      <input type="text" value={contato.funcao} onChange={e => updateContato(i, 'funcao', e.target.value)} className={inp} placeholder="Ex: Engenheiro, Gerente" /></div>
+                      <input type="text" name={`contato_funcao_${i}`} value={contato.funcao} onChange={e => updateContato(i, 'funcao', e.target.value)} className={inp} placeholder="Ex: Engenheiro, Gerente" /></div>
                     <div><label className={lbl}>Email</label>
-                      <input type="email" value={contato.email} onChange={e => updateContato(i, 'email', e.target.value)} className={inp} /></div>
+                      <input type="email" name={`contato_email_${i}`} value={contato.email} onChange={e => updateContato(i, 'email', e.target.value)} className={inp} /></div>
                     <div><label className={lbl}>WhatsApp</label>
-                      <input type="text" value={contato.whatsapp} onChange={e => updateContato(i, 'whatsapp', e.target.value)} className={inp} placeholder="(11) 99999-9999" /></div>
+                      <input type="text" name={`contato_whatsapp_${i}`} value={contato.whatsapp} onChange={e => updateContato(i, 'whatsapp', e.target.value)} className={inp} placeholder="(11) 99999-9999" /></div>
                   </div>
                 </div>
               ))}

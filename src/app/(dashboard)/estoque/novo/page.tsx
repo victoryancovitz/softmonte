@@ -74,21 +74,21 @@ export default function NovoItemPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Codigo *</label>
-              <input type="text" required value={form.codigo} onChange={e => set('codigo', e.target.value)} placeholder="EPI-001" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
+              <input type="text" name="codigo" required value={form.codigo} onChange={e => set('codigo', e.target.value)} placeholder="EPI-001" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-              <select value={form.categoria} onChange={e => set('categoria', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white">
+              <select name="categoria" value={form.categoria} onChange={e => set('categoria', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white">
                 <option>EPI</option><option>Material</option><option>Ferramenta</option><option>Consumivel</option>
               </select></div>
           </div>
           <div><label className="block text-sm font-medium text-gray-700 mb-1">Nome do item *</label>
-            <input type="text" required value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Ex: Capacete de seguranca" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
+            <input type="text" name="nome" required value={form.nome} onChange={e => set('nome', e.target.value)} placeholder="Ex: Capacete de seguranca" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Qtd. atual</label>
-              <input type="number" step="0.01" value={form.quantidade} onChange={e => set('quantidade', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
+              <input type="number" name="quantidade" step="0.01" value={form.quantidade} onChange={e => set('quantidade', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Qtd. minima</label>
-              <input type="number" step="0.01" value={form.quantidade_minima} onChange={e => set('quantidade_minima', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
+              <input type="number" name="quantidade_minima" step="0.01" value={form.quantidade_minima} onChange={e => set('quantidade_minima', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Unidade</label>
-              <select value={form.unidade} onChange={e => set('unidade', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white">
+              <select name="unidade" value={form.unidade} onChange={e => set('unidade', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white">
                 {['un','m','kg','l','pares','cx','rolo'].map(u => <option key={u}>{u}</option>)}
               </select></div>
           </div>
@@ -113,6 +113,7 @@ export default function NovoItemPage() {
             {!form.centro_custo_id && (
               <input
                 type="text"
+                name="deposito"
                 value={form.deposito}
                 onChange={e => set('deposito', e.target.value)}
                 placeholder="Ou digite o nome do deposito"

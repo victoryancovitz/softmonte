@@ -108,7 +108,7 @@ export default function NovaFaltaPage() {
           {/* Funcionário */}
           <div>
             <label className={lbl}>Funcionário *</label>
-            <select value={form.funcionario_id} onChange={e => set('funcionario_id', e.target.value)} className={inp}>
+            <select name="funcionario_id" value={form.funcionario_id} onChange={e => set('funcionario_id', e.target.value)} className={inp}>
               <option value="">Selecione...</option>
               {funcionarios.map(f => (
                 <option key={f.id} value={f.id}>{f.nome} — {f.cargo}</option>
@@ -119,7 +119,7 @@ export default function NovaFaltaPage() {
           {/* Obra */}
           <div>
             <label className={lbl}>Obra</label>
-            <select value={form.obra_id} onChange={e => set('obra_id', e.target.value)} className={inp}>
+            <select name="obra_id" value={form.obra_id} onChange={e => set('obra_id', e.target.value)} className={inp}>
               <option value="">Nenhuma</option>
               {obras.map(o => (
                 <option key={o.id} value={o.id}>{o.nome}</option>
@@ -130,13 +130,13 @@ export default function NovaFaltaPage() {
           {/* Data */}
           <div>
             <label className={lbl}>Data *</label>
-            <input type="date" value={form.data} onChange={e => set('data', e.target.value)} className={inp} />
+            <input type="date" name="data" value={form.data} onChange={e => set('data', e.target.value)} className={inp} />
           </div>
 
           {/* Tipo */}
           <div>
             <label className={lbl}>Tipo *</label>
-            <select value={form.tipo} onChange={e => set('tipo', e.target.value)} className={inp}>
+            <select name="tipo" value={form.tipo} onChange={e => set('tipo', e.target.value)} className={inp}>
               <option value="falta_injustificada">Falta Injustificada</option>
               <option value="falta_justificada">Falta Justificada</option>
               <option value="atestado_medico">Atestado Médico</option>
@@ -153,14 +153,14 @@ export default function NovaFaltaPage() {
           {/* Dias descontados */}
           <div>
             <label className={lbl}>Dias descontados</label>
-            <input type="number" step="0.5" min="0" value={form.dias_descontados}
+            <input type="number" name="dias_descontados" step="0.5" min="0" value={form.dias_descontados}
               onChange={e => set('dias_descontados', e.target.value)} className={inp} />
           </div>
 
           {/* Arquivo */}
           <div>
             <label className={lbl}>Arquivo (PDF ou imagem)</label>
-            <input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp"
+            <input type="file" name="arquivo" accept=".pdf,.jpg,.jpeg,.png,.webp"
               onChange={e => {
                 const f = e.target.files?.[0]
                 if (!f) return
@@ -184,17 +184,17 @@ export default function NovaFaltaPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
                 <label className={lbl}>CID</label>
-                <input type="text" value={form.cid} onChange={e => set('cid', e.target.value)}
+                <input type="text" name="cid" value={form.cid} onChange={e => set('cid', e.target.value)}
                   placeholder="Ex: J11" className={inp} />
               </div>
               <div>
                 <label className={lbl}>Médico</label>
-                <input type="text" value={form.medico} onChange={e => set('medico', e.target.value)}
+                <input type="text" name="medico" value={form.medico} onChange={e => set('medico', e.target.value)}
                   placeholder="Nome do médico" className={inp} />
               </div>
               <div>
                 <label className={lbl}>CRM</label>
-                <input type="text" value={form.crm} onChange={e => set('crm', e.target.value)}
+                <input type="text" name="crm" value={form.crm} onChange={e => set('crm', e.target.value)}
                   placeholder="CRM do médico" className={inp} />
               </div>
             </div>
@@ -204,7 +204,7 @@ export default function NovaFaltaPage() {
         {/* Observação */}
         <div>
           <label className={lbl}>Observação</label>
-          <textarea value={form.observacao} onChange={e => set('observacao', e.target.value)}
+          <textarea name="observacao" value={form.observacao} onChange={e => set('observacao', e.target.value)}
             rows={3} placeholder="Observações adicionais..." className={inp} />
         </div>
 

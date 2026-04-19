@@ -113,7 +113,7 @@ export default function NovoLancamentoPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Obra</label>
-              <select value={form.obra_id} onChange={e => set('obra_id', e.target.value)}
+              <select name="obra_id" value={form.obra_id} onChange={e => set('obra_id', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
                 <option value="">Nenhuma (geral)</option>
                 {obras.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
@@ -121,7 +121,7 @@ export default function NovoLancamentoPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
-              <select value={form.categoria} onChange={e => set('categoria', e.target.value)}
+              <select name="categoria" value={form.categoria} onChange={e => set('categoria', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
                 <option value="">Selecione...</option>
                 {cats.map(c => <option key={c}>{c}</option>)}
@@ -131,19 +131,19 @@ export default function NovoLancamentoPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Descrição *</label>
-            <input type="text" required value={form.nome} onChange={e => set('nome', e.target.value)}
+            <input type="text" name="nome" required value={form.nome} onChange={e => set('nome', e.target.value)}
               placeholder="Ex: Folha de pagamento março" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Valor (R$) *</label>
-              <input type="number" required min="0.01" step="0.01" value={form.valor} onChange={e => set('valor', e.target.value)}
+              <input type="number" name="valor" required min="0.01" step="0.01" value={form.valor} onChange={e => set('valor', e.target.value)}
                 placeholder="0,00" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select value={form.status} onChange={e => set('status', e.target.value)}
+              <select name="status" value={form.status} onChange={e => set('status', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
                 <option value="em_aberto">Em aberto</option>
                 <option value="pago">Pago / Recebido</option>
@@ -155,12 +155,12 @@ export default function NovoLancamentoPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Data de competência *</label>
-              <input type="date" required value={form.data_competencia} onChange={e => set('data_competencia', e.target.value)}
+              <input type="date" name="data_competencia" required value={form.data_competencia} onChange={e => set('data_competencia', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Vencimento</label>
-              <input type="date" value={form.data_vencimento} onChange={e => set('data_vencimento', e.target.value)}
+              <input type="date" name="data_vencimento" value={form.data_vencimento} onChange={e => set('data_vencimento', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
             </div>
           </div>
@@ -168,7 +168,7 @@ export default function NovoLancamentoPage() {
           {form.status === 'pago' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Data de pagamento</label>
-              <input type="date" value={form.data_pagamento} onChange={e => set('data_pagamento', e.target.value)}
+              <input type="date" name="data_pagamento" value={form.data_pagamento} onChange={e => set('data_pagamento', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
             </div>
           )}
@@ -176,13 +176,13 @@ export default function NovoLancamentoPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">{form.tipo === 'receita' ? 'Cliente' : 'Fornecedor'}</label>
-              <input type="text" value={form.tipo === 'receita' ? form.cliente : form.fornecedor}
+              <input type="text" name={form.tipo === 'receita' ? 'cliente' : 'fornecedor'} value={form.tipo === 'receita' ? form.cliente : form.fornecedor}
                 onChange={e => set(form.tipo === 'receita' ? 'cliente' : 'fornecedor', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Conta corrente</label>
-              <select value={form.conta_id} onChange={e => set('conta_id', e.target.value)}
+              <select name="conta_id" value={form.conta_id} onChange={e => set('conta_id', e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
                 <option value="">— Selecione —</option>
                 {contas.map(c => <option key={c.id} value={c.id}>{c.nome}{c.banco ? ` · ${c.banco}` : ''}</option>)}
@@ -196,7 +196,7 @@ export default function NovoLancamentoPage() {
           </div>
 
           <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <input type="checkbox" checked={form.is_provisao} onChange={e => set('is_provisao', e.target.checked)}
+            <input type="checkbox" name="is_provisao" checked={form.is_provisao} onChange={e => set('is_provisao', e.target.checked)}
               className="rounded border-gray-300 text-brand" />
             <span className="text-sm text-gray-700">É uma provisão futura</span>
             <span className="text-xs text-gray-400">(ex: salário previsto, desmobilização)</span>
@@ -204,7 +204,7 @@ export default function NovoLancamentoPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Observação</label>
-            <textarea value={form.observacao} onChange={e => set('observacao', e.target.value)} rows={2}
+            <textarea name="observacao" value={form.observacao} onChange={e => set('observacao', e.target.value)} rows={2}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand resize-none" />
           </div>
 
