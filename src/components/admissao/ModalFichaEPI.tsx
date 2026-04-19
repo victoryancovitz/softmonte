@@ -260,9 +260,9 @@ export default function ModalFichaEPI({ funcionario, workflowId, onClose, onSucc
         ${TERMO_PARAGRAFOS.map(p => `<p style="margin:6px 0;">${p}</p>`).join('')}
       </div>
 
-      ${signImg ? `<div style="margin-top:20px;text-align:center;"><img src="${signImg}" style="max-width:240px;height:80px;border-bottom:1px solid #333;" alt="Assinatura digital" /><p style="font-size:8px;color:#666;">Assinatura digital</p></div>` : `<div class="assinatura-area"><div class="assinatura-line">Assinatura do funcionario</div><div class="assinatura-line">Responsavel: ${responsavel || '_______________'}</div></div>`}
+      ${signImg ? `<div style="margin-top:20px;text-align:center;"><img src="${signImg}" style="max-width:240px;height:80px;border-bottom:1px solid #333;" alt="Assinatura digital" /><p style="font-size:8px;color:#666;">Assinatura digital</p></div>` : `<div class="assinatura-area"><div class="assinatura-line">Assinatura do funcionário</div><div class="assinatura-line">Responsável: ${responsavel || '_______________'}</div></div>`}
 
-      ${signImg ? `<div class="assinatura-area"><div class="assinatura-line">Responsavel: ${responsavel || '_______________'}</div></div>` : ''}
+      ${signImg ? `<div class="assinatura-area"><div class="assinatura-line">Responsável: ${responsavel || '_______________'}</div></div>` : ''}
 
       <p style="font-size:7px;color:#999;margin-top:16px;text-align:center;">Conforme NR-6 e NFPA 70E.</p>
     `
@@ -345,13 +345,13 @@ export default function ModalFichaEPI({ funcionario, workflowId, onClose, onSucc
                   <input type="date" value={dataEntrega} onChange={e => setDataEntrega(e.target.value)} className={inputCls} />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Responsavel</label>
-                  <input type="text" value={responsavel} onChange={e => setResponsavel(e.target.value)} className={inputCls} placeholder="Nome do responsavel" />
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Responsável</label>
+                  <input type="text" value={responsavel} onChange={e => setResponsavel(e.target.value)} className={inputCls} placeholder="Nome do responsável" />
                 </div>
               </div>
 
               {loadingKit ? (
-                <div className="py-8 text-center text-sm text-gray-400">Carregando kit da funcao...</div>
+                <div className="py-8 text-center text-sm text-gray-400">Carregando kit da função...</div>
               ) : (
                 <>
                   <div className="space-y-2">

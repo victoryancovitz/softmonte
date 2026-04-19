@@ -206,7 +206,7 @@ export default function CustosFixosPage() {
       })
       const data = await resp.json()
       if (!resp.ok) throw new Error(data.error || 'Erro ao gerar lancamentos')
-      toast.success(`${data.gerados} lancamento(s) gerado(s). ${data.ja_existiam} ja existiam.`)
+      toast.success(`${data.gerados} lancamento(s) gerado(s). ${data.ja_existiam} já existiam.`)
       setGerarModal(false)
     } catch (err: any) {
       toast.error(err?.message ?? 'Erro ao gerar lancamentos')

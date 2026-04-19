@@ -328,7 +328,7 @@ export default function FeriasPage() {
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div className="flex-1 min-w-[200px]">
-          <SearchInput value={busca} onChange={setBusca} placeholder="Buscar funcionario..." />
+          <SearchInput value={busca} onChange={setBusca} placeholder="Buscar funcionário..." />
         </div>
         <select
           value={statusFilter}

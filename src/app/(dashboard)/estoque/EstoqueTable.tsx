@@ -74,7 +74,7 @@ export default function EstoqueTable({ itens, centrosCusto = [] }: { itens: any[
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
-              <SortableHeader label="Codigo" field="codigo" currentField={sortField} currentDir={sortDir} onSort={onSort} />
+              <SortableHeader label="Código" field="codigo" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Nome" field="nome" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Categoria" field="categoria" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Depósito / CC" field="deposito" currentField={sortField} currentDir={sortDir} onSort={onSort} />

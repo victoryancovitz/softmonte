@@ -163,7 +163,7 @@ export default function WizardDrawer({ audit, onClose, onRefresh }: Props) {
             onClick={handleBypassAdmissao}
             className="mt-1 text-xs px-3 py-1 bg-amber-600 text-white rounded hover:bg-amber-700"
           >
-            Equipe ja integrada (bypass)
+            Equipe já integrada (bypass)
           </button>
         )}
 

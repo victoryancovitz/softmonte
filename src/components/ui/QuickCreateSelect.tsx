@@ -28,7 +28,7 @@ interface QuickCreateSelectProps {
 const TYPE_CONFIG: Record<QuickCreateType, { titulo: string; tabela: string }> = {
   centro_custo: { titulo: 'Novo Centro de Custo', tabela: 'centros_custo' },
   categoria_financeira: { titulo: 'Nova Categoria Financeira', tabela: 'categorias_financeiras' },
-  funcao: { titulo: 'Nova Funcao', tabela: 'funcoes' },
+  funcao: { titulo: 'Nova Função', tabela: 'funcoes' },
   cliente: { titulo: 'Novo Cliente', tabela: 'clientes' },
   obra: { titulo: 'Nova Obra', tabela: 'obras' },
   conta_bancaria: { titulo: 'Nova Conta Bancaria', tabela: 'contas_correntes' },

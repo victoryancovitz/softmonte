@@ -492,10 +492,10 @@ function CTPSModal({ open, onClose, saving, funcionario, onSave }: {
 
   return (
     <ModalShell title="CTPS" open={open} onClose={onClose}>
-      <Field label="Numero CTPS">
+      <Field label="Número CTPS">
         <input type="text" value={form.ctps_numero} onChange={e => setForm({ ...form, ctps_numero: e.target.value })} className={inputCls} />
       </Field>
-      <Field label="Serie">
+      <Field label="Série">
         <input type="text" value={form.ctps_serie} onChange={e => setForm({ ...form, ctps_serie: e.target.value })} className={inputCls} />
       </Field>
       <Field label="UF">
@@ -689,15 +689,15 @@ function EPIUniformeModal({ open, onClose, saving: _saving, categoria, titulo, f
       <Field label="Data de entrega">
         <input type="date" value={dataEntrega} onChange={e => setDataEntrega(e.target.value)} className={inputCls} />
       </Field>
-      <Field label="Responsavel">
-        <input type="text" value={responsavel} onChange={e => setResponsavel(e.target.value)} className={inputCls} placeholder="Nome do responsavel" />
+      <Field label="Responsável">
+        <input type="text" value={responsavel} onChange={e => setResponsavel(e.target.value)} className={inputCls} placeholder="Nome do responsável" />
       </Field>
 
       {itens.length === 0 ? (
         <p className="text-sm text-gray-400 py-4 text-center">Nenhum item de {categoria} cadastrado no estoque.</p>
       ) : (
         <div className="space-y-2 max-h-60 overflow-y-auto">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Itens disponiveis</p>
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Itens disponíveis</p>
           {itens.map(item => (
             <div key={item.id} className="flex items-center justify-between gap-3 p-2 bg-gray-50 rounded-xl border border-gray-200">
               <div className="flex-1 min-w-0">
@@ -742,21 +742,21 @@ function IntegracaoSSTModal({ open, onClose, saving, onSave }: {
   }, [open])
 
   return (
-    <ModalShell title="Integracao SST" open={open} onClose={onClose}>
+    <ModalShell title="Integração SST" open={open} onClose={onClose}>
       <div className="flex items-start gap-2 p-3 rounded-xl bg-amber-50 border border-amber-200">
         <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-amber-800 font-medium">A data sera o primeiro dia valido de ponto.</p>
+        <p className="text-sm text-amber-800 font-medium">A data será o primeiro dia válido de ponto.</p>
       </div>
-      <Field label="Data da integracao">
+      <Field label="Data da integração">
         <input type="date" value={form.data_integracao} onChange={e => setForm({ ...form, data_integracao: e.target.value })} className={inputCls} />
       </Field>
-      <Field label="Responsavel">
+      <Field label="Responsável">
         <input type="text" value={form.responsavel} onChange={e => setForm({ ...form, responsavel: e.target.value })} className={inputCls} />
       </Field>
       <Field label="Local">
         <input type="text" value={form.local} onChange={e => setForm({ ...form, local: e.target.value })} className={inputCls} />
       </Field>
-      <Field label="Observacoes">
+      <Field label="Observações">
         <textarea value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} rows={3}
           className={inputCls + ' resize-none'} />
       </Field>
@@ -789,9 +789,9 @@ function ESocialModal({ open, onClose, saving, onSave }: {
         <input type="date" value={form.data_envio} onChange={e => setForm({ ...form, data_envio: e.target.value })} className={inputCls} />
       </Field>
       <Field label="Recibo eSocial">
-        <input type="text" value={form.recibo_esocial} onChange={e => setForm({ ...form, recibo_esocial: e.target.value })} className={inputCls} placeholder="Numero do recibo S-2200" />
+        <input type="text" value={form.recibo_esocial} onChange={e => setForm({ ...form, recibo_esocial: e.target.value })} className={inputCls} placeholder="Número do recibo S-2200" />
       </Field>
-      <Field label="Observacoes">
+      <Field label="Observações">
         <textarea value={form.observacoes} onChange={e => setForm({ ...form, observacoes: e.target.value })} rows={3}
           className={inputCls + ' resize-none'} />
       </Field>

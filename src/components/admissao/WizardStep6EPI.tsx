@@ -179,8 +179,8 @@ export default function WizardStep6EPI({ funcionario, workflowId, onComplete }: 
 <div class="info">
   <div><span>Nome:</span> ${funcionario.nome || '-'}</div>
   <div><span>CPF:</span> ${funcionario.cpf || '-'}</div>
-  <div><span>Funcao:</span> ${funcionario.funcao_nome || funcionario.funcao || '-'}</div>
-  <div><span>Matricula:</span> ${funcionario.matricula || '-'}</div>
+  <div><span>Função:</span> ${funcionario.funcao_nome || funcionario.funcao || '-'}</div>
+  <div><span>Matrícula:</span> ${funcionario.matricula || '-'}</div>
   <div><span>Data Admissão:</span> ${admissao}</div>
   <div><span>Data Entrega:</span> ${dataEntrega ? new Date(dataEntrega + 'T12:00:00').toLocaleDateString('pt-BR') : today}</div>
 </div>
@@ -193,10 +193,10 @@ export default function WizardStep6EPI({ funcionario, workflowId, onComplete }: 
 <div class="termo">
   ${TERMO_PARAGRAFOS.map(p => `<p>${p}</p>`).join('')}
 </div>
-${signImg ? `<div class="sig"><img src="${signImg}" alt="Assinatura digital" /><p style="font-size:10px;color:#666;">Assinatura digital</p></div>` : `<div class="sig"><div class="sig-line"></div><p style="font-size:10px;">Assinatura do funcionario</p></div>`}
+${signImg ? `<div class="sig"><img src="${signImg}" alt="Assinatura digital" /><p style="font-size:10px;color:#666;">Assinatura digital</p></div>` : `<div class="sig"><div class="sig-line"></div><p style="font-size:10px;">Assinatura do funcionário</p></div>`}
 <div style="margin-top:20px;text-align:center;">
   <div class="sig-line"></div>
-  <p style="font-size:10px;">Responsavel: ${responsavel || '_______________'}</p>
+  <p style="font-size:10px;">Responsável: ${responsavel || '_______________'}</p>
 </div>
 <div class="footer">Conforme NR-6 e NFPA 70E. Documento gerado em ${today}.</div>
 <script>window.onload = function() { window.print(); }</script>

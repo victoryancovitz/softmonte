@@ -167,7 +167,7 @@ export default function CotacoesPage() {
     const { data: existing } = await supabase.from('requisicoes')
       .select('id').eq('observacao', `Gerado automaticamente da cotacao #${cotacao.numero}`).limit(1)
     if (existing && existing.length > 0) {
-      toast.warning('Pedido ja foi gerado para esta cotacao.')
+      toast.warning('Pedido já foi gerado para esta cotação.')
       return
     }
     setGerandoPedido(cotacao.id)
@@ -184,7 +184,7 @@ export default function CotacoesPage() {
       setGerandoPedido(null)
       return
     }
-    toast.success('Pedido de compra gerado!', `Cotacao ${cotacao.numero}`)
+    toast.success('Pedido de compra gerado!', `Cotação ${cotacao.numero}`)
     setGerandoPedido(null)
     loadData()
   }

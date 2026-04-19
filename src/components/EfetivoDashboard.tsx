@@ -178,7 +178,7 @@ export default function EfetivoDashboard({ data }: Props) {
         {semEfetivo ? (
           <div className="flex flex-col items-center justify-center py-10 text-center">
             <span className="text-4xl mb-3">&#128119;</span>
-            <p className="text-gray-500 text-sm mb-2">Aguardando lancamento do efetivo de hoje</p>
+            <p className="text-gray-500 text-sm mb-2">Aguardando lançamento do efetivo de hoje</p>
             <Link href="/ponto" className="text-sm font-medium hover:underline" style={{ color: '#c8960c' }}>
               Ir para Ponto &rarr;
             </Link>
@@ -228,7 +228,7 @@ export default function EfetivoDashboard({ data }: Props) {
 
             {/* Right: bar chart by function */}
             <div>
-              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Por Funcao</p>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Por Função</p>
               <div className="space-y-1.5">
                 {porFuncao.slice(0, 8).map(f => (
                   <div key={f.nome} className="flex items-center gap-2 text-xs">
@@ -242,7 +242,7 @@ export default function EfetivoDashboard({ data }: Props) {
                     <span className="text-gray-500 font-mono w-10 text-right">{f.presentes}/{f.total}</span>
                   </div>
                 ))}
-                {porFuncao.length === 0 && <p className="text-xs text-gray-400">Sem dados de funcao</p>}
+                {porFuncao.length === 0 && <p className="text-xs text-gray-400">Sem dados de função</p>}
               </div>
             </div>
           </div>
@@ -277,7 +277,7 @@ export default function EfetivoDashboard({ data }: Props) {
 
       {/* ══════ SECTION 3: 30-DAY CHART ══════ */}
       <div className="rounded-2xl border border-gray-100 bg-white shadow-sm p-5 mb-4">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Ultimos 30 dias</h3>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Últimos 30 dias</h3>
         <div className="relative h-24">
           {/* Expected line (dashed) */}
           {esperados > 0 && (
@@ -336,7 +336,7 @@ export default function EfetivoDashboard({ data }: Props) {
                 type="text"
                 value={busca}
                 onChange={e => setBusca(e.target.value)}
-                placeholder="Buscar funcionario ou funcao..."
+                placeholder="Buscar funcionário ou função..."
                 className="w-full sm:w-72 pl-3 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#00215B] bg-white"
               />
             </div>
@@ -344,10 +344,10 @@ export default function EfetivoDashboard({ data }: Props) {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-gray-100 text-left text-[10px] font-bold text-gray-400 uppercase">
-                    <th className="py-2 pr-3">Funcionario</th>
-                    <th className="py-2 pr-3">Funcao</th>
+                    <th className="py-2 pr-3">Funcionário</th>
+                    <th className="py-2 pr-3">Função</th>
                     <th className="py-2 pr-3">Entrada</th>
-                    <th className="py-2 pr-3">Saida</th>
+                    <th className="py-2 pr-3">Saída</th>
                     <th className="py-2 pr-3">HH</th>
                     <th className="py-2">Status</th>
                   </tr>

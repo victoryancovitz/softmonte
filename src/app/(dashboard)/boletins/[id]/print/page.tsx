@@ -468,10 +468,10 @@ export default async function BMPrintPage({ params }: { params: { id: string } }
         {/* Assinaturas */}
         <div style={{ padding: '24px 20px 8px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 60 }}>
           <div style={{ borderTop: '1px solid #999', paddingTop: 8, textAlign: 'center', fontSize: 10, color: '#555' }}>
-            Responsavel Tecnomonte
+            Responsável Tecnomonte
           </div>
           <div style={{ borderTop: '1px solid #999', paddingTop: 8, textAlign: 'center', fontSize: 10, color: '#555' }}>
-            Responsavel {bm.obras?.cliente || 'Cliente'}
+            Responsável {bm.obras?.cliente || 'Cliente'}
           </div>
         </div>
 

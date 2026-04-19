@@ -606,7 +606,7 @@ export default function DemissaoWizardPage() {
                   <input type="date" value={esocial.s2299_data} onChange={e => setEsocial(es => ({ ...es, s2299_data: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className={lbl}>Numero do recibo</label>
+                  <label className={lbl}>Número do recibo</label>
                   <input type="text" value={esocial.s2299_recibo} onChange={e => setEsocial(es => ({ ...es, s2299_recibo: e.target.value }))} className={inp} placeholder="Ex: 1.2.0000000000.000000000000" />
                 </div>
               </div>
@@ -623,7 +623,7 @@ export default function DemissaoWizardPage() {
           )}
           {etapa < 5 && (
             <button type="button" onClick={handleNext} disabled={saving} className="px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50">
-              {saving ? 'Salvando...' : 'Salvar e Proximo'}
+              {saving ? 'Salvando...' : 'Salvar e Próximo'}
             </button>
           )}
           {etapa === 5 && (

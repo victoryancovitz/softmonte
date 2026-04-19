@@ -146,7 +146,7 @@ export default function LoteBar({ selected, lancamentos, contas, onClear, onPaid
                 <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-5 text-sm space-y-1">
                   {despesas.length > 0 && <div className="flex justify-between text-gray-700"><span>{despesas.length} despesa{despesas.length > 1 ? 's' : ''}</span><span className="font-medium text-red-700">{fmt(despesas.reduce((s, l) => s + Number(l.valor), 0))}</span></div>}
                   {receitas.length > 0 && <div className="flex justify-between text-gray-700"><span>{receitas.length} receita{receitas.length > 1 ? 's' : ''}</span><span className="font-medium text-green-700">{fmt(receitas.reduce((s, l) => s + Number(l.valor), 0))}</span></div>}
-                  {pagos.length > 0 && <p className="text-xs text-red-600 font-medium pt-1 border-t border-red-200 mt-1">⚠️ {pagos.length} ja pago{pagos.length > 1 ? 's' : ''} — excluir afetara o resultado financeiro</p>}
+                  {pagos.length > 0 && <p className="text-xs text-red-600 font-medium pt-1 border-t border-red-200 mt-1">⚠️ {pagos.length} já pago{pagos.length > 1 ? 's' : ''} — excluir afetará o resultado financeiro</p>}
                 </div>
               )
             })()}

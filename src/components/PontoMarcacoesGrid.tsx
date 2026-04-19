@@ -472,7 +472,7 @@ export default function PontoMarcacoesGrid() {
 
     // Dia fora do periodo ativo do funcionario: nao contar como falta
     if (!isDentroDoPeridoAtivo(funcId, dateStr)) {
-      return { display: '', cls: 'bg-gray-50 text-gray-300', title: 'Fora do periodo ativo' }
+      return { display: '', cls: 'bg-gray-50 text-gray-300', title: 'Fora do período ativo' }
     }
 
     if (isWeekend(ano, mes, day)) {

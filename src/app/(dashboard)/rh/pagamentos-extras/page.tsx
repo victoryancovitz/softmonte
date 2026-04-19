@@ -226,7 +226,7 @@ export default function PagamentosExtrasPage() {
 
       {/* Busca e Filtros */}
       <div className="mb-3">
-        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar por funcionario ou descricao..." />
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar por funcionário ou descrição..." />
       </div>
       <div className="flex flex-wrap gap-2 mb-4 items-center">
         <select value={tipoFiltro} onChange={e => setTipoFiltro(e.target.value)}

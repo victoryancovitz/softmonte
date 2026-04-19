@@ -455,7 +455,7 @@ export default function TreinamentosPage() {
               )}
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Numero Certificado</label>
+              <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Número Certificado</label>
               <input
                 type="text"
                 value={formCertificado}
@@ -475,7 +475,7 @@ export default function TreinamentosPage() {
               type="text"
               value={funcSearchTerm}
               onChange={e => setFuncSearchTerm(e.target.value)}
-              placeholder="Buscar funcionario..."
+              placeholder="Buscar funcionário..."
               className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 mb-2"
             />
             <div className="max-h-48 overflow-y-auto border border-gray-200 rounded-xl divide-y divide-gray-100">
@@ -616,7 +616,7 @@ export default function TreinamentosPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-gray-50">
-                          {['Treinamento', 'Codigo', 'Realizacao', 'Vencimento', 'Situacao', ''].map(h => (
+                          {['Treinamento', 'Código', 'Realização', 'Vencimento', 'Situação', ''].map(h => (
                             <th key={h} className="text-left px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                           ))}
                         </tr>
@@ -712,7 +712,7 @@ export default function TreinamentosPage() {
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-gray-50">
-                          {['Funcionario', 'Funcao', 'Obra', 'Realizacao', 'Vencimento', 'Situacao', ''].map(h => (
+                          {['Funcionário', 'Função', 'Obra', 'Realização', 'Vencimento', 'Situação', ''].map(h => (
                             <th key={h} className="text-left px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                           ))}
                         </tr>
@@ -806,7 +806,7 @@ export default function TreinamentosPage() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Numero do certificado</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Número do certificado</label>
                 <input type="text" value={renewForm.certificado} placeholder="Opcional"
                   onChange={e => setRenewForm(f => ({ ...f, certificado: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />

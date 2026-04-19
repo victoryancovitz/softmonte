@@ -77,7 +77,7 @@ export default function NovoDesligamentoPage() {
       .limit(1)
 
     if (existing && existing.length > 0) {
-      setError('Este funcionario ja possui um desligamento em andamento.')
+      setError('Este funcionário já possui um desligamento em andamento.')
       setSaving(false)
       return
     }

@@ -371,9 +371,9 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
           {abaModal === 'basico' && (
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-gray-500 mb-1">Descricao *</label>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Descrição *</label>
                 <input value={modalForm.nome} onChange={e => setModalForm(f => ({ ...f, nome: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Nome do lancamento" />
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Nome do lançamento" />
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Fornecedor</label>

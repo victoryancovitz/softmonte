@@ -29,13 +29,13 @@ const REQUIRED_FIELDS: Record<number, string[]> = {
 
 const FIELD_LABELS: Record<string, string> = {
   nome: 'Nome completo', data_nascimento: 'Data de nascimento', cpf: 'CPF',
-  nome_mae: 'Nome da mae', telefone: 'Telefone', endereco: 'Endereco',
-  cidade_endereco: 'Cidade', cep: 'CEP', funcao_id: 'Funcao',
-  cargo: 'Cargo', matricula: 'Matricula', id_ponto: 'ID Ponto',
-  salario_base: 'Salario base', tipo_vinculo: 'Tipo de vinculo',
-  admissao: 'Data de admissao', tamanho_uniforme: 'Tamanho uniforme',
-  tamanho_bota: 'Tamanho bota', ctps_numero: 'Numero CTPS',
-  ctps_serie: 'Serie CTPS', ctps_uf: 'UF CTPS', banco: 'Banco',
+  nome_mae: 'Nome da mãe', telefone: 'Telefone', endereco: 'Endereço',
+  cidade_endereco: 'Cidade', cep: 'CEP', funcao_id: 'Função',
+  cargo: 'Cargo', matricula: 'Matrícula', id_ponto: 'ID Ponto',
+  salario_base: 'Salário base', tipo_vinculo: 'Tipo de vínculo',
+  admissao: 'Data de admissão', tamanho_uniforme: 'Tamanho uniforme',
+  tamanho_bota: 'Tamanho bota', ctps_numero: 'Número CTPS',
+  ctps_serie: 'Série CTPS', ctps_uf: 'UF CTPS', banco: 'Banco',
   aso_data_exame: 'Data do exame', aso_data_vencimento: 'Data de vencimento',
 }
 

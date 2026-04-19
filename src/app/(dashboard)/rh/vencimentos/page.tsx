@@ -282,7 +282,7 @@ export default function VencimentosPage() {
       {/* Filters */}
       <div className="space-y-3 mb-6">
         <div className="max-w-md">
-          <SearchInput value={busca} onChange={setBusca} placeholder="Buscar por nome do funcionario..." />
+          <SearchInput value={busca} onChange={setBusca} placeholder="Buscar por nome do funcionário..." />
         </div>
 
         <div className="flex flex-wrap gap-2">

@@ -331,7 +331,7 @@ export default function ModalEdicaoPonto({ funcionario, data, obraId, open, onCl
           {(['batidas', 'resumo', 'historico'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
               className={`px-4 py-2 text-xs font-semibold rounded-t-lg transition-colors ${tab === t ? 'bg-brand/10 text-brand border-b-2 border-brand' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}>
-              {t === 'batidas' ? 'Batidas' : t === 'resumo' ? 'Resumo do Dia' : 'Historico'}
+              {t === 'batidas' ? 'Batidas' : t === 'resumo' ? 'Resumo do Dia' : 'Histórico'}
             </button>
           ))}
         </div>
@@ -532,7 +532,7 @@ export default function ModalEdicaoPonto({ funcionario, data, obraId, open, onCl
                       </div>
 
                       <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1">Observacao</label>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1">Observação</label>
                         <textarea value={regObservacao} disabled={readonly} rows={2}
                           onChange={e => { setRegObservacao(e.target.value); setRegDirty(true) }}
                           className="px-3 py-2 border border-gray-200 rounded-xl text-sm w-full disabled:bg-gray-50 disabled:text-gray-400 resize-none" />

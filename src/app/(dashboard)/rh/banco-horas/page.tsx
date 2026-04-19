@@ -408,7 +408,7 @@ export default function BancoHorasPage() {
 
       {/* Search */}
       <div className="mb-4">
-        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar funcionario..." />
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar funcionário..." />
       </div>
 
       {/* Fallback view */}
@@ -417,14 +417,14 @@ export default function BancoHorasPage() {
           <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-4 text-sm text-amber-700">
             <AlertTriangle className="w-4 h-4" />
             <span>
-              Nao ha registros detalhados de banco de horas para este periodo. Exibindo saldo consolidado da view resumo.
+              Não há registros detalhados de banco de horas para este período. Exibindo saldo consolidado da view resumo.
             </span>
           </div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-gray-100 bg-gray-50">
-                  {['Funcionario', 'Funcao', 'Obra', 'Saldo Atual', 'Status'].map(h => (
+                  {['Funcionário', 'Função', 'Obra', 'Saldo Atual', 'Status'].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
                   ))}
                 </tr>

@@ -144,7 +144,7 @@ export default function PromocaoModal({ funcionario, funcoes, onClose }: Props) 
         </div>
 
         <div className="p-5 space-y-4">
-          {/* Situacao atual */}
+          {/* Situação atual */}
           <div className="p-3 bg-gray-50 rounded-xl border border-gray-200">
             <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Situação atual</h3>
             <div className="grid grid-cols-3 gap-3 text-xs">

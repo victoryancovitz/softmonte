@@ -43,7 +43,7 @@ export default function AlocacaoView({ ativas, role }: AlocacaoViewProps) {
     <>
       <div className="flex flex-wrap gap-2 items-center mb-4">
         <div className="flex-1 min-w-[200px]">
-          <SearchInput value={busca} onChange={setBusca} placeholder="Buscar por funcionario ou obra..." />
+          <SearchInput value={busca} onChange={setBusca} placeholder="Buscar por funcionário ou obra..." />
         </div>
         <select value={filtroObra} onChange={e => setFiltroObra(e.target.value)}
           className="px-3 py-2 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">

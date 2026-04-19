@@ -381,7 +381,7 @@ export default function AdmissaoWizardPage() {
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Dados do Contrato</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="col-span-1 sm:col-span-2">
-                <label className={lbl}>Funcao</label>
+                <label className={lbl}>Função</label>
                 <select value={contrato.funcao_id} onChange={e => {
                   const fn = funcoes.find(f => f.id === e.target.value)
                   setContrato(c => ({ ...c, funcao_id: e.target.value, cargo: fn?.nome ?? c.cargo }))
@@ -619,7 +619,7 @@ export default function AdmissaoWizardPage() {
                   <input type="date" value={esocial.s2200_data} onChange={e => setEsocial(es => ({ ...es, s2200_data: e.target.value }))} className={inp} />
                 </div>
                 <div>
-                  <label className={lbl}>Numero do recibo</label>
+                  <label className={lbl}>Número do recibo</label>
                   <input type="text" value={esocial.s2200_recibo} onChange={e => setEsocial(es => ({ ...es, s2200_recibo: e.target.value }))} className={inp} placeholder="Ex: 1.2.0000000000.000000000000" />
                 </div>
               </div>
@@ -636,7 +636,7 @@ export default function AdmissaoWizardPage() {
           )}
           {etapa < 5 && (
             <button type="button" onClick={handleNext} disabled={saving} className="px-5 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50">
-              {saving ? 'Salvando...' : 'Salvar e Proximo'}
+              {saving ? 'Salvando...' : 'Salvar e Próximo'}
             </button>
           )}
           {etapa === 5 && (

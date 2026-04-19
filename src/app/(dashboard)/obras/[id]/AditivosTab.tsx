@@ -341,7 +341,7 @@ export default function AditivosTab({ obra, aditivos: rawAditivos, composicao: r
                 </select>
               </div>
 
-              {/* Numero */}
+              {/* Número */}
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Número</label>
                 <input type="text" readOnly value={`#${aditivos.length + 1}`}

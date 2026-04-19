@@ -73,11 +73,11 @@ export default function NovoItemPage() {
         {error && <div className="mb-4 p-3 bg-red-50 text-red-700 text-sm rounded-lg">{error}</div>}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div><label className="block text-sm font-medium text-gray-700 mb-1">Codigo *</label>
+            <div><label className="block text-sm font-medium text-gray-700 mb-1">Código *</label>
               <input type="text" name="codigo" required value={form.codigo} onChange={e => set('codigo', e.target.value)} placeholder="EPI-001" className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand" /></div>
             <div><label className="block text-sm font-medium text-gray-700 mb-1">Categoria</label>
               <select name="categoria" value={form.categoria} onChange={e => set('categoria', e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white">
-                <option>EPI</option><option>Material</option><option>Ferramenta</option><option>Consumivel</option>
+                <option>EPI</option><option>Material</option><option>Ferramenta</option><option>Consumível</option>
               </select></div>
           </div>
           <div><label className="block text-sm font-medium text-gray-700 mb-1">Nome do item *</label>

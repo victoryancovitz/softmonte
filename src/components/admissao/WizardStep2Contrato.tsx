@@ -229,7 +229,7 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes: f
         </div>
       </section>
 
-      {/* Funcao e cargo */}
+      {/* Função e cargo */}
       <section>
         <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">
           Função e Cargo

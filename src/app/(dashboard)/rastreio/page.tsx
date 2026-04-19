@@ -325,7 +325,7 @@ export default function RastreioPage() {
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
           <div className="flex items-center gap-2 mb-1">
             <Stethoscope className="w-4 h-4 text-red-500" />
-            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Sem ASO Valido</p>
+            <p className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Sem ASO Válido</p>
           </div>
           <p className="text-2xl font-bold text-red-600">{totalSemAso}</p>
         </div>
@@ -400,7 +400,7 @@ export default function RastreioPage() {
       <div className="mb-8">
         <div className="flex items-center gap-2 mb-3">
           <Stethoscope className="w-5 h-5 text-brand" />
-          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Funcionarios sem ASO Valido</h2>
+          <h2 className="text-sm font-bold text-gray-700 uppercase tracking-wide">Funcionários sem ASO Válido</h2>
           <span className="text-xs text-gray-400">({filteredAsos.length})</span>
         </div>
 
@@ -477,7 +477,7 @@ export default function RastreioPage() {
                   className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Observacao</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Observação</label>
                 <input type="text" value={asoObs} onChange={e => setAsoObs(e.target.value)} placeholder="Opcional"
                   className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
               </div>

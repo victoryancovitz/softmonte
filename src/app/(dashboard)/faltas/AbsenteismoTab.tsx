@@ -151,7 +151,7 @@ export default function AbsenteismoTab() {
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-3 mb-4">
         <div className="flex-1 min-w-[200px]">
-          <SearchInput value={busca} onChange={setBusca} placeholder="Buscar funcionario ou obra..." />
+          <SearchInput value={busca} onChange={setBusca} placeholder="Buscar funcionário ou obra..." />
         </div>
         <select
           value={obraFilter}
@@ -192,7 +192,7 @@ export default function AbsenteismoTab() {
             <tr className="border-b border-gray-100 bg-gray-50">
               <SortableHeader label="Nome" field="nome" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Obra" field="obra" currentField={sortField} currentDir={sortDir} onSort={onSort} />
-              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Periodo</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide whitespace-nowrap">Período</th>
               <SortableHeader label="Dias Trab." field="dias_trabalhados" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Faltas" field="total_faltas" currentField={sortField} currentDir={sortDir} onSort={onSort} />
               <SortableHeader label="Injustif." field="faltas_injustificadas" currentField={sortField} currentDir={sortDir} onSort={onSort} />

@@ -337,7 +337,7 @@ export default function DesligamentosPage() {
                   <div className="flex items-center gap-3">
                     {progress.nextPending && (
                       <span className="hidden sm:inline text-xs text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full font-medium">
-                        Proximo: {progress.nextPending}
+                        Próximo: {progress.nextPending}
                       </span>
                     )}
                     <span className="text-xs font-semibold text-gray-500">{progress.done}/{progress.total}</span>
