@@ -101,6 +101,7 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
         nome_pai: func.nome_pai ?? '',
         titulo_eleitor: func.titulo_eleitor ?? '',
         telefone: func.telefone ?? '',
+        telefone_celular: func.telefone_celular ?? '',
         email: func.email ?? '',
         endereco: func.endereco ?? '',
         cidade_endereco: func.cidade_endereco ?? '',
@@ -232,6 +233,7 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
         update.nome_pai = formData.nome_pai || null
         update.titulo_eleitor = formData.titulo_eleitor || null
         update.telefone = formData.telefone || null
+        update.telefone_celular = formData.telefone_celular || null
         update.email = formData.email || null
         update.endereco = formData.endereco || null
         update.cidade_endereco = formData.cidade_endereco || null

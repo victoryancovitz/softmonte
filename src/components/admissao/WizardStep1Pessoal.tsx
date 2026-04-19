@@ -184,6 +184,17 @@ export default function WizardStep1Pessoal({ data, onChange, errors }: Props) {
           />
         </Field>
 
+        <Field label="Celular (WhatsApp)" error={errors.telefone_celular}>
+          <input
+            type="tel"
+            value={data.telefone_celular ?? ''}
+            onChange={e => onChange('telefone_celular', maskTelefone(e.target.value))}
+            className={inp}
+            placeholder="(31) 98765-4321"
+          />
+          <p className="text-[10px] text-gray-400 mt-0.5">Usado para envio de holerite e avisos via WhatsApp</p>
+        </Field>
+
         <Field label="E-mail" error={errors.email}>
           <input
             type="email"

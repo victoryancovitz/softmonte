@@ -65,7 +65,7 @@ function FinanceiroPage() {
   const [centrosCusto, setCentrosCusto] = useState<any[]>([])
   const [page, setPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
-  const PAGE_SIZE = 50
+  const PAGE_SIZE = 500
 
   const toggleSelect = (id: string) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
   const toggleTodos = (ids: string[]) => setSelected(prev => prev.size === ids.length ? new Set() : new Set(ids))
@@ -247,7 +247,7 @@ function FinanceiroPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl font-semibold font-display">Lançamentos Financeiros</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Receitas, despesas e fluxo de caixa por obra</p>
+          <p className="text-sm text-gray-500 mt-0.5">Receitas, despesas e fluxo de caixa por obra {totalCount > 0 && <span className="text-gray-400">— {totalCount.toLocaleString('pt-BR')} lançamento{totalCount !== 1 ? 's' : ''} no total</span>}</p>
         </div>
         <div className="flex items-center gap-2">
           <select value={obraId} onChange={e => { setObraId(e.target.value); setPage(1) }}

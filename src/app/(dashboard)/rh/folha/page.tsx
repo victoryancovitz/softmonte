@@ -57,6 +57,19 @@ export default function FolhaPage() {
         setFechando(false); return
       }
 
+      // Verificar se há ponto lançado no período
+      const mesStr = String(form.mes).padStart(2, '0')
+      const inicioMes = `${form.ano}-${mesStr}-01`
+      const fimMes = `${form.ano}-${mesStr}-${new Date(form.ano, form.mes, 0).getDate()}`
+      const { count: pontoCount } = await supabase.from('ponto_registros')
+        .select('id', { count: 'exact', head: true })
+        .eq('obra_id', form.obra_id)
+        .gte('data', inicioMes)
+        .lte('data', fimMes)
+      if (!pontoCount || pontoCount === 0) {
+        toast.warning('Nenhum ponto lançado para este período. Folha será calculada com horas padrão (220h).')
+      }
+
       // Filtrar funcionários com salário zerado
       const semSalario = custos.filter((c: any) => !Number(c.salario_total_bruto))
       if (semSalario.length > 0) {

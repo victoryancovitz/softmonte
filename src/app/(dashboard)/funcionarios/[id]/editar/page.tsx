@@ -100,6 +100,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
       turno: form.turno, status: form.status,
       re: form.re || null, cpf: form.cpf ? form.cpf.replace(/\D/g, '') : null, pis: form.pis || null,
       telefone: form.telefone || null,
+      telefone_celular: form.telefone_celular || null,
       naturalidade: form.naturalidade || null,
       estado_civil: form.estado_civil || null,
       titulo_eleitor: form.titulo_eleitor || null,
@@ -287,6 +288,11 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div data-field="telefone"><label className={lbl}>Telefone</label>
                 <input type="text" value={form.telefone ?? ''} onChange={e => set('telefone', e.target.value)} className={inp} /></div>
+              <div data-field="telefone_celular">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Celular (WhatsApp)</label>
+                <input type="tel" name="telefone_celular" value={form.telefone_celular || ''} onChange={e => set('telefone_celular', e.target.value)} placeholder="(31) 98765-4321" className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand" />
+                <p className="text-[10px] text-gray-400 mt-0.5">Usado para envio de holerite e avisos via WhatsApp</p>
+              </div>
               <div data-field="naturalidade"><label className={lbl}>Naturalidade</label>
                 <input type="text" value={form.naturalidade ?? ''} onChange={e => set('naturalidade', e.target.value)} className={inp} placeholder="Cidade-UF"/></div>
               <div data-field="estado_civil"><label className={lbl}>Estado civil</label>
