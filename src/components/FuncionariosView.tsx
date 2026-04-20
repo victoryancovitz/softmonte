@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import SortableHeader, { applySort, type SortDir } from '@/components/SortableHeader'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { TIPO_VINCULO } from '@/lib/formatters'
 
 const CC_BADGE_COLOR: Record<string, string> = {
@@ -217,7 +218,7 @@ export default function FuncionariosView({
 
   async function bulkDesligar() {
     if (selectedIds.size === 0) return
-    if (!confirm(`Desligar ${selectedIds.size} funcionário(s) selecionado(s)? Os vínculos serão arquivados.`)) return
+    if (!await confirmDialog({ title: 'Desligar funcionários?', message: `Desligar ${selectedIds.size} funcionário(s) selecionado(s)? Os vínculos serão arquivados.`, variant: 'danger', confirmLabel: 'Desligar' })) return
     setBulkRunning(true)
     const { data: { user } } = await supabase.auth.getUser()
     const ids = Array.from(selectedIds)

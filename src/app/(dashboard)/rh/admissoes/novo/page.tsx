@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Breadcrumb from '@/components/ui/Breadcrumb'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { formatSupabaseError } from '@/lib/errors'
 import { UserPlus } from 'lucide-react'
 
@@ -99,7 +100,7 @@ export default function NovaAdmissaoPage() {
     }
     if ((freshFunc as any).nao_renovar) {
       const motivo = (freshFunc as any).observacao_renovacao ? ` Motivo: ${(freshFunc as any).observacao_renovacao}` : ''
-      if (!confirm(`⚠ Este funcionário está marcado como NÃO RENOVAR.${motivo}\n\nDeseja prosseguir com a admissão mesmo assim?`)) {
+      if (!await confirmDialog({ title: 'Funcionário marcado como NÃO RENOVAR', message: `Este funcionário está marcado como NÃO RENOVAR.${motivo}\n\nDeseja prosseguir com a admissão mesmo assim?`, variant: 'warning', confirmLabel: 'Prosseguir' })) {
         setSaving(false)
         return
       }

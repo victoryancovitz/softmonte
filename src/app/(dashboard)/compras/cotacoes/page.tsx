@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { Plus, X, ChevronDown, ChevronUp, Check, AlertTriangle, Trash2, ShoppingCart } from 'lucide-react'
 import SearchInput from '@/components/SearchInput'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import EmptyState from '@/components/ui/EmptyState'
 
 interface Obra {
@@ -151,7 +152,7 @@ export default function CotacoesPage() {
   }
 
   async function handleDelete(cotacao: Cotacao) {
-    if (!confirm(`Excluir cotação ${cotacao.numero}? Esta ação não pode ser desfeita.`)) return
+    if (!await confirmDialog({ title: 'Excluir cotação?', message: `Excluir cotação ${cotacao.numero}? Esta ação não pode ser desfeita.`, variant: 'danger', confirmLabel: 'Excluir' })) return
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { toast.error('Sessão expirada — faça login novamente'); return }
     const { error } = await supabase.from('cotacoes')

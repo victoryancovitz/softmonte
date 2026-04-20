@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 
 const ROLES = [
   { key: 'admin', label: 'Administrador', desc: 'Acesso total ao sistema', color: 'bg-red-50 border-red-200 text-red-700' },
@@ -235,7 +236,7 @@ export default function EditarUsuarioPage() {
         <div className="ml-auto">
           <button
             onClick={async () => {
-              if (!window.confirm(`Excluir o usuário "${profile.nome}"? Ele perderá acesso imediatamente.`)) return
+              if (!await confirmDialog({ title: 'Excluir usuário?', message: `Excluir o usuário "${profile.nome}"? Ele perderá acesso imediatamente.`, variant: 'danger', confirmLabel: 'Excluir' })) return
               setSaving(true)
               const { data: { user: currentUser } } = await supabase.auth.getUser()
               const { error: delErr } = await supabase.from('profiles').update({

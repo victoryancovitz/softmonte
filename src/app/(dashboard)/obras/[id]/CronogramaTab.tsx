@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 
 type Etapa = {
   id: string
@@ -144,7 +145,7 @@ export default function CronogramaTab({ obraId }: { obraId: string }) {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Excluir esta etapa?')) return
+    if (!await confirmDialog({ title: 'Excluir etapa?', message: 'Esta ação não pode ser desfeita.', variant: 'danger', confirmLabel: 'Excluir' })) return
     const { error } = await supabase.from('cronograma_etapas').delete().eq('id', id)
     if (error) toast.error('Erro ao excluir etapa')
     else { toast.success('Etapa excluída'); fetchEtapas() }

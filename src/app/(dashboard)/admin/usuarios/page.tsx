@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import BackButton from '@/components/BackButton'
 import SearchInput from '@/components/SearchInput'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 
 const ROLE_CONFIG: Record<string, { label: string; color: string }> = {
   admin: { label: 'Administrador', color: 'bg-red-100 text-red-700' },
@@ -62,7 +63,7 @@ export default function AdminUsuariosPage() {
   }
 
   async function revogarConvite(id: string) {
-    if (!window.confirm('Cancelar este convite? O link deixara de funcionar.')) return
+    if (!await confirmDialog({ title: 'Cancelar convite?', message: 'O link deixará de funcionar.', variant: 'danger', confirmLabel: 'Cancelar convite' })) return
     await supabase.from('convites').update({ ativo: false }).eq('id', id)
     toast.success('Convite cancelado')
     await loadData()

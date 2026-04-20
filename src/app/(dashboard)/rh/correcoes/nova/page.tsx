@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { Calculator, Save } from 'lucide-react'
 import { MOTIVO_CORRECAO, formatMotivoCorrecao } from '@/lib/formatters'
 
@@ -75,7 +76,7 @@ export default function NovaCorrecaoPage() {
 
   async function aplicar() {
     if (!form._corrId || !preview) return
-    if (!confirm(`Aplicar reajuste em ${preview.length} funcionário(s)? Isso atualiza salários e registra histórico.`)) return
+    if (!await confirmDialog({ title: 'Aplicar correção?', message: `Aplicar reajuste em ${preview.length} funcionário(s)? Isso atualiza salários e registra histórico.`, variant: 'info', confirmLabel: 'Aplicar' })) return
     setSaving(true)
     const { error } = await supabase.rpc('aplicar_correcao_salarial', { p_correcao_id: form._corrId, p_dry_run: false })
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -184,9 +185,12 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
         if (modalForm.valor_previsto && Number(modalForm.valor_previsto) > 0) {
           const variacaoPct = Math.abs((valorNum - Number(modalForm.valor_previsto)) / Number(modalForm.valor_previsto) * 100)
           if (variacaoPct > (modalForm.variacao_max_pct ?? 20)) {
-            const confirmar = window.confirm(
-              `O valor (${fmt(valorNum)}) variou ${variacaoPct.toFixed(1)}% em relação ao previsto (${fmt(Number(modalForm.valor_previsto))}), acima do limite de ${modalForm.variacao_max_pct ?? 20}%. Deseja salvar mesmo assim?`
-            )
+            const confirmar = await confirmDialog({
+              title: 'Variação acima do limite',
+              message: `O valor (${fmt(valorNum)}) variou ${variacaoPct.toFixed(1)}% em relação ao previsto (${fmt(Number(modalForm.valor_previsto))}), acima do limite de ${modalForm.variacao_max_pct ?? 20}%. Deseja salvar mesmo assim?`,
+              variant: 'warning',
+              confirmLabel: 'Salvar',
+            })
             if (!confirmar) { setSalvando(false); return }
           }
         }

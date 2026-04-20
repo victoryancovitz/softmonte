@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import SearchInput from '@/components/SearchInput'
 import SortableHeader, { SortDir, applySort } from '@/components/SortableHeader'
 import { formatTipoPagamento, formatStatus, TIPO_PAGAMENTO_EXTRA } from '@/lib/formatters'
@@ -119,7 +120,7 @@ export default function PagamentosExtrasPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Cancelar este pagamento? Se havia lançamento no financeiro, ele será removido.')) return
+    if (!await confirmDialog({ title: 'Cancelar pagamento?', message: 'Se havia lançamento no financeiro, ele será removido.', variant: 'danger', confirmLabel: 'Cancelar pagamento' })) return
     const pag = pagamentos.find(p => p.id === id)
     const { data: { user } } = await supabase.auth.getUser()
     if (pag?.financeiro_lancamento_id) {

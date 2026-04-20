@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { Upload, X, FileText, CheckCircle, AlertCircle } from 'lucide-react'
 
 interface Props {
@@ -89,7 +90,7 @@ export default function RdoImportModal({ obraId, onClose, onImported }: Props) {
         .eq('data', dataRdo)
         .maybeSingle()
       if (existing?.id) {
-        if (!confirm(`Já existe RDO de ${dataRdo}. Substituir?`)) {
+        if (!await confirmDialog({ title: 'Substituir RDO?', message: `Já existe RDO de ${dataRdo}. Deseja substituir?`, variant: 'warning', confirmLabel: 'Substituir' })) {
           setSaving(false); return
         }
         // Deleta existente (cascata apaga filhos)

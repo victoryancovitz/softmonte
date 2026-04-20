@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { formatSupabaseError } from '@/lib/errors'
 import WizardStepper from '@/components/admissao/WizardStepper'
 import WizardStep1Pessoal from '@/components/admissao/WizardStep1Pessoal'
@@ -445,9 +446,9 @@ export default function WizardAdmissaoPage() {
     }
   }
 
-  function handleClose() {
+  async function handleClose() {
     if (formData.nome || funcionarioId) {
-      if (!confirm('Deseja salvar o rascunho antes de sair?')) {
+      if (!await confirmDialog({ title: 'Salvar rascunho?', message: 'Deseja salvar o rascunho antes de sair?', variant: 'info', confirmLabel: 'Salvar rascunho' })) {
         router.push('/rh/admissoes')
         return
       }

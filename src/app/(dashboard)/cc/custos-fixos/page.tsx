@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import SearchInput from '@/components/SearchInput'
 import EmptyState from '@/components/ui/EmptyState'
 import { ChevronDown, ChevronRight, DollarSign, Pencil, Plus, Trash2, X } from 'lucide-react'
@@ -185,7 +186,7 @@ export default function CustosFixosPage() {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Deseja realmente excluir este custo fixo?')) return
+    if (!await confirmDialog({ title: 'Excluir custo fixo?', message: 'Deseja realmente excluir este custo fixo?', variant: 'danger', confirmLabel: 'Excluir' })) return
     try {
       const { error } = await supabase.from('cc_custos_fixos').update({ ativo: false }).eq('id', id)
       if (error) throw error

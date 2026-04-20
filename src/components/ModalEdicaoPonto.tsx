@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface Props {
   funcionario: any
@@ -291,7 +292,7 @@ export default function ModalEdicaoPonto({ funcionario, data, obraId, open, onCl
 
   async function handleDeleteRegistro() {
     if (!registro) return
-    if (!confirm('Deseja realmente excluir o registro deste dia? Essa acao nao pode ser desfeita.')) return
+    if (!await confirmDialog({ title: 'Excluir registro?', message: 'Deseja realmente excluir o registro deste dia? Essa ação não pode ser desfeita.', variant: 'danger', confirmLabel: 'Excluir' })) return
     setSaving(true)
     const { error } = await supabase.from('ponto_registros').delete().eq('id', registro.id)
     setSaving(false)

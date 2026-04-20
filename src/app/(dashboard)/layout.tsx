@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Topbar from '@/components/Topbar'
 import ModuleTabs from '@/components/ModuleTabs'
 import { ToastProvider } from '@/components/Toast'
+import { ConfirmDialogProvider } from '@/components/ui/ConfirmDialog'
 import InstallPrompt from '@/components/InstallPrompt'
 import NotificationTrigger from '@/components/NotificationTrigger'
 import ErrorBoundary from '@/components/ErrorBoundary'
@@ -22,7 +23,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Topbar profile={profile} />
       <ModuleTabs />
       <main>
-        <ToastProvider><ErrorBoundary>{children}</ErrorBoundary></ToastProvider>
+        <ToastProvider><ConfirmDialogProvider><ErrorBoundary>{children}</ErrorBoundary></ConfirmDialogProvider></ToastProvider>
         <InstallPrompt />
         <NotificationTrigger />
         <WizardButton />

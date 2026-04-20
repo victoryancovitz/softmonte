@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { Plus, X, Loader2, Trash2, Repeat } from 'lucide-react'
 
 const TIPOS = [
@@ -124,7 +125,7 @@ export default function PagamentosExtrasFuncionario({ funcionarioId }: { funcion
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Cancelar esse pagamento? Se havia lançamento no financeiro, ele também será removido.')) return
+    if (!await confirmDialog({ title: 'Cancelar pagamento?', message: 'Se havia lançamento no financeiro, ele também será removido.', variant: 'danger', confirmLabel: 'Cancelar pagamento' })) return
     const { data: { user } } = await supabase.auth.getUser()
     const pag = pagamentos.find(p => p.id === id)
     if (pag?.financeiro_lancamento_id) {

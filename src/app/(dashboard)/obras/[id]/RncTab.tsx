@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 
 type Rnc = {
   id: string
@@ -190,7 +191,7 @@ export default function RncTab({ obraId }: { obraId: string }) {
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Excluir esta RNC?')) return
+    if (!await confirmDialog({ title: 'Excluir RNC?', message: 'Esta ação não pode ser desfeita.', variant: 'danger', confirmLabel: 'Excluir' })) return
     const { error } = await supabase.from('rnc').delete().eq('id', id)
     if (error) toast.error('Erro ao excluir RNC')
     else { toast.success('RNC excluída'); fetchRncs() }

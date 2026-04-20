@@ -7,6 +7,7 @@ import PontoDiaRapidoModal from '@/components/PontoDiaRapidoModal'
 import SecullumSyncPanel from '@/components/SecullumSyncPanel'
 import PontoMarcacoesGrid from '@/components/PontoMarcacoesGrid'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import PontoGrid from './components/PontoGrid'
 import PontoAlertas from './components/PontoAlertas'
 import ModalOverrideEmergencial from '@/components/ModalOverrideEmergencial'
@@ -221,7 +222,7 @@ export default function PontoPage() {
 
   async function handleFechar() {
     if (!obraId) return
-    if (!confirm(`Fechar o ponto de ${meses[mes - 1]}/${ano}? Após fechado, apenas administradores poderão editar.`)) return
+    if (!await confirmDialog({ title: 'Fechar ponto?', message: `Fechar o ponto de ${meses[mes - 1]}/${ano}? Após fechado, apenas administradores poderão editar.`, variant: 'warning', confirmLabel: 'Fechar' })) return
     setFechando(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { toast.error('Sessão expirada — faça login novamente'); setFechando(false); return }
@@ -239,7 +240,7 @@ export default function PontoPage() {
 
   async function handleReabrir() {
     if (!fechamento) return
-    if (!confirm(`Reabrir o ponto de ${meses[mes - 1]}/${ano}? Os usuários voltarão a poder editar.`)) return
+    if (!await confirmDialog({ title: 'Reabrir ponto?', message: `Reabrir o ponto de ${meses[mes - 1]}/${ano}? Os usuários voltarão a poder editar.`, variant: 'warning', confirmLabel: 'Reabrir' })) return
     setFechando(true)
     const { error } = await supabase.from('ponto_fechamentos').delete().eq('id', fechamento.id)
     setFechando(false)

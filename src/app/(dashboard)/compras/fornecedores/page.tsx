@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { Plus, X, Star } from 'lucide-react'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 
 const CATEGORIAS = ['Material', 'EPI', 'Ferramentas', 'Serviços', 'Transporte', 'Alimentação'] as const
 
@@ -79,7 +80,7 @@ export default function FornecedoresPage() {
   }
 
   async function softDelete(f: Fornecedor) {
-    if (!confirm(`Excluir fornecedor "${f.nome}"? Esta ação não pode ser desfeita.`)) return
+    if (!await confirmDialog({ title: 'Excluir fornecedor?', message: `Excluir fornecedor "${f.nome}"? Esta ação não pode ser desfeita.`, variant: 'danger', confirmLabel: 'Excluir' })) return
     const { data: { user } } = await supabase.auth.getUser()
     await supabase.from('fornecedores')
       .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null })

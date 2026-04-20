@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { fmt } from '@/lib/cores'
 
 interface Conta {
@@ -152,7 +153,7 @@ export default function ContasCorrentesPage() {
   }
 
   async function apagar(c: Conta) {
-    if (!confirm(`Excluir a conta "${c.nome}"? Lançamentos vinculados manterão o histórico.`)) return
+    if (!await confirmDialog({ title: 'Excluir conta?', message: `Excluir a conta "${c.nome}"? Lançamentos vinculados manterão o histórico.`, variant: 'danger', confirmLabel: 'Excluir' })) return
     const { data: { user } } = await supabase.auth.getUser()
     const { error } = await supabase.from('contas_correntes')
       .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null, ativo: false })

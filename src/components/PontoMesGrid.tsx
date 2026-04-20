@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 
 interface Props {
   obraId: string
@@ -143,7 +144,7 @@ export default function PontoMesGrid({ obraId, mes, ano, onCellClick }: Props) {
   useEffect(() => { loadData() }, [loadData])
 
   async function handleFecharMes() {
-    if (!confirm(`Fechar o ponto de ${mes}/${ano}? Apenas administradores poderao editar apos o fechamento.`)) return
+    if (!await confirmDialog({ title: 'Fechar ponto?', message: `Fechar o ponto de ${mes}/${ano}? Apenas administradores poderão editar após o fechamento.`, variant: 'warning', confirmLabel: 'Fechar' })) return
     setFechando(true)
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { toast.error('Sessao expirada'); setFechando(false); return }
@@ -161,7 +162,7 @@ export default function PontoMesGrid({ obraId, mes, ano, onCellClick }: Props) {
 
   async function handleReabrirMes() {
     if (!fechamento) return
-    if (!confirm(`Reabrir o ponto de ${mes}/${ano}?`)) return
+    if (!await confirmDialog({ title: 'Reabrir ponto?', message: `Reabrir o ponto de ${mes}/${ano}?`, variant: 'warning', confirmLabel: 'Reabrir' })) return
     setFechando(true)
     const { error: err1 } = await supabase.from('ponto_fechamentos').delete().eq('id', fechamento.id)
     // Also update folha_fechamentos if exists

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 
 const MOTIVOS: Record<string, string> = {
   acordo_coletivo: 'Acordo coletivo', dissidio: 'Dissídio', merito: 'Mérito',
@@ -30,7 +31,7 @@ export default function CorrecaoDetalhePage() {
   }, [id])
 
   async function reverter() {
-    if (!confirm('Reverter correção? Todos os salários voltarão ao valor anterior.')) return
+    if (!await confirmDialog({ title: 'Reverter correção?', message: 'Todos os salários voltarão ao valor anterior.', variant: 'warning', confirmLabel: 'Reverter' })) return
     const { data: { user } } = await supabase.auth.getUser()
     // Aplica inversamente cada item do histórico
     for (const h of historico) {

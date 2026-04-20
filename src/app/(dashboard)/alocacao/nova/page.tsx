@@ -6,6 +6,7 @@ import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import { Search, Check, Users } from 'lucide-react'
 import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 
 type Func = { id: string; nome: string; cargo: string | null; status: string | null; deleted_at: string | null }
 type AtivaMap = Record<string, { id: string; obra_nome: string; cargo_na_obra: string | null; data_inicio: string | null }[]>
@@ -167,13 +168,12 @@ export default function NovaAlocacaoPage() {
       const detalhe = arquivados.map(f =>
         `• ${f.nome} (desligado em ${new Date(f.deleted_at!).toLocaleDateString('pt-BR')})`
       ).join('\n')
-      const ok = window.confirm(
-        `ATENÇÃO: ${arquivados.length} funcionário(s) arquivado(s):\n\n${detalhe}\n\n` +
-        `Use somente para:\n` +
-        `• Readmissão (reativar no sistema)\n` +
-        `• Fechamento retroativo de ponto/folha\n\n` +
-        `Deseja prosseguir?`
-      )
+      const ok = await confirmDialog({
+        title: 'Funcionários arquivados',
+        message: `${arquivados.length} funcionário(s) arquivado(s):\n\n${detalhe}\n\nUse somente para:\n• Readmissão (reativar no sistema)\n• Fechamento retroativo de ponto/folha\n\nDeseja prosseguir?`,
+        variant: 'warning',
+        confirmLabel: 'Prosseguir',
+      })
       if (!ok) return
     }
 

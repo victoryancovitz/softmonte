@@ -2,6 +2,7 @@
 import { useState, Fragment } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { gerarTabelaAmortizacao } from '@/lib/dividas'
 import EmptyState from '@/components/ui/EmptyState'
 import { Landmark, AlertTriangle } from 'lucide-react'
@@ -187,7 +188,7 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
   }
 
   async function estornarParcela(p: any) {
-    if (!confirm(`Reverter pagamento da parcela ${p.numero}?\nIsso desfaz os lançamentos e marca como não paga.`)) return
+    if (!await confirmDialog({ title: 'Reverter pagamento?', message: `Reverter pagamento da parcela ${p.numero}? Isso desfaz os lançamentos e marca como não paga.`, variant: 'warning', confirmLabel: 'Reverter' })) return
     setSaving(true)
     const hoje = new Date().toISOString().slice(0, 10)
     await supabase.from('divida_parcelas').update({
