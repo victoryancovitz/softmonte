@@ -1,0 +1,99 @@
+{
+  "_meta": {
+    "total": 18,
+    "fonte": "CBO DAS FUNCOES - CODESP.docx (Tecnomonte)",
+    "uso": "Fazer UPSERT em funcoes adicionando descricao_cbo e cbo_codigo onde faltar"
+  },
+  "funcoes_cbo": [
+    {
+      "titulo": "ADMINISTRATIVO DE OBRAS",
+      "cbo_codigo": "3513-05",
+      "descricao_cbo": "Executam serviços de apoio nas áreas de recursos humanos, administração, finanças e logística; atendem fornecedores, clientes e funcionários, tratam de documentos variados e controle de funcionários (documentação, alimentação, transporte, pagamento e benefícios)."
+    },
+    {
+      "titulo": "AJUDANTE",
+      "cbo_codigo": "7170-20",
+      "descricao_cbo": "Preparam canteiros de obras, limpando a área e otimizando o espaço; efetuam manutenção de primeiro nível, limpando máquinas e ferramentas, verificando condições dos equipamentos."
+    },
+    {
+      "titulo": "CALDEIREIRO",
+      "cbo_codigo": "7243-15",
+      "descricao_cbo": "Confeccionam, reparam e instalam peças e elementos diversos em chapas de metal como aço, ferro galvanizado, cobre, estanho, latão, alumínio e zinco; fabricam ou reparam caldeiras, tanques, portas, grades, vitrais e peças similares."
+    },
+    {
+      "titulo": "ELETRICISTA",
+      "cbo_codigo": "7156-10",
+      "descricao_cbo": "Planejam serviços elétricos; realizam instalação de distribuição de alta e baixa tensão; montam e reparam instalações elétricas em equipamentos auxiliares, estabelecimentos industriais, comerciais e de serviços; instalam e reparam equipamentos elétricos."
+    },
+    {
+      "titulo": "ENCARREGADO",
+      "cbo_codigo": "7102-05",
+      "descricao_cbo": "Supervisionam equipes de trabalhadores; elaboram documentação técnica e controlam recursos produtivos da obra, segurança dos locais e equipamentos da obra administrando o cronograma da obra."
+    },
+    {
+      "titulo": "MONTADOR",
+      "cbo_codigo": "7244-05",
+      "descricao_cbo": "Confeccionam gabaritos e modelos de peças de estruturas metálicas diversas, incluindo estruturas; preparam peças da estrutura, montam e instalam."
+    },
+    {
+      "titulo": "MONTADOR ANDAIMES",
+      "cbo_codigo": "7171-10",
+      "descricao_cbo": "Confeccionam e organizam modelos de peças de estruturas metálicas diversas; preparam peças da estrutura, montam, instalam, desmontam e recuperam estruturas metálicas."
+    },
+    {
+      "titulo": "OPERADOR DE MUNCK",
+      "cbo_codigo": "7823-15",
+      "descricao_cbo": "Transportam, coletam e entregam cargas em geral; guincham, removem peças e equipamentos, movimentam cargas volumosas e pesadas, definem rotas e asseguram a regularidade do transporte."
+    },
+    {
+      "titulo": "PINTOR",
+      "cbo_codigo": "7233-05",
+      "descricao_cbo": "Analisam e preparam as superfícies a serem pintadas e calculam quantidade de materiais para pintura, dão acabamento e retocam superfícies pintadas."
+    },
+    {
+      "titulo": "PINTOR JATISTA",
+      "cbo_codigo": "7233-30",
+      "descricao_cbo": "Analisam e preparam as superfícies a serem pintadas e calculam quantidade de materiais para pintura; dão acabamento e retocam superfícies pintadas. Especializado em pintura a jato."
+    },
+    {
+      "titulo": "PROJETISTA",
+      "cbo_codigo": "3180-05",
+      "descricao_cbo": "Auxiliam arquitetos e engenheiros no desenvolvimento de projetos, apoiam a coordenação de equipes, desenvolvendo projetos, dimensionando estruturas e instalações, especificando materiais."
+    },
+    {
+      "titulo": "SOLDADOR ELETRODO",
+      "cbo_codigo": "7243-10",
+      "descricao_cbo": "Unem e cortam peças de ligas metálicas usando processos de soldagem e corte, tais como eletrodo revestido, TIG, MIG, MAG, oxigás, arco submerso, brasagem, plasma."
+    },
+    {
+      "titulo": "SOLDADOR ER",
+      "cbo_codigo": "7243-10",
+      "descricao_cbo": "Soldador Eletrodo Revestido. Unem e cortam peças de ligas metálicas usando processo de soldagem com eletrodo revestido (SMAW)."
+    },
+    {
+      "titulo": "SOLDADOR TIG",
+      "cbo_codigo": "7243-10",
+      "descricao_cbo": "Soldador TIG (Tungsten Inert Gas). Unem peças de aço, aço inox, alumínio e ligas com processo de soldagem TIG, exigido em tanques, tubulações e indústria petroquímica."
+    },
+    {
+      "titulo": "SUPERVISOR",
+      "cbo_codigo": "7101-05",
+      "descricao_cbo": "Supervisionam equipe de trabalho, controlam processos de produção e administram metas e resultados de produção; controlam recursos para a produção, elaboram documentação técnica e operacional."
+    },
+    {
+      "titulo": "TECNICO DE PLANEJAMENTO",
+      "cbo_codigo": "3121-10",
+      "descricao_cbo": "Planejam e supervisionam a execução das atividades de caldeiraria, soldagem e montagem; elaboram cronogramas, controlam escopo de projetos e quantificam materiais."
+    },
+    {
+      "titulo": "MECANICO",
+      "cbo_codigo": "7257-10",
+      "descricao_cbo": "Montam, ajustam e reparam máquinas e equipamentos industriais; realizam manutenção preventiva e corretiva, identificam falhas mecânicas e substituem componentes."
+    },
+    {
+      "titulo": "MEIO OFICIAL",
+      "cbo_codigo": "7170-10",
+      "descricao_cbo": "Auxilia os oficiais (soldadores, caldeireiros, mecânicos) na execução das atividades de montagem, corte, solda e acabamento, com autonomia parcial."
+    }
+  ]
+}

@@ -1,0 +1,538 @@
+{
+  "_meta": {
+    "total_clientes": 2,
+    "total_nrs_catalogo": 16,
+    "total_sheets_ageo_originais": 31
+  },
+  "clientes_com_sgi": [
+    {
+      "cliente_slug": "terminais_ageo",
+      "cliente_nome_completo": "Terminais AGEO S/A",
+      "checklist_codigo": "SGI.02.210",
+      "checklist_titulo": "Check List de Avaliação de Documentos",
+      "observacoes": [
+        "NR-20 OBRIGATÓRIO para indústria petroquímica",
+        "Checklist oficial AGEO — preencher antes de liberar funcionário"
+      ],
+      "nrs_disponiveis": [
+        "NR-10 Eletricidade",
+        "SEP - Sistema Elétrico de Potência",
+        "NR-11 Movimentação/Transporte",
+        "NR-18 Segurança Básica",
+        "NR-18 Operador de PEMT (PTA)",
+        "NR-18 Balancim",
+        "NR-18 Cadeira Suspensa",
+        "NR-18 Montagem de Andaime",
+        "NR-33 Espaço Confinado",
+        "NR-35 Trabalho em Altura",
+        "NR-20 Inflamáveis",
+        "IRATA NBR 15475",
+        "Operador Caminhão Munck",
+        "Operador Guindaste",
+        "Operador Retroescavadeira",
+        "MOPP - Movimentação Produtos Perigosos"
+      ],
+      "placeholder": false,
+      "requisitos_por_funcao": [
+        {
+          "funcao": "ADM DE OBRA",
+          "nrs_obrigatorias": []
+        },
+        {
+          "funcao": "AJUDANTE",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis"
+          ]
+        },
+        {
+          "funcao": "ALMOXARIFE",
+          "nrs_obrigatorias": [
+            "NR-11 Movimentação/Transporte",
+            "NR-18 Segurança Básica"
+          ]
+        },
+        {
+          "funcao": "AUX ADM",
+          "nrs_obrigatorias": []
+        },
+        {
+          "funcao": "AUX. TÉCNICO PLANEJAMENTO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica"
+          ]
+        },
+        {
+          "funcao": "AUXILIAR DE ALMOXARIFE",
+          "nrs_obrigatorias": [
+            "NR-11 Movimentação/Transporte",
+            "NR-18 Segurança Básica"
+          ]
+        },
+        {
+          "funcao": "CALDEIREIRO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "COMPRADOR",
+          "nrs_obrigatorias": []
+        },
+        {
+          "funcao": "ELETRICISTA",
+          "nrs_obrigatorias": [
+            "NR-10 Eletricidade",
+            "SEP - Sistema Elétrico de Potência",
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "ENCANADOR",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "ENCARREGADO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "ENCARREGADO CALDEIRARIA",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "ENCARREGADO DE ANDAIMES",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-18 Montagem de Andaime",
+            "NR-20 Inflamáveis",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "ENGENHEIRO MECÂNICO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "INSPETOR DE SOLDA",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "INSTRUMENTISTA",
+          "nrs_obrigatorias": [
+            "NR-10 Eletricidade",
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "MECANICO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "MEIO OFICIAL",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "MONTADOR",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "MONTADOR DE ANDAIMES",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-18 Montagem de Andaime",
+            "NR-20 Inflamáveis",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "OPERADOR DE MUNCK",
+          "nrs_obrigatorias": [
+            "NR-11 Movimentação/Transporte",
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "Operador Caminhão Munck"
+          ]
+        },
+        {
+          "funcao": "PINTOR",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "PINTOR JATISTA",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "SOLDADOR ER",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "SOLDADOR MIG",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "SOLDADOR TIG",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "SUPERVISOR",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "TÉCNICO PLANEJAMENTO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis"
+          ]
+        },
+        {
+          "funcao": "TÉCNICO SEGURANÇA DO TRABALHO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        }
+      ]
+    },
+    {
+      "cliente_slug": "cesari",
+      "cliente_nome_completo": "Cesari Engenharia",
+      "checklist_codigo": "SGI-CESARI-001",
+      "checklist_titulo": "Checklist de Pré-Requisitos — Obras Cesari",
+      "observacoes": [
+        "PLACEHOLDER — cliente ainda não forneceu checklist oficial"
+      ],
+      "nrs_disponiveis": [
+        "NR-10 Eletricidade",
+        "SEP - Sistema Elétrico de Potência",
+        "NR-11 Movimentação/Transporte",
+        "NR-18 Segurança Básica",
+        "NR-18 Operador de PEMT (PTA)",
+        "NR-18 Balancim",
+        "NR-18 Cadeira Suspensa",
+        "NR-18 Montagem de Andaime",
+        "NR-33 Espaço Confinado",
+        "NR-35 Trabalho em Altura",
+        "NR-20 Inflamáveis",
+        "IRATA NBR 15475",
+        "Operador Caminhão Munck",
+        "Operador Guindaste",
+        "Operador Retroescavadeira",
+        "MOPP - Movimentação Produtos Perigosos"
+      ],
+      "placeholder": true,
+      "requisitos_por_funcao": [
+        {
+          "funcao": "ADM DE OBRA",
+          "nrs_obrigatorias": []
+        },
+        {
+          "funcao": "AJUDANTE",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis"
+          ]
+        },
+        {
+          "funcao": "ALMOXARIFE",
+          "nrs_obrigatorias": [
+            "NR-11 Movimentação/Transporte",
+            "NR-18 Segurança Básica"
+          ]
+        },
+        {
+          "funcao": "AUX ADM",
+          "nrs_obrigatorias": []
+        },
+        {
+          "funcao": "AUX. TÉCNICO PLANEJAMENTO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica"
+          ]
+        },
+        {
+          "funcao": "AUXILIAR DE ALMOXARIFE",
+          "nrs_obrigatorias": [
+            "NR-11 Movimentação/Transporte",
+            "NR-18 Segurança Básica"
+          ]
+        },
+        {
+          "funcao": "CALDEIREIRO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "COMPRADOR",
+          "nrs_obrigatorias": []
+        },
+        {
+          "funcao": "ELETRICISTA",
+          "nrs_obrigatorias": [
+            "NR-10 Eletricidade",
+            "SEP - Sistema Elétrico de Potência",
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "ENCANADOR",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "ENCARREGADO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "ENCARREGADO CALDEIRARIA",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "ENCARREGADO DE ANDAIMES",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-18 Montagem de Andaime",
+            "NR-20 Inflamáveis",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "ENGENHEIRO MECÂNICO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "INSPETOR DE SOLDA",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "INSTRUMENTISTA",
+          "nrs_obrigatorias": [
+            "NR-10 Eletricidade",
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "MECANICO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "MEIO OFICIAL",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "MONTADOR",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "MONTADOR DE ANDAIMES",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-18 Montagem de Andaime",
+            "NR-20 Inflamáveis",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "OPERADOR DE MUNCK",
+          "nrs_obrigatorias": [
+            "NR-11 Movimentação/Transporte",
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "Operador Caminhão Munck"
+          ]
+        },
+        {
+          "funcao": "PINTOR",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "PINTOR JATISTA",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "SOLDADOR ER",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "SOLDADOR MIG",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "SOLDADOR TIG",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "SUPERVISOR",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        },
+        {
+          "funcao": "TÉCNICO PLANEJAMENTO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis"
+          ]
+        },
+        {
+          "funcao": "TÉCNICO SEGURANÇA DO TRABALHO",
+          "nrs_obrigatorias": [
+            "NR-18 Segurança Básica",
+            "NR-20 Inflamáveis",
+            "NR-33 Espaço Confinado",
+            "NR-35 Trabalho em Altura"
+          ]
+        }
+      ]
+    }
+  ]
+}

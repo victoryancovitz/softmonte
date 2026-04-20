@@ -1,0 +1,722 @@
+{
+  "_meta": {
+    "total_funcoes": 15,
+    "fonte": "O.S NR 01 FUNCOES SEPARADA.xlsx (Tecnomonte)",
+    "medidas_preventivas_padrao": [
+      "Uso correto de EPI",
+      "Treinamentos para execução de tarefas",
+      "Correção das posturas de trabalho",
+      "Guarda corpo de proteção periferias, vãos e aberturas",
+      "Delimitação de áreas de trabalho (isolamento)",
+      "Verificação periódica de ferramentas e equipamentos"
+    ],
+    "orientacoes_seguranca_padrao": [
+      "Não transite pela obra sem capacete e calçado de segurança",
+      "Use seus EPIs apenas para a finalidade a que se destinam",
+      "Observe atentamente o meio ambiente do trabalho, comunicando qualquer anormalidade ao seu supervisor",
+      "Em caso de acidente, comunique imediatamente o Setor de Segurança",
+      "Participe ativamente dos treinamentos e DDS (Diálogo Diário de Segurança)",
+      "Zele pela conservação e higiene de seu local de trabalho"
+    ]
+  },
+  "os_nr01_modelos": [
+    {
+      "funcao": "AJUDANTE",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "Auxilia os oficiais na execução das atividades; executa limpeza das  áreas. Movimenta ferramentas, maquinas,equipamentos e peças;esmerilha peças em processo de fabricação.",
+      "riscos": {
+        "fisico": "Ruído, vibração de Maos e braços, radiação não ionizantes",
+        "acidentes": "Fogo, faíscas, fagulhas( chama aberta), explosão, fumos metalicos, liquido/gás inflamavel, excesso de oxigenio, operação de equipamentos eletricos,operação de ferramentas rotativas, projeção de particulas, contato com superficies aquecida, choque eletricos, manuseio de forma manual de equipamentos e materiais, cargas pesadas, queda de carga/objetos, choque mecnico, impacto de pessoa sofrido por, saliências, descontinuidades, aberturas, obstruções ou escorregadios, queda do mesmo nivel, queda de objeto, queda de nivel superior a 2 metros, deficiência de oxigenio/ execesso de oxigenio, gás inflamavel/liquido inflamavel/gás toxico, iluminação inadequada/ausente."
+      },
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha",
+        "Botina de segurança com biqueira de aço",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 1,50 m quando necessário)",
+        "Protetor facial",
+        "Utilização de Trava quedas;",
+        "Mangote, perneira, e avental de raspa",
+        "Mascara de segurança",
+        "Respirador semifacial"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "AUXILIAR ADMINISTRATIVO",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "AUXILIA NO APONTAMENTO DE CARTÃO DE PONTO , AUXILIA NO CONTROLE DE MATERIAIS DE APLICAÇÃO , CONSUMOS , EPIS , FERRAMENTAS , EQUIPAMENTOS , EMITE E ACOMPANHA AS CHATS , ELABORA PROPOE E DIVULGA NORMAS E PROCEDIMENTOS INTERNOS DE SEGURANÇA ,HIGINE E MEIO AMBIENTE ,AUXILIA NOS SERVIÇOS DE INFRAESTRUTURAS DA OBRA , CONTROLA E ORGANIZA DOCUMENTAÇOES ,  AUXILIA NA ELABORAÇÃO DE PLANILHAS DE CUSTOS.",
+      "riscos": {
+        "acidentes": "RISCOS DE ACIDENTES POR QUEDAS DO MESMO NIVEL ,",
+        "fisico": "EXPOSIÇÃO AO RUIDO INTERMITENTE / FADIGA ANSIEDADE, ESTRESSE, E PERCA AUDITIVA"
+      },
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Capacete com jugular",
+        "Botina de segurança com biqueira de composite",
+        "Protetor auricular tipo concha",
+        "Óculos de segurança incolor"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "CALDEIREIRO",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "Constroí estruturas de tanques, plataformas, tubulações; faz traçados em chaparias; corta e dobra chapas em guilhotinas,dobradeiras, calandra, plasma, etc. Manuseia ferramentas eletricas como lixadeira, furadeira e retifica.",
+      "riscos": {
+        "quimico": "Poeiras Metalicas",
+        "fisico": "Ruído, vibração de Maos e braços, radiação não ionizantes",
+        "acidentes": "Fogo, faíscas, fagulhas( chama aberta), explosão, fumos metalicos, liquido/gás inflamavel, excesso de oxigenio, operação de equipamentos eletricos,operação de ferramentas rotativas, projeção de particulas, contato com superficies aquecida, choque eletricos, manuseio de forma manual de equipamentos e materiais, cargas pesadas, queda de carga/objetos, choque mecnico, impacto de pessoa sofrido por, saliências, descontinuidades, aberturas, obstruções ou escorregadios, queda do mesmo nivel, queda de objeto, queda de nivel superior a 2 metros, deficiência de oxigenio/ execesso de oxigenio, gás inflamavel/liquido inflamavel/gás toxico, iluminação inadequada/ausente."
+      },
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha",
+        "Botina de segurança com biqueira de aço",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 1,50 m quando necessário)",
+        "Protetor Facial",
+        "Utilização de Trava quedas;",
+        "Mangote, perneira e avental de raspa",
+        "Mascara de segurança",
+        "Respirador semifacial"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "ELETRICISTA",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "Fazer suportes para paineis eletricos e quadro de de comandos : montar paineis eletricos e quadros de comando : fazer suporte para instrumentos :lançar cabos eletricos e dutos e eletrocalhas : fazer ligação de equipamentos eletricos",
+      "riscos": {
+        "quimico": "Irritação , problemas respiratorios",
+        "fisico": "Exposição ao ruido intermitente / fadiga,ansiedade ,estresse e perda auditiva , problemas osteomusculares dor MMSS fadiga / insolação queimadura, etc",
+        "acidentes": "Queimadura fibrilação ventricular parada cardiorespiratoria morte / impacto de pessoa contra impacto de pessoa sofrido por perda de contenção  / vazamento lesão pessoal /queimaduras , lesoes"
+      },
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha",
+        "Botina de segurança com biqueira de aço",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 1,50 m quando necessário)",
+        "Protetor Facial",
+        "Utilização de Trava quedas;",
+        "Mangote, perneira e avental de raspa",
+        "Mascara de segurança",
+        "Respirador semifacial"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "ENCARREGADO",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "COORDENA E ORIENTA EQUIPES AVALIA RISCOS OPERACIONAIS ,INTERPRETQ DESENHOS AVALIA QUALIDADE DE TRABALHOS ACOMPANHA A EXECUSSÃO DE PROJETOS ,PRESERVA A SEGURANÇA DA EQUIPE E DOS TRABALHOS .",
+      "riscos": {
+        "ergonomico": "Postura Inadequada",
+        "fisico": "Ruído",
+        "acidentes": "Queda de Objetos  /  Peças                                                                                                                                                                                             Queda Altura Asfixia, falta de  oxigênio"
+      },
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha",
+        "Botina de segurança com biqueira de aço",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 1,50 m quando necessário)",
+        "Protetor Facial",
+        "Utilização de Trava quedas;",
+        "Mangote, perneira e avental de raspa",
+        "Mascara de segurança",
+        "Respirador semifacial"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "MEIO OFICIAL",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "Auxilia os oficiais na execução das atividades; executa limpeza das  áreas. Movimenta ferramentas, maquinas,equipamentos e peças;esmerilha peças em processo de fabricação.",
+      "riscos": {
+        "fisico": "Ruído, vibração de Maos e braços, radiação não ionizantes",
+        "acidentes": "Cargas pesadas/Queda de carga/objetos, choque mecânico, impacto de pessoa sofrido por, choques eletricos, contato com superficies aquecidas/deficiência de oxigenio/ excesso de oxigenio, Espaço confinado, gás inflamavel/liquido inflamavel/gás toxico, iluminação inadequada/ausent. Manuseio de forma manual de equipamentos e materiais, Projeção de particulas, Queda do mesmo nivel, queda de nivel superior a 2 metros,  queda de objeto, Saliências, descontinuidades, aberturas, obstruções ou escorregadios."
+      },
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha",
+        "Botina de segurança com biqueira de aço",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 1,50 m quando necessário)",
+        "Protetor facial",
+        "Utilização de Trava quedas;",
+        "Mangote, perneira, e avental de raspa",
+        "Mascara de segurança",
+        "Respirador semifacial"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "MONTADOR",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "Confeccionam modelos de peças de estruturas metalicas diversas, oreoaram peças da estrutura, montam, instalam e recuperamestruturas metálicas. Realizam manutenção preventiva de máquinas e equipamentos. Organizam o local de trabalho para executar as atividades conforme normase procedimentos técnicos de qualidade, segurança e preservaçãodo meio ambiente",
+      "riscos": {},
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha e/ou plug",
+        "Botina de segurança com biqueira de composite",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 2.00 m quando necessário)",
+        "Protetor Facial",
+        "Utilização de Trava quedas;",
+        "Mangote, perneira e avental de raspa",
+        "Mascara de segurança",
+        "Respirador semifacial"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "MONTADOR DE ANDAIMES",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "Controla o equipamento e escolhe os elementos de montagem; Verifica a solidez da zona de assentamento, coloca bases niveladoras que permitem o aumento da superfície de carga e compensação rigorosa de desníveis existentes; Verifica a solidez dos encaixes e dos elementos de aperto (braçadeiras perfeitamente imobilizadas) de forma a garantir a máxima capacidade de carga dos andaimes, considerando as fases críticas da montagem e da desmontagem do mesmo;",
+      "riscos": {
+        "quimico": "Eventual contato com produtos químicos",
+        "fisico": "Ruído, calor",
+        "biologico": "Não especificado",
+        "acidentes": "Riscos de acidentes por quedas, incidentes e cortes"
+      },
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha",
+        "Botina de segurança com biqueira de aço",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 1,50 m quando necessário)",
+        "Respirador PFF3",
+        "Utilização de Trava quedas;"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "OP.MUNK",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "CONDUZ VEICULOS AUTOMOTORES , LEVES E PESADOS , CONTROLA AS CARGAS E DESCARGA DE MATERIAIS OPERA MUCK E EMPILHADEIRA EFETUA MANUTENÇÃO DOS VEICULOS OBEDECE AS NORMAS E REGRAS DE TRANSITO VERIFICA OS NIVEIS DE OLEO DO MOTOR CALIBRAGEM DE PNEUS AGUA DE RADIADOR , COMBUSTIVEL ETC .",
+      "riscos": {},
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha e/ou plug",
+        "Botina de segurança com biqueira de composite",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 2.00 m quando necessário)",
+        "Protetor Facial",
+        "Utilização de Trava quedas;",
+        "Mangote, perneira e avental de raspa",
+        "Mascara de segurança",
+        "Respirador semifacial"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "PINTOR",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "ASPAR ,LIXAR,ESCOVAR E PREPARAR SUPERFICIES PARA PINTURA ,PREPARA E DOSAR O MATERIALPARA APLICAÇÃO (TINTAS) APLICAR A TINTA E \nDERIVADOS, EM SUPERFICIES DE ALVENARIA OU METALICAS",
+      "riscos": {
+        "quimico": "Irritação , problemas respiratorios",
+        "fisico": "Exposição ao ruido intermitente / fadiga,ansiedade ,estresse e perda auditiva , problemas osteomusculares dor MMSS fadiga / insolação queimadura, etc",
+        "acidentes": "Queimadura fibrilação ventricular parada cardiorespiratoria morte / impacto de pessoa contra impacto de pessoa sofrido por perda de contenção  / vazamento lesão pessoal /queimaduras , lesoes"
+      },
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha",
+        "Botina de segurança com biqueira de aço",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 1,50 m quando necessário)",
+        "Protetor Facial",
+        "Luva latex",
+        "Mangote, perneira e avental de raspa",
+        "Mascara de segurança",
+        "Respirador semifacial"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "PINTOR JATISTA",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "responsável pela aplicação de revestimentos de pintura em estruturas metálicas, equipamentos e superfícies em geral. Ele utiliza técnicas \nde jateamento abrasivo para preparar a superfície, aplica tintas e revestimentos protetores, realiza a pintura conforme as especificações \ndo projeto e realiza inspeções de qualidade para garantir a aderência e durabilidade da pintura",
+      "riscos": {
+        "quimico": "Irritação , problemas respiratorios",
+        "fisico": "Exposição ao ruido intermitente / fadiga,ansiedade ,estresse e perda auditiva , problemas osteomusculares dor MMSS fadiga / insolação queimadura, etc",
+        "acidentes": "Queimadura fibrilação ventricular parada cardiorespiratoria morte / impacto de pessoa contra impacto de pessoa sofrido por perda de contenção  / vazamento lesão pessoal /queimaduras , lesoes"
+      },
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha",
+        "Botina de segurança com biqueira de aço",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 1,50 m quando necessário)",
+        "Protetor Facial",
+        "Luva latex",
+        "Mangote, perneira e avental de raspa",
+        "Mascara de segurança",
+        "Respirador semifacial"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "SOLDADOR MIG",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "Unir superficies ferrosas por meio de solda; operar maquinas de solda; manusear ferramentas eletricas como lixadeiras, retificas.",
+      "riscos": {
+        "quimico": "Fumos metalicos, poeiras metalicas,",
+        "fisico": "Ruído, vibração de Maos e braços, radiação não ionizantes",
+        "acidentes": "Projeção de particulas, contato com superficies aquecidas, choque elétricos, manuseio de forma manual de equipamentos e materiais, cargas pesadas, queda de carga/objetos, choque mecânico, impacto de pessoa sofrido por, saliências, descontinuidades, aberturas, obstruções ou escorregadios, queda do mesmo nivel, queda de objeto, queda de nivel superior a 2 metros, deficiência de oxigenio/ execesso de oxigenio, gás inflamavel/liquido inflamavel/gás toxico, iluminação inadequada/ausente."
+      },
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha",
+        "Botina de segurança com biqueira de aço",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 1,50 m quando necessário)",
+        "Protetor Facial",
+        "Utilização de Trava quedas;",
+        "Mangote, perneira e avental de raspa",
+        "Mascara de segurança",
+        "Respirador semifacial"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "SUPERVISOR DE OBRAS",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "Planejam, organizam e controlam atividades, contratos, equipes de trabalho e recursos para a execução de obras de construção civil, de acordo com custo, qualidade, segurança e prazo estabelecidos.",
+      "riscos": {
+        "quimico": "Eventual contato com produtos químicos",
+        "fisico": "Ruído, calor",
+        "biologico": "Não especificado",
+        "acidentes": "Riscos de acidentes por quedas, incidentes e cortes"
+      },
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha",
+        "Botina de segurança com biqueira de aço",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 1,50 m quando necessário)",
+        "Respirador PFF3",
+        "Utilização de Trava quedas;"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "TECNICO DE PLANEJAMENTO",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "ELABORA QUANTIFICA E CONTROLA ESCOPO DE PROJETOS DESENVOLVE O PLANEJAMENTO DO PROJETO , ATUALIZANDO E DISTRIBUINDO CRONOGRAMAS REALIZA INTERFACE ENTRE AS ARES DE ENGENHARIA , PCP, FABRICA, SUPRIMENTOS E EXPEDIÇÃO A FIM DE GARANTIR O FLUXO DE INFORMAÇOES E O CUMPRIMENTO DOS PRAZOS ACORDADOS .",
+      "riscos": {
+        "acidentes": "Queda de Objetos/Peças ,Queda Altura ,Asfixia, falta de oxigênio",
+        "ergonomico": "Postura Inadequada",
+        "fisico": "Ruido"
+      },
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha",
+        "Botina de segurança com biqueira de aço",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 1,50 m quando necessário)",
+        "Protetor Facial",
+        "Utilização de Trava quedas;",
+        "Mangote, perneira e avental de raspa",
+        "Mascara de segurança",
+        "Respirador semifacial"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    },
+    {
+      "funcao": "TECNICO DE SEGURANÇA DO TRABALHO",
+      "setor_default": "PRODUÇÃO",
+      "atividades_descricao": "ORGANIZAR E PROPOR MEDIDAS DE PREVENÇÃO DE SEGURANÇA , HIGIENE E MEIO AMBIENTE ,ORGANIZAR ,ORIENTAR E ASSISTIR O FUNCIONAMENTO DAS CIPAS , ELABORAR , PROPOR E DIVULGAR NORMAS E PROCEDIMENTOS INTERNOS DE SEGURANÇA , HIGIENE E MEIO AMBIENTE , ELABORARE ANALIZAR QUADROS ESTATISTICOS DE ACIDENTES DO TRABALHO EMITIR E ENCAMINHAR CAT'S",
+      "riscos": {
+        "ergonomico": "Postura Inadequada",
+        "fisico": "Ruído",
+        "acidentes": "Queda de Objetos  /  Peças                                                                                                                                                                                             Queda Altura Asfixia, falta de  oxigênio"
+      },
+      "epis_recomendados": [
+        "Uniforme completo",
+        "Luvas de vaqueta",
+        "Capacete com jugular",
+        "Protetor auricular tipo concha",
+        "Botina de segurança com biqueira de aço",
+        "Óculos de segurança incolor",
+        "Cinto de Segurança c/ 2 talabartes  (para trabalhos em altura acima de 1,50 m quando necessário)",
+        "Protetor Facial",
+        "Utilização de Trava quedas;",
+        "Mangote, perneira e avental de raspa",
+        "Mascara de segurança",
+        "Respirador semifacial"
+      ],
+      "medidas_preventivas": [
+        "Uso correto de EPI",
+        "Treinamentos para execução de tarefas",
+        "Correção das posturas de trabalho",
+        "Guarda corpo de proteção periferias, vão das plataformas e escadas."
+      ],
+      "orientacoes_seguranca": [
+        "Não transite pela obra sem capacete e botina de segurança;",
+        "Use seus epi's apenas para a finalidade a que se destinam e mantenha-os sob sua guarda e conservação;",
+        "Observe atentamente o meio ambiente do trabalho ao circular na obra e corrija as condições inseguras encontradas",
+        "Não ultrapasse a barreira (cancela) de segurança sem que o elevador esteja no seu pavimento;",
+        "Oriente seus trabalhadores sobre o processo mais seguro para executar qualquer trabalho;",
+        "Exija de seus subordinados uma reunião preliminar com suas equipes para discutir as medidas específicas de segu",
+        "Mantenha a obra sempre lima e a circulação dos trabalhadores desobstruída;",
+        "Corrija as condições inseguras que forem comunicadas com o máximo de urgência;",
+        "Dê atenção especial a proteção da periferia, dos poços de elevadores, às instalações elétricas e à manutenção",
+        "Paralise imediatamente os trabalhos em andamento que sujeitem os trabalhadores a graves e iminentes riscos, es",
+        "Oriente, acompanhe e fiscalize os trabalhos;",
+        "Mantenha o livro próprio para inspeções de máquinas atualizado, com registro de falhas encontradas, medidas cor",
+        "Nâo permita alteração nos locais onde tenham ocorrido acidentes graves antes da realização da perícia ou vistoria",
+        "Providencie atendimento médico urgente aos trabalhadores acidentados;",
+        "Prestigie as reuniões da CIPA quando aplicável;",
+        "Fiscalize e exija permanentemente o uso de EPI apropriado por todos os trabalhadores da obra."
+      ]
+    }
+  ]
+}

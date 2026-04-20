@@ -1,0 +1,1254 @@
+{
+  "_meta": {
+    "total_itens_catalogo": 28,
+    "total_kits_por_funcao": 19,
+    "observacoes": [
+      "Itens com 'ca': têm Certificado de Aprovação MTE",
+      "Itens com 'slug_interno' (uniforme, bloqueador_solar, etc): não exigem CA por não serem EPI normativo",
+      "tipo_tamanho='numeracao_bota': pedir número (35-46)",
+      "tipo_tamanho='pp_p_m_g_gg_xg': dropdown de tamanhos de uniforme",
+      "Kit de SOLDADOR tem variação ER/TIG — ambos cadastrados",
+      "Funções em caixa alta batem com o enum de funções do sistema"
+    ]
+  },
+  "catalogo_epi": [
+    {
+      "ca": "8304",
+      "descricao": "Capacete de segurança com carneira e jugular",
+      "categoria": "protecao_cabeca",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "42165",
+      "descricao": "Bota de segurança com biqueira",
+      "categoria": "protecao_pes",
+      "tipo_tamanho": "numeracao_bota"
+    },
+    {
+      "ca": "44305",
+      "descricao": "Máscara descartável PFF-2",
+      "categoria": "protecao_respiratoria",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "40051",
+      "descricao": "Luva de raspa P-7",
+      "categoria": "protecao_maos",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "25368",
+      "descricao": "Luva de vaqueta",
+      "categoria": "protecao_maos",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "16314",
+      "descricao": "Luva de segurança impermeável nitrílica",
+      "categoria": "protecao_maos",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "19628",
+      "descricao": "Óculos de segurança ampla visão incolor",
+      "categoria": "protecao_olhos",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "18046",
+      "descricao": "Óculos de segurança lente escura",
+      "categoria": "protecao_olhos",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "36032",
+      "descricao": "Óculos incolor",
+      "categoria": "protecao_olhos",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "3135",
+      "descricao": "Óculos de maçarico",
+      "categoria": "protecao_olhos",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "4398",
+      "descricao": "Protetor auditivo tipo concha",
+      "categoria": "protecao_auditiva",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "17664",
+      "descricao": "Protetor auditivo tipo plug",
+      "categoria": "protecao_auditiva",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "41200",
+      "descricao": "Protetor facial contra projeção de partículas",
+      "categoria": "protecao_face",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "37976",
+      "descricao": "Cinto de segurança com talabarte em Y",
+      "categoria": "protecao_queda",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "41004",
+      "descricao": "Cinto de segurança com talabarte duplo em Y",
+      "categoria": "protecao_queda",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "46136",
+      "descricao": "Cinto de segurança com talabarte duplo em Y (modelo alternativo)",
+      "categoria": "protecao_queda",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "5314",
+      "descricao": "Máscara de fuga",
+      "categoria": "protecao_respiratoria",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "6135",
+      "descricao": "Máscara de segurança para solda",
+      "categoria": "protecao_face",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "39428",
+      "descricao": "Respirador semifacial com cartucho",
+      "categoria": "protecao_respiratoria",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "10419",
+      "descricao": "Avental de raspa",
+      "categoria": "vestimenta_protecao",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "42729",
+      "descricao": "Blusão de raspa",
+      "categoria": "vestimenta_protecao",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "8841",
+      "descricao": "Perneira de raspa",
+      "categoria": "protecao_pernas",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": "25721",
+      "descricao": "Protetor facial contra projeção (alternativo)",
+      "categoria": "protecao_face",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": null,
+      "slug_interno": "calca_brim",
+      "descricao": "Calça de brim (uniforme)",
+      "categoria": "uniforme",
+      "tipo_tamanho": "pp_p_m_g_gg_xg"
+    },
+    {
+      "ca": null,
+      "slug_interno": "camisa_manga_longa",
+      "descricao": "Camisa manga longa (uniforme)",
+      "categoria": "uniforme",
+      "tipo_tamanho": "pp_p_m_g_gg_xg"
+    },
+    {
+      "ca": null,
+      "slug_interno": "bloqueador_solar",
+      "descricao": "Bloqueador solar",
+      "categoria": "higiene_pele",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": null,
+      "slug_interno": "creme_protecao_dermica_iii",
+      "descricao": "Creme de proteção dérmica tipo III",
+      "categoria": "higiene_pele",
+      "tipo_tamanho": "unico"
+    },
+    {
+      "ca": null,
+      "slug_interno": "chave_andaime",
+      "descricao": "Chave de andaime",
+      "categoria": "ferramenta_protecao",
+      "tipo_tamanho": "unico"
+    }
+  ],
+  "kits_por_funcao": [
+    {
+      "funcao": "AJUDANTE",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "18046",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "6135",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "39428",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "46136",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "5314",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "CALDEIREIRO",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "18046",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "6135",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "39428",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "41004",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "5314",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "41200",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "3135",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42729",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "8841",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "ELETRICISTA",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "18046",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "6135",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "39428",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "41004",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "5314",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "bloqueador_solar",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "10419",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "creme_protecao_dermica_iii",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "8841",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        }
+      ]
+    },
+    {
+      "funcao": "ENCARREGADO",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "37976",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "5314",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "6135",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "8841",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "41200",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "16314",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "bloqueador_solar",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "MECANICO",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "41004",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "6135",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "8841",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "41200",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "SOLDADOR ER",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "37976",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "6135",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "8841",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "41200",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42729",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "10419",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "SOLDADOR TIG",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "18046",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "6135",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "39428",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "37976",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "25721",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "PINTOR",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "41004",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "5314",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "16314",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "39428",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "bloqueador_solar",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "PINTOR JATISTA",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "41004",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "5314",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "16314",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "39428",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "bloqueador_solar",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "MONTADOR",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "41004",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "5314",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "8841",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "41200",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "MONTADOR ANDAIME",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "41004",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "chave_andaime",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "5314",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "creme_protecao_dermica_iii",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "16314",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "OPERADOR DE MUNCK",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "36032",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "25368",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "17664",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        }
+      ]
+    },
+    {
+      "funcao": "TECNICO DE SEGURANCA",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "39428",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "41004",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "41200",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "16314",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "bloqueador_solar",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "AUXILIAR ADMINISTRATIVO",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        }
+      ]
+    },
+    {
+      "funcao": "AUXILIAR DE ALMOXARIFE",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        }
+      ]
+    },
+    {
+      "funcao": "TECNICO DE PLANEJAMENTO",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "41004",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "5314",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "6135",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "39428",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "8841",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "41200",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "1/2 OFICIAL",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "18046",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "6135",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "39428",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "46136",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "5314",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "41200",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "INSPETOR DE SOLDA",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "18046",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "6135",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "39428",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "41004",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "5314",
+          "quantidade": 1
+        }
+      ]
+    },
+    {
+      "funcao": "INSTRUMENTISTA",
+      "itens": [
+        {
+          "ca_ou_slug": "8304",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "44305",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "40051",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "42165",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "18046",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "19628",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "4398",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "6135",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "39428",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "calca_brim",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "camisa_manga_longa",
+          "quantidade": 2
+        },
+        {
+          "ca_ou_slug": "41004",
+          "quantidade": 1
+        },
+        {
+          "ca_ou_slug": "5314",
+          "quantidade": 1
+        }
+      ]
+    }
+  ]
+}

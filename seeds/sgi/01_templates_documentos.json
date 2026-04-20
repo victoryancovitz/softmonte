@@ -1,0 +1,89 @@
+{
+  "_meta": {
+    "total": 5,
+    "empresa_default": {
+      "razao_social": "TECNOMONTE FABRICAÇÃO E MONTAGENS DE TANQUES INDUSTRIAIS EIRELI",
+      "cnpj": "31.045.857/0001-51",
+      "endereco_completo": "Avenida José Pedro Oliveira, nº 1043, Jardim América, Paulínia/SP",
+      "representante_legal_nome": "Andreia Aparecida Skuerek Upeneck",
+      "representante_cpf": "087.539.859-66",
+      "representante_rg": "10.238.164",
+      "representante_rg_orgao": "SSP/PR",
+      "cidade": "Santos",
+      "uf": "SP"
+    },
+    "placeholders_disponiveis_no_merger": [
+      "funcionario.nome_completo",
+      "funcionario.cpf_formatado",
+      "funcionario.rg",
+      "funcionario.estado_civil",
+      "funcionario.funcao",
+      "funcionario.data_admissao_br",
+      "funcionario.data_desligamento_br",
+      "empresa.razao_social",
+      "empresa.cnpj",
+      "empresa.endereco_completo",
+      "empresa.representante_legal_nome",
+      "empresa.representante_cpf",
+      "empresa.representante_rg",
+      "empresa.representante_rg_orgao",
+      "empresa.cidade",
+      "empresa.uf",
+      "data_hoje_br",
+      "data_hoje_extenso",
+      "autorizado.*",
+      "desconto.*",
+      "encomenda.*",
+      "autorizacao.*",
+      "autoridade_portuaria"
+    ]
+  },
+  "templates": [
+    {
+      "slug": "termo_anuencia_he_recibo",
+      "titulo": "Termo de Anuência — HE em recibo",
+      "descricao": "Autoriza pagamento de horas extras em recibo sem incidência de INSS, FGTS, férias e 13º.",
+      "categoria": "trabalhista",
+      "aplicavel_a": "funcionario_ativo",
+      "gerar_em_admissao": true,
+      "corpo_markdown": "TERMO DE ANUÊNCIA\n\nEu, {{funcionario.nome_completo}}, portador do RG n° {{funcionario.rg}}, inscrito no CPF n° {{funcionario.cpf_formatado}}, pelo presente instrumento, solicita e concorda que a empresa, {{empresa.razao_social}}, inscrita no CNPJ sob o nº {{empresa.cnpj}}, com sede na {{empresa.endereco_completo}}, neste ato representado pelo seu representante legal, {{empresa.representante_legal_nome}}, brasileira, solteira, empresária, inscrita no CPF nº {{empresa.representante_cpf}}, portadora da Carteira de Identidade nº {{empresa.representante_rg}} expedida pela {{empresa.representante_rg_orgao}}, proceda com o pagamento das horas extras em recibo, porém sem a incidência da verba no INSS, FGTS e sem reflexos em férias e 13° salário.\n\nE, por estarem, assim, de comum acordo, as partes assinam o presente termo em duas vias de igual teor.\n\n{{empresa.cidade}}/{{empresa.uf}}, {{data_hoje_extenso}}\n\n_______________________________________\n{{funcionario.nome_completo}}\nCPF: {{funcionario.cpf_formatado}}"
+    },
+    {
+      "slug": "termo_autorizacao_pagamento_salario",
+      "titulo": "Termo de Autorização de Pagamento de Salário em Conta de Terceiros",
+      "descricao": "Autoriza depósito de salário em conta bancária de terceiro.",
+      "categoria": "financeiro",
+      "aplicavel_a": "funcionario_ativo",
+      "gerar_em_admissao": false,
+      "sob_demanda": true,
+      "corpo_markdown": "TERMO DE AUTORIZAÇÃO DE PAGAMENTO DE SALÁRIO\n\nEu, {{funcionario.nome_completo}}, brasileiro(a), {{funcionario.estado_civil}}, portador do RG n° {{funcionario.rg}}, inscrito no CPF sob o n° {{funcionario.cpf_formatado}}, AUTORIZO o pagamento das minhas verbas salariais efetuado pela empresa {{empresa.razao_social}} na conta bancária de {{autorizado.nome}}, inscrito no CPF sob o n° {{autorizado.cpf}}, titular da conta {{autorizado.conta}}, agência {{autorizado.agencia}}, banco {{autorizado.banco}}.\n\n{{empresa.cidade}}/{{empresa.uf}}, {{data_hoje_extenso}}\n\n________________________________________\nNome e assinatura do funcionário\n{{funcionario.nome_completo}}"
+    },
+    {
+      "slug": "declaracao_sem_vinculo_portuaria",
+      "titulo": "Declaração de Desligamento — Autoridade Portuária",
+      "descricao": "Declaração enviada à autoridade portuária quando funcionário é desligado, para cancelamento de credencial.",
+      "categoria": "rescisao",
+      "aplicavel_a": "funcionario_inativo",
+      "gerar_em_rescisao": true,
+      "corpo_markdown": "DECLARAÇÃO QUE NÃO TEM VÍNCULO EMPREGATÍCIO\n\nÀ Autoridade Portuária de {{autoridade_portuaria}}\n\nEu, {{funcionario.nome_completo}}, CPF nº {{funcionario.cpf_formatado}}, declaro para os devidos fins que não possuo vínculo empregatício com a empresa {{empresa.razao_social}}. Sendo desligado(a) na data {{funcionario.data_desligamento_br}}.\n\nDeclaro que a credencial foi devolvida mediante o desligamento na empresa, sendo entregue ao responsável do RH (sendo inutilizada).\n\nDeclaro-me responsável pela inutilização da credencial.\n\nDesejo o cancelamento de pessoa/credencial.\n\n{{empresa.cidade}}, {{data_hoje_extenso}}\n\n________________________\nAssinatura\n{{funcionario.nome_completo}}"
+    },
+    {
+      "slug": "autorizacao_desconto_folha",
+      "titulo": "Autorização de Desconto em Folha",
+      "descricao": "Desconto de valor específico em folha (EPI não devolvido, adiantamento, etc).",
+      "categoria": "financeiro",
+      "aplicavel_a": "funcionario_ativo",
+      "sob_demanda": true,
+      "corpo_markdown": "AUTORIZAÇÃO DE DESCONTO EM FOLHA\n\nEu, {{funcionario.nome_completo}}, portador do RG nº {{funcionario.rg}} e CPF nº {{funcionario.cpf_formatado}}, funcionário(a) da empresa {{empresa.razao_social}} (CNPJ {{empresa.cnpj}}), na função de {{funcionario.funcao}}, AUTORIZO expressamente a empresa a proceder com o desconto em minha folha de pagamento do valor de R$ {{desconto.valor}} ({{desconto.valor_extenso}}), referente a {{desconto.descricao}}.\n\nO desconto será efetuado em {{desconto.parcelas}} parcela(s), iniciando na folha de pagamento de {{desconto.mes_inicial}}.\n\nDeclaro estar ciente e de pleno acordo com o referido desconto.\n\n{{empresa.cidade}}/{{empresa.uf}}, {{data_hoje_extenso}}\n\n________________________________________\n{{funcionario.nome_completo}}\nCPF: {{funcionario.cpf_formatado}}"
+    },
+    {
+      "slug": "procuracao_retirada_encomenda",
+      "titulo": "Autorização para Retirada de Encomenda por Terceiros",
+      "descricao": "Procuração simples para terceiro retirar documentos em nome do funcionário.",
+      "categoria": "administrativo",
+      "aplicavel_a": "funcionario_ativo",
+      "sob_demanda": true,
+      "corpo_markdown": "AUTORIZAÇÃO PARA RETIRADA DE ENCOMENDA POR TERCEIROS\n\nEu, {{funcionario.nome_completo}}, portador(a) do RG nº {{funcionario.rg}} e CPF nº {{funcionario.cpf_formatado}}, funcionário(a) da empresa {{empresa.razao_social}} (CNPJ {{empresa.cnpj}}), AUTORIZO {{autorizado.nome}}, portador(a) do RG nº {{autorizado.rg}} e CPF nº {{autorizado.cpf}}, a retirar em meu nome a seguinte encomenda/documento: {{encomenda.descricao}}.\n\nEsta autorização é válida pelo período de {{autorizacao.validade_dias}} dias a partir desta data.\n\n{{empresa.cidade}}/{{empresa.uf}}, {{data_hoje_extenso}}\n\n________________________________________\n{{funcionario.nome_completo}}\nAutorizante"
+    }
+  ]
+}
