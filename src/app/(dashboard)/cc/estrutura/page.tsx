@@ -7,6 +7,7 @@ import { useToast } from '@/components/Toast'
 import SearchInput from '@/components/SearchInput'
 import EmptyState from '@/components/ui/EmptyState'
 import { Landmark, Pencil, Plus, X } from 'lucide-react'
+import EntityActions from '@/components/ui/EntityActions'
 import { fmt } from '@/lib/cores'
 
 /* ═══ Types ═══ */
@@ -239,13 +240,7 @@ export default function EstruturaAdmPage() {
                   </div>
                   <h3 className="text-sm font-bold text-gray-800 truncate">{cc.nome}</h3>
                 </div>
-                <button
-                  onClick={() => openEdit(cc)}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-brand hover:bg-brand/5 transition-colors"
-                  title="Editar"
-                >
-                  <Pencil className="w-4 h-4" />
-                </button>
+                <EntityActions entity="centro_custo" id={cc.id} nome={cc.nome} onRefresh={load} onEdit={() => openEdit(cc)} />
               </div>
               <div className="flex items-center gap-4 text-xs text-gray-500">
                 {cc.localizacao && <span>{cc.localizacao}</span>}

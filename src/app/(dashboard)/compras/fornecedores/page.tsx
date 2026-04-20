@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { Plus, X, Star } from 'lucide-react'
 import { confirmDialog } from '@/components/ui/ConfirmDialog'
+import EntityActions from '@/components/ui/EntityActions'
 
 const CATEGORIAS = ['Material', 'EPI', 'Ferramentas', 'Serviços', 'Transporte', 'Alimentação'] as const
 
@@ -282,7 +283,7 @@ export default function FornecedoresPage() {
               {f.email && (
                 <p className="text-xs text-gray-400 truncate">{f.email}</p>
               )}
-              <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
                 <button
                   onClick={() => toggleAtivo(f)}
                   className={`text-xs font-medium ${
@@ -293,6 +294,7 @@ export default function FornecedoresPage() {
                 >
                   {f.ativo ? 'Desativar' : 'Ativar'}
                 </button>
+                <EntityActions entity="fornecedor" id={f.id} nome={f.nome} onRefresh={loadFornecedores} />
               </div>
             </div>
           ))}

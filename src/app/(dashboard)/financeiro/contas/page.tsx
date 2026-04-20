@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
 import { confirmDialog } from '@/components/ui/ConfirmDialog'
+import EntityActions from '@/components/ui/EntityActions'
 import { fmt } from '@/lib/cores'
 
 interface Conta {
@@ -275,7 +276,7 @@ export default function ContasCorrentesPage() {
                     )}
                   </div>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex items-center gap-1">
                   {!(c as any).is_padrao && (
                     <button onClick={async () => {
                       await supabase.from('contas_correntes').update({ is_padrao: true }).eq('id', c.id)
@@ -285,10 +286,7 @@ export default function ContasCorrentesPage() {
                   )}
                   <button onClick={() => carregarExtrato(c.id)}
                     className="text-xs text-blue-600 hover:text-blue-800 px-2 py-1">Extrato</button>
-                  <button onClick={() => abrirEditar(c)}
-                    className="text-xs text-gray-500 hover:text-brand px-2 py-1">Editar</button>
-                  <button onClick={() => apagar(c)}
-                    className="text-xs text-gray-400 hover:text-red-600 px-2 py-1">Excluir</button>
+                  <EntityActions entity="conta_corrente" id={c.id} nome={c.nome} onRefresh={loadContas} onEdit={() => abrirEditar(c)} />
                 </div>
               </div>
               <div className="pt-3 border-t border-gray-100">
