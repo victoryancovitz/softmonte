@@ -41,7 +41,7 @@ export default async function FuncionariosPage() {
 
   // Banners separados por tipo de alerta
   const prazo2Urgentes = (prazosLegais ?? [])
-    .filter((p: any) => p.alerta_tipo === 'experiencia_2_vencendo')
+    .filter((p: any) => p.alerta_tipo === 'experiencia_1_vencendo')
     .map((p: any) => ({ ...p, func: funcs.find(f => f.id === p.funcionario_id) }))
     .filter((p: any) => p.func)
     .sort((a: any, b: any) => (a.dias_restantes ?? 999) - (b.dias_restantes ?? 999))

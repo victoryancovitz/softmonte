@@ -35,7 +35,6 @@ const STATUS_LABEL: Record<string, string> = {
 
 const ALERTA_BADGE: Record<string, { label: string; cls: string }> = {
   experiencia_1_vencendo: { label: 'Exp. 1 vence', cls: 'bg-amber-100 text-amber-700' },
-  experiencia_2_vencendo: { label: 'Exp. vence', cls: 'bg-red-100 text-red-700' },
   ferias_vencidas: { label: 'Férias vencidas', cls: 'bg-red-100 text-red-700' },
   ferias_urgente: { label: 'Férias urgente', cls: 'bg-orange-100 text-orange-700' },
   contrato_vencendo: { label: 'Contrato vence', cls: 'bg-amber-100 text-amber-700' },

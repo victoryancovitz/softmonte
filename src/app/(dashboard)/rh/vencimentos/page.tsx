@@ -74,7 +74,7 @@ export default function VencimentosPage() {
       // Contratos de experiencia
       supabase.from('vw_prazos_legais')
         .select('funcionario_id, nome, tipo_vinculo, prazo_experiencia_1, prazo_experiencia_2, converte_clt_em, alerta_tipo')
-        .in('alerta_tipo', ['experiencia_1_vencendo', 'experiencia_2_vencendo']),
+        .in('alerta_tipo', ['experiencia_1_vencendo']),
       // Documentos vencendo (inclui ASOs)
       supabase.from('documentos')
         .select('id, tipo, vencimento, funcionario_id, funcionarios(id, nome)')

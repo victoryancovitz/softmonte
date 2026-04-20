@@ -183,7 +183,7 @@ export default async function DiretoriaPage() {
   // === DECISÕES PENDENTES ===
   // Contratos sem decisão de renovação
   const contratosPendentes = (prazosLegais ?? [])
-    .filter((p: any) => p.alerta_tipo === 'experiencia_2_vencendo')
+    .filter((p: any) => p.alerta_tipo === 'experiencia_1_vencendo')
     .map((p: any) => ({ ...p, dias: p.prazo_experiencia_2 ? Math.ceil((new Date(p.prazo_experiencia_2).getTime() - Date.now()) / 86400000) : 99 }))
     .sort((a: any, b: any) => a.dias - b.dias)
     .slice(0, 5)

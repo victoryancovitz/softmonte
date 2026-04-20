@@ -421,10 +421,10 @@ export async function POST(req: NextRequest) {
   const finalStatus = erros.length === 0 ? 'ok' : 'error'
   await finishLog({
     status: finalStatus,
-    total_batidas: allMarcacoes.length,
-    novas: inseridas,
-    ignoradas,
-    sem_match: semMatch.length,
+    total_batidas: batidas.length,  // cartões diários do Secullum
+    novas: inseridas,               // marcações individuais inseridas
+    ignoradas: ignoradas + ignoradas_pos_desligamento,
+    sem_match: semMatch.length,     // funcionários sem match (não cartões)
     erro: erros.length > 0 ? erros.join('; ') : null,
   })
 
