@@ -287,22 +287,37 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    // Fallback: por id_ponto (para PIS que não bateram)
-    // Coleta secullum IDs das batidas sem match
-    const unmatchedPis = pisList.filter(p => !pisToFuncId.has(p))
-    if (unmatchedPis.length > 0) {
-      // Buscar todos os funcionários com id_ponto preenchido
-      const { data: byIdPonto } = await supabase
+    // Fallback: por NOME do funcionário (quando PIS do Secullum não bate)
+    // Coleta nomes das batidas/status que não deram match por PIS
+    const nomesPorPis = new Map<string, string>()
+    allMarcacoes.forEach(m => { if (m.pis && m.nome && !pisToFuncId.has(m.pis)) nomesPorPis.set(m.pis, m.nome.toUpperCase().trim()) })
+    allDiaStatus.forEach(d => { if (d.pis && !pisToFuncId.has(d.pis)) {
+      const cartao = d as any
+      const nome = cartao.nome || ''
+      if (nome) nomesPorPis.set(d.pis, nome.toUpperCase().trim())
+    }})
+
+    if (nomesPorPis.size > 0) {
+      // Buscar todos os funcionários ativos para match por nome
+      const { data: allFuncs } = await supabase
         .from('funcionarios')
-        .select('id, pis, id_ponto, deleted_at')
-        .not('id_ponto', 'is', null)
-      ;(byIdPonto || []).forEach((f: any) => {
-        // Se o PIS do Secullum bate com algum via id_ponto
-        if (f.pis && !pisToFuncId.has(onlyDigits(f.pis))) {
-          pisToFuncId.set(onlyDigits(f.pis), f.id)
-          if (f.deleted_at) funcIdToDeletedAt.set(f.id, f.deleted_at.split('T')[0])
-        }
+        .select('id, nome, pis, deleted_at')
+        .is('deleted_at', null)
+
+      const funcByNome = new Map<string, { id: string; deleted_at: string | null }>()
+      ;(allFuncs || []).forEach((f: any) => {
+        funcByNome.set(f.nome.toUpperCase().trim(), { id: f.id, deleted_at: f.deleted_at })
       })
+
+      for (const [pis, nomeSecullum] of Array.from(nomesPorPis.entries())) {
+        const match = funcByNome.get(nomeSecullum)
+        if (match) {
+          pisToFuncId.set(pis, match.id)
+          if (match.deleted_at) funcIdToDeletedAt.set(match.id, match.deleted_at.split('T')[0])
+          // Atualizar PIS do funcionário no banco para futuras syncs
+          await supabase.from('funcionarios').update({ pis }).eq('id', match.id)
+        }
+      }
     }
   }
 
