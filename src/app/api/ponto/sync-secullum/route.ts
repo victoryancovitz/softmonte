@@ -287,34 +287,42 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    // Fallback: por NOME do funcionário (quando PIS do Secullum não bate)
-    // Coleta nomes das batidas/status que não deram match por PIS
-    const nomesPorPis = new Map<string, string>()
-    allMarcacoes.forEach(m => { if (m.pis && m.nome && !pisToFuncId.has(m.pis)) nomesPorPis.set(m.pis, m.nome.toUpperCase().trim()) })
-    allDiaStatus.forEach(d => { if (d.pis && !pisToFuncId.has(d.pis)) {
-      const cartao = d as any
-      const nome = cartao.nome || ''
-      if (nome) nomesPorPis.set(d.pis, nome.toUpperCase().trim())
-    }})
+    // Fallback 1: por id_ponto (NumeroIdentificador do Secullum)
+    // Fallback 2: por nome do funcionário
+    // Coleta id_ponto e nome das batidas que não deram match por PIS
+    const unmatchedInfo = new Map<string, { idPonto: string | null; nome: string }>()
+    for (const cartao of batidas) {
+      const c = cartao as any
+      const pis = onlyDigits(c.Funcionario?.NumeroPis || c.Funcionario?.Pis || '')
+      if (!pis || pisToFuncId.has(pis)) continue
+      const idPonto = String(c.Funcionario?.NumeroIdentificador || c.Funcionario?.NumeroFolha || c.FuncionarioId || '')
+      const nome = (c.Funcionario?.Nome || '').toUpperCase().trim()
+      if (idPonto || nome) unmatchedInfo.set(pis, { idPonto: idPonto || null, nome })
+    }
 
-    if (nomesPorPis.size > 0) {
-      // Buscar todos os funcionários ativos para match por nome
+    if (unmatchedInfo.size > 0) {
+      // Buscar todos os funcionários para match por id_ponto ou nome
       const { data: allFuncs } = await supabase
         .from('funcionarios')
-        .select('id, nome, pis, deleted_at')
-        .is('deleted_at', null)
+        .select('id, nome, pis, id_ponto, deleted_at')
 
+      const funcByIdPonto = new Map<string, { id: string; deleted_at: string | null }>()
       const funcByNome = new Map<string, { id: string; deleted_at: string | null }>()
       ;(allFuncs || []).forEach((f: any) => {
+        if (f.id_ponto) funcByIdPonto.set(String(f.id_ponto), { id: f.id, deleted_at: f.deleted_at })
         funcByNome.set(f.nome.toUpperCase().trim(), { id: f.id, deleted_at: f.deleted_at })
       })
 
-      for (const [pis, nomeSecullum] of Array.from(nomesPorPis.entries())) {
-        const match = funcByNome.get(nomeSecullum)
+      for (const [pis, info] of Array.from(unmatchedInfo.entries())) {
+        // Tentar match por id_ponto primeiro
+        let match = info.idPonto ? funcByIdPonto.get(info.idPonto) : null
+        // Fallback: match por nome
+        if (!match && info.nome) match = funcByNome.get(info.nome)
+
         if (match) {
           pisToFuncId.set(pis, match.id)
           if (match.deleted_at) funcIdToDeletedAt.set(match.id, match.deleted_at.split('T')[0])
-          // Atualizar PIS do funcionário no banco para futuras syncs
+          // Atualizar PIS no banco para futuros syncs
           await supabase.from('funcionarios').update({ pis }).eq('id', match.id)
         }
       }
