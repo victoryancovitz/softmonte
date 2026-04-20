@@ -6,7 +6,7 @@ import { useToast } from '@/components/Toast'
 import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { MoreHorizontal, Pencil, Archive, Trash2, GitMerge } from 'lucide-react'
 
-type EntityType = 'centro_custo' | 'funcionario' | 'cliente' | 'fornecedor' | 'categoria' | 'funcao' | 'conta_corrente' | 'socio'
+type EntityType = 'centro_custo' | 'funcionario' | 'cliente' | 'fornecedor' | 'categoria' | 'funcao' | 'conta_corrente' | 'socio' | 'obra' | 'lancamento_financeiro' | 'processo_juridico' | 'advogado'
 
 interface EntityActionsProps {
   entity: EntityType
@@ -86,6 +86,39 @@ const ENTITY_CONFIG: Record<EntityType, {
     label: 'Sócio',
     deps: [
       { tabela: 'movimentacoes_societarias', campo: 'socio_id', label: 'movimentações' },
+    ],
+  },
+  obra: {
+    tabela: 'obras',
+    label: 'Obra',
+    deps: [
+      { tabela: 'alocacoes', campo: 'obra_id', label: 'alocações' },
+      { tabela: 'boletins_medicao', campo: 'obra_id', label: 'boletins' },
+      { tabela: 'financeiro_lancamentos', campo: 'obra_id', label: 'lançamentos' },
+      { tabela: 'efetivo_diario', campo: 'obra_id', label: 'efetivo diário' },
+    ],
+  },
+  lancamento_financeiro: {
+    tabela: 'financeiro_lancamentos',
+    label: 'Lançamento',
+    deps: [],
+  },
+  processo_juridico: {
+    tabela: 'processos_juridicos',
+    label: 'Processo',
+    softDeleteOnly: true,
+    deps: [
+      { tabela: 'processo_movimentacoes', campo: 'processo_id', label: 'movimentações' },
+      { tabela: 'processo_audiencias', campo: 'processo_id', label: 'audiências' },
+      { tabela: 'processo_acordos', campo: 'processo_id', label: 'acordos' },
+    ],
+  },
+  advogado: {
+    tabela: 'advogados',
+    label: 'Advogado',
+    softDeleteOnly: true,
+    deps: [
+      { tabela: 'processos_juridicos', campo: 'advogado_id', label: 'processos' },
     ],
   },
 }
