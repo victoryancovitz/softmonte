@@ -91,6 +91,13 @@ const NAV_GROUPS: NavGroupDef[] = [
     ],
   },
   {
+    label: 'Jurídico',
+    links: [
+      { href: '/juridico/processos', label: 'Processos', icon: ic.docs },
+      { href: '/juridico/advogados', label: 'Advogados', icon: ic.cad },
+    ],
+  },
+  {
     label: 'Cadastros',
     links: [
       { href: '/cadastros', label: 'Visão Geral', icon: ic.cad },
@@ -180,6 +187,14 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/cc/rateio', label: 'Rateio', match: ['/cc/rateio'] },
     ],
   },
+  {
+    // Módulo Jurídico
+    groupPaths: ['/juridico'],
+    tabs: [
+      { href: '/juridico/processos', label: 'Processos', match: ['/juridico/processos'] },
+      { href: '/juridico/advogados', label: 'Advogados', match: ['/juridico/advogados'] },
+    ],
+  },
 ]
 
 // Map every link path to its group and label for breadcrumb generation
@@ -195,7 +210,8 @@ MODULE_TABS.forEach(mod => {
     : mod.groupPaths.includes('/financeiro') ? 'Financeiro'
     : mod.groupPaths.includes('/obras') ? 'Engenharia'
     : mod.groupPaths.includes('/estoque') ? 'Compras'
-    : mod.groupPaths.includes('/cc') ? 'CC' : ''
+    : mod.groupPaths.includes('/cc') ? 'CC'
+    : mod.groupPaths.includes('/juridico') ? 'Jurídico' : ''
   mod.tabs.forEach(t => {
     if (!PATH_MAP[t.href]) PATH_MAP[t.href] = { group: groupLabel, label: t.label }
   })

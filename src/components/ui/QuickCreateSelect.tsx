@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { Plus, X } from 'lucide-react'
 
-type QuickCreateType = 'centro_custo' | 'categoria_financeira' | 'funcao' | 'cliente' | 'obra' | 'conta_bancaria' | 'fornecedor'
+type QuickCreateType = 'centro_custo' | 'categoria_financeira' | 'funcao' | 'cliente' | 'obra' | 'conta_bancaria' | 'fornecedor' | 'advogado'
 
 interface QuickCreateOption {
   id: string
@@ -33,6 +33,7 @@ const TYPE_CONFIG: Record<QuickCreateType, { titulo: string; tabela: string }> =
   obra: { titulo: 'Nova Obra', tabela: 'obras' },
   conta_bancaria: { titulo: 'Nova Conta Bancária', tabela: 'contas_correntes' },
   fornecedor: { titulo: 'Novo Fornecedor', tabela: 'fornecedores' },
+  advogado: { titulo: 'Novo Advogado', tabela: 'advogados' },
 }
 
 const CC_TIPOS = [
@@ -87,6 +88,12 @@ function QuickCreateModal({
   // fornecedor
   const [fornNome, setFornNome] = useState('')
   const [fornCnpj, setFornCnpj] = useState('')
+
+  // advogado
+  const [advNome, setAdvNome] = useState('')
+  const [advOab, setAdvOab] = useState('')
+  const [advUf, setAdvUf] = useState('SP')
+  const [advTipo, setAdvTipo] = useState('externo')
 
   const config = TYPE_CONFIG[type]
 
@@ -150,6 +157,12 @@ function QuickCreateModal({
           if (!fornNome.trim()) { toast.warning('Nome obrigatório'); setSaving(false); return }
           insertData = { nome: fornNome.trim(), ativo: true, ...(fornCnpj ? { cnpj: fornCnpj } : {}) }
           label = fornNome.trim()
+          break
+        }
+        case 'advogado': {
+          if (!advNome.trim() || !advOab.trim()) { toast.warning('Nome e OAB obrigatórios'); setSaving(false); return }
+          insertData = { nome: advNome.trim(), oab: advOab.trim(), uf_oab: advUf, tipo: advTipo, ativo: true }
+          label = `${advNome.trim()} (OAB/${advUf} ${advOab.trim()})`
           break
         }
       }
@@ -349,22 +362,52 @@ function QuickCreateModal({
             <>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">Nome *</label>
-                <input
-                  value={fornNome}
-                  onChange={e => setFornNome(e.target.value)}
+                <input value={fornNome} onChange={e => setFornNome(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                  placeholder="Ex: CONTABNEW ASSESSORIA"
-                  autoFocus
-                />
+                  placeholder="Ex: CONTABNEW ASSESSORIA" autoFocus />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-600 mb-1">CNPJ</label>
-                <input
-                  value={fornCnpj}
-                  onChange={e => setFornCnpj(e.target.value)}
+                <input value={fornCnpj} onChange={e => setFornCnpj(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                  placeholder="00.000.000/0000-00"
-                />
+                  placeholder="00.000.000/0000-00" />
+              </div>
+            </>
+          )}
+
+          {type === 'advogado' && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Nome *</label>
+                <input value={advNome} onChange={e => setAdvNome(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                  placeholder="Dr. João Silva" autoFocus />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">OAB *</label>
+                  <input value={advOab} onChange={e => setAdvOab(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                    placeholder="123456" />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">UF *</label>
+                  <select value={advUf} onChange={e => setAdvUf(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white">
+                    {['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO'].map(uf => (
+                      <option key={uf} value={uf}>{uf}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Tipo *</label>
+                <select value={advTipo} onChange={e => setAdvTipo(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white">
+                  <option value="interno">Interno</option>
+                  <option value="externo">Externo</option>
+                  <option value="escritorio">Escritório</option>
+                </select>
               </div>
             </>
           )}
