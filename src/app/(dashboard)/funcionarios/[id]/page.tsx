@@ -10,6 +10,7 @@ import PromocaoButton from '@/components/PromocaoButton'
 import { User, Briefcase, DollarSign, Clock, FileText, History } from 'lucide-react'
 import AdmissaoStepPanel from '@/components/AdmissaoStepPanel'
 import AdmissaoBannerWrapper from '@/components/AdmissaoBannerWrapper'
+import DecisaoRenovacaoCard from '@/components/rh/DecisaoRenovacaoCard'
 import AdmissaoDrawerTrigger from '@/components/admissao/AdmissaoDrawerTrigger'
 import { ADMISSAO_STEPS_FIELDS } from '@/lib/admissao-steps-config'
 
@@ -529,6 +530,9 @@ export default async function FuncionarioPage({ params, searchParams }: { params
           </div>
         )
       })()}
+
+      {/* Card de decisão de renovação (experiência 45+45) */}
+      <DecisaoRenovacaoCard funcionario_id={f.id} />
 
       {/* Tabs */}
       <FuncionarioTabs tabs={tabs} />
