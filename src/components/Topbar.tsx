@@ -95,6 +95,7 @@ const NAV_GROUPS: NavGroupDef[] = [
     links: [
       { href: '/juridico/processos', label: 'Processos', icon: ic.docs },
       { href: '/juridico/advogados', label: 'Advogados', icon: ic.cad },
+      { href: '/juridico/audiencias', label: 'Audiências', icon: ic.docs },
     ],
   },
   {
@@ -193,6 +194,7 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
     tabs: [
       { href: '/juridico/processos', label: 'Processos', match: ['/juridico/processos'] },
       { href: '/juridico/advogados', label: 'Advogados', match: ['/juridico/advogados'] },
+      { href: '/juridico/audiencias', label: 'Audiências', match: ['/juridico/audiencias'] },
     ],
   },
 ]

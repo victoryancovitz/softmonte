@@ -2,8 +2,9 @@ import { createClient } from '@/lib/supabase-server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
-import Breadcrumb from '@/components/ui/Breadcrumb'
 import ProcessoTabs from './ProcessoTabs'
+import AudienciasTab from '@/components/juridico/AudienciasTab'
+import AcordoTab from '@/components/juridico/AcordoTab'
 
 const TIPOS: Record<string, { label: string; color: string }> = {
   trabalhista: { label: 'Trabalhista', color: 'bg-red-100 text-red-700 border-red-200' },
@@ -58,11 +59,12 @@ export default async function ProcessoPage({ params, searchParams }: { params: {
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-      <Breadcrumb items={[
-        { label: 'Jurídico', href: '/juridico/processos' },
-        { label: 'Processos', href: '/juridico/processos' },
-        { label: p.numero_cnj || 'Processo' },
-      ]} />
+      <div className="flex items-center gap-2 text-sm text-gray-500 mb-2">
+        <BackButton fallback="/juridico/processos" />
+        <Link href="/juridico/processos" className="hover:text-gray-700">Processos</Link>
+        <span>/</span>
+        <span className="text-gray-900 font-medium">{p.numero_cnj || 'Processo'}</span>
+      </div>
 
       <div className="flex items-start justify-between mt-4 mb-6">
         <div>
@@ -167,15 +169,11 @@ export default async function ProcessoPage({ params, searchParams }: { params: {
         )}
 
         {tab === 'audiencias' && (
-          <div className="text-center py-16 text-gray-400 text-sm border rounded-xl">
-            Em breve -- commit 3
-          </div>
+          <AudienciasTab processo_id={p.id} />
         )}
 
         {tab === 'acordo' && (
-          <div className="text-center py-16 text-gray-400 text-sm border rounded-xl">
-            Em breve -- commit 3
-          </div>
+          <AcordoTab processo_id={p.id} />
         )}
 
         {tab === 'anexos' && (
