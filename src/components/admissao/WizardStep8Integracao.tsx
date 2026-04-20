@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { AlertTriangle, Building2, Calendar, User, FileText, MapPin, Upload, CheckSquare, X } from 'lucide-react'
+import { gerarLancamentosAdmissao } from '@/lib/financeiro/gerar_lancamento_rh'
 
 /* ─── Types ─── */
 
@@ -162,7 +163,25 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
         .eq('workflow_id', workflowId)
         .eq('ativo', true)
 
-      toast.success('Admissão concluída com sucesso!')
+      // 6. Gerar lançamentos financeiros de admissão (ASO, EPI, uniforme, outros)
+      const totalCustos = await gerarLancamentosAdmissao(
+        supabase,
+        funcionario.id,
+        {
+          aso_admissional: Number(funcionario.custo_aso_admissional || 0),
+          epi: Number(funcionario.custo_epi || 0),
+          uniforme: Number(funcionario.custo_uniforme || 0),
+          outros: Number(funcionario.custo_outros_admissao || 0),
+        },
+        dataIntegracao,
+        user?.id,
+      )
+
+      if (totalCustos > 0) {
+        toast.success(`Admissão concluída! R$ ${totalCustos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em lançamentos gerados.`)
+      } else {
+        toast.success('Admissão concluída com sucesso!')
+      }
       onComplete()
     } catch {
       toast.error('Erro ao finalizar admissão')
