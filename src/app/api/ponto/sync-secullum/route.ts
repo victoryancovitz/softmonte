@@ -278,13 +278,32 @@ export async function POST(req: NextRequest) {
   const funcIdToDeletedAt = new Map<string, string>()
 
   if (pisList.length > 0) {
-    const { data } = await supabase.from('funcionarios').select('id, pis, deleted_at').in('pis', pisList)
+    // Match primário: por PIS
+    const { data } = await supabase.from('funcionarios').select('id, pis, id_ponto, deleted_at').in('pis', pisList)
     ;(data || []).forEach((f: any) => {
       if (f.pis) {
         pisToFuncId.set(onlyDigits(f.pis), f.id)
         if (f.deleted_at) funcIdToDeletedAt.set(f.id, f.deleted_at.split('T')[0])
       }
     })
+
+    // Fallback: por id_ponto (para PIS que não bateram)
+    // Coleta secullum IDs das batidas sem match
+    const unmatchedPis = pisList.filter(p => !pisToFuncId.has(p))
+    if (unmatchedPis.length > 0) {
+      // Buscar todos os funcionários com id_ponto preenchido
+      const { data: byIdPonto } = await supabase
+        .from('funcionarios')
+        .select('id, pis, id_ponto, deleted_at')
+        .not('id_ponto', 'is', null)
+      ;(byIdPonto || []).forEach((f: any) => {
+        // Se o PIS do Secullum bate com algum via id_ponto
+        if (f.pis && !pisToFuncId.has(onlyDigits(f.pis))) {
+          pisToFuncId.set(onlyDigits(f.pis), f.id)
+          if (f.deleted_at) funcIdToDeletedAt.set(f.id, f.deleted_at.split('T')[0])
+        }
+      })
+    }
   }
 
   // 5. Prepara rows pra upsert
