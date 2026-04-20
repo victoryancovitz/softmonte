@@ -93,9 +93,11 @@ const NAV_GROUPS: NavGroupDef[] = [
   {
     label: 'Jurídico',
     links: [
+      { href: '/juridico', label: 'Dashboard', icon: ic.home },
       { href: '/juridico/processos', label: 'Processos', icon: ic.docs },
-      { href: '/juridico/advogados', label: 'Advogados', icon: ic.cad },
       { href: '/juridico/audiencias', label: 'Audiências', icon: ic.docs },
+      { href: '/juridico/advogados', label: 'Advogados', icon: ic.cad },
+      { href: '/juridico/provisoes', label: 'Provisões', icon: ic.fin },
     ],
   },
   {
@@ -192,9 +194,11 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
     // Módulo Jurídico
     groupPaths: ['/juridico'],
     tabs: [
+      { href: '/juridico', label: 'Dashboard', match: ['/juridico'] },
       { href: '/juridico/processos', label: 'Processos', match: ['/juridico/processos'] },
-      { href: '/juridico/advogados', label: 'Advogados', match: ['/juridico/advogados'] },
       { href: '/juridico/audiencias', label: 'Audiências', match: ['/juridico/audiencias'] },
+      { href: '/juridico/advogados', label: 'Advogados', match: ['/juridico/advogados'] },
+      { href: '/juridico/provisoes', label: 'Provisões', match: ['/juridico/provisoes'] },
     ],
   },
 ]
