@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { Plus, X } from 'lucide-react'
 
-type QuickCreateType = 'centro_custo' | 'categoria_financeira' | 'funcao' | 'cliente' | 'obra' | 'conta_bancaria'
+type QuickCreateType = 'centro_custo' | 'categoria_financeira' | 'funcao' | 'cliente' | 'obra' | 'conta_bancaria' | 'fornecedor'
 
 interface QuickCreateOption {
   id: string
@@ -31,7 +31,8 @@ const TYPE_CONFIG: Record<QuickCreateType, { titulo: string; tabela: string }> =
   funcao: { titulo: 'Nova Função', tabela: 'funcoes' },
   cliente: { titulo: 'Novo Cliente', tabela: 'clientes' },
   obra: { titulo: 'Nova Obra', tabela: 'obras' },
-  conta_bancaria: { titulo: 'Nova Conta Bancaria', tabela: 'contas_correntes' },
+  conta_bancaria: { titulo: 'Nova Conta Bancária', tabela: 'contas_correntes' },
+  fornecedor: { titulo: 'Novo Fornecedor', tabela: 'fornecedores' },
 }
 
 const CC_TIPOS = [
@@ -82,6 +83,10 @@ function QuickCreateModal({
   // conta_bancaria
   const [contaNome, setContaNome] = useState('')
   const [contaBanco, setContaBanco] = useState('')
+
+  // fornecedor
+  const [fornNome, setFornNome] = useState('')
+  const [fornCnpj, setFornCnpj] = useState('')
 
   const config = TYPE_CONFIG[type]
 
@@ -136,9 +141,15 @@ function QuickCreateModal({
           break
         }
         case 'conta_bancaria': {
-          if (!contaNome.trim()) { toast.warning('Nome obrigatorio'); setSaving(false); return }
+          if (!contaNome.trim()) { toast.warning('Nome obrigatório'); setSaving(false); return }
           insertData = { nome: contaNome.trim(), ativo: true, ...(contaBanco ? { banco: contaBanco } : {}) }
           label = contaNome.trim()
+          break
+        }
+        case 'fornecedor': {
+          if (!fornNome.trim()) { toast.warning('Nome obrigatório'); setSaving(false); return }
+          insertData = { nome: fornNome.trim(), ativo: true, ...(fornCnpj ? { cnpj: fornCnpj } : {}) }
+          label = fornNome.trim()
           break
         }
       }
@@ -329,6 +340,30 @@ function QuickCreateModal({
                   onChange={e => setContaBanco(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
                   placeholder="Ex: Itau, Bradesco..."
+                />
+              </div>
+            </>
+          )}
+
+          {type === 'fornecedor' && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Nome *</label>
+                <input
+                  value={fornNome}
+                  onChange={e => setFornNome(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                  placeholder="Ex: CONTABNEW ASSESSORIA"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">CNPJ</label>
+                <input
+                  value={fornCnpj}
+                  onChange={e => setFornCnpj(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                  placeholder="00.000.000/0000-00"
                 />
               </div>
             </>
