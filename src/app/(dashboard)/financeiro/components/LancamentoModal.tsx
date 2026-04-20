@@ -60,7 +60,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
 
   const [modalForm, setModalForm] = useState({ ...FORM_INITIAL })
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [abaModal, setAbaModal] = useState<'basico' | 'avancado'>('basico')
+  // Tabs removidas — tudo em uma seção com accordions colapsáveis
   const [salvando, setSalvando] = useState(false)
   const [avisoSimilar, setAvisoSimilar] = useState<string | null>(null)
   const [uploadingAnexo, setUploadingAnexo] = useState(false)
@@ -111,7 +111,6 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
       setEditingId(null)
       setModalForm({ ...FORM_INITIAL })
     }
-    setAbaModal('basico')
     setAvisoSimilar(null)
   }, [open, editingLanc])
 
@@ -131,7 +130,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
         .eq('valor', Number(valor))
         .limit(3)
       if (data && data.length > 0) {
-        setAvisoSimilar(`Possivel duplicidade: encontrado "${data[0].nome}" com mesmo valor (${fmt(Number(data[0].valor))}) em ${data[0].data_competencia || 'sem data'}`)
+        setAvisoSimilar(`Possível duplicidade: encontrado "${data[0].nome}" com mesmo valor (${fmt(Number(data[0].valor))}) em ${data[0].data_competencia || 'sem data'}`)
       } else {
         setAvisoSimilar(null)
       }
@@ -174,8 +173,8 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const valorNum = Number(modalForm.valor)
-      if (!valorNum || valorNum <= 0) { toast.error('Valor invalido'); setSalvando(false); return }
-      if (!modalForm.nome.trim()) { toast.error('Descricao obrigatoria'); setSalvando(false); return }
+      if (!valorNum || valorNum <= 0) { toast.error('Valor inválido'); setSalvando(false); return }
+      if (!modalForm.nome.trim()) { toast.error('Descrição obrigatória'); setSalvando(false); return }
 
       const frequenciaDias = modalForm.frequencia === 'semanal' ? 7 : modalForm.frequencia === 'quinzenal' ? 15 : modalForm.frequencia === 'bimestral' ? 60 : modalForm.frequencia === 'trimestral' ? 90 : modalForm.frequencia === 'semestral' ? 180 : modalForm.frequencia === 'anual' ? 365 : 30
 
@@ -186,7 +185,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
           const variacaoPct = Math.abs((valorNum - Number(modalForm.valor_previsto)) / Number(modalForm.valor_previsto) * 100)
           if (variacaoPct > (modalForm.variacao_max_pct ?? 20)) {
             const confirmar = window.confirm(
-              `O valor (${fmt(valorNum)}) variou ${variacaoPct.toFixed(1)}% em relacao ao previsto (${fmt(Number(modalForm.valor_previsto))}), acima do limite de ${modalForm.variacao_max_pct ?? 20}%. Deseja salvar mesmo assim?`
+              `O valor (${fmt(valorNum)}) variou ${variacaoPct.toFixed(1)}% em relação ao previsto (${fmt(Number(modalForm.valor_previsto))}), acima do limite de ${modalForm.variacao_max_pct ?? 20}%. Deseja salvar mesmo assim?`
             )
             if (!confirmar) { setSalvando(false); return }
           }
@@ -212,7 +211,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
           multa_padrao_pct: modalForm.multa_padrao_pct ?? 2,
         }).eq('id', editingId)
         if (error) { toast.error('Erro: ' + error.message); setSalvando(false); return }
-        toast.success('Lancamento atualizado')
+        toast.success('Lançamento atualizado')
       }
       // PARCELADO mode
       else if (modalForm.is_parcelado && modalForm.parcela_total > 1) {
@@ -273,7 +272,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
         }
         const { error } = await supabase.from('financeiro_lancamentos').insert(row)
         if (error) { toast.error('Erro: ' + error.message); setSalvando(false); return }
-        toast.success(`Lancamento recorrente criado (${modalForm.frequencia}, 1/${modalForm.total_ocorrencias})`)
+        toast.success(`Lançamento recorrente criado (${modalForm.frequencia}, 1/${modalForm.total_ocorrencias})`)
       }
       // SIMPLE mode
       else {
@@ -295,7 +294,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
           multa_padrao_pct: modalForm.multa_padrao_pct ?? 2,
         })
         if (error) { toast.error('Erro: ' + error.message); setSalvando(false); return }
-        toast.success('Lancamento criado')
+        toast.success('Lançamento criado')
       }
       onClose()
       onSaved()
@@ -308,12 +307,12 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
 
   // Button text for modal
   const modalButtonText = editingId
-    ? 'Salvar alteracoes'
+    ? 'Salvar alterações'
     : modalForm.is_parcelado && modalForm.parcela_total > 1
       ? `Criar ${modalForm.parcela_total} parcelas`
       : modalForm.is_recorrente
-        ? `Criar ${modalForm.total_ocorrencias} ocorrencias`
-        : 'Criar lancamento'
+        ? `Criar ${modalForm.total_ocorrencias} ocorrências`
+        : 'Criar lançamento'
 
   // Parcelamento preview dates
   const previewParcelas = modalForm.is_parcelado && modalForm.parcela_total > 1 && modalForm.data_vencimento
@@ -346,19 +345,8 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
           </div>
         </div>
 
-        {/* Tabs */}
-        <div className="flex border-b border-gray-200">
-          <button onClick={() => setAbaModal('basico')}
-            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${abaModal === 'basico' ? 'text-brand border-b-2 border-brand' : 'text-gray-500 hover:text-gray-700'}`}>
-            Basico
-          </button>
-          {!editingId && (
-            <button onClick={() => setAbaModal('avancado')}
-              className={`flex-1 py-2.5 text-sm font-medium transition-colors ${abaModal === 'avancado' ? 'text-brand border-b-2 border-brand' : 'text-gray-500 hover:text-gray-700'}`}>
-              Avancado
-            </button>
-          )}
-        </div>
+        {/* Header separator */}
+        <div className="border-b border-gray-200" />
 
         {/* Duplicate warning */}
         {avisoSimilar && (
@@ -368,7 +356,6 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
         )}
 
         <div className="p-6 space-y-4">
-          {abaModal === 'basico' && (
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Descrição *</label>
@@ -377,12 +364,17 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Fornecedor</label>
-                <input value={modalForm.fornecedor} onChange={e => setModalForm(f => ({ ...f, fornecedor: e.target.value }))}
-                  list="fornecedores-list"
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Buscar fornecedor..." />
-                <datalist id="fornecedores-list">
-                  {fornecedores.map(f => <option key={f.id} value={f.nome} />)}
-                </datalist>
+                <QuickCreateSelect
+                  type="fornecedor"
+                  value={fornecedores.find(f => f.nome === modalForm.fornecedor)?.id || ''}
+                  onChange={(id, label) => setModalForm(f => ({ ...f, fornecedor: label, fornecedor_id: id }))}
+                  options={fornecedores.map(f => ({ id: f.id, label: f.nome }))}
+                  placeholder="Buscar fornecedor..."
+                  onCreated={(id, label) => {
+                    fornecedores.push({ id, nome: label })
+                    setModalForm(f => ({ ...f, fornecedor: label, fornecedor_id: id }))
+                  }}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Valor *</label>
@@ -395,25 +387,36 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">Competencia</label>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Competência</label>
                 <input type="date" value={modalForm.data_competencia} onChange={e => setModalForm(f => ({ ...f, data_competencia: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-500 mb-1">Conta</label>
-                <select value={modalForm.conta_id} onChange={e => setModalForm(f => ({ ...f, conta_id: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                  <option value="">Selecionar...</option>
-                  {contas.map(c => <option key={c.id} value={c.id}>{c.is_padrao ? '★ ' : ''}{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}
-                </select>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Conta *</label>
+                <QuickCreateSelect
+                  type="conta_bancaria"
+                  value={modalForm.conta_id}
+                  onChange={(id) => setModalForm(f => ({ ...f, conta_id: id }))}
+                  options={contas.map(c => ({ id: c.id, label: `${c.banco ? c.banco + ' — ' : ''}${c.nome}` }))}
+                  placeholder="Selecionar conta..."
+                  onCreated={(id, label) => {
+                    contas.push({ id, nome: label, banco: '' })
+                    setModalForm(f => ({ ...f, conta_id: id }))
+                  }}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Categoria</label>
-                <select value={modalForm.categoria} onChange={e => setModalForm(f => ({ ...f, categoria: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                  <option value="">Selecionar...</option>
-                  {(modalForm.tipo === 'receita' ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA).map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                <QuickCreateSelect
+                  type="categoria_financeira"
+                  value={(modalForm.tipo === 'receita' ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA).includes(modalForm.categoria) ? modalForm.categoria : ''}
+                  onChange={(id, label) => setModalForm(f => ({ ...f, categoria: label }))}
+                  options={(modalForm.tipo === 'receita' ? CATEGORIAS_RECEITA : CATEGORIAS_DESPESA).map(c => ({ id: c, label: c }))}
+                  placeholder="Selecionar categoria..."
+                  onCreated={(id, label) => {
+                    setModalForm(f => ({ ...f, categoria: label }))
+                  }}
+                />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Centro de custo</label>
@@ -450,7 +453,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
                 </select>
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-semibold text-gray-500 mb-1">Observacao</label>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Observação</label>
                 <textarea value={modalForm.observacao} onChange={e => setModalForm(f => ({ ...f, observacao: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" rows={2} />
               </div>
@@ -478,32 +481,29 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
                 <label className="flex items-center gap-2 text-sm cursor-pointer">
                   <input type="checkbox" checked={modalForm.is_provisao} onChange={e => setModalForm(f => ({ ...f, is_provisao: e.target.checked }))}
                     className="rounded border-gray-300 text-brand" />
-                  E provisao (despesa futura estimada)
+                  É provisão (despesa futura estimada)
                 </label>
               </div>
-            </div>
-          )}
-
-          {abaModal === 'avancado' && !editingId && (
-            <div className="space-y-4">
-              {/* Nº Documento */}
-              <div>
+              <div className="col-span-2">
                 <label className="block text-xs font-semibold text-gray-500 mb-1">N° Documento</label>
                 <input value={modalForm.numero_documento} onChange={e => setModalForm(f => ({ ...f, numero_documento: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="NF-e, OS, boleto..." />
               </div>
+            </div>
 
+          {!editingId && (
+            <div className="space-y-3">
               {/* Recorrência */}
               <details className="border border-gray-200 rounded-xl overflow-hidden">
                 <summary className="px-4 py-3 bg-gray-50 cursor-pointer text-sm font-semibold text-gray-700 flex items-center gap-2">
                   <input type="checkbox" checked={modalForm.is_recorrente} onChange={e => { e.stopPropagation(); setModalForm(f => ({ ...f, is_recorrente: e.target.checked, is_parcelado: false })) }} className="rounded" />
-                  Recorrencia
+                  Recorrência
                 </summary>
                 {modalForm.is_recorrente && (
                   <div className="px-4 py-3 space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Frequencia</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Frequência</label>
                         <select name="frequencia" value={modalForm.frequencia || 'mensal'} onChange={e => setModalForm(f => ({ ...f, frequencia: e.target.value }))} className="w-full px-3 py-2 border rounded-lg text-sm">
                           <option value="semanal">Semanal</option>
                           <option value="quinzenal">Quinzenal</option>
@@ -512,7 +512,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Total de ocorrencias</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Total de ocorrências</label>
                         <input type="number" name="total_ocorrencias" min="1" value={modalForm.total_ocorrencias || ''} onChange={e => setModalForm(f => ({ ...f, total_ocorrencias: Number(e.target.value) || 12 }))} placeholder="∞" className="w-full px-3 py-2 border rounded-lg text-sm" />
                       </div>
                     </div>
@@ -522,7 +522,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
                         <input type="number" name="alertar_dias_antes" value={modalForm.alertar_dias_antes ?? 7} onChange={e => setModalForm(f => ({ ...f, alertar_dias_antes: Number(e.target.value) }))} className="w-full px-3 py-2 border rounded-lg text-sm" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Variacao max (%)</label>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Variação máx (%)</label>
                         <input type="number" name="variacao_max_pct" value={modalForm.variacao_max_pct ?? 20} onChange={e => setModalForm(f => ({ ...f, variacao_max_pct: Number(e.target.value) }))} className="w-full px-3 py-2 border rounded-lg text-sm" />
                       </div>
                     </div>
