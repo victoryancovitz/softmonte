@@ -32,7 +32,10 @@ export async function middleware(request: NextRequest) {
   const isPublicApi = pathname.startsWith('/api/auth/register') ||
     pathname.startsWith('/api/whatsapp/webhook') ||
     pathname.startsWith('/api/whatsapp/confirmar') ||
-    pathname.startsWith('/api/health')
+    pathname.startsWith('/api/health') ||
+    pathname.startsWith('/api/cron/') ||
+    pathname.startsWith('/api/ponto/sync-secullum') ||
+    pathname.startsWith('/api/ponto/calcular-efetivo')
   const isPortalRoute = pathname.startsWith('/portal')
 
   if (!user && !isAuthPage && !isPublicApi) {
