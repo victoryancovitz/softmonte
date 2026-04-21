@@ -14,6 +14,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [ccsAdm, setCcsAdm] = useState<any[]>([])
+  const [funcoes, setFuncoes] = useState<any[]>([])
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
   const router = useRouter()
@@ -27,13 +28,15 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
   useEffect(() => {
     ;(async () => {
       try {
-        const [{ data, error }, { data: ccs }] = await Promise.all([
+        const [{ data, error }, { data: ccs }, { data: fns }] = await Promise.all([
           supabase.from('funcionarios').select('*').eq('id', params.id).single(),
           supabase.from('centros_custo').select('id, codigo, nome, tipo').eq('tipo', 'administrativo').eq('ativo', true).is('deleted_at', null).order('codigo'),
+          supabase.from('funcoes').select('id, nome').order('nome'),
         ])
         if (error) throw error
         if (data) setForm(data)
         setCcsAdm(ccs ?? [])
+        setFuncoes(fns ?? [])
       } catch (e: any) {
         setError('Erro ao carregar funcionário: ' + (e?.message || 'desconhecido'))
       } finally {
@@ -96,7 +99,7 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
     const { error } = await supabase.from('funcionarios').update({
       nome: form.nome, nome_guerra: form.nome_guerra || null,
       matricula: form.matricula || null, id_ponto: form.id_ponto || null,
-      cargo: form.cargo,
+      cargo: form.cargo, funcao_id: form.funcao_id || null,
       turno: form.turno, status: form.status,
       re: form.re || null, cpf: form.cpf ? form.cpf.replace(/\D/g, '') : null, pis: form.pis || null,
       telefone: form.telefone || null,
@@ -203,8 +206,18 @@ export default function EditarFuncionarioPage({ params }: { params: { id: string
           <section>
             <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3 border-b border-gray-100 pb-2">Função e Contrato</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div><label className={lbl}>Cargo *</label>
-                <input required type="text" value={form.cargo ?? ''} onChange={e => set('cargo', e.target.value)} className={inp}/></div>
+              <div><label className={lbl}>Cargo / Função *</label>
+                <select required value={form.funcao_id ?? ''} onChange={e => {
+                  const fn = funcoes.find((f: any) => f.id === e.target.value)
+                  set('funcao_id', e.target.value || null)
+                  if (fn) set('cargo', fn.nome)
+                }} className={inp + ' bg-white'}>
+                  <option value="">Selecione...</option>
+                  {funcoes.map((fn: any) => <option key={fn.id} value={fn.id}>{fn.nome}</option>)}
+                </select>
+                {form.cargo && !form.funcao_id && (
+                  <p className="text-xs text-amber-600 mt-1">Cargo atual: {form.cargo} (sem função vinculada)</p>
+                )}</div>
               <div><label className={lbl}>Turno</label>
                 <select value={form.turno ?? 'diurno'} onChange={e => set('turno', e.target.value)} className={inp + ' bg-white'}>
                   <option value="diurno">Diurno</option><option value="noturno">Noturno</option><option value="misto">Misto</option>
