@@ -114,312 +114,231 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const moneyFormat = '"R$" #,##0.00;[Red]-"R$" #,##0.00'
   const numberFormat = '#,##0'
 
-  // Colunas (A vazia, depois 13 colunas: B..N)
+  // Colunas — layout 3 seções (como PDF Cesari)
   ws.columns = [
     { width: 3 },    // A — margem
-    { width: 5 },    // B — Nº
-    { width: 16 },   // C — Função (merged C:D)
-    { width: 14 },   // D
-    { width: 8 },    // E — Efetivo
-    { width: 9 },    // F — DIA HN
-    { width: 11 },   // G — DIA HE 70%
-    { width: 11 },   // H — DIA HE 100%
-    { width: 10 },   // I — HH Normal
-    { width: 10 },   // J — HH HE 70%
-    { width: 10 },   // K — HH HE 100%
-    { width: 13 },   // L — R$/HH
-    { width: 16 },   // M — Valor Total
+    { width: 7 },    // B — ITEM
+    { width: 32 },   // C — DESCRIÇÃO
+    { width: 10 },   // D — EFETIVO
+    { width: 8 },    // E — DIAS
+    { width: 16 },   // F — CARGA HORÁRIA
+    { width: 14 },   // G — VALOR
+    { width: 16 },   // H — VALOR TOTAL
   ]
+  const LAST_COL = 8
 
   // ══════════════════════════════════════════
-  // CABEÇALHO — logo (imagem) sobre fundo navy
+  // CABEÇALHO — logo + info do BM (formato Cesari)
   // ══════════════════════════════════════════
+  const start = new Date(bm.data_inicio + 'T12:00')
+  const end = new Date(bm.data_fim + 'T12:00')
+  const diasTotal = Math.ceil((end.getTime() - start.getTime()) / 86400000) + 1
 
-  // Row 1-3: barra navy grande para o logo
-  ws.getRow(1).height = 18
-  ws.getRow(2).height = 18
-  ws.getRow(3).height = 18
+  // Contar dias úteis, sábados e domingos/feriados no período
+  let diasUteis = 0, diasSab = 0, diasDomFer = 0
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dow = d.getDay()
+    if (dow === 0) diasDomFer++
+    else if (dow === 6) diasSab++
+    else diasUteis++
+  }
 
-  // Preenche o fundo da faixa superior em navy
+  // Rows 1-3: faixa navy com logo
   for (let r = 1; r <= 3; r++) {
-    for (let c = 2; c <= 13; c++) {
+    ws.getRow(r).height = 18
+    for (let c = 2; c <= LAST_COL; c++) {
       ws.getCell(r, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
     }
   }
-
-  // Embute o logo Tecnomonte (PNG inline base64 — funciona em serverless sem depender do fs)
   try {
     const logoBuf = Buffer.from(TECNOMONTE_LOGO_DARK_B64, 'base64')
     const logoId = wb.addImage({ buffer: logoBuf as any, extension: 'png' })
-    ws.addImage(logoId, {
-      tl: { col: 1.2, row: 0.3 } as any,
-      ext: { width: 235, height: 72 },
-      editAs: 'oneCell',
-    })
-  } catch (e) {
-    // Fallback: texto se o logo falhar
-    ws.mergeCells('B1:F3')
-    const fallback = ws.getCell('B1')
-    fallback.value = 'TECNOMONTE'
-    fallback.font = { name: 'Arial Black', size: 18, bold: true, color: { argb: WHITE } }
-    fallback.alignment = { horizontal: 'center', vertical: 'middle' }
+    ws.addImage(logoId, { tl: { col: 1.2, row: 0.2 } as any, ext: { width: 200, height: 60 }, editAs: 'oneCell' })
+  } catch { /* fallback sem logo */ }
+
+  // Título "RESUMO DE HORAS" + subtítulo
+  ws.mergeCells('D1:F2')
+  const titCell = ws.getCell('D1')
+  titCell.value = 'RESUMO DE HORAS\nMÃO DE OBRA APOIO ROTINA'
+  titCell.font = { size: 11, bold: true, color: { argb: WHITE } }
+  titCell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+
+  // Info lado direito
+  const infoFont = { size: 9, bold: true, color: { argb: WHITE } } as const
+  const infoValFont = { size: 9, bold: true, color: { argb: GOLD_LIGHT } } as const
+
+  ws.getCell('G1').value = 'Local:'
+  ws.getCell('G1').font = infoFont
+  ws.getCell('H1').value = (bm.obras.nome ?? '').toUpperCase()
+  ws.getCell('H1').font = infoValFont
+
+  ws.getCell('G2').value = 'Início:'
+  ws.getCell('G2').font = infoFont
+  ws.getCell('H2').value = `${new Date(bm.data_inicio + 'T12:00').toLocaleDateString('pt-BR')}`
+  ws.getCell('H2').font = infoValFont
+
+  ws.getCell('G3').value = 'Período:'
+  ws.getCell('G3').font = infoFont
+  ws.getCell('H3').value = `${diasTotal} dias`
+  ws.getCell('H3').font = infoValFont
+
+  // Row 4: info dias úteis
+  ws.getRow(4).height = 18
+  for (let c = 2; c <= LAST_COL; c++) {
+    ws.getCell(4, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_LIGHT } }
   }
+  ws.getCell('C4').value = 'Segunda a Sexta'
+  ws.getCell('C4').font = { size: 9, bold: true, color: { argb: NAVY } }
+  ws.getCell('D4').value = diasUteis
+  ws.getCell('D4').font = { size: 10, bold: true, color: { argb: NAVY } }
+  ws.getCell('D4').alignment = { horizontal: 'center' }
+  ws.getCell('E4').value = 'Sábado'
+  ws.getCell('E4').font = { size: 9, bold: true, color: { argb: NAVY } }
+  ws.getCell('F4').value = diasSab
+  ws.getCell('F4').font = { size: 10, bold: true, color: { argb: NAVY } }
+  ws.getCell('F4').alignment = { horizontal: 'center' }
+  ws.getCell('G4').value = 'Domingo / Feriado'
+  ws.getCell('G4').font = { size: 9, bold: true, color: { argb: NAVY } }
+  ws.getCell('H4').value = diasDomFer
+  ws.getCell('H4').font = { size: 10, bold: true, color: { argb: NAVY } }
+  ws.getCell('H4').alignment = { horizontal: 'center' }
 
-  // Lado direito: razão social + boletim ID
-  ws.mergeCells('G1:M2')
-  const sub = ws.getCell('G1')
-  sub.value = 'FABRICAÇÃO, MONTAGEM E MANUTENÇÃO INDUSTRIAL'
-  sub.font = { size: 10, bold: true, color: { argb: GOLD_LIGHT }, italic: true }
-  sub.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 }
-
-  ws.mergeCells('G3:M3')
-  const bmLabel = ws.getCell('G3')
-  bmLabel.value = `BOLETIM DE MEDIÇÃO Nº ${String(bm.numero).padStart(2,'0')}`
-  bmLabel.font = { size: 11, bold: true, color: { argb: WHITE } }
-  bmLabel.alignment = { horizontal: 'right', vertical: 'middle', indent: 1 }
-
-  // Row 4: barra ouro fina decorativa
-  ws.getRow(4).height = 4
-  for (let c = 2; c <= 13; c++) {
-    ws.getCell(4, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GOLD } }
+  // Row 5: barra ouro
+  ws.getRow(5).height = 3
+  for (let c = 2; c <= LAST_COL; c++) {
+    ws.getCell(5, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GOLD } }
   }
-
-  // Row 5-6: bloco de título "RESUMO DE HORAS" + info do BM
-  ws.getRow(5).height = 26
-  ws.getRow(6).height = 22
-
-  ws.mergeCells('B5:E6')
-  const titBlock = ws.getCell('B5')
-  titBlock.value = `RESUMO DE HORAS\nBM ${String(bm.numero).padStart(2,'0')}`
-  titBlock.font = { name: 'Arial', size: 13, bold: true, color: { argb: NAVY } }
-  titBlock.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
-  titBlock.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_LIGHT } }
-  titBlock.border = {
-    top: { style: 'thin', color: { argb: GOLD } },
-    bottom: { style: 'thin', color: { argb: GOLD } },
-    left: { style: 'thin', color: { argb: GOLD } },
-    right: { style: 'thin', color: { argb: GOLD } },
-  }
-
-  // Info do BM (F5:M6) em 2 linhas
-  // Linha 5: Cliente | Local
-  const labelStyle = { size: 8, bold: true, color: { argb: NAVY } } as const
-  const valStyle = { size: 10, bold: true, color: { argb: 'FF333333' } } as const
-
-  ws.getCell('F5').value = 'CLIENTE'
-  ws.getCell('F5').font = labelStyle
-  ws.getCell('F5').alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 }
-  ws.mergeCells('G5:I5')
-  ws.getCell('G5').value = (bm.obras.cliente ?? '').toUpperCase()
-  ws.getCell('G5').font = valStyle
-  ws.getCell('G5').alignment = { horizontal: 'left', vertical: 'bottom' }
-
-  ws.getCell('J5').value = 'LOCAL'
-  ws.getCell('J5').font = labelStyle
-  ws.getCell('J5').alignment = { horizontal: 'left', vertical: 'bottom', indent: 1 }
-  ws.mergeCells('K5:M5')
-  ws.getCell('K5').value = (bm.obras.local ?? '').toUpperCase()
-  ws.getCell('K5').font = valStyle
-  ws.getCell('K5').alignment = { horizontal: 'left', vertical: 'bottom' }
-
-  ws.getCell('F6').value = 'PERÍODO'
-  ws.getCell('F6').font = labelStyle
-  ws.getCell('F6').alignment = { horizontal: 'left', vertical: 'top', indent: 1 }
-  ws.mergeCells('G6:I6')
-  const diasTotal = Math.ceil((new Date(bm.data_fim).getTime() - new Date(bm.data_inicio).getTime()) / 86400000) + 1
-  ws.getCell('G6').value = `${new Date(bm.data_inicio + 'T12:00').toLocaleDateString('pt-BR')} a ${new Date(bm.data_fim + 'T12:00').toLocaleDateString('pt-BR')}  (${diasTotal} dias)`
-  ws.getCell('G6').font = { size: 9, color: { argb: 'FF555555' } }
-  ws.getCell('G6').alignment = { horizontal: 'left', vertical: 'top' }
-
-  ws.getCell('J6').value = 'HORÁRIO'
-  ws.getCell('J6').font = labelStyle
-  ws.getCell('J6').alignment = { horizontal: 'left', vertical: 'top', indent: 1 }
-  ws.mergeCells('K6:M6')
-  ws.getCell('K6').value = '07:00 às 17:00'
-  ws.getCell('K6').font = { size: 9, color: { argb: 'FF555555' } }
-  ws.getCell('K6').alignment = { horizontal: 'left', vertical: 'top' }
-
-  // Row 7: outra barra fina ouro
-  ws.getRow(7).height = 3
-  for (let c = 2; c <= 13; c++) {
-    ws.getCell(7, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GOLD } }
-  }
-
-  // Start dates (needed below for other sheets)
-  const start = new Date(bm.data_inicio + 'T12:00')
-  const end = new Date(bm.data_fim + 'T12:00')
 
   // ══════════════════════════════════════════
-  // TABELA — formato preview (12 colunas)
+  // CABEÇALHO DA TABELA (row 6)
   // ══════════════════════════════════════════
-
-  // Header rows 9-10 (2 linhas de cabeçalho agrupado)
-  const HEADER_TOP = 9
-  const HEADER_BOT = 10
-  ws.getRow(8).height = 4  // pequeno respiro
-  ws.getRow(HEADER_TOP).height = 22
-  ws.getRow(HEADER_BOT).height = 22
-
-  // Merges do cabeçalho superior
-  ws.mergeCells(`B${HEADER_TOP}:B${HEADER_BOT}`) // Nº
-  ws.mergeCells(`C${HEADER_TOP}:D${HEADER_BOT}`) // Função
-  ws.mergeCells(`E${HEADER_TOP}:E${HEADER_BOT}`) // Efetivo
-  ws.mergeCells(`F${HEADER_TOP}:H${HEADER_TOP}`) // DIAS (agrupado)
-  ws.mergeCells(`I${HEADER_TOP}:K${HEADER_TOP}`) // HORAS (agrupado)
-  ws.mergeCells(`L${HEADER_TOP}:L${HEADER_BOT}`) // R$/HH
-  ws.mergeCells(`M${HEADER_TOP}:M${HEADER_BOT}`) // Valor total
-
-  // Cabeçalho superior (grupos)
-  const topCells: Array<[string, string]> = [
-    ['B', 'Nº'],
-    ['C', 'FUNÇÃO'],
-    ['E', 'EFETIVO'],
-    ['F', 'DIAS'],
-    ['I', 'HORAS'],
-    ['L', 'R$/HH'],
-    ['M', 'VALOR TOTAL'],
+  ws.getRow(6).height = 26
+  const headerCols: Array<[string, string]> = [
+    ['B', 'ITEM'], ['C', 'DESCRIÇÃO'], ['D', 'EFETIVO'],
+    ['E', 'DIAS'], ['F', 'CARGA HORÁRIA'], ['G', 'VALOR'], ['H', 'VALOR\nTOTAL'],
   ]
-  topCells.forEach(([col, val]) => {
-    const cell = ws.getCell(`${col}${HEADER_TOP}`)
-    cell.value = val
-    cell.font = { bold: true, size: 10, color: { argb: WHITE } }
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
-    cell.alignment = { horizontal: 'center', vertical: 'middle' }
-  })
-
-  // Cabeçalho inferior (sub-colunas de DIAS e HORAS)
-  const subHeaders: Array<[string, string, string]> = [
-    ['F', 'DIA HN', 'blue'],
-    ['G', 'DIA HE 70%', 'amber'],
-    ['H', 'DIA HE 100%', 'red'],
-    ['I', 'HH NORMAL', 'blue'],
-    ['J', 'HH HE 70%', 'amber'],
-    ['K', 'HH HE 100%', 'red'],
-  ]
-  subHeaders.forEach(([col, val]) => {
-    const cell = ws.getCell(`${col}${HEADER_BOT}`)
+  headerCols.forEach(([col, val]) => {
+    const cell = ws.getCell(`${col}6`)
     cell.value = val
     cell.font = { bold: true, size: 9, color: { argb: WHITE } }
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY_SOFT } }
-    cell.alignment = { horizontal: 'center', vertical: 'middle' }
-  })
-
-  // Bordas em todo o bloco de header
-  for (let r = HEADER_TOP; r <= HEADER_BOT; r++) {
-    for (let c = 2; c <= 13; c++) {
-      ws.getCell(r, c).border = {
-        top: { style: 'thin', color: { argb: GOLD } },
-        bottom: { style: 'thin', color: { argb: GOLD } },
-        left: { style: 'thin', color: { argb: BORDER_LIGHT } },
-        right: { style: 'thin', color: { argb: BORDER_LIGHT } },
-      }
-    }
-  }
-
-  // Linhas de dados (uma por função, como no preview)
-  let row = HEADER_BOT + 1
-  linhasFuncao.forEach((l, idx) => {
-    const isAlt = idx % 2 === 1
-    const bg = isAlt ? 'FFFAF8F2' : WHITE
-    const setCell = (col: string, val: any, opts: { format?: string; color?: string; bold?: boolean; align?: 'left'|'center'|'right' } = {}) => {
-      const cell = ws.getCell(`${col}${row}`)
-      cell.value = val
-      if (opts.format) cell.numFmt = opts.format
-      cell.font = {
-        size: 10,
-        bold: opts.bold ?? false,
-        color: { argb: opts.color ?? 'FF222222' },
-      }
-      cell.alignment = { horizontal: opts.align ?? 'center', vertical: 'middle' }
-      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } }
-      cell.border = {
-        top: { style: 'hair', color: { argb: BORDER_LIGHT } },
-        bottom: { style: 'hair', color: { argb: BORDER_LIGHT } },
-        left: { style: 'hair', color: { argb: BORDER_LIGHT } },
-        right: { style: 'hair', color: { argb: BORDER_LIGHT } },
-      }
-    }
-
-    ws.mergeCells(`C${row}:D${row}`)
-    setCell('B', idx + 1, { bold: true, color: NAVY })
-    setCell('C', l.funcao, { align: 'left', bold: true })
-    setCell('E', l.efetivo, { color: 'FF555555' })
-    setCell('F', l.dia_hn || '', { color: 'FF1D4ED8', bold: true })
-    setCell('G', l.dia_he70 || '', { color: 'FFB45309', bold: true })
-    setCell('H', l.dia_he100 || '', { color: 'FFB91C1C', bold: true })
-    setCell('I', l.hh_hn || '', { format: numberFormat, color: 'FF1D4ED8' })
-    setCell('J', l.hh_he70 || '', { format: numberFormat, color: 'FFB45309' })
-    setCell('K', l.hh_he100 || '', { format: numberFormat, color: 'FFB91C1C' })
-    // R$/HH: mostra o valor normal como principal; se houver HE, aparece entre parênteses
-    setCell('L', l.valor_hh_n || l.valor_hh_70 || l.valor_hh_100 || 0, { format: moneyFormat, align: 'right', color: 'FF555555' })
-    setCell('M', l.valor_total, { format: moneyFormat, align: 'right', bold: true, color: NAVY })
-
-    ws.getRow(row).height = 22
-    row++
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true }
+    cell.border = { bottom: { style: 'thin', color: { argb: GOLD } } }
   })
 
   // ══════════════════════════════════════════
-  // TOTAL GERAL — barra navy
+  // 3 SEÇÕES: HORA NORMAL / HORA EXTRA 70% / HORA EXTRA 100%
+  // ══════════════════════════════════════════
+  const sections = [
+    { num: 1, label: 'HORA NORMAL', hhKey: 'hh_hn' as const, vhhKey: 'valor_hh_n' as const },
+    { num: 2, label: 'HORA EXTRA 70%', hhKey: 'hh_he70' as const, vhhKey: 'valor_hh_70' as const },
+    { num: 3, label: 'HORA EXTRA 100%', hhKey: 'hh_he100' as const, vhhKey: 'valor_hh_100' as const },
+  ]
+
+  let row = 7
+  const thinBorder = { style: 'hair' as const, color: { argb: BORDER_LIGHT } }
+  const cellBorder = { top: thinBorder, bottom: thinBorder, left: thinBorder, right: thinBorder }
+
+  for (const sec of sections) {
+    // Subtotal da seção
+    const secTotal = linhasFuncao.reduce((s, l) => {
+      const hh = l[sec.hhKey]
+      const vhh = l[sec.vhhKey]
+      return s + hh * vhh
+    }, 0)
+
+    // Section header row
+    ws.getRow(row).height = 24
+    ws.getCell(`B${row}`).value = sec.num
+    ws.getCell(`B${row}`).font = { bold: true, size: 11, color: { argb: NAVY } }
+    ws.getCell(`B${row}`).alignment = { horizontal: 'center', vertical: 'middle' }
+    ws.getCell(`C${row}`).value = sec.label
+    ws.getCell(`C${row}`).font = { bold: true, size: 11, color: { argb: NAVY } }
+    ws.getCell(`C${row}`).alignment = { horizontal: 'left', vertical: 'middle' }
+    ws.getCell(`H${row}`).value = secTotal > 0 ? secTotal : null
+    ws.getCell(`H${row}`).numFmt = moneyFormat
+    ws.getCell(`H${row}`).font = { bold: true, size: 11, color: { argb: NAVY } }
+    ws.getCell(`H${row}`).alignment = { horizontal: 'right', vertical: 'middle' }
+    // Background for section header
+    for (let c = 2; c <= LAST_COL; c++) {
+      ws.getCell(row, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: BG_LIGHT } }
+      ws.getCell(row, c).border = cellBorder
+    }
+    row++
+
+    // Function rows
+    linhasFuncao.forEach((l, idx) => {
+      const hh = l[sec.hhKey]
+      const vhh = l[sec.vhhKey]
+      const valorLinha = hh * vhh
+      const isAlt = idx % 2 === 1
+      const bg = isAlt ? 'FFFAF8F2' : WHITE
+
+      ws.getRow(row).height = 20
+      const setC = (col: string, val: any, opts: { fmt?: string; bold?: boolean; align?: 'left'|'center'|'right' } = {}) => {
+        const cell = ws.getCell(`${col}${row}`)
+        cell.value = val
+        if (opts.fmt) cell.numFmt = opts.fmt
+        cell.font = { size: 10, bold: opts.bold, color: { argb: 'FF222222' } }
+        cell.alignment = { horizontal: opts.align ?? 'center', vertical: 'middle' }
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: bg } }
+        cell.border = cellBorder
+      }
+
+      setC('B', `${sec.num}.${idx + 1}`, { bold: true })
+      setC('C', l.funcao, { align: 'left', bold: true })
+      setC('D', l.efetivo)
+      setC('E', hh > 0 ? diasUteis : 0)
+      setC('F', hh > 0 ? Math.round(hh * 10) / 10 : 0, { fmt: '#,##0.0' })
+      setC('G', vhh > 0 ? vhh : null, { fmt: moneyFormat })
+      setC('H', valorLinha > 0 ? valorLinha : null, { fmt: moneyFormat, bold: true })
+
+      row++
+    })
+  }
+
+  // ══════════════════════════════════════════
+  // TOTAL GERAL
   // ══════════════════════════════════════════
   row += 1
-  ws.getRow(row).height = 32
-
-  // Label "TOTAL GERAL"
-  ws.mergeCells(`B${row}:E${row}`)
-  const totLabel = ws.getCell(`B${row}`)
-  totLabel.value = 'TOTAL GERAL'
-  totLabel.font = { bold: true, size: 13, color: { argb: GOLD } }
-  totLabel.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 }
-  totLabel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
-
-  // Totais dias
-  const setTot = (col: string, val: any, color: string, format?: string) => {
-    const c = ws.getCell(`${col}${row}`)
-    c.value = val
-    if (format) c.numFmt = format
-    c.font = { bold: true, size: 11, color: { argb: color } }
-    c.alignment = { horizontal: 'center', vertical: 'middle' }
-    c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
+  ws.getRow(row).height = 30
+  ws.mergeCells(`B${row}:F${row}`)
+  // Empty cells for merge
+  for (let c = 2; c <= LAST_COL; c++) {
+    ws.getCell(row, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: WHITE } }
   }
-  setTot('F', totalDiaHN || '', 'FF93C5FD')
-  setTot('G', totalDiaHe70 || '', 'FFFCD34D')
-  setTot('H', totalDiaHe100 || '', 'FFFCA5A5')
-  setTot('I', totalHHn || '', 'FF93C5FD', numberFormat)
-  setTot('J', totalHH70 || '', 'FFFCD34D', numberFormat)
-  setTot('K', totalHH100 || '', 'FFFCA5A5', numberFormat)
-
-  ws.getCell(`L${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
-
-  const totValor = ws.getCell(`M${row}`)
-  totValor.value = totalGeral
-  totValor.numFmt = moneyFormat
-  totValor.font = { bold: true, size: 13, color: { argb: GOLD } }
-  totValor.alignment = { horizontal: 'right', vertical: 'middle' }
-  totValor.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: NAVY } }
-
-  // Bordas do bloco total
-  for (let c = 2; c <= 13; c++) {
+  ws.getCell(`F${row}`).value = 'TOTAL :'
+  ws.getCell(`F${row}`).font = { bold: true, size: 12, color: { argb: NAVY } }
+  ws.getCell(`F${row}`).alignment = { horizontal: 'right', vertical: 'middle' }
+  ws.getCell(`G${row}`).value = 'R$'
+  ws.getCell(`G${row}`).font = { bold: true, size: 12, color: { argb: NAVY } }
+  ws.getCell(`G${row}`).alignment = { horizontal: 'right', vertical: 'middle' }
+  ws.getCell(`H${row}`).value = totalGeral
+  ws.getCell(`H${row}`).numFmt = '#,##0.00'
+  ws.getCell(`H${row}`).font = { bold: true, size: 13, color: { argb: NAVY } }
+  ws.getCell(`H${row}`).alignment = { horizontal: 'right', vertical: 'middle' }
+  for (let c = 2; c <= LAST_COL; c++) {
     ws.getCell(row, c).border = {
-      top: { style: 'medium', color: { argb: GOLD } },
-      bottom: { style: 'medium', color: { argb: GOLD } },
+      top: { style: 'medium', color: { argb: NAVY } },
+      bottom: { style: 'medium', color: { argb: NAVY } },
     }
   }
 
-  // Rodapé: linha de assinatura decorativa
+  // Rodapé
   row += 2
   ws.getRow(row).height = 4
-  for (let c = 2; c <= 13; c++) {
+  for (let c = 2; c <= LAST_COL; c++) {
     ws.getCell(row, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GOLD } }
   }
   row += 1
   ws.getCell(`B${row}`).value = `Emitido em ${new Date().toLocaleDateString('pt-BR')} · Tecnomonte Softmonte`
   ws.getCell(`B${row}`).font = { size: 8, italic: true, color: { argb: 'FF888888' } }
-  ws.mergeCells(`B${row}:M${row}`)
+  ws.mergeCells(`B${row}:H${row}`)
 
-  // Congelar painéis (mantém cabeçalho ao rolar)
-  ws.views = [{ state: 'frozen', ySplit: HEADER_BOT, xSplit: 0 }]
+  // Congelar painéis
+  ws.views = [{ state: 'frozen', ySplit: 6, xSplit: 0 }]
 
-  // Print setup (paisagem, caber em 1 página de largura)
+  // Print setup
   ws.pageSetup.orientation = 'landscape'
   ws.pageSetup.fitToPage = true
   ws.pageSetup.fitToWidth = 1
