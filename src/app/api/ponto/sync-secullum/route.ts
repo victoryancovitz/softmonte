@@ -287,36 +287,41 @@ export async function POST(req: NextRequest) {
       }
     })
 
-    // Fallback 1: por id_ponto (NumeroIdentificador do Secullum)
-    // Fallback 2: por nome do funcionário
-    // Coleta id_ponto e nome das batidas que não deram match por PIS
-    const unmatchedInfo = new Map<string, { idPonto: string | null; nome: string }>()
+    // Fallbacks: CPF → id_ponto → nome
+    // Coleta CPF, id_ponto e nome das batidas que não deram match por PIS
+    const unmatchedInfo = new Map<string, { cpf: string | null; idPonto: string | null; nome: string }>()
     for (const cartao of batidas) {
       const c = cartao as any
       const pis = onlyDigits(c.Funcionario?.NumeroPis || c.Funcionario?.Pis || '')
       if (!pis || pisToFuncId.has(pis)) continue
+      const cpf = onlyDigits(c.Funcionario?.Cpf || c.Funcionario?.cpf || '')
       const idPonto = String(c.Funcionario?.NumeroIdentificador || c.Funcionario?.NumeroFolha || c.FuncionarioId || '')
       const nome = (c.Funcionario?.Nome || '').toUpperCase().trim()
-      if (idPonto || nome) unmatchedInfo.set(pis, { idPonto: idPonto || null, nome })
+      if (cpf || idPonto || nome) unmatchedInfo.set(pis, { cpf: cpf || null, idPonto: idPonto || null, nome })
     }
 
     if (unmatchedInfo.size > 0) {
-      // Buscar todos os funcionários para match por id_ponto ou nome
+      // Buscar todos os funcionários para match por CPF, id_ponto ou nome
       const { data: allFuncs } = await supabase
         .from('funcionarios')
-        .select('id, nome, pis, id_ponto, deleted_at')
+        .select('id, nome, cpf, pis, id_ponto, deleted_at')
 
+      const funcByCpf = new Map<string, { id: string; deleted_at: string | null }>()
       const funcByIdPonto = new Map<string, { id: string; deleted_at: string | null }>()
       const funcByNome = new Map<string, { id: string; deleted_at: string | null }>()
       ;(allFuncs || []).forEach((f: any) => {
+        const cpfDigits = onlyDigits(f.cpf)
+        if (cpfDigits.length === 11) funcByCpf.set(cpfDigits, { id: f.id, deleted_at: f.deleted_at })
         if (f.id_ponto) funcByIdPonto.set(String(f.id_ponto), { id: f.id, deleted_at: f.deleted_at })
         funcByNome.set(f.nome.toUpperCase().trim(), { id: f.id, deleted_at: f.deleted_at })
       })
 
       for (const [pis, info] of Array.from(unmatchedInfo.entries())) {
-        // Tentar match por id_ponto primeiro
-        let match = info.idPonto ? funcByIdPonto.get(info.idPonto) : null
-        // Fallback: match por nome
+        // Tentar match por CPF primeiro (mais confiável que id_ponto/nome)
+        let match = info.cpf ? funcByCpf.get(info.cpf) : null
+        // Fallback: id_ponto
+        if (!match && info.idPonto) match = funcByIdPonto.get(info.idPonto)
+        // Fallback: nome
         if (!match && info.nome) match = funcByNome.get(info.nome)
 
         if (match) {
