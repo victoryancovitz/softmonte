@@ -94,12 +94,22 @@ export default function FolhaPage() {
         .select('funcao_id, funcao_nome, quantidade_contratada')
         .eq('obra_id', form.obra_id).eq('ativo', true)
       const norm = (s: any) => (s || '').toString().toUpperCase().trim()
+
+      // Busca funcao_id dos funcionários para match mais preciso
+      const funcIdsParaCheck = custosValidos.map((c: any) => c.funcionario_id).filter(Boolean)
+      const { data: funcsComFuncaoId } = funcIdsParaCheck.length > 0
+        ? await supabase.from('funcionarios').select('id, funcao_id').in('id', funcIdsParaCheck)
+        : { data: [] }
+      const funcaoIdMap: Record<string, string> = {}
+      ;(funcsComFuncaoId ?? []).forEach((f: any) => { if (f.funcao_id) funcaoIdMap[f.id] = f.funcao_id })
+
       const porCargo: Record<string, number> = {}
       const porFuncaoId: Record<string, number> = {}
       for (const c of custosValidos) {
         const cargo = norm(c.cargo)
         if (cargo) porCargo[cargo] = (porCargo[cargo] || 0) + 1
-        if (c.funcao_id) porFuncaoId[c.funcao_id] = (porFuncaoId[c.funcao_id] || 0) + 1
+        const fid = funcaoIdMap[c.funcionario_id]
+        if (fid) porFuncaoId[fid] = (porFuncaoId[fid] || 0) + 1
       }
       const excedentes: string[] = []
       for (const comp of (composicaoCheck ?? [])) {
@@ -111,7 +121,19 @@ export default function FolhaPage() {
       const semContrato: string[] = []
       for (const [cargo, qtd] of Object.entries(porCargo)) {
         const matchNome = (composicaoCheck ?? []).find((c: any) => norm(c.funcao_nome) === cargo)
-        if (!matchNome && qtd > 0) semContrato.push(`${cargo}: ${qtd} pessoa(s) sem contrato`)
+        if (!matchNome && qtd > 0) {
+          // Tenta match por funcao_id antes de reportar como sem contrato
+          const funcsDesteCargo = custosValidos.filter((c: any) => norm(c.cargo) === cargo)
+          const temMatchPorFuncaoId = funcsDesteCargo.some((f: any) => {
+            const fid = funcaoIdMap[f.funcionario_id]
+            return fid && (composicaoCheck ?? []).some((c: any) => c.funcao_id === fid)
+          })
+          if (!temMatchPorFuncaoId) {
+            const nomes = funcsDesteCargo.map((f: any) => f.nome || '').filter(Boolean)
+            const listaStr = nomes.length > 0 ? `: ${nomes.join(', ')}` : ''
+            semContrato.push(`${cargo} — ${qtd} pessoa(s) sem composição contratual${listaStr}`)
+          }
+        }
       }
       // Helper to proceed with closing after validation
       const procederFechamento = async (cargosSemContrato?: string[]) => {
