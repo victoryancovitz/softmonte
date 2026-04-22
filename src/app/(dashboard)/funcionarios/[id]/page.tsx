@@ -91,9 +91,11 @@ export default async function FuncionarioPage({ params, searchParams }: { params
   const [
     { data: funcoes },
     { data: historicoSalarial },
+    { data: historicoFuncional },
   ] = await Promise.all([
     supabase.from('funcoes').select('id, nome, salario_base, horas_mes, insalubridade_pct').eq('ativo', true),
     supabase.from('funcionario_historico_salarial').select('*').eq('funcionario_id', params.id).order('data_efetivo', { ascending: false }),
+    supabase.from('historico_funcional').select('*').eq('funcionario_id', params.id).order('data_vigencia', { ascending: false }),
   ])
 
   const prazos = prazosArr?.[0] ?? null
@@ -255,9 +257,53 @@ export default async function FuncionarioPage({ params, searchParams }: { params
     ),
   }
 
+  const TIPO_HISTORICO_LABEL: Record<string, string> = {
+    admissao: 'Admissão', promocao: 'Promoção', transferencia: 'Transferência',
+    reajuste_salarial: 'Reajuste salarial', mudanca_turno: 'Mudança de turno', mudanca_obra: 'Mudança de obra',
+  }
+  const TIPO_HISTORICO_COR: Record<string, string> = {
+    admissao: 'bg-green-100 text-green-700', promocao: 'bg-blue-100 text-blue-700',
+    transferencia: 'bg-purple-100 text-purple-700', reajuste_salarial: 'bg-amber-100 text-amber-700',
+    mudanca_turno: 'bg-gray-100 text-gray-600', mudanca_obra: 'bg-indigo-100 text-indigo-700',
+  }
+
   const tabHistorico: Tab = {
     id: 'historico', label: 'Histórico', icon: TAB_ICONS.historico,
+    badge: (historicoFuncional ?? []).length > 0 ? (historicoFuncional as any[]).length : undefined,
     content: (
+      <div className="space-y-5">
+      {/* Histórico funcional (promoções, mudanças) */}
+      {(historicoFuncional as any[] ?? []).length > 0 && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+          <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Histórico funcional</h2>
+          <div className="space-y-2">
+            {(historicoFuncional as any[]).map((h: any) => (
+              <div key={h.id} className="flex items-start gap-3 p-3 rounded-lg border border-gray-100 bg-gray-50/50">
+                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold flex-shrink-0 mt-0.5 ${TIPO_HISTORICO_COR[h.tipo] ?? 'bg-gray-100 text-gray-600'}`}>
+                  {TIPO_HISTORICO_LABEL[h.tipo] ?? h.tipo}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-gray-700">
+                      {h.cargo_anterior && h.cargo_novo ? `${h.cargo_anterior} → ${h.cargo_novo}` : h.cargo_novo || h.tipo}
+                    </span>
+                    <span className="text-[11px] text-gray-400">{fmtD(h.data_vigencia)}</span>
+                  </div>
+                  {(h.salario_anterior || h.salario_novo) && (
+                    <p className="text-[11px] text-gray-500 mt-0.5">
+                      {h.salario_anterior ? `${fmtR(Number(h.salario_anterior))} → ` : ''}
+                      {h.salario_novo ? fmtR(Number(h.salario_novo)) : ''}
+                    </p>
+                  )}
+                  {h.motivo && <p className="text-[11px] text-gray-400 mt-0.5">{h.motivo}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Vínculos */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Histórico na empresa</h2>
@@ -317,6 +363,7 @@ export default async function FuncionarioPage({ params, searchParams }: { params
             ))}
           </div>
         )}
+      </div>
       </div>
     ),
   }
