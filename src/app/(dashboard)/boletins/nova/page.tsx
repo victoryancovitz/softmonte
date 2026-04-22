@@ -172,6 +172,37 @@ export default function NovoBMPage() {
 
     const funcIds = Array.from(funcMap.keys())
 
+    // --- PASSO 1b: Buscar histórico funcional (promoções/mudanças de cargo) ---
+    const { data: historicos } = await supabase
+      .from('historico_funcional')
+      .select('funcionario_id, data_vigencia, funcao_id_novo, cargo_novo')
+      .in('funcionario_id', funcIds)
+      .in('tipo', ['promocao', 'transferencia', 'mudanca_obra'])
+      .lte('data_vigencia', form.data_fim)
+      .order('data_vigencia', { ascending: true })
+
+    // Helper: resolve qual função/cargo estava ativo em determinada data
+    const historicoByFunc = new Map<string, Array<{ data_vigencia: string; cargo: string; funcao_id: string | null }>>()
+    ;(historicos ?? []).forEach((h: any) => {
+      if (!historicoByFunc.has(h.funcionario_id)) historicoByFunc.set(h.funcionario_id, [])
+      historicoByFunc.get(h.funcionario_id)!.push({
+        data_vigencia: h.data_vigencia,
+        cargo: h.cargo_novo || '',
+        funcao_id: h.funcao_id_novo || null,
+      })
+    })
+    function resolveCargoNaData(fid: string, date: string, defaultCargo: string, defaultFuncaoId: string | null): { cargo: string; funcao_id: string | null } {
+      const entries = historicoByFunc.get(fid)
+      if (!entries || entries.length === 0) return { cargo: defaultCargo, funcao_id: defaultFuncaoId }
+      // Encontra a última entrada com data_vigencia <= date
+      let result = { cargo: defaultCargo, funcao_id: defaultFuncaoId }
+      for (const e of entries) {
+        if (e.data_vigencia <= date) result = { cargo: e.cargo || defaultCargo, funcao_id: e.funcao_id || defaultFuncaoId }
+        else break
+      }
+      return result
+    }
+
     // --- PASSO 2: Buscar marcações de ponto paginadas ---
     let allMarc: any[] = []
     {
@@ -253,59 +284,65 @@ export default function NovoBMPage() {
       return null
     }
 
-    // --- PASSO 3: Calcular horas por funcionário com base nas marcações ---
-    // Classifica dias: dom/feriado = HE100, sábado = HE50 (excedente), dia útil = normal + HE50
-    const perFunc: Record<string, { func: any; cargo: string; tipos: Record<string, Set<string>>; horas: { normais: number; he50: number; he100: number } }> = {}
+    // --- PASSO 3: Calcular horas por funcionário POR FUNÇÃO VIGENTE ---
+    // Se um funcionário mudou de função no período (promoção), os dias são
+    // divididos entre a função antiga e a nova usando historico_funcional.
+    // Chave: "funcId|funcaoId|CARGO" → acumulador de dias/horas
+    type SplitEntry = { func: any; cargo: string; funcao_id: string | null; tipos: Record<string, Set<string>>; horas: { normais: number; he50: number; he100: number } }
+    const perFuncSplit: Record<string, SplitEntry> = {}
+    let anyDayProcessed = false
 
     Array.from(funcMap.entries()).forEach(([fid, info]) => {
       const dates = marcDates.get(fid)
       if (!dates || dates.size === 0) return
 
-      perFunc[fid] = {
-        func: info.func,
-        cargo: info.cargo,
-        tipos: { util: new Set(), sabado: new Set(), domingo_feriado: new Set() },
-        horas: { normais: 0, he50: 0, he100: 0 },
-      }
-
       Array.from(dates).forEach(dateStr => {
-        // Verifica se a data está dentro do período efetivo do funcionário
         if (dateStr < info.periodoInicio || dateStr > info.periodoFim) return
+
+        // Resolve qual cargo/função estava vigente NESTE dia
+        const resolved = resolveCargoNaData(fid, dateStr, info.cargo, info.func.funcao_id ?? null)
+        const splitKey = `${fid}|${resolved.funcao_id ?? ''}|${resolved.cargo.toUpperCase()}`
+
+        if (!perFuncSplit[splitKey]) {
+          perFuncSplit[splitKey] = {
+            func: info.func,
+            cargo: resolved.cargo,
+            funcao_id: resolved.funcao_id,
+            tipos: { util: new Set(), sabado: new Set(), domingo_feriado: new Set() },
+            horas: { normais: 0, he50: 0, he100: 0 },
+          }
+        }
+        const entry = perFuncSplit[splitKey]
+        anyDayProcessed = true
 
         const dt = new Date(dateStr + 'T12:00:00')
         const dow = dt.getDay()
-        const isDom = dow === 0
-        const isSab = dow === 6
-
         const key = `${fid}|${dateStr}`
         const horasCalc = marcPorFuncDia.get(key) ?? 0
 
-        if (isDom) {
-          perFunc[fid].tipos.domingo_feriado.add(dateStr)
-          perFunc[fid].horas.he100 += horasCalc
-        } else if (isSab) {
-          perFunc[fid].tipos.sabado.add(dateStr)
-          const normais = Math.min(horasCalc, cargaDia)
-          perFunc[fid].horas.normais += normais
-          perFunc[fid].horas.he50 += Math.max(0, horasCalc - cargaDia)
+        if (dow === 0) {
+          entry.tipos.domingo_feriado.add(dateStr)
+          entry.horas.he100 += horasCalc
+        } else if (dow === 6) {
+          entry.tipos.sabado.add(dateStr)
+          entry.horas.normais += Math.min(horasCalc, cargaDia)
+          entry.horas.he50 += Math.max(0, horasCalc - cargaDia)
         } else {
-          perFunc[fid].tipos.util.add(dateStr)
-          const normais = Math.min(horasCalc, cargaDia)
-          perFunc[fid].horas.normais += normais
-          perFunc[fid].horas.he50 += Math.max(0, horasCalc - cargaDia)
+          entry.tipos.util.add(dateStr)
+          entry.horas.normais += Math.min(horasCalc, cargaDia)
+          entry.horas.he50 += Math.max(0, horasCalc - cargaDia)
         }
       })
     })
 
-    // Se havia alocações mas nenhum funcionário teve marcações processáveis
-    if (Object.keys(perFunc).length === 0 && avisoSemPonto) {
+    if (!anyDayProcessed && avisoSemPonto) {
       setError('Funcionarios alocados nesta obra no periodo, mas sem marcacoes de ponto registradas.')
       setPreview([])
       setPreviewing(false)
       return
     }
 
-    // Step 2: group funcionarios by função (cargo)
+    // Step 2: group split entries by função (cargo)
     const perFuncao: Record<string, {
       cargo: string
       funcao_id?: string | null
@@ -313,8 +350,8 @@ export default function NovoBMPage() {
       horasReais: { normais: number; he50: number; he100: number }
     }> = {}
 
-    Object.values(perFunc).forEach(g => {
-      const cargo = g.cargo ?? g.func.cargo ?? 'OUTROS'
+    Object.values(perFuncSplit).forEach(g => {
+      const cargo = g.cargo ?? 'OUTROS'
       const cargoKey = cargo.toUpperCase()
 
       let dias_normais: number, dias_he70: number, dias_he100: number
@@ -337,14 +374,12 @@ export default function NovoBMPage() {
         datas = Array.from(new Set<string>(allArr)).sort()
       }
 
-      // Agrupar por funcao_id+cargo para evitar conflito quando mesmo cargo tem funcao_id diferente
-      const groupKey = g.func.funcao_id ? `${g.func.funcao_id}|${cargoKey}` : cargoKey
-      if (!perFuncao[groupKey]) perFuncao[groupKey] = { cargo, funcao_id: g.func.funcao_id ?? null, funcs: [], horasReais: { normais: 0, he50: 0, he100: 0 } }
+      const groupKey = g.funcao_id ? `${g.funcao_id}|${cargoKey}` : cargoKey
+      if (!perFuncao[groupKey]) perFuncao[groupKey] = { cargo, funcao_id: g.funcao_id ?? null, funcs: [], horasReais: { normais: 0, he50: 0, he100: 0 } }
       perFuncao[groupKey].funcs.push({
         id: g.func.id,
         nome: g.func.nome_guerra ?? g.func.nome,
         dias_normais, dias_he70, dias_he100, datas,
-        // Horas reais por funcionário (pra modelo hora efetiva)
         hh_normais_real: Math.round(g.horas.normais * 100) / 100,
         hh_he70_real: Math.round(g.horas.he50 * 100) / 100,
         hh_he100_real: Math.round(g.horas.he100 * 100) / 100,
