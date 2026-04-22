@@ -1,6 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { Zap, RefreshCw, Users, Calculator, AlertTriangle, Check, Info } from 'lucide-react'
+import { Zap, RefreshCw, AlertTriangle, Check, Info } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 
 type ImportStatus = {
@@ -71,63 +71,62 @@ export default function SecullumSyncPanel({ obraId }: { obraId?: string }) {
     ? dataInicio <= status.importacao.ultima_data
     : false
 
-  async function handleSync() {
+  async function handleSincronizar() {
     setLoading('sync')
     setLastResult(null)
+    const results: any = {}
+
     try {
-      const r = await fetch('/api/ponto/sync-secullum', {
+      // Passo 1: Importar marcações do Secullum
+      toast.warning('Passo 1/3 — Importando marcações...')
+      const r1 = await fetch('/api/ponto/sync-secullum', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dataInicio, dataFim, trigger: 'manual' }),
       })
-      const j = await r.json()
-      setLastResult({ kind: 'sync', data: j, ok: r.ok })
-      if (r.ok) {
-        toast.success(`Sync ok: ${j.novas ?? 0} marcações novas`)
-        loadStatus(false) // atualiza status sem resetar datas do usuário
-      } else {
-        toast.error('Erro: ' + (j.error || 'desconhecido'))
+      const j1 = await r1.json()
+      results.sync = j1
+      if (!r1.ok) {
+        toast.error('Erro na importação: ' + (j1.error || 'desconhecido'))
+        setLastResult({ kind: 'sync', data: results, ok: false })
+        return
       }
-    } catch (e: any) {
-      toast.error('Falha de rede: ' + (e?.message || ''))
-    } finally {
-      setLoading(null)
-    }
-  }
 
-  async function handleCalcular() {
-    setLoading('calc')
-    setLastResult(null)
-    try {
-      const body: any = { dataInicio, dataFim }
-      if (obraId) body.obraId = obraId
-      const r = await fetch('/api/ponto/calcular-efetivo', {
+      // Passo 2: Calcular horas (efetivo diário)
+      toast.warning('Passo 2/3 — Calculando horas...')
+      setLoading('calc')
+      const body2: any = { dataInicio, dataFim }
+      if (obraId) body2.obraId = obraId
+      const r2 = await fetch('/api/ponto/calcular-efetivo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify(body2),
       })
-      const j = await r.json()
-      setLastResult({ kind: 'calc', data: j, ok: r.ok })
-      if (r.ok) toast.success(`Horas calculadas: ${j.criados_ou_atualizados ?? 0} dia(s)`)
-      else toast.error('Erro: ' + (j.error || 'desconhecido'))
-    } catch (e: any) {
-      toast.error('Falha de rede: ' + (e?.message || ''))
-    } finally {
-      setLoading(null)
-    }
-  }
+      const j2 = await r2.json()
+      results.calc = j2
+      if (!r2.ok) {
+        toast.error('Erro no cálculo: ' + (j2.error || 'desconhecido'))
+        setLastResult({ kind: 'all', data: results, ok: false })
+        return
+      }
 
-  async function handleReconciliar() {
-    setLoading('rec')
-    setLastResult(null)
-    try {
-      const r = await fetch('/api/ponto/reconciliar-funcionarios')
-      const j = await r.json()
-      setLastResult({ kind: 'rec', data: { totais: j.totais, so_secullum_amostra: j.so_secullum?.slice(0, 10), so_softmonte: j.so_softmonte }, ok: r.ok })
-      if (r.ok) toast.success(`${j.totais?.match ?? 0} funcionários vinculados em ambos os sistemas`)
-      else toast.error('Erro: ' + (j.error || 'desconhecido'))
+      // Passo 3: Reconciliar cadastros
+      toast.warning('Passo 3/3 — Reconciliando cadastros...')
+      setLoading('rec')
+      const r3 = await fetch('/api/ponto/reconciliar-funcionarios')
+      const j3 = await r3.json()
+      results.rec = { totais: j3.totais, so_secullum_amostra: j3.so_secullum?.slice(0, 10), so_softmonte: j3.so_softmonte }
+
+      // Resultado final
+      const novas = j1.novas ?? 0
+      const dias = j2.criados_ou_atualizados ?? 0
+      const match = j3.totais?.match ?? 0
+      toast.success(`Sincronização completa: ${novas} marcações, ${dias} dias calculados, ${match} funcionários vinculados`)
+      setLastResult({ kind: 'all', data: results, ok: true })
+      loadStatus(false)
     } catch (e: any) {
       toast.error('Falha de rede: ' + (e?.message || ''))
+      setLastResult({ kind: 'all', data: results, ok: false })
     } finally {
       setLoading(null)
     }
@@ -206,37 +205,22 @@ export default function SecullumSyncPanel({ obraId }: { obraId?: string }) {
             </div>
           )}
 
-          {/* Botões na ordem correta do fluxo */}
-          <div className="flex gap-2 flex-wrap">
-            <button type="button" onClick={handleSync} disabled={loading !== null}
-              className="px-3 py-1.5 bg-brand text-white rounded-lg text-xs font-bold hover:bg-brand-dark disabled:opacity-50 flex items-center gap-1.5">
-              <RefreshCw className={`w-3.5 h-3.5 ${loading === 'sync' ? 'animate-spin' : ''}`} />
-              {loading === 'sync' ? 'Importando...' : '1. Importar ponto'}
-            </button>
-            <button type="button" onClick={handleCalcular} disabled={loading !== null}
-              className="px-3 py-1.5 border border-brand text-brand rounded-lg text-xs font-bold hover:bg-brand/5 disabled:opacity-50 flex items-center gap-1.5">
-              <Calculator className={`w-3.5 h-3.5 ${loading === 'calc' ? 'animate-spin' : ''}`} />
-              {loading === 'calc' ? 'Calculando...' : '2. Calcular horas'}
-            </button>
-            <button type="button" onClick={handleReconciliar} disabled={loading !== null}
-              className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-lg text-xs font-semibold hover:bg-gray-50 disabled:opacity-50 flex items-center gap-1.5">
-              <Users className={`w-3.5 h-3.5 ${loading === 'rec' ? 'animate-spin' : ''}`} />
-              Reconciliar cadastros
-            </button>
-          </div>
+          {/* Botão único */}
+          <button type="button" onClick={handleSincronizar} disabled={loading !== null}
+            className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-bold hover:bg-brand-dark disabled:opacity-50 flex items-center gap-2">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            {loading === 'sync' ? 'Importando marcações...' : loading === 'calc' ? 'Calculando horas...' : loading === 'rec' ? 'Reconciliando...' : 'Sincronizar'}
+          </button>
 
           <p className="text-[11px] text-gray-500">
-            <strong>Fluxo:</strong> (1) importa marcações brutas da Secullum, (2) calcula horas trabalhadas aplicando a escala de cada obra.
-            Ponto é do colaborador — a obra do dia é definida pela alocação vigente ou atribuição manual no efetivo.
+            Importa marcações da Secullum, calcula horas trabalhadas e reconcilia cadastros em um único passo.
           </p>
 
           {lastResult && (
             <div className={`p-3 rounded-lg border text-xs ${lastResult.ok ? 'bg-green-50 border-green-200 text-green-900' : 'bg-red-50 border-red-200 text-red-900'}`}>
               <div className="flex items-center gap-1.5 font-bold mb-1">
                 {lastResult.ok ? <Check className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-                {lastResult.kind === 'sync' && 'Resultado da importação'}
-                {lastResult.kind === 'calc' && 'Resultado do cálculo de horas'}
-                {lastResult.kind === 'rec' && 'Reconciliação de cadastros'}
+                {lastResult.kind === 'all' ? 'Resultado da sincronização' : lastResult.kind === 'sync' ? 'Resultado da importação' : lastResult.kind === 'calc' ? 'Resultado do cálculo' : 'Reconciliação'}
               </div>
               <pre className="whitespace-pre-wrap text-[11px] leading-tight max-h-60 overflow-y-auto">
                 {JSON.stringify(lastResult.data, null, 2)}
