@@ -8,7 +8,6 @@ import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import SearchInput from '@/components/SearchInput'
 import EmptyState from '@/components/ui/EmptyState'
 import { ChevronDown, ChevronRight, DollarSign, Pencil, Plus, Trash2, X } from 'lucide-react'
-import EntityActions from '@/components/ui/EntityActions'
 import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 import { fmt } from '@/lib/cores'
 
@@ -296,7 +295,8 @@ export default function CustosFixosPage() {
                         <span className="text-sm text-gray-700 flex-1 truncate">{c.nome}</span>
                         <span className="text-sm font-semibold text-gray-800 tabular-nums">{fmt(c.valor)}</span>
                         <span className="text-xs text-gray-400 min-w-[40px]">dia {c.dia_vencimento}</span>
-                        <EntityActions entity="centro_custo" id={c.centro_custo_id} nome={c.nome} onRefresh={load} onEdit={() => openEdit(c)} />
+                        <button onClick={() => openEdit(c)} className="p-1.5 rounded hover:bg-gray-100" title="Editar"><Pencil className="w-4 h-4 text-gray-400" /></button>
+                        <button onClick={() => handleDelete(c.id)} className="p-1.5 rounded hover:bg-gray-100" title="Excluir"><Trash2 className="w-4 h-4 text-gray-400" /></button>
                       </div>
                     ))}
                   </div>
