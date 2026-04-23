@@ -241,6 +241,29 @@ export default function DividaDetalheClient({ passivo, parcelas: initialParcelas
             Gerar lancamentos
           </button>
         )}
+        {parcelasPagas > 0 && (() => {
+          const pagasSemLanc = parcelas.filter(p => p.status === 'paga' && !p.hasLancamento).length
+          if (pagasSemLanc === 0) return null
+          return (
+            <button onClick={async () => {
+              const ok = await confirmDialog({
+                title: 'Registrar histórico de pagamentos?',
+                message: `Serão criados ${pagasSemLanc} lançamentos retroativos com status "pago" para parcelas já pagas antes do cadastro.`,
+                variant: 'info', confirmLabel: 'Registrar',
+              })
+              if (!ok) return
+              setSaving(true)
+              const { data, error } = await supabase.rpc('materializar_parcelas_pagas_historico', { p_passivo_id: passivo.id })
+              setSaving(false)
+              if (error) { toast.error(error.message); return }
+              toast.success(`${data?.lancamentos_pagos_criados ?? 0} lançamentos históricos criados`)
+              reloadParcelas()
+            }} disabled={saving}
+              className="px-4 py-2 border border-amber-300 text-amber-700 bg-amber-50 rounded-lg text-sm font-medium hover:bg-amber-100">
+              Registrar histórico ({pagasSemLanc} pagas)
+            </button>
+          )
+        })()}
         {passivo.status === 'ativa' && parcelasAbertas.length > 0 && (
           <button
             onClick={() => { setShowAmort(true); setAmortPreview(null); setAmortForm(f => ({ ...f, valor: String(saldoDevedor) })) }}
