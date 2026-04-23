@@ -341,7 +341,7 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
       if (!ok) { setSaving(false); return }
     }
 
-    const { error } = await supabase.from('passivos_nao_circulantes').update({
+    const payload = {
       descricao: editForm.descricao.trim(),
       banco_credor: editForm.banco_credor.trim() || null,
       numero_contrato: sanitizarContrato(editForm.numero_contrato) || null,
@@ -349,8 +349,8 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
       observacao: editForm.observacao.trim() || null,
       saldo_devedor_atual: parseFloat(editForm.saldo_devedor_atual) || showEditar.saldo_devedor_atual,
       saldo_devedor: parseFloat(editForm.saldo_devedor_atual) || showEditar.saldo_devedor_atual,
-      tipo: editForm.tipo, tipo_divida: editForm.tipo_divida,
-      sistema: editForm.sistema, credor_tipo: editForm.credor_tipo,
+      tipo: editForm.tipo || null, tipo_divida: editForm.tipo_divida || null,
+      sistema: editForm.sistema || null, credor_tipo: editForm.credor_tipo || null,
       taxa_juros_am: taxaAm > 0 ? taxaAm : null,
       taxa_juros_aa: taxaAa > 0 ? taxaAa : null,
       fornecedor_id: editForm.fornecedor_id || null,
@@ -358,9 +358,12 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
       conta_debito_id: editForm.conta_debito_id || null,
       valor_parcela: Number(editForm.valor_parcela) || showEditar.valor_parcela,
       n_parcelas_total: Number(editForm.n_parcelas_total) || showEditar.n_parcelas_total,
-      n_parcelas_pagas: Number(editForm.n_parcelas_pagas) ?? showEditar.n_parcelas_pagas,
-    }).eq('id', showEditar.id)
-    if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
+      n_parcelas_pagas: editForm.n_parcelas_pagas !== '' ? Number(editForm.n_parcelas_pagas) : (showEditar.n_parcelas_pagas ?? 0),
+    }
+    const { data: updated, error } = await supabase.from('passivos_nao_circulantes')
+      .update(payload).eq('id', showEditar.id).select().maybeSingle()
+    if (error) { toast.error('Erro ao salvar: ' + error.message); setSaving(false); return }
+    if (!updated) { toast.error('Nenhum registro atualizado. Verifique permissões.'); setSaving(false); return }
 
     if (mudouParcelas) {
       await supabase.rpc('gerar_divida_parcelas', { p_passivo_id: showEditar.id })
@@ -659,7 +662,11 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <span className={`text-[10px] px-1.5 py-0.5 rounded ${cb.cls}`}>{cb.icon}</span>
-                      <div><div className="font-medium">{d.credor_display || d.descricao}</div><div className="text-[10px] text-gray-400">{d.descricao}</div></div>
+                      <div>
+                        <div className="font-medium">{d.banco_credor || d.descricao}</div>
+                        <div className="text-[10px] text-gray-400">{d.numero_contrato ? `${d.numero_contrato} · ` : ''}{d.descricao}</div>
+                        {n(d.parcelas_atrasadas) > 0 && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 font-bold mt-0.5 inline-block">⚠ {d.parcelas_atrasadas} parcela{d.parcelas_atrasadas > 1 ? 's' : ''} em atraso</span>}
+                      </div>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-xs">{TIPO_LABEL[d.tipo_divida] || d.tipo_divida || '—'}</td>

@@ -189,6 +189,24 @@ export default function DividaDetalheClient({ passivo, parcelas: initialParcelas
         <span className={`px-3 py-1 rounded-full text-xs font-semibold ${statusInfo.cls}`}>{statusInfo.label}</span>
       </div>
 
+      {/* Alerta parcelas atrasadas */}
+      {(() => {
+        const hoje = new Date().toISOString().slice(0, 10)
+        const atrasadas = parcelas.filter(p => p.status === 'aberta' && p.data_vencimento < hoje)
+        if (atrasadas.length === 0) return null
+        return (
+          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2.5">
+            <span className="text-red-500 text-lg">⚠</span>
+            <div>
+              <p className="text-sm font-semibold text-red-800">{atrasadas.length} parcela{atrasadas.length > 1 ? 's' : ''} em atraso</p>
+              <p className="text-xs text-red-700 mt-0.5">
+                {atrasadas.slice(0, 3).map(p => `Parcela ${p.numero} venceu em ${new Date(p.data_vencimento + 'T12:00').toLocaleDateString('pt-BR')}`).join(' · ')}
+              </p>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <div className="bg-white rounded-xl border border-gray-100 p-4">
@@ -453,12 +471,15 @@ export default function DividaDetalheClient({ passivo, parcelas: initialParcelas
               <tbody>
                 {parcelas.filter(p => p.status !== 'cancelada').map((p: any) => {
                   const total = n(p.valor_amortizacao) + n(p.valor_juros) + n(p.valor_outros)
-                  const badge = PARCELA_BADGE[p.status] || PARCELA_BADGE.aberta
+                  const hoje = new Date().toISOString().slice(0, 10)
+                  const isAtrasada = p.status === 'aberta' && p.data_vencimento && p.data_vencimento < hoje
+                  const diasAtraso = isAtrasada ? Math.ceil((Date.now() - new Date(p.data_vencimento + 'T12:00').getTime()) / 86400000) : 0
+                  const badge = isAtrasada ? { label: `Vencida há ${diasAtraso}d`, cls: 'bg-red-100 text-red-700' } : (PARCELA_BADGE[p.status] || PARCELA_BADGE.aberta)
                   const isOpen = ['aberta', 'atrasada', 'pendente'].includes(p.status)
                   return (
-                    <tr key={p.id} className="border-t border-gray-50 hover:bg-gray-50/50">
+                    <tr key={p.id} className={`border-t border-gray-50 hover:bg-gray-50/50 ${isAtrasada ? 'bg-red-50' : ''}`}>
                       <td className="px-4 py-2.5 font-medium text-gray-700">{p.numero}</td>
-                      <td className="px-4 py-2.5 text-gray-600">
+                      <td className={`px-4 py-2.5 ${isAtrasada ? 'text-red-700 font-semibold' : 'text-gray-600'}`}>
                         {p.data_vencimento ? new Date(p.data_vencimento + 'T12:00').toLocaleDateString('pt-BR') : '—'}
                       </td>
                       <td className="px-4 py-2.5 text-right text-gray-700">{fmt(p.valor_amortizacao)}</td>
