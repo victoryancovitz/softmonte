@@ -9,9 +9,36 @@ import { Landmark, AlertTriangle } from 'lucide-react'
 import { fmt } from '@/lib/cores'
 import { PASSIVO_TIPO, DIVIDA_TIPO, CREDOR_TIPO, SISTEMA_AMORTIZACAO } from '@/lib/enums/financeiro'
 import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 const n = (v: any) => Number(v || 0)
 
 const TIPO_LABEL: Record<string, string> = { ...DIVIDA_TIPO }
+
+const MESES_CURTO = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+function CronogramaChart({ data }: { data: any[] }) {
+  // Agrupar por mês (somando todos os credores)
+  const porMes: Record<string, number> = {}
+  data.forEach((d: any) => {
+    porMes[d.mes] = (porMes[d.mes] || 0) + Number(d.valor || 0)
+  })
+  const chartData = Object.entries(porMes).sort(([a], [b]) => a.localeCompare(b)).map(([mes, valor]) => {
+    const [ano, m] = mes.split('-')
+    return { mes: `${MESES_CURTO[Number(m)]}/${ano.slice(2)}`, valor: Math.round(valor) }
+  })
+  const fmtK = (v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <BarChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+        <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
+        <YAxis tickFormatter={fmtK} tick={{ fontSize: 10 }} width={45} />
+        <Tooltip formatter={(v: any) => `R$ ${Number(v).toLocaleString('pt-BR')}`} />
+        <Bar dataKey="valor" radius={[4, 4, 0, 0]}>
+          {chartData.map((_, i) => <Cell key={i} fill={i === 0 ? '#0F3757' : '#C9A269'} />)}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
 
 const CREDOR_BADGE: Record<string, { icon: string; cls: string }> = {
   banco: { icon: '🏦', cls: 'bg-blue-100 text-blue-700' },
@@ -22,7 +49,7 @@ const CREDOR_BADGE: Record<string, { icon: string; cls: string }> = {
   outro: { icon: '📋', cls: 'bg-gray-100 text-gray-600' },
 }
 
-export default function DividasClient({ dividas, indicadores, contas, fornecedores, centros, credorTipos }: { dividas: any[]; indicadores: any; contas: any[]; fornecedores?: any[]; centros?: any[]; credorTipos?: any[] }) {
+export default function DividasClient({ dividas, indicadores, kpis, cronograma, composicao, contas, fornecedores, centros, credorTipos }: { dividas: any[]; indicadores: any; kpis?: any; cronograma?: any[]; composicao?: any[]; contas: any[]; fornecedores?: any[]; centros?: any[]; credorTipos?: any[] }) {
   const supabase = createClient()
   const toast = useToast()
   const [showNova, setShowNova] = useState(false)
@@ -440,7 +467,8 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="text-[10px] font-bold text-gray-400 uppercase">Próxima Parcela</div>
-          <div className="text-sm font-bold text-gray-900">{proxVenc ? `${fmt(proxVenc.prox_valor_parcela)} em ${new Date(proxVenc.prox_vencimento + 'T12:00').toLocaleDateString('pt-BR')}` : '—'}</div>
+          <div className="text-sm font-bold text-gray-900">{kpis?.proxima_valor ? fmt(n(kpis.proxima_valor)) : '—'}</div>
+          {kpis?.proxima_data && <div className="text-[10px] text-gray-500">em {new Date(kpis.proxima_data + 'T12:00').toLocaleDateString('pt-BR')} ({kpis.proxima_qtd} parcela{kpis.proxima_qtd > 1 ? 's' : ''})</div>}
         </div>
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="text-[10px] font-bold text-gray-400 uppercase">Parcelas em Atraso</div>
@@ -460,6 +488,43 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
           <span className="text-[10px] px-3 py-1 rounded-full bg-gray-100 text-gray-600" title="Dívida / (Dívida + PL)">
             Endividamento: {n(indicadores.endividamento_geral_pct).toFixed(1)}%
           </span>
+        </div>
+      )}
+
+      {/* Gráficos */}
+      {((cronograma ?? []).length > 0 || (composicao ?? []).length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
+          {/* Cronograma mensal */}
+          {(cronograma ?? []).length > 0 && (
+            <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 p-4">
+              <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">Vencimentos — próximos 12 meses</h3>
+              <div className="h-48">
+                <CronogramaChart data={cronograma ?? []} />
+              </div>
+            </div>
+          )}
+          {/* Composição por credor */}
+          {(composicao ?? []).length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 p-4">
+              <h3 className="text-xs font-bold text-gray-400 uppercase mb-3">Composição por credor</h3>
+              <div className="space-y-2">
+                {(composicao ?? []).map((c: any, i: number) => {
+                  const total = (composicao ?? []).reduce((s: number, x: any) => s + n(x.saldo), 0)
+                  const pct = total > 0 ? (n(c.saldo) / total * 100) : 0
+                  const cores = ['bg-blue-500', 'bg-amber-500', 'bg-green-500', 'bg-red-500', 'bg-purple-500', 'bg-indigo-500']
+                  return (
+                    <div key={c.banco_credor}>
+                      <div className="flex justify-between text-xs mb-0.5">
+                        <span className="text-gray-600 truncate">{c.banco_credor}</span>
+                        <span className="text-gray-500 font-medium">{fmt(n(c.saldo))} ({pct.toFixed(1)}%)</span>
+                      </div>
+                      <div className="w-full h-2 bg-gray-100 rounded-full"><div className={`h-full rounded-full ${cores[i % cores.length]}`} style={{ width: `${pct}%` }} /></div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
