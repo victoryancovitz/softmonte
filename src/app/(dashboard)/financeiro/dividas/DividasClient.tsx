@@ -153,7 +153,18 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
 
     const parcelasCriadas = res?.parcelas_criadas ?? nTotal
     const parcelasPagas = res?.n_pagas ?? nPagas
-    toast.success(`Dívida cadastrada. ${parcelasCriadas} parcelas geradas (${parcelasPagas} pagas, ${parcelasCriadas - parcelasPagas} em aberto).`)
+
+    // 3. Gerar lançamentos automaticamente para as parcelas em aberto
+    const { data: resLanc } = await supabase.rpc('materializar_lancamentos_divida', {
+      p_passivo_id: passivo.id,
+      p_conta_pagadora_id: form.conta_debito_id || null,
+      p_centro_custo_id: form.centro_custo_id || null,
+      p_forma_pagamento: null,
+      p_origem: 'divida_parcela',
+    })
+    const lancCriados = resLanc?.lancamentos_criados ?? 0
+
+    toast.success(`Dívida cadastrada. ${parcelasCriadas} parcelas (${parcelasPagas} pagas). ${lancCriados} lançamentos gerados.`)
     setShowNova(false); setSaving(false)
   }
 
