@@ -67,10 +67,38 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
   const [uploadingAnexo, setUploadingAnexo] = useState(false)
   const [centrosCusto, setCentrosCusto] = useState<any[]>([])
 
+  // Modo B (dívida) & Modo C (processo jurídico)
+  const [dividas, setDividas] = useState<any[]>([])
+  const [selectedDividaId, setSelectedDividaId] = useState('')
+  const [parcelasAberta, setParcelasAberta] = useState<any[]>([])
+  const [selectedParcelaId, setSelectedParcelaId] = useState('')
+  const [processos, setProcessos] = useState<any[]>([])
+  const [selectedProcessoId, setSelectedProcessoId] = useState('')
+  const [selectedOrigemJuridica, setSelectedOrigemJuridica] = useState('')
+
   // Load centros de custo
   useEffect(() => {
     supabase.from('centros_custo').select('id, codigo, nome, tipo').is('deleted_at', null).eq('ativo', true).order('codigo').then(({ data }) => setCentrosCusto(data ?? []))
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch dividas e processos when modal opens
+  useEffect(() => {
+    if (!open) return
+    supabase.from('passivos_nao_circulantes').select('id, descricao, banco_credor, valor_total, status')
+      .eq('status', 'ativa').is('deleted_at', null).order('descricao')
+      .then(({ data }) => setDividas(data ?? []))
+    supabase.from('processos_juridicos').select('id, numero_processo, parte_adversa, tipo')
+      .is('deleted_at', null).order('numero_processo')
+      .then(({ data }) => setProcessos(data ?? []))
+  }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Fetch parcelas when divida_id changes
+  useEffect(() => {
+    if (!selectedDividaId) { setParcelasAberta([]); setSelectedParcelaId(''); return }
+    supabase.from('divida_parcelas').select('id, numero_parcela, valor, data_vencimento, status')
+      .eq('divida_id', selectedDividaId).eq('status', 'aberta').order('numero_parcela')
+      .then(({ data }) => { setParcelasAberta(data ?? []); setSelectedParcelaId('') })
+  }, [selectedDividaId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Reset form when modal opens/closes or editingLanc changes
   useEffect(() => {
@@ -113,7 +141,27 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
       setModalForm({ ...FORM_INITIAL })
     }
     setAvisoSimilar(null)
+    setSelectedDividaId('')
+    setSelectedParcelaId('')
+    setSelectedProcessoId('')
+    setSelectedOrigemJuridica('')
   }, [open, editingLanc])
+
+  // Auto-fill from parcela de dívida
+  function handleParcelaChange(parcelaId: string) {
+    setSelectedParcelaId(parcelaId)
+    if (!parcelaId) return
+    const parcela = parcelasAberta.find(p => p.id === parcelaId)
+    const divida = dividas.find(d => d.id === selectedDividaId)
+    if (parcela) {
+      setModalForm(f => ({
+        ...f,
+        valor: String(parcela.valor || f.valor),
+        data_vencimento: parcela.data_vencimento || f.data_vencimento,
+        fornecedor: divida?.banco_credor || f.fornecedor,
+      }))
+    }
+  }
 
   // Duplicate detection debounce
   useEffect(() => {
@@ -317,6 +365,17 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
       }
       // SIMPLE mode
       else {
+        // Determine origem and extra fields based on vinculação
+        let origem = 'manual'
+        const extraFields: Record<string, any> = {}
+        if (selectedParcelaId && selectedDividaId) {
+          origem = 'divida_parcela'
+          extraFields.divida_parcela_id = selectedParcelaId
+        } else if (selectedProcessoId) {
+          origem = selectedOrigemJuridica || 'manual'
+          extraFields.processo_juridico_id = selectedProcessoId
+        }
+
         const { error } = await supabase.from('financeiro_lancamentos').insert({
           tipo: modalForm.tipo, nome: modalForm.nome, valor: valorNum,
           fornecedor: modalForm.fornecedor || null,
@@ -328,13 +387,23 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
           data_competencia: modalForm.data_competencia || null,
           data_vencimento: modalForm.data_vencimento || null,
           observacao: modalForm.observacao || null, is_provisao: modalForm.is_provisao,
-          origem: 'manual', status: 'em_aberto', created_by: user?.id ?? null,
+          origem, status: 'em_aberto', created_by: user?.id ?? null,
           numero_documento: modalForm.numero_documento || null,
           anexo_url: modalForm.anexo_url || null,
           juros_dia_padrao_pct: modalForm.juros_dia_padrao_pct ?? 0.033,
           multa_padrao_pct: modalForm.multa_padrao_pct ?? 2,
+          ...extraFields,
         })
         if (error) { toast.error('Erro: ' + error.message); setSalvando(false); return }
+
+        // If linked to a divida parcela and status is pago, mark parcela as paga
+        if (selectedParcelaId && modalForm.status === 'pago') {
+          await supabase.from('divida_parcelas').update({
+            status: 'paga',
+            data_pagamento: modalForm.data_pagamento || new Date().toISOString().slice(0, 10),
+          }).eq('id', selectedParcelaId)
+        }
+
         toast.success('Lançamento criado')
       }
       onClose()
@@ -640,6 +709,71 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
                       <div>30 dias: +R$ {(Number(modalForm.valor) * Number(modalForm.juros_dia_padrao_pct || 0.033) / 100 * 30 + Number(modalForm.valor) * Number(modalForm.multa_padrao_pct || 2) / 100).toFixed(2)}</div>
                     </div>
                   )}
+                </div>
+              </details>
+
+              {/* Vincular a dívida ou processo */}
+              <details className="border border-gray-200 rounded-xl overflow-hidden">
+                <summary className="px-4 py-3 bg-gray-50 cursor-pointer text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  Vincular a divida ou processo
+                </summary>
+                <div className="px-4 py-3 space-y-4">
+                  {/* Modo B — Parcela de dívida */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-gray-500">Vincular a parcela de divida</label>
+                    <select value={selectedDividaId} onChange={e => { setSelectedDividaId(e.target.value); setSelectedParcelaId('') }}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" disabled={!!selectedProcessoId}>
+                      <option value="">Nenhuma divida</option>
+                      {dividas.map(d => (
+                        <option key={d.id} value={d.id}>{d.descricao} — {d.banco_credor} ({fmt(d.valor_total)})</option>
+                      ))}
+                    </select>
+                    {selectedDividaId && (
+                      <select value={selectedParcelaId} onChange={e => handleParcelaChange(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                        <option value="">Selecionar parcela...</option>
+                        {parcelasAberta.map(p => (
+                          <option key={p.id} value={p.id}>
+                            Parcela {p.numero_parcela} — {fmt(p.valor)} — venc. {p.data_vencimento ? new Date(p.data_vencimento + 'T12:00').toLocaleDateString('pt-BR') : 'N/A'}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                    {selectedParcelaId && (
+                      <div className="bg-blue-50 rounded-lg p-2 text-xs text-blue-800">
+                        Valores preenchidos automaticamente a partir da parcela selecionada.
+                      </div>
+                    )}
+                  </div>
+
+                  <hr className="border-gray-200" />
+
+                  {/* Modo C — Processo jurídico */}
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-gray-500">Vincular a processo juridico</label>
+                    <select value={selectedProcessoId} onChange={e => { setSelectedProcessoId(e.target.value); if (!e.target.value) setSelectedOrigemJuridica('') }}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" disabled={!!selectedDividaId}>
+                      <option value="">Nenhum processo</option>
+                      {processos.map(p => (
+                        <option key={p.id} value={p.id}>{p.numero_processo} — {p.parte_adversa} ({p.tipo})</option>
+                      ))}
+                    </select>
+                    {selectedProcessoId && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Tipo de origem</label>
+                        <select value={selectedOrigemJuridica} onChange={e => setSelectedOrigemJuridica(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                          <option value="">Selecionar origem...</option>
+                          <option value="juridico_acordo">Acordo</option>
+                          <option value="juridico_honorarios">Honorarios</option>
+                          <option value="juridico_custas">Custas</option>
+                          <option value="juridico_deposito">Deposito judicial</option>
+                          <option value="juridico_pericia">Pericia</option>
+                          <option value="juridico_multa">Multa</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </details>
             </div>
