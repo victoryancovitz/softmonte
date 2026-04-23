@@ -16,6 +16,7 @@ const FORM_INITIAL = {
   tipo: 'despesa',
   nome: '',
   fornecedor: '',
+  fornecedor_id: '',
   categoria: '',
   centro_custo: '',
   centro_custo_id: '',
@@ -109,6 +110,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
         tipo: editingLanc.tipo || 'despesa',
         nome: editingLanc.nome || '',
         fornecedor: editingLanc.fornecedor || '',
+        fornecedor_id: editingLanc.fornecedor_id || '',
         categoria: editingLanc.categoria || '',
         centro_custo: editingLanc.centro_custo || '',
         centro_custo_id: editingLanc.centro_custo_id || '',
@@ -246,6 +248,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
           tipo: modalForm.tipo,
           nome: modalForm.nome,
           fornecedor: modalForm.fornecedor || null,
+          fornecedor_id: modalForm.fornecedor_id || null,
           valor: valorNum,
           categoria: modalForm.categoria || null,
           centro_custo: modalForm.centro_custo || null,
@@ -312,7 +315,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
           venc.setDate(venc.getDate() + i * modalForm.intervalo_parcelas_dias)
           return {
             tipo: modalForm.tipo, nome: `${modalForm.nome} (${i + 1}/${modalForm.parcela_total})`,
-            fornecedor: modalForm.fornecedor || null,
+            fornecedor: modalForm.fornecedor || null, fornecedor_id: modalForm.fornecedor_id || null,
             valor: valorParcela, categoria: modalForm.categoria || null,
             centro_custo: modalForm.centro_custo || null,
             centro_custo_id: modalForm.centro_custo_id || null,
@@ -476,7 +479,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Fornecedor</label>
                 <QuickCreateSelect
                   type="fornecedor"
-                  value={fornecedores.find(f => f.nome === modalForm.fornecedor)?.id || ''}
+                  value={(modalForm as any).fornecedor_id || fornecedores.find(f => f.nome === modalForm.fornecedor)?.id || ''}
                   onChange={(id, label) => setModalForm(f => ({ ...f, fornecedor: label, fornecedor_id: id }))}
                   options={fornecedores.map(f => ({ id: f.id, label: f.nome }))}
                   placeholder="Buscar fornecedor..."
