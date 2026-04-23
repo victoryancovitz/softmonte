@@ -5,6 +5,7 @@ import { useToast } from '@/components/Toast'
 import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { fmt } from '@/lib/cores'
 import { useRouter } from 'next/navigation'
+import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 
 const n = (v: any) => Number(v || 0)
 
@@ -261,17 +262,15 @@ export default function DividaDetalheClient({ passivo, parcelas: initialParcelas
             <div className="space-y-3 mb-5">
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Conta pagadora *</label>
-                <select value={matForm.conta_id} onChange={e => setMatForm(f => ({ ...f, conta_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                  <option value="">Selecione...</option>
-                  {contas.map(c => <option key={c.id} value={c.id}>{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}
-                </select>
+                <QuickCreateSelect type="conta_bancaria" value={matForm.conta_id}
+                  options={contas.map(c => ({ id: c.id, label: c.banco ? `${c.banco} — ${c.nome}` : c.nome }))}
+                  onChange={(id) => setMatForm(f => ({ ...f, conta_id: id }))} />
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Centro de custo</label>
-                <select value={matForm.centro_custo_id} onChange={e => setMatForm(f => ({ ...f, centro_custo_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                  <option value="">Nenhum</option>
-                  {centros.map((c: any) => <option key={c.id} value={c.id}>{c.codigo} — {c.nome}</option>)}
-                </select>
+                <QuickCreateSelect type="centro_custo" value={matForm.centro_custo_id}
+                  options={centros.map((c: any) => ({ id: c.id, label: `${c.codigo} — ${c.nome}` }))}
+                  onChange={(id) => setMatForm(f => ({ ...f, centro_custo_id: id }))} />
               </div>
             </div>
             <div className="flex justify-end gap-2">
@@ -315,10 +314,9 @@ export default function DividaDetalheClient({ passivo, parcelas: initialParcelas
 
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Conta de débito *</label>
-                <select value={amortForm.conta_id} onChange={e => setAmortForm(f => ({ ...f, conta_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                  <option value="">Selecione...</option>
-                  {contas.map(c => <option key={c.id} value={c.id}>{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}
-                </select>
+                <QuickCreateSelect type="conta_bancaria" value={amortForm.conta_id}
+                  options={contas.map(c => ({ id: c.id, label: c.banco ? `${c.banco} — ${c.nome}` : c.nome }))}
+                  onChange={(id) => setAmortForm(f => ({ ...f, conta_id: id }))} />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -417,10 +415,9 @@ export default function DividaDetalheClient({ passivo, parcelas: initialParcelas
               </div>
               <div>
                 <label className="block text-xs font-semibold text-gray-500 mb-1">Conta</label>
-                <select value={pagForm.conta_id} onChange={e => setPagForm(f => ({ ...f, conta_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                  <option value="">Selecione...</option>
-                  {contas.map(c => <option key={c.id} value={c.id}>{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}
-                </select>
+                <QuickCreateSelect type="conta_bancaria" value={pagForm.conta_id}
+                  options={contas.map(c => ({ id: c.id, label: c.banco ? `${c.banco} — ${c.nome}` : c.nome }))}
+                  onChange={(id) => setPagForm(f => ({ ...f, conta_id: id }))} />
               </div>
               <div className="grid grid-cols-3 gap-2">
                 <div>

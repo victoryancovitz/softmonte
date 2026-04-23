@@ -607,8 +607,9 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
                 <input type="number" step="0.01" value={form.taxa_juros_am} onChange={e => setForm(f => ({ ...f, taxa_juros_am: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="1.80" />
                 {form.taxa_juros_am && <div className="text-[10px] text-gray-400 mt-0.5">{((Math.pow(1 + Number(form.taxa_juros_am) / 100, 12) - 1) * 100).toFixed(2)}% a.a.</div>}</div>
               <div><label className="block text-xs font-semibold text-gray-500 mb-1">Conta onde entrou o empréstimo</label>
-                <select value={form.conta_credito_id} onChange={e => setForm(f => ({ ...f, conta_credito_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                  <option value="">Nenhuma</option>{contas.map(c => <option key={c.id} value={c.id}>{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}</select>
+                <QuickCreateSelect type="conta_bancaria" value={form.conta_credito_id}
+                  options={contas.map(c => ({ id: c.id, label: c.banco ? `${c.banco} — ${c.nome}` : c.nome }))}
+                  onChange={(id) => setForm(f => ({ ...f, conta_credito_id: id }))} />
                 <div className="text-[10px] text-gray-400 mt-0.5">Só preencher se gerou entrada de caixa.</div></div>
               <div><label className="block text-xs font-semibold text-gray-500 mb-1">Observação</label>
                 <textarea value={form.observacao} onChange={e => setForm(f => ({ ...f, observacao: e.target.value }))} rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none" /></div>
@@ -772,7 +773,10 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
                 <div className="flex justify-between font-bold text-sm border-t pt-2 mt-2"><span>Total a pagar</span><span className="text-brand">{fmt(n(showPagar.valor_amortizacao) + (pagForm.valor_juros_real !== '' ? Number(pagForm.valor_juros_real) : n(showPagar.valor_juros)) + (pagForm.valor_mora_real !== '' ? Number(pagForm.valor_mora_real) : n(showPagar.juros_mora)) + (pagForm.valor_multa_real !== '' ? Number(pagForm.valor_multa_real) : n(showPagar.multa)))}</span></div>
               </div>
               <div><label className="block text-xs font-semibold text-gray-500 mb-1">Data pagamento</label><input type="date" value={pagForm.data_pagamento} onChange={e => setPagForm(f => ({ ...f, data_pagamento: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-              <div><label className="block text-xs font-semibold text-gray-500 mb-1">Conta</label><select value={pagForm.conta_id} onChange={e => setPagForm(f => ({ ...f, conta_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"><option value="">Selecionar...</option>{contas.map((c: any) => <option key={c.id} value={c.id}>{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}</select></div>
+              <div><label className="block text-xs font-semibold text-gray-500 mb-1">Conta</label>
+                <QuickCreateSelect type="conta_bancaria" value={pagForm.conta_id}
+                  options={contas.map((c: any) => ({ id: c.id, label: c.banco ? `${c.banco} — ${c.nome}` : c.nome }))}
+                  onChange={(id) => setPagForm(f => ({ ...f, conta_id: id }))} /></div>
               <div className="text-[10px] text-amber-600 bg-amber-50 p-2 rounded">Gera 2 lançamentos: juros (despesa DRE) + amortização (reduz passivo).</div>
             </div>
             <div className="flex gap-2"><button onClick={() => setShowPagar(null)} className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm">Cancelar</button><button onClick={pagarParcela} disabled={saving} className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium disabled:opacity-50">{saving ? 'Salvando...' : 'Confirmar Pagamento'}</button></div>
