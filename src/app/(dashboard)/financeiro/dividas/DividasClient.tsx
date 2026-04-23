@@ -22,7 +22,7 @@ const CREDOR_BADGE: Record<string, { icon: string; cls: string }> = {
   outro: { icon: '📋', cls: 'bg-gray-100 text-gray-600' },
 }
 
-export default function DividasClient({ dividas, indicadores, contas, fornecedores, centros }: { dividas: any[]; indicadores: any; contas: any[]; fornecedores?: any[]; centros?: any[] }) {
+export default function DividasClient({ dividas, indicadores, contas, fornecedores, centros, credorTipos }: { dividas: any[]; indicadores: any; contas: any[]; fornecedores?: any[]; centros?: any[]; credorTipos?: any[] }) {
   const supabase = createClient()
   const toast = useToast()
   const [showNova, setShowNova] = useState(false)
@@ -502,9 +502,9 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
                 options={(fornecedores ?? []).map((f: any) => ({ id: f.id, label: f.nome }))}
                 onChange={(id, label) => setForm(f => ({ ...f, fornecedor_id: id, banco_credor: label }))} /></div>
             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Tipo de credor</label>
-              <select value={form.credor_tipo} onChange={e => setForm(f => ({ ...f, credor_tipo: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                {Object.entries(CREDOR_TIPO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select></div>
+              <QuickCreateSelect type="credor_tipo" value={form.credor_tipo}
+                options={(credorTipos ?? []).map((t: any) => ({ id: t.valor, label: t.label }))}
+                onChange={(id) => setForm(f => ({ ...f, credor_tipo: id }))} /></div>
           </div>
 
           {/* SEÇÃO 2: Classificação */}
@@ -872,8 +872,9 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
                     options={(fornecedores ?? []).map((f: any) => ({ id: f.id, label: f.nome }))}
                     onChange={(id, label) => setEditForm(f => ({ ...f, fornecedor_id: id, banco_credor: label }))} /></div>
                 <div><label className="block text-xs font-semibold text-gray-600 mb-1">Tipo de credor</label>
-                  <select value={editForm.credor_tipo} onChange={e => setEditForm(f => ({ ...f, credor_tipo: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm">
-                    {Object.entries(CREDOR_TIPO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+                  <QuickCreateSelect type="credor_tipo" value={editForm.credor_tipo}
+                    options={(credorTipos ?? []).map((t: any) => ({ id: t.valor, label: t.label }))}
+                    onChange={(id) => setEditForm(f => ({ ...f, credor_tipo: id }))} /></div>
               </div>
 
               {/* Classificação */}

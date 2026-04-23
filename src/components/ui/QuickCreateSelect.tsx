@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { Plus, X } from 'lucide-react'
 
-type QuickCreateType = 'centro_custo' | 'categoria_financeira' | 'funcao' | 'cliente' | 'obra' | 'conta_bancaria' | 'fornecedor' | 'advogado'
+type QuickCreateType = 'centro_custo' | 'categoria_financeira' | 'funcao' | 'cliente' | 'obra' | 'conta_bancaria' | 'fornecedor' | 'advogado' | 'credor_tipo'
 
 interface QuickCreateOption {
   id: string
@@ -34,6 +34,7 @@ const TYPE_CONFIG: Record<QuickCreateType, { titulo: string; tabela: string }> =
   conta_bancaria: { titulo: 'Nova Conta Bancária', tabela: 'contas_correntes' },
   fornecedor: { titulo: 'Novo Fornecedor', tabela: 'fornecedores' },
   advogado: { titulo: 'Novo Advogado', tabela: 'advogados' },
+  credor_tipo: { titulo: 'Novo Tipo de Credor', tabela: 'credor_tipos' },
 }
 
 const CC_TIPOS = [
@@ -88,6 +89,9 @@ function QuickCreateModal({
   // fornecedor
   const [fornNome, setFornNome] = useState('')
   const [fornCnpj, setFornCnpj] = useState('')
+
+  // credor_tipo
+  const [ctLabel, setCtLabel] = useState('')
 
   // advogado
   const [advNome, setAdvNome] = useState('')
@@ -165,6 +169,13 @@ function QuickCreateModal({
           label = `${advNome.trim()} (OAB/${advUf} ${advOab.trim()})`
           break
         }
+        case 'credor_tipo': {
+          if (!ctLabel.trim()) { toast.warning('Nome do tipo obrigatório'); setSaving(false); return }
+          const valor = ctLabel.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
+          insertData = { valor, label: ctLabel.trim(), ativo: true }
+          label = ctLabel.trim()
+          break
+        }
       }
 
       const { data, error } = await supabase
@@ -177,7 +188,9 @@ function QuickCreateModal({
       if (!data) { toast.error('Erro ao criar registro'); setSaving(false); return }
 
       toast.success(`${config.titulo.replace('Nov', 'Criad').replace('a ', 'a: ').replace('o ', 'o: ')}`)
-      onCreated(data.id, label)
+      // credor_tipo usa 'valor' como identificador, não 'id'
+      const returnId = type === 'credor_tipo' ? (insertData as any).valor : data.id
+      onCreated(returnId, label)
       onClose()
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Erro desconhecido'
@@ -410,6 +423,19 @@ function QuickCreateModal({
                 </select>
               </div>
             </>
+          )}
+          {type === 'credor_tipo' && (
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Nome do tipo *</label>
+              <input value={ctLabel} onChange={e => setCtLabel(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                placeholder="Ex: Consórcio, Factoring, Securitizadora..." autoFocus />
+              {ctLabel.trim() && (
+                <div className="text-[10px] text-gray-400 mt-1">
+                  Identificador: <code>{ctLabel.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')}</code>
+                </div>
+              )}
+            </div>
           )}
         </div>
         <div className="flex justify-end gap-2 px-4 py-3 border-t border-gray-100">
