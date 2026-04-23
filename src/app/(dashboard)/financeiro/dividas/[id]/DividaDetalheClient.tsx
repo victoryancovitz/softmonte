@@ -42,6 +42,9 @@ export default function DividaDetalheClient({ passivo, parcelas: initialParcelas
   const [matForm, setMatForm] = useState({ conta_id: '', centro_custo_id: '' })
   const [showPagar, setShowPagar] = useState<any>(null)
   const [pagForm, setPagForm] = useState({ data_pagamento: new Date().toISOString().slice(0, 10), conta_id: '', valor_juros_real: '', valor_mora_real: '', valor_multa_real: '' })
+  const [showAmort, setShowAmort] = useState(false)
+  const [amortForm, setAmortForm] = useState({ modo: 'quitacao_total' as string, valor: '', desconto: '', conta_id: '', responsavel: '', protocolo: '' })
+  const [amortPreview, setAmortPreview] = useState<any>(null)
 
   // KPIs
   const valorTotal = n(passivo.valor_total) || n(passivo.valor_principal)
@@ -219,6 +222,14 @@ export default function DividaDetalheClient({ passivo, parcelas: initialParcelas
             Gerar lancamentos
           </button>
         )}
+        {passivo.status === 'ativa' && parcelasAbertas.length > 0 && (
+          <button
+            onClick={() => { setShowAmort(true); setAmortPreview(null); setAmortForm(f => ({ ...f, valor: String(saldoDevedor) })) }}
+            className="px-4 py-2 border border-amber-300 text-amber-700 bg-amber-50 rounded-lg text-sm font-medium hover:bg-amber-100"
+          >
+            Pagamento antecipado
+          </button>
+        )}
       </div>
 
       {/* Materializar modal */}
@@ -249,6 +260,122 @@ export default function DividaDetalheClient({ passivo, parcelas: initialParcelas
               <button onClick={() => setShowMaterializar(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancelar</button>
               <button onClick={materializarLancamentos} disabled={saving} className="px-4 py-2 bg-brand text-white rounded-lg text-sm font-medium hover:bg-brand-dark disabled:opacity-50">
                 {saving ? 'Gerando...' : 'Gerar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal amortização antecipada */}
+      {showAmort && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <h3 className="text-sm font-bold text-brand mb-1">Pagamento Antecipado / Amortização</h3>
+            <p className="text-xs text-gray-500 mb-4">Saldo devedor: <strong>{fmt(saldoDevedor)}</strong> · {parcelasAbertas.length} parcelas em aberto</p>
+
+            <div className="space-y-3 mb-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">O que você quer fazer?</label>
+                <select value={amortForm.modo} onChange={e => { setAmortForm(f => ({ ...f, modo: e.target.value, valor: e.target.value === 'quitacao_total' ? String(saldoDevedor) : '' })); setAmortPreview(null) }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                  <option value="quitacao_total">Quitar a dívida TOTAL agora</option>
+                  <option value="reduzir_prazo">Amortizar parcial (reduzir prazo)</option>
+                  <option value="reduzir_parcela">Amortizar parcial (reduzir valor da parcela)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Valor a pagar hoje (R$) *</label>
+                <input type="number" step="0.01" value={amortForm.valor} onChange={e => { setAmortForm(f => ({ ...f, valor: e.target.value })); setAmortPreview(null) }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+              </div>
+
+              {amortForm.modo === 'quitacao_total' && (
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1">Desconto negociado (R$)</label>
+                  <input type="number" step="0.01" value={amortForm.desconto} onChange={e => setAmortForm(f => ({ ...f, desconto: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="0" />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 mb-1">Conta de débito *</label>
+                <select value={amortForm.conta_id} onChange={e => setAmortForm(f => ({ ...f, conta_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                  <option value="">Selecione...</option>
+                  {contas.map(c => <option key={c.id} value={c.id}>{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div><label className="block text-xs font-semibold text-gray-500 mb-1">Responsável</label>
+                  <input value={amortForm.responsavel} onChange={e => setAmortForm(f => ({ ...f, responsavel: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+                <div><label className="block text-xs font-semibold text-gray-500 mb-1">Nº Protocolo</label>
+                  <input value={amortForm.protocolo} onChange={e => setAmortForm(f => ({ ...f, protocolo: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
+              </div>
+            </div>
+
+            {/* Simular */}
+            <button onClick={async () => {
+              if (!amortForm.valor || Number(amortForm.valor) <= 0) { toast.error('Informe o valor'); return }
+              const { data, error } = await supabase.rpc('calcular_amortizacao_antecipada', {
+                p_passivo_id: passivo.id,
+                p_valor_pagamento: Number(amortForm.valor),
+                p_modo: amortForm.modo,
+              })
+              if (error) { toast.error(error.message); return }
+              setAmortPreview(data)
+            }} className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 mb-3">
+              Simular
+            </button>
+
+            {/* Preview */}
+            {amortPreview?.ok && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4 text-xs space-y-1">
+                <div className="flex justify-between"><span className="text-gray-500">Saldo atual:</span><strong>{fmt(n(amortPreview.saldo_atual))}</strong></div>
+                <div className="flex justify-between"><span className="text-gray-500">Valor do pagamento:</span><strong>{fmt(n(amortPreview.valor_pagamento))}</strong></div>
+                {n(amortForm.desconto) > 0 && <div className="flex justify-between"><span className="text-gray-500">Desconto negociado:</span><strong className="text-green-600">-{fmt(n(amortForm.desconto))}</strong></div>}
+                <div className="flex justify-between border-t border-blue-200 pt-1"><span className="text-gray-500">Novo saldo:</span><strong className="text-brand">{fmt(n(amortPreview.novo_saldo))}</strong></div>
+                {amortPreview.modo !== 'quitacao_total' && (
+                  <>
+                    <div className="flex justify-between"><span className="text-gray-500">Novas parcelas:</span><strong>{amortPreview.novo_n_parcelas}</strong></div>
+                    <div className="flex justify-between"><span className="text-gray-500">Novo valor parcela:</span><strong>{fmt(n(amortPreview.novo_valor_parcela))}</strong></div>
+                  </>
+                )}
+                {n(amortPreview.economia_juros_estimada) > 0 && (
+                  <div className="flex justify-between"><span className="text-gray-500">Economia estimada em juros:</span><strong className="text-green-600">{fmt(n(amortPreview.economia_juros_estimada))}</strong></div>
+                )}
+                {!amortPreview.tem_taxa && (
+                  <div className="text-amber-600 mt-1">Sem taxa de juros cadastrada — desconto de juros não calculado.</div>
+                )}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <button onClick={() => setShowAmort(false)} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-800">Cancelar</button>
+              <button disabled={saving || !amortPreview?.ok || !amortForm.conta_id} onClick={async () => {
+                const ok = await confirmDialog({
+                  title: amortForm.modo === 'quitacao_total' ? 'Confirmar quitação total?' : 'Confirmar amortização?',
+                  message: amortForm.modo === 'quitacao_total'
+                    ? `Pagar ${fmt(n(amortForm.valor))} e quitar todas as ${parcelasAbertas.length} parcelas em aberto?`
+                    : `Amortizar ${fmt(n(amortForm.valor))} e recalcular ${amortPreview.novo_n_parcelas} parcelas?`,
+                  variant: 'warning',
+                  confirmLabel: 'Confirmar pagamento',
+                })
+                if (!ok) return
+                setSaving(true)
+                const { data, error } = await supabase.rpc('efetivar_amortizacao_antecipada', {
+                  p_passivo_id: passivo.id,
+                  p_valor_pagamento: Number(amortForm.valor),
+                  p_modo: amortForm.modo,
+                  p_conta_debito_id: amortForm.conta_id,
+                  p_desconto_obtido: Number(amortForm.desconto || 0),
+                  p_responsavel: amortForm.responsavel || null,
+                  p_numero_protocolo: amortForm.protocolo || null,
+                })
+                setSaving(false)
+                if (error) { toast.error('Erro: ' + error.message); return }
+                toast.success(amortForm.modo === 'quitacao_total' ? 'Dívida quitada!' : `Amortização registrada. Novo saldo: ${fmt(n(data?.novo_saldo))}`)
+                setShowAmort(false)
+                reloadParcelas()
+              }} className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm font-medium hover:bg-amber-700 disabled:opacity-50">
+                {saving ? 'Processando...' : 'Confirmar pagamento'}
               </button>
             </div>
           </div>

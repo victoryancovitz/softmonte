@@ -8,6 +8,7 @@ import EmptyState from '@/components/ui/EmptyState'
 import { Landmark, AlertTriangle } from 'lucide-react'
 import { fmt } from '@/lib/cores'
 import { PASSIVO_TIPO, DIVIDA_TIPO, CREDOR_TIPO, SISTEMA_AMORTIZACAO } from '@/lib/enums/financeiro'
+import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 const n = (v: any) => Number(v || 0)
 
 const TIPO_LABEL: Record<string, string> = { ...DIVIDA_TIPO }
@@ -440,13 +441,9 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
             <div className="col-span-2"><label className="block text-xs font-semibold text-gray-500 mb-1">Descrição curta (como aparece na listagem) *</label>
               <input value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Refinanciamento Daycoval, Acordo Adtech, Parcelamento INSS..." /></div>
             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Credor *</label>
-              <select value={form.fornecedor_id} onChange={e => {
-                const forn = (fornecedores ?? []).find((f: any) => f.id === e.target.value)
-                setForm(f => ({ ...f, fornecedor_id: e.target.value, banco_credor: forn?.nome || f.banco_credor }))
-              }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="">Selecione o credor...</option>
-                {(fornecedores ?? []).map((f: any) => <option key={f.id} value={f.id}>{f.nome}</option>)}
-              </select></div>
+              <QuickCreateSelect type="fornecedor" value={form.fornecedor_id}
+                options={(fornecedores ?? []).map((f: any) => ({ id: f.id, label: f.nome }))}
+                onChange={(id, label) => setForm(f => ({ ...f, fornecedor_id: id, banco_credor: label }))} /></div>
             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Tipo de credor</label>
               <select value={form.credor_tipo} onChange={e => setForm(f => ({ ...f, credor_tipo: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
                 {Object.entries(CREDOR_TIPO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
@@ -519,12 +516,14 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
                 <div className="text-[10px] text-gray-400 mt-0.5">Data da primeira parcela que você <strong>ainda vai pagar</strong>.</div></div>
             )}
             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Conta de onde será PAGO *</label>
-              <select value={form.conta_debito_id} onChange={e => setForm(f => ({ ...f, conta_debito_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="">Selecione a conta...</option>{contas.map(c => <option key={c.id} value={c.id}>{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}</select>
+              <QuickCreateSelect type="conta_bancaria" value={form.conta_debito_id}
+                options={contas.map((c: any) => ({ id: c.id, label: c.banco ? `${c.banco} — ${c.nome}` : c.nome }))}
+                onChange={(id) => setForm(f => ({ ...f, conta_debito_id: id }))} />
               <div className="text-[10px] text-gray-400 mt-0.5">De qual conta sai o dinheiro.</div></div>
             <div><label className="block text-xs font-semibold text-gray-500 mb-1">Centro de custo</label>
-              <select value={form.centro_custo_id} onChange={e => setForm(f => ({ ...f, centro_custo_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="">Selecione...</option>{(centros ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.codigo} — {c.nome}</option>)}</select></div>
+              <QuickCreateSelect type="centro_custo" value={form.centro_custo_id}
+                options={(centros ?? []).map((c: any) => ({ id: c.id, label: `${c.codigo} — ${c.nome}` }))}
+                onChange={(id) => setForm(f => ({ ...f, centro_custo_id: id }))} /></div>
           </div>
 
           {/* Preview cronograma */}
