@@ -105,6 +105,21 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
     }).select().single()
     if (err1 || !divida) { toast.error('Erro: ' + (err1?.message || 'desconhecido')); setSaving(false); return }
 
+    // Inserir também na tabela 'dividas' (FK de divida_parcelas aponta para ela)
+    await supabase.from('dividas').insert({
+      id: divida.id,
+      credor: form.banco_credor || form.descricao,
+      tipo: form.tipo_divida || 'financiamento',
+      descricao: form.descricao,
+      valor_original: Number(form.valor_principal),
+      taxa_juros_am_pct: Number(form.taxa_juros_am),
+      num_parcelas: Number(form.n_parcelas),
+      data_contrato: new Date().toISOString().slice(0, 10),
+      saldo_devedor: Number(form.valor_principal),
+      status: 'ativa',
+      passivo_id: divida.id,
+    })
+
     // Inserir parcelas
     const rows = previewParcelas.map(p => ({
       divida_id: divida.id, numero: p.numero, data_vencimento: p.data_vencimento,
