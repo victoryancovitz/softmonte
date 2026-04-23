@@ -202,14 +202,39 @@ export default function AcordoTab({ processo_id }: { processo_id: string }) {
             <div className="text-sm font-semibold">{acordo.intervalo_dias} dias</div>
           </div>
         </div>
-        {acordo.status === 'proposta' && (
-          <button
-            onClick={handleHomologar}
-            className="px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
-          >
-            Homologar
-          </button>
-        )}
+        <div className="flex gap-2 flex-wrap">
+          {acordo.status === 'proposta' && (
+            <button
+              onClick={handleHomologar}
+              className="px-4 py-2 text-sm bg-amber-600 text-white rounded-lg hover:bg-amber-700"
+            >
+              Homologar
+            </button>
+          )}
+          {acordo.status !== 'proposta' && parcelas.filter(p => p.status !== 'pago').length > 0 && (
+            <button
+              onClick={async () => {
+                const ok = await confirmDialog({
+                  title: 'Gerar lançamentos financeiros?',
+                  message: `Criar lançamentos para as ${parcelas.filter(p => p.status !== 'pago').length} parcelas em aberto deste acordo?`,
+                  confirmLabel: 'Gerar',
+                  variant: 'info',
+                })
+                if (!ok) return
+                const { data, error } = await supabase.rpc('materializar_lancamentos_acordo', {
+                  p_processo_id: processo_id,
+                  p_valor_parcela: Number(acordo.valor_total) / Number(acordo.numero_parcelas),
+                })
+                if (error) { toast.error('Erro: ' + error.message); return }
+                toast.success(`${data?.lancamentos_criados ?? 0} lançamentos criados`)
+                fetchData()
+              }}
+              className="px-4 py-2 text-sm bg-brand text-white rounded-lg hover:bg-brand-dark"
+            >
+              Gerar lançamentos financeiros
+            </button>
+          )}
+        </div>
       </div>
 
       {/* KPIs */}
