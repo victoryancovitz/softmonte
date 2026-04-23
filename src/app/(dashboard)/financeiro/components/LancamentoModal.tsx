@@ -194,7 +194,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
             if (!confirmar) { setSalvando(false); return }
           }
         }
-        const { error } = await supabase.from('financeiro_lancamentos').update({
+        const updatePayload: Record<string, any> = {
           tipo: modalForm.tipo,
           nome: modalForm.nome,
           fornecedor: modalForm.fornecedor || null,
@@ -213,7 +213,44 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
           updated_by: user?.id ?? null,
           juros_dia_padrao_pct: modalForm.juros_dia_padrao_pct ?? 0.033,
           multa_padrao_pct: modalForm.multa_padrao_pct ?? 2,
-        }).eq('id', editingId)
+        }
+
+        // Se é parte de um grupo (parcelado/recorrente), perguntar se aplica a todas
+        const grupoId = (editingLanc as any)?.parcela_grupo_id
+        let aplicarEmTodas = false
+        if (grupoId) {
+          aplicarEmTodas = await confirmDialog({
+            title: 'Aplicar a todas as parcelas?',
+            message: 'Este lançamento faz parte de um grupo recorrente/parcelado. Deseja aplicar as alterações (fornecedor, categoria, centro de custo, conta, obra) a todas as parcelas em aberto?',
+            variant: 'info',
+            confirmLabel: 'Aplicar a todas',
+            cancelLabel: 'Apenas esta',
+          })
+        }
+
+        if (aplicarEmTodas && grupoId) {
+          // Campos que fazem sentido propagar (não valor/vencimento que variam por parcela)
+          const grupoPayload: Record<string, any> = {
+            fornecedor: updatePayload.fornecedor,
+            categoria: updatePayload.categoria,
+            centro_custo: updatePayload.centro_custo,
+            centro_custo_id: updatePayload.centro_custo_id,
+            obra_id: updatePayload.obra_id,
+            conta_id: updatePayload.conta_id,
+            updated_by: updatePayload.updated_by,
+          }
+          // Atualiza todas em aberto do mesmo grupo
+          const { error: errGrupo, count } = await supabase.from('financeiro_lancamentos')
+            .update(grupoPayload)
+            .eq('parcela_grupo_id', grupoId)
+            .eq('status', 'em_aberto')
+            .neq('id', editingId)
+          if (errGrupo) toast.warning('Erro ao atualizar grupo: ' + errGrupo.message)
+          else toast.success(`${count ?? 0} parcelas atualizadas`)
+        }
+
+        // Atualiza o lançamento atual (com todos os campos, incluindo valor/vencimento)
+        const { error } = await supabase.from('financeiro_lancamentos').update(updatePayload).eq('id', editingId)
         if (error) { toast.error('Erro: ' + error.message); setSalvando(false); return }
         toast.success('Lançamento atualizado')
       }
