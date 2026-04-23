@@ -5,10 +5,12 @@ import DividasClient from './DividasClient'
 
 export default async function DividasPage() {
   const supabase = createClient()
-  const [{ data: dividas }, { data: indicadores }, { data: contas }] = await Promise.all([
+  const [{ data: dividas }, { data: indicadores }, { data: contas }, { data: fornecedores }, { data: centros }] = await Promise.all([
     supabase.from('vw_dividas_resumo').select('*'),
     supabase.from('vw_indicadores_divida').select('*').maybeSingle(),
     supabase.from('contas_correntes').select('id, nome, banco').eq('ativo', true).is('deleted_at', null).order('nome'),
+    supabase.from('fornecedores').select('id, nome').eq('ativo', true).is('deleted_at', null).order('nome'),
+    supabase.from('centros_custo').select('id, codigo, nome').eq('ativo', true).is('deleted_at', null).order('codigo'),
   ])
 
   return (
@@ -21,7 +23,7 @@ export default async function DividasPage() {
       </div>
       <h1 className="text-xl font-bold font-display text-brand mb-1">Gestão de Dívidas</h1>
       <p className="text-sm text-gray-500 mb-6">Empréstimos, financiamentos, cronograma de parcelas e indicadores de endividamento.</p>
-      <DividasClient dividas={dividas ?? []} indicadores={indicadores} contas={contas ?? []} />
+      <DividasClient dividas={dividas ?? []} indicadores={indicadores} contas={contas ?? []} fornecedores={fornecedores ?? []} centros={centros ?? []} />
     </div>
   )
 }

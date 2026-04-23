@@ -7,16 +7,10 @@ import { gerarTabelaAmortizacao } from '@/lib/dividas'
 import EmptyState from '@/components/ui/EmptyState'
 import { Landmark, AlertTriangle } from 'lucide-react'
 import { fmt } from '@/lib/cores'
+import { PASSIVO_TIPO, DIVIDA_TIPO, CREDOR_TIPO, SISTEMA_AMORTIZACAO } from '@/lib/enums/financeiro'
 const n = (v: any) => Number(v || 0)
 
-const TIPO_LABEL: Record<string, string> = {
-  emprestimo_capital_giro: 'Capital de Giro', financiamento_equipamento: 'Financiamento',
-  antecipacao_recebiveis: 'Antecipação', cartao_empresarial: 'Cartão', mutuo_socio: 'Mútuo Sócio',
-  leasing: 'Leasing', debenture: 'Debênture', debito_cartorio: 'Cartório',
-  fornecedor: 'Fornecedor', imposto_parcelado: 'Imposto Parcelado',
-  cheque_especial: 'Cheque Especial', cartao_credito: 'Cartão de Crédito',
-  condominio_aluguel: 'Aluguel/Condomínio', outros: 'Outros',
-}
+const TIPO_LABEL: Record<string, string> = { ...DIVIDA_TIPO }
 
 const CREDOR_BADGE: Record<string, { icon: string; cls: string }> = {
   banco: { icon: '🏦', cls: 'bg-blue-100 text-blue-700' },
@@ -27,7 +21,7 @@ const CREDOR_BADGE: Record<string, { icon: string; cls: string }> = {
   outro: { icon: '📋', cls: 'bg-gray-100 text-gray-600' },
 }
 
-export default function DividasClient({ dividas, indicadores, contas }: { dividas: any[]; indicadores: any; contas: any[] }) {
+export default function DividasClient({ dividas, indicadores, contas, fornecedores, centros }: { dividas: any[]; indicadores: any; contas: any[]; fornecedores?: any[]; centros?: any[] }) {
   const supabase = createClient()
   const toast = useToast()
   const [showNova, setShowNova] = useState(false)
@@ -43,11 +37,14 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
   const [renegs, setRenegs] = useState<any[]>([])
   const [pagForm, setPagForm] = useState({ data_pagamento: new Date().toISOString().slice(0, 10), conta_id: '', valor_juros_real: '' as string, valor_mora_real: '' as string, valor_multa_real: '' as string })
   const [form, setForm] = useState({
-    descricao: '', tipo_divida: 'emprestimo_capital_giro', credor_tipo: 'banco',
+    descricao: '', tipo: 'financiamento' as string, tipo_divida: 'refinanciamento' as string,
+    credor_tipo: 'banco' as string, fornecedor_id: '' as string,
     banco_credor: '', numero_contrato: '',
-    valor_principal: '', taxa_juros_am: '', sistema: 'price' as 'price' | 'sac' | 'bullet',
-    n_parcelas: '12', data_primeiro_venc: '', dia_vencimento: '', finalidade: '', garantia: '',
-    conta_credito_id: '', valor_desembolsado: '',
+    valor_parcela: '', n_parcelas: '36', n_parcelas_pagas: '0',
+    taxa_juros_am: '', sistema: 'price' as 'price' | 'sac' | 'bullet',
+    data_primeiro_venc: '', conta_debito_id: '', conta_credito_id: '',
+    centro_custo_id: '',
+    finalidade: '', garantia: '', observacao: '',
     // Cartório
     cartorio_nome: '', numero_protesto: '', data_protesto: '', credor_original: '',
     valor_emolumentos: '', valor_acrescimos: '',
@@ -60,86 +57,103 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
   const totalAtrasadas = dividas.reduce((s, d) => s + n(d.parcelas_atrasadas), 0)
   const proxVenc = dividas.filter(d => d.prox_vencimento).sort((a, b) => a.prox_vencimento.localeCompare(b.prox_vencimento))[0]
 
-  // Preview amortização
-  const previewParcelas = form.valor_principal && form.taxa_juros_am && form.n_parcelas && form.data_primeiro_venc
+  // Valores derivados
+  const valorParcela = Number(form.valor_parcela) || 0
+  const nTotal = Number(form.n_parcelas) || 0
+  const nPagas = Number(form.n_parcelas_pagas) || 0
+  const nRestantes = Math.max(0, nTotal - nPagas)
+  const valorTotal = valorParcela * nTotal
+  const saldoDevedor = valorParcela * nRestantes
+
+  // Preview amortização (usado quando tem juros, senão parcelas simples)
+  const temJuros = Number(form.taxa_juros_am) > 0
+  const previewParcelas = temJuros && form.valor_parcela && form.n_parcelas && form.data_primeiro_venc
     ? gerarTabelaAmortizacao({
-        valor: Number(form.valor_principal), taxaMensal: Number(form.taxa_juros_am) / 100,
-        nParcelas: Number(form.n_parcelas), dataInicio: form.data_primeiro_venc,
-        sistema: form.sistema, diaVencimento: form.dia_vencimento ? Number(form.dia_vencimento) : undefined,
+        valor: saldoDevedor > 0 ? saldoDevedor : valorTotal,
+        taxaMensal: Number(form.taxa_juros_am) / 100,
+        nParcelas: nRestantes > 0 ? nRestantes : nTotal,
+        dataInicio: form.data_primeiro_venc,
+        sistema: form.sistema,
       })
     : []
   const totalJurosPreview = previewParcelas.reduce((s, p) => s + p.valor_juros, 0)
 
   async function salvarDivida() {
-    if (!form.descricao || !form.valor_principal || !form.taxa_juros_am || !form.data_primeiro_venc) {
-      toast.error('Preencha os campos obrigatórios'); return
-    }
+    // Validação
+    const erros: string[] = []
+    if (!form.descricao.trim()) erros.push('Descrição obrigatória')
+    if (!form.fornecedor_id) erros.push('Selecione um credor')
+    if (!valorParcela || valorParcela <= 0) erros.push('Valor da parcela > 0')
+    if (!nTotal || nTotal < 1) erros.push('Total de parcelas ≥ 1')
+    if (nPagas >= nTotal) erros.push('Parcelas pagas deve ser menor que o total')
+    if (!form.data_primeiro_venc) erros.push('Data do primeiro vencimento obrigatória')
+    if (!form.conta_debito_id) erros.push('Selecione a conta de débito')
+    if (erros.length > 0) { toast.error(erros.join('. ')); return }
+
     setSaving(true)
     const { data: { user } } = await supabase.auth.getUser()
-    const taxaAm = Number(form.taxa_juros_am) / 100
-    const taxaAa = Math.pow(1 + taxaAm, 12) - 1
+    const taxaAm = Number(form.taxa_juros_am || 0) / 100
+    const taxaAa = taxaAm > 0 ? Math.pow(1 + taxaAm, 12) - 1 : 0
+    const diaVenc = new Date(form.data_primeiro_venc + 'T12:00').getDate()
 
-    // Inserir dívida
-    const { data: divida, error: err1 } = await supabase.from('passivos_nao_circulantes').insert({
-      descricao: form.descricao, tipo_divida: form.tipo_divida, credor_tipo: form.credor_tipo,
-      banco_credor: form.banco_credor, numero_contrato: form.numero_contrato, sistema: form.sistema, status: 'ativa',
-      cartorio_nome: form.cartorio_nome || null, numero_protesto: form.numero_protesto || null,
-      data_protesto: form.data_protesto || null, credor_original: form.credor_original || null,
-      valor_emolumentos: form.valor_emolumentos ? Number(form.valor_emolumentos) : null,
-      valor_acrescimos: form.valor_acrescimos ? Number(form.valor_acrescimos) : null,
-      negociado: form.negociado, desconto_obtido_valor: form.desconto_obtido_valor ? Number(form.desconto_obtido_valor) : null,
-      condicoes_especiais: form.condicoes_especiais || null, responsavel_negociacao: form.responsavel_negociacao || null,
-      valor_principal: Number(form.valor_principal), valor_total: Number(form.valor_principal),
-      saldo_devedor: Number(form.valor_principal), saldo_devedor_atual: Number(form.valor_principal),
-      valor_desembolsado: Number(form.valor_desembolsado || form.valor_principal),
-      taxa_juros_am: taxaAm, taxa_juros_aa: taxaAa,
-      n_parcelas_total: Number(form.n_parcelas), valor_parcela: previewParcelas[0]?.valor_total || 0,
-      dia_vencimento: form.dia_vencimento ? Number(form.dia_vencimento) : null,
-      data_contratacao: new Date().toISOString().slice(0, 10),
+    // Calcular último vencimento
+    const dtPrimeiro = new Date(form.data_primeiro_venc + 'T12:00')
+    const dtUltimo = new Date(dtPrimeiro)
+    dtUltimo.setMonth(dtUltimo.getMonth() + nTotal - 1)
+    const dataUltimoVenc = dtUltimo.toISOString().slice(0, 10)
+
+    // Fornecedor nome para campo banco_credor
+    const fornNome = form.banco_credor || (fornecedores ?? []).find((f: any) => f.id === form.fornecedor_id)?.nome || ''
+
+    // 1. INSERT master (trigger cria dívida-espelho automaticamente)
+    const { data: passivo, error: err1 } = await supabase.from('passivos_nao_circulantes').insert({
+      descricao: form.descricao,
+      tipo: form.tipo || 'financiamento',
+      tipo_divida: form.tipo_divida,
+      credor_tipo: form.credor_tipo,
+      fornecedor_id: form.fornecedor_id || null,
+      banco_credor: fornNome,
+      numero_contrato: form.numero_contrato || null,
+      sistema: form.sistema,
+      status: 'ativa',
+      valor_principal: valorTotal,
+      valor_total: valorTotal,
+      valor_parcela: valorParcela,
+      saldo_devedor: saldoDevedor,
+      saldo_devedor_atual: saldoDevedor,
+      n_parcelas_total: nTotal,
+      n_parcelas_pagas: nPagas,
+      taxa_juros_am: taxaAm > 0 ? taxaAm : null,
+      taxa_juros_aa: taxaAa > 0 ? taxaAa : null,
+      dia_vencimento: diaVenc,
       data_primeiro_venc: form.data_primeiro_venc,
-      data_ultimo_venc: previewParcelas[previewParcelas.length - 1]?.data_vencimento,
-      data_inicio: form.data_primeiro_venc, data_vencimento: previewParcelas[previewParcelas.length - 1]?.data_vencimento,
+      data_ultimo_venc: dataUltimoVenc,
+      data_inicio: form.data_primeiro_venc,
+      data_vencimento: dataUltimoVenc,
+      data_contratacao: new Date().toISOString().slice(0, 10),
       conta_credito_id: form.conta_credito_id || null,
-      finalidade: form.finalidade, garantia: form.garantia,
+      centro_custo_id: form.centro_custo_id || null,
+      finalidade: form.finalidade || null,
+      garantia: form.garantia || null,
+      observacao: form.observacao || null,
+      negociado: form.negociado,
+      desconto_obtido_valor: form.desconto_obtido_valor ? Number(form.desconto_obtido_valor) : null,
+      condicoes_especiais: form.condicoes_especiais || null,
+      responsavel_negociacao: form.responsavel_negociacao || null,
       created_by: user?.id,
     }).select().single()
-    if (err1 || !divida) { toast.error('Erro: ' + (err1?.message || 'desconhecido')); setSaving(false); return }
+    if (err1 || !passivo) { toast.error('Erro: ' + (err1?.message || 'desconhecido')); setSaving(false); return }
 
-    // Inserir também na tabela 'dividas' (FK de divida_parcelas aponta para ela)
-    await supabase.from('dividas').insert({
-      id: divida.id,
-      credor: form.banco_credor || form.descricao,
-      tipo: form.tipo_divida || 'financiamento',
-      descricao: form.descricao,
-      valor_original: Number(form.valor_principal),
-      taxa_juros_am_pct: Number(form.taxa_juros_am),
-      num_parcelas: Number(form.n_parcelas),
-      data_contrato: new Date().toISOString().slice(0, 10),
-      saldo_devedor: Number(form.valor_principal),
-      status: 'ativa',
-      passivo_id: divida.id,
-    })
+    // 2. Chamar RPC para gerar parcelas (a trigger já criou a dívida-espelho)
+    const { data: res, error: errParc } = await supabase.rpc('gerar_divida_parcelas', { p_passivo_id: passivo.id })
+    if (errParc) {
+      toast.warning(`Passivo salvo mas parcelas não foram geradas: ${errParc.message}`)
+      setSaving(false); setShowNova(false); return
+    }
 
-    // Inserir parcelas
-    const rows = previewParcelas.map(p => ({
-      divida_id: divida.id, numero: p.numero, data_vencimento: p.data_vencimento,
-      valor_amortizacao: p.valor_amortizacao, valor_juros: p.valor_juros,
-      saldo_antes: p.saldo_antes, saldo_depois: p.saldo_depois, status: 'aberta',
-    }))
-    const { error: err2 } = await supabase.from('divida_parcelas').insert(rows)
-    if (err2) { toast.error('Erro parcelas: ' + err2.message); setSaving(false); return }
-
-    // Lançamento financeiro de entrada
-    await supabase.from('financeiro_lancamentos').insert({
-      tipo: 'receita', nome: `Empréstimo — ${form.descricao}`,
-      categoria: 'Empréstimos e Financiamentos', origem: 'manual',
-      valor: Number(form.valor_desembolsado || form.valor_principal),
-      status: 'pago', data_competencia: new Date().toISOString().slice(0, 10),
-      data_pagamento: new Date().toISOString().slice(0, 10),
-      conta_id: form.conta_credito_id || null, is_provisao: false, created_by: user?.id,
-    })
-
-    toast.success(`Dívida cadastrada. ${previewParcelas.length} parcelas geradas.`)
+    const parcelasCriadas = res?.parcelas_criadas ?? nTotal
+    const parcelasPagas = res?.n_pagas ?? nPagas
+    toast.success(`Dívida cadastrada. ${parcelasCriadas} parcelas geradas (${parcelasPagas} pagas, ${parcelasCriadas - parcelasPagas} em aberto).`)
     setShowNova(false); setSaving(false)
   }
 
@@ -381,39 +395,108 @@ export default function DividasClient({ dividas, indicadores, contas }: { divida
       {showNova && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">
           <h3 className="text-sm font-bold text-brand mb-4">Cadastrar Nova Dívida</h3>
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-4">
+
+          {/* SEÇÃO 1: Identificação */}
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Identificação</p>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
             <div className="col-span-2"><label className="block text-xs font-semibold text-gray-500 mb-1">Descrição *</label>
-              <input value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Ex: Capital de giro — BV Financeira" /></div>
-            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Credor</label>
-              <select value={form.credor_tipo} onChange={e => setForm(f => ({ ...f, credor_tipo: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="banco">🏦 Banco</option><option value="cartorio">📜 Cartório</option><option value="fornecedor">🏢 Fornecedor</option><option value="fisco">🏛️ Fisco/Imposto</option><option value="socio">👤 Sócio</option><option value="outro">Outro</option>
+              <input value={form.descricao} onChange={e => setForm(f => ({ ...f, descricao: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Ex: Refinanciamento Daycoval - Ação Monitória" /></div>
+            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Nº do contrato / CNJ</label>
+              <input value={form.numero_contrato} onChange={e => setForm(f => ({ ...f, numero_contrato: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="Ex: 1112184-33.2024.8.26.0100" /></div>
+            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Credor *</label>
+              <select value={form.fornecedor_id} onChange={e => {
+                const forn = (fornecedores ?? []).find((f: any) => f.id === e.target.value)
+                setForm(f => ({ ...f, fornecedor_id: e.target.value, banco_credor: forn?.nome || f.banco_credor }))
+              }} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                <option value="">Selecione o credor...</option>
+                {(fornecedores ?? []).map((f: any) => <option key={f.id} value={f.id}>{f.nome}</option>)}
               </select></div>
-            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Tipo</label>
-              <select value={form.tipo_divida} onChange={e => setForm(f => ({ ...f, tipo_divida: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                {Object.entries(TIPO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
-            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Banco/Credor</label>
-              <input value={form.banco_credor} onChange={e => setForm(f => ({ ...f, banco_credor: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Valor Principal *</label>
-              <input type="number" step="0.01" value={form.valor_principal} onChange={e => setForm(f => ({ ...f, valor_principal: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Taxa Juros (% a.m.) *</label>
-              <input type="number" step="0.01" value={form.taxa_juros_am} onChange={e => setForm(f => ({ ...f, taxa_juros_am: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="1.80" />
-              {form.taxa_juros_am && <div className="text-[10px] text-gray-400 mt-0.5">{((Math.pow(1 + Number(form.taxa_juros_am) / 100, 12) - 1) * 100).toFixed(2)}% a.a.</div>}</div>
-            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Sistema</label>
-              <select value={form.sistema} onChange={e => setForm(f => ({ ...f, sistema: e.target.value as any }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="price">PRICE (parcela fixa)</option><option value="sac">SAC (amortização constante)</option><option value="bullet">Bullet (juros + principal no fim)</option></select></div>
-            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Nº Parcelas</label>
-              <input type="number" value={form.n_parcelas} onChange={e => setForm(f => ({ ...f, n_parcelas: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-            <div><label className="block text-xs font-semibold text-gray-500 mb-1">1º Vencimento *</label>
-              <input type="date" value={form.data_primeiro_venc} onChange={e => setForm(f => ({ ...f, data_primeiro_venc: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" /></div>
-            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Conta de Crédito</label>
-              <select value={form.conta_credito_id} onChange={e => setForm(f => ({ ...f, conta_credito_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="">Selecionar...</option>{contas.map(c => <option key={c.id} value={c.id}>{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}</select></div>
+            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Tipo de credor</label>
+              <select value={form.credor_tipo} onChange={e => setForm(f => ({ ...f, credor_tipo: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                {Object.entries(CREDOR_TIPO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select></div>
           </div>
 
-          {/* Preview */}
+          {/* SEÇÃO 2: Classificação */}
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Classificação</p>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
+            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Tipo *</label>
+              <select value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                {Object.entries(PASSIVO_TIPO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select></div>
+            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Subtipo / Natureza *</label>
+              <select value={form.tipo_divida} onChange={e => setForm(f => ({ ...f, tipo_divida: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                {Object.entries(DIVIDA_TIPO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select></div>
+            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Sistema de amortização</label>
+              <select value={form.sistema} onChange={e => setForm(f => ({ ...f, sistema: e.target.value as any }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                {Object.entries(SISTEMA_AMORTIZACAO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select></div>
+          </div>
+
+          {/* SEÇÃO 3: Valores e parcelamento */}
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Valores e Parcelamento</p>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Valor da parcela mensal *</label>
+              <input type="number" step="0.01" value={form.valor_parcela} onChange={e => setForm(f => ({ ...f, valor_parcela: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="8807,97" /></div>
+            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Total de parcelas do plano *</label>
+              <input type="number" value={form.n_parcelas} onChange={e => setForm(f => ({ ...f, n_parcelas: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="36" />
+              <div className="text-[10px] text-gray-400 mt-0.5">Total no plano inteiro, mesmo se já pagou algumas.</div></div>
+            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Parcelas já pagas *</label>
+              <input type="number" value={form.n_parcelas_pagas} onChange={e => setForm(f => ({ ...f, n_parcelas_pagas: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="0" />
+              <div className="text-[10px] text-gray-400 mt-0.5">Quantas já foram pagas ANTES de cadastrar aqui.</div></div>
+          </div>
+          {/* Preview valores */}
+          {valorParcela > 0 && nTotal > 0 && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-5 grid grid-cols-3 gap-3 text-center">
+              <div><div className="text-[10px] text-blue-600 font-bold uppercase">Valor total do plano</div><div className="text-sm font-bold text-blue-800">{fmt(valorTotal)}</div></div>
+              <div><div className="text-[10px] text-blue-600 font-bold uppercase">Saldo devedor</div><div className="text-sm font-bold text-blue-800">{fmt(saldoDevedor)}</div></div>
+              <div><div className="text-[10px] text-blue-600 font-bold uppercase">Parcelas restantes</div><div className="text-sm font-bold text-blue-800">{nRestantes}</div></div>
+            </div>
+          )}
+
+          {/* SEÇÃO 4: Datas e pagamento */}
+          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Datas e Pagamento</p>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-3">
+            <div><label className="block text-xs font-semibold text-gray-500 mb-1">1º Vencimento *</label>
+              <input type="date" value={form.data_primeiro_venc} onChange={e => setForm(f => ({ ...f, data_primeiro_venc: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+              <div className="text-[10px] text-gray-400 mt-0.5">Data da parcela 1/{nTotal}, mesmo se já foi paga.</div></div>
+            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Conta para PAGAR as parcelas *</label>
+              <select value={form.conta_debito_id} onChange={e => setForm(f => ({ ...f, conta_debito_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                <option value="">Selecione a conta...</option>{contas.map(c => <option key={c.id} value={c.id}>{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}</select>
+              <div className="text-[10px] text-gray-400 mt-0.5">De qual conta sai o dinheiro.</div></div>
+            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Centro de custo</label>
+              <select value={form.centro_custo_id} onChange={e => setForm(f => ({ ...f, centro_custo_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                <option value="">Selecione...</option>{(centros ?? []).map((c: any) => <option key={c.id} value={c.id}>{c.codigo} — {c.nome}</option>)}</select></div>
+          </div>
+          {/* Preview datas */}
+          {form.data_primeiro_venc && nTotal > 0 && (
+            <div className="bg-gray-50 rounded-lg p-2 mb-5 text-xs text-gray-500 flex gap-4">
+              <span>Último vencimento: <strong>{(() => { const d = new Date(form.data_primeiro_venc + 'T12:00'); d.setMonth(d.getMonth() + nTotal - 1); return d.toLocaleDateString('pt-BR') })()}</strong></span>
+              {nPagas > 0 && <span>Próxima em aberto: <strong>parcela {nPagas + 1}</strong>, vence em {(() => { const d = new Date(form.data_primeiro_venc + 'T12:00'); d.setMonth(d.getMonth() + nPagas); return d.toLocaleDateString('pt-BR') })()}</span>}
+            </div>
+          )}
+
+          {/* SEÇÃO 5: Taxas (accordion) */}
+          <details className="mb-4">
+            <summary className="text-[10px] font-bold text-gray-400 uppercase tracking-wider cursor-pointer hover:text-gray-600">Taxas e Detalhes (opcional)</summary>
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
+              <div><label className="block text-xs font-semibold text-gray-500 mb-1">Taxa Juros (% a.m.)</label>
+                <input type="number" step="0.01" value={form.taxa_juros_am} onChange={e => setForm(f => ({ ...f, taxa_juros_am: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" placeholder="1.80" />
+                {form.taxa_juros_am && <div className="text-[10px] text-gray-400 mt-0.5">{((Math.pow(1 + Number(form.taxa_juros_am) / 100, 12) - 1) * 100).toFixed(2)}% a.a.</div>}</div>
+              <div><label className="block text-xs font-semibold text-gray-500 mb-1">Conta onde entrou o empréstimo</label>
+                <select value={form.conta_credito_id} onChange={e => setForm(f => ({ ...f, conta_credito_id: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                  <option value="">Nenhuma</option>{contas.map(c => <option key={c.id} value={c.id}>{c.banco ? `${c.banco} — ` : ''}{c.nome}</option>)}</select>
+                <div className="text-[10px] text-gray-400 mt-0.5">Só preencher se gerou entrada de caixa.</div></div>
+              <div><label className="block text-xs font-semibold text-gray-500 mb-1">Observação</label>
+                <textarea value={form.observacao} onChange={e => setForm(f => ({ ...f, observacao: e.target.value }))} rows={2} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none" /></div>
+            </div>
+          </details>
+
+          {/* Preview tabela amortização (só se tem juros) */}
           {previewParcelas.length > 0 && (
             <div className="bg-gray-50 rounded-lg p-3 mb-4">
-              <div className="text-xs font-bold text-gray-500 mb-2">Preview: {previewParcelas.length} parcelas · Juros total: {fmt(totalJurosPreview)} · Custo total: {fmt(Number(form.valor_principal) + totalJurosPreview)}</div>
+              <div className="text-xs font-bold text-gray-500 mb-2">Tabela de amortização: {previewParcelas.length} parcelas · Juros total: {fmt(totalJurosPreview)}</div>
               <table className="w-full text-xs">
                 <thead><tr className="text-gray-400"><th className="text-left">Nº</th><th className="text-right">Amort.</th><th className="text-right">Juros</th><th className="text-right">Parcela</th><th className="text-right">Saldo</th></tr></thead>
                 <tbody>
