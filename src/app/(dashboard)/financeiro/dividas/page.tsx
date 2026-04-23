@@ -6,7 +6,7 @@ import DividasClient from './DividasClient'
 export default async function DividasPage() {
   const supabase = createClient()
   const [{ data: dividas }, { data: indicadores }, { data: contas }, { data: fornecedores }, { data: centros }] = await Promise.all([
-    supabase.from('vw_dividas_resumo').select('*'),
+    supabase.from('vw_dividas_listagem').select('*'),
     supabase.from('vw_indicadores_divida').select('*').maybeSingle(),
     supabase.from('contas_correntes').select('id, nome, banco').eq('ativo', true).is('deleted_at', null).order('nome'),
     supabase.from('fornecedores').select('id, nome').eq('ativo', true).is('deleted_at', null).order('nome'),

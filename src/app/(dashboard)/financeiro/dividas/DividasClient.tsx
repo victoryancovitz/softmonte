@@ -33,7 +33,7 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
   const [showReneg, setShowReneg] = useState<any>(null) // dívida para renegociar
   const [confirmandoExclusao, setConfirmandoExclusao] = useState<any>(null)
   const [showEditar, setShowEditar] = useState<any>(null)
-  const [editForm, setEditForm] = useState({ descricao: '', banco_credor: '', numero_contrato: '', finalidade: '', observacao: '', saldo_devedor_atual: '' })
+  const [editForm, setEditForm] = useState<Record<string, string>>({ descricao: '', banco_credor: '', numero_contrato: '', finalidade: '', observacao: '', saldo_devedor_atual: '', tipo: '', tipo_divida: '', sistema: '', credor_tipo: '', taxa_juros_am: '', fornecedor_id: '', centro_custo_id: '', conta_debito_id: '', valor_parcela: '', n_parcelas_total: '', n_parcelas_pagas: '' })
   const [parcelas, setParcelas] = useState<any[]>([])
   const [renegs, setRenegs] = useState<any[]>([])
   const [pagForm, setPagForm] = useState({ data_pagamento: new Date().toISOString().slice(0, 10), conta_id: '', valor_juros_real: '' as string, valor_mora_real: '' as string, valor_multa_real: '' as string })
@@ -305,22 +305,68 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
   }
 
   function abrirEditar(d: any) {
-    setEditForm({ descricao: d.descricao || '', banco_credor: d.banco_credor || d.credor_display || '', numero_contrato: d.numero_contrato || '', finalidade: d.finalidade || '', observacao: d.observacao || '', saldo_devedor_atual: String(d.saldo_devedor_atual || '') })
+    setEditForm({
+      descricao: d.descricao || '', banco_credor: d.banco_credor || '',
+      numero_contrato: d.numero_contrato || '', finalidade: d.finalidade || '',
+      observacao: d.observacao || '', saldo_devedor_atual: String(d.saldo_devedor_atual || ''),
+      tipo: d.tipo || 'financiamento', tipo_divida: d.tipo_divida || 'refinanciamento',
+      sistema: d.sistema || 'price', credor_tipo: d.credor_tipo || 'banco',
+      taxa_juros_am: d.taxa_juros_am ? String(n(d.taxa_juros_am) * 100) : '',
+      fornecedor_id: d.fornecedor_id || '', centro_custo_id: d.centro_custo_id || '',
+      conta_debito_id: d.conta_debito_id || '',
+      valor_parcela: String(d.valor_parcela || ''),
+      n_parcelas_total: String(d.n_parcelas_total || ''),
+      n_parcelas_pagas: String(d.n_parcelas_pagas || ''),
+    })
     setShowEditar(d)
   }
 
   async function salvarEdicao() {
     if (!showEditar) return
     setSaving(true)
+    const taxaAm = Number(editForm.taxa_juros_am || 0) / 100
+    const taxaAa = taxaAm > 0 ? Math.pow(1 + taxaAm, 12) - 1 : 0
+
+    // Detectar se mudou campos que afetam parcelas
+    const mudouParcelas = editForm.valor_parcela !== String(showEditar.valor_parcela || '') ||
+      editForm.n_parcelas_total !== String(showEditar.n_parcelas_total || '') ||
+      editForm.n_parcelas_pagas !== String(showEditar.n_parcelas_pagas || '')
+
+    if (mudouParcelas) {
+      const ok = await confirmDialog({
+        title: 'Regenerar parcelas?',
+        message: 'Você alterou dados do parcelamento. As parcelas atuais serão apagadas e recriadas. Pagamentos registrados nas parcelas serão perdidos.',
+        variant: 'warning', confirmLabel: 'Salvar e regenerar',
+      })
+      if (!ok) { setSaving(false); return }
+    }
+
     const { error } = await supabase.from('passivos_nao_circulantes').update({
-      descricao: editForm.descricao.trim(), banco_credor: editForm.banco_credor.trim() || null,
-      numero_contrato: editForm.numero_contrato.trim() || null, finalidade: editForm.finalidade.trim() || null,
+      descricao: editForm.descricao.trim(),
+      banco_credor: editForm.banco_credor.trim() || null,
+      numero_contrato: sanitizarContrato(editForm.numero_contrato) || null,
+      finalidade: editForm.finalidade.trim() || null,
       observacao: editForm.observacao.trim() || null,
       saldo_devedor_atual: parseFloat(editForm.saldo_devedor_atual) || showEditar.saldo_devedor_atual,
       saldo_devedor: parseFloat(editForm.saldo_devedor_atual) || showEditar.saldo_devedor_atual,
+      tipo: editForm.tipo, tipo_divida: editForm.tipo_divida,
+      sistema: editForm.sistema, credor_tipo: editForm.credor_tipo,
+      taxa_juros_am: taxaAm > 0 ? taxaAm : null,
+      taxa_juros_aa: taxaAa > 0 ? taxaAa : null,
+      fornecedor_id: editForm.fornecedor_id || null,
+      centro_custo_id: editForm.centro_custo_id || null,
+      conta_debito_id: editForm.conta_debito_id || null,
+      valor_parcela: Number(editForm.valor_parcela) || showEditar.valor_parcela,
+      n_parcelas_total: Number(editForm.n_parcelas_total) || showEditar.n_parcelas_total,
+      n_parcelas_pagas: Number(editForm.n_parcelas_pagas) ?? showEditar.n_parcelas_pagas,
     }).eq('id', showEditar.id)
     if (error) { toast.error('Erro: ' + error.message); setSaving(false); return }
-    toast.success('Dívida atualizada.')
+
+    if (mudouParcelas) {
+      await supabase.rpc('gerar_divida_parcelas', { p_passivo_id: showEditar.id })
+    }
+
+    toast.success('Dívida atualizada.' + (mudouParcelas ? ' Parcelas regeneradas.' : ''))
     setShowEditar(null); setSaving(false)
     window.location.reload()
   }
@@ -619,8 +665,8 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
                   <td className="px-4 py-3 text-xs">{TIPO_LABEL[d.tipo_divida] || d.tipo_divida || '—'}</td>
                   <td className="px-4 py-3 text-xs uppercase">{d.sistema || '—'}</td>
                   <td className="px-4 py-3 font-semibold text-red-700">{fmt(d.saldo_devedor_atual)}</td>
-                  <td className="px-4 py-3 text-xs">{d.taxa_juros_am ? `${(n(d.taxa_juros_am) * 100).toFixed(2)}% a.m.` : d.taxa_juros_aa ? `${(n(d.taxa_juros_aa) * 100).toFixed(2)}% a.a.` : '—'}</td>
-                  <td className="px-4 py-3 text-xs">{d.prox_vencimento ? `${fmt(d.prox_valor_parcela)} em ${new Date(d.prox_vencimento + 'T12:00').toLocaleDateString('pt-BR')}` : '—'}</td>
+                  <td className="px-4 py-3 text-xs">{d.taxa_juros_am ? `${(n(d.taxa_juros_am) * 100).toFixed(2)}% a.m.` : d.taxa_juros_aa ? `${(n(d.taxa_juros_aa) * 100).toFixed(2)}% a.a.` : <span className="text-amber-600">Sem taxa</span>}</td>
+                  <td className="px-4 py-3 text-xs">{d.prox_vencimento ? <><span className="font-semibold">{new Date(d.prox_vencimento + 'T12:00').toLocaleDateString('pt-BR')}</span><span className="text-gray-400 ml-1">(nº {d.prox_parcela_numero})</span></> : '—'}</td>
                   <td className="px-4 py-3 text-xs">{d.n_parcelas_pagas || 0}/{d.n_parcelas_total || '—'} {n(d.parcelas_atrasadas) > 0 && <span className="text-red-600 font-bold">({d.parcelas_atrasadas} atrasada)</span>}</td>
                   <td className="px-4 py-3 text-center">{d.negociado ? <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-bold" title={d.condicoes_especiais || ''}>🤝 {d.desconto_obtido_pct ? `-${d.desconto_obtido_pct}%` : 'Sim'}</span> : <span className="text-gray-300">—</span>}</td>
                   <td className="px-4 py-3"><span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${d.status === 'ativa' ? 'bg-blue-100 text-blue-700' : d.status === 'quitada' ? 'bg-green-100 text-green-700' : d.status === 'em_atraso' ? 'bg-red-100 text-red-700' : d.status === 'renegociada' ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-500'}`}>{d.status}{Number(d.total_renegociacoes) > 0 ? ` (${d.total_renegociacoes}×)` : ''}</span></td>
@@ -801,17 +847,68 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
       {/* Modal Editar Dívida */}
       {showEditar && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full p-6">
-            <h3 className="text-base font-bold text-brand mb-5">✏️ Editar dívida</h3>
-            <div className="space-y-3">
-              <div><label className="block text-xs font-semibold text-gray-600 mb-1">Descrição *</label><input value={editForm.descricao} onChange={e => setEditForm(f => ({ ...f, descricao: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-brand focus:outline-none" /></div>
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-base font-bold text-brand mb-4">Editar dívida</h3>
+            <div className="space-y-4">
+              {/* Identificação */}
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Identificação</p>
               <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2"><label className="block text-xs font-semibold text-gray-600 mb-1">Descrição *</label><input value={editForm.descricao} onChange={e => setEditForm(f => ({ ...f, descricao: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /></div>
                 <div><label className="block text-xs font-semibold text-gray-600 mb-1">Banco/Credor</label><input value={editForm.banco_credor} onChange={e => setEditForm(f => ({ ...f, banco_credor: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /></div>
                 <div><label className="block text-xs font-semibold text-gray-600 mb-1">Nº do Contrato</label><input value={editForm.numero_contrato} onChange={e => setEditForm(f => ({ ...f, numero_contrato: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /></div>
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">Credor</label>
+                  <QuickCreateSelect type="fornecedor" value={editForm.fornecedor_id}
+                    options={(fornecedores ?? []).map((f: any) => ({ id: f.id, label: f.nome }))}
+                    onChange={(id, label) => setEditForm(f => ({ ...f, fornecedor_id: id, banco_credor: label }))} /></div>
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">Tipo de credor</label>
+                  <select value={editForm.credor_tipo} onChange={e => setEditForm(f => ({ ...f, credor_tipo: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm">
+                    {Object.entries(CREDOR_TIPO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
               </div>
-              <div><label className="block text-xs font-semibold text-gray-600 mb-1">Saldo Devedor Atual (R$)</label><input type="number" step="0.01" value={editForm.saldo_devedor_atual} onChange={e => setEditForm(f => ({ ...f, saldo_devedor_atual: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /><p className="text-[10px] text-gray-400 mt-1">Use para corrigir o saldo após atualização do credor</p></div>
-              <div><label className="block text-xs font-semibold text-gray-600 mb-1">Finalidade</label><input value={editForm.finalidade} onChange={e => setEditForm(f => ({ ...f, finalidade: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /></div>
-              <div><label className="block text-xs font-semibold text-gray-600 mb-1">Observação</label><textarea rows={3} value={editForm.observacao} onChange={e => setEditForm(f => ({ ...f, observacao: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none" /></div>
+
+              {/* Classificação */}
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Classificação</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">Tipo</label>
+                  <select value={editForm.tipo} onChange={e => setEditForm(f => ({ ...f, tipo: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm">
+                    {Object.entries(PASSIVO_TIPO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">Subtipo</label>
+                  <select value={editForm.tipo_divida} onChange={e => setEditForm(f => ({ ...f, tipo_divida: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm">
+                    {Object.entries(DIVIDA_TIPO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">Sistema</label>
+                  <select value={editForm.sistema} onChange={e => setEditForm(f => ({ ...f, sistema: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm">
+                    {Object.entries(SISTEMA_AMORTIZACAO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></div>
+              </div>
+
+              {/* Valores */}
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Valores e Parcelamento</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">Valor parcela</label><input type="number" step="0.01" value={editForm.valor_parcela} onChange={e => setEditForm(f => ({ ...f, valor_parcela: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /></div>
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">Total parcelas</label><input type="number" value={editForm.n_parcelas_total} onChange={e => setEditForm(f => ({ ...f, n_parcelas_total: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /></div>
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">Parcelas pagas</label><input type="number" value={editForm.n_parcelas_pagas} onChange={e => setEditForm(f => ({ ...f, n_parcelas_pagas: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /></div>
+              </div>
+              <div><label className="block text-xs font-semibold text-gray-600 mb-1">Saldo Devedor Atual (R$)</label><input type="number" step="0.01" value={editForm.saldo_devedor_atual} onChange={e => setEditForm(f => ({ ...f, saldo_devedor_atual: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /></div>
+
+              {/* Taxas e contas */}
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Taxas e Contas</p>
+              <div className="grid grid-cols-3 gap-3">
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">Taxa juros (% a.m.)</label><input type="number" step="0.01" value={editForm.taxa_juros_am} onChange={e => setEditForm(f => ({ ...f, taxa_juros_am: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" placeholder="Ex: 2.0" /></div>
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">Conta débito</label>
+                  <QuickCreateSelect type="conta_bancaria" value={editForm.conta_debito_id}
+                    options={contas.map((c: any) => ({ id: c.id, label: c.banco ? `${c.banco} — ${c.nome}` : c.nome }))}
+                    onChange={(id) => setEditForm(f => ({ ...f, conta_debito_id: id }))} /></div>
+                <div><label className="block text-xs font-semibold text-gray-600 mb-1">Centro de custo</label>
+                  <QuickCreateSelect type="centro_custo" value={editForm.centro_custo_id}
+                    options={(centros ?? []).map((c: any) => ({ id: c.id, label: `${c.codigo} — ${c.nome}` }))}
+                    onChange={(id) => setEditForm(f => ({ ...f, centro_custo_id: id }))} /></div>
+              </div>
+
+              {/* Outros */}
+              <details><summary className="text-[10px] font-bold text-gray-400 uppercase tracking-wider cursor-pointer">Outros</summary>
+                <div className="grid grid-cols-2 gap-3 mt-2">
+                  <div><label className="block text-xs font-semibold text-gray-600 mb-1">Finalidade</label><input value={editForm.finalidade} onChange={e => setEditForm(f => ({ ...f, finalidade: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm" /></div>
+                  <div><label className="block text-xs font-semibold text-gray-600 mb-1">Observação</label><textarea rows={2} value={editForm.observacao} onChange={e => setEditForm(f => ({ ...f, observacao: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm resize-none" /></div>
+                </div>
+              </details>
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={salvarEdicao} disabled={saving || !editForm.descricao.trim()} className="flex-1 py-2.5 bg-brand text-white rounded-xl text-sm font-bold hover:bg-brand-dark disabled:opacity-50">{saving ? 'Salvando...' : 'Salvar alterações'}</button>
