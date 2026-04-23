@@ -285,13 +285,21 @@ export default function DividasClient({ dividas, indicadores, contas, fornecedor
     if (e1) { toast.error('Erro ao excluir: ' + e1.message); setSaving(false); return }
     // 2. Cancelar parcelas em aberto/atrasadas
     await supabase.from('divida_parcelas').update({ status: 'cancelada' }).eq('divida_id', d.id).in('status', ['aberta', 'atrasada', 'pendente'])
-    // 3. Soft-delete apenas lançamentos em_aberto vinculados às parcelas
-    const { data: parcsComLanc } = await supabase.from('divida_parcelas').select('lancamento_id').eq('divida_id', d.id).not('lancamento_id', 'is', null)
-    const lancIds = (parcsComLanc ?? []).map((p: any) => p.lancamento_id).filter(Boolean)
-    if (lancIds.length > 0) {
-      await supabase.from('financeiro_lancamentos').update({ deleted_at: agora }).in('id', lancIds).eq('status', 'em_aberto')
+    // 3. Soft-delete TODOS os lançamentos vinculados (via lancamento_id OU divida_parcela_id)
+    const { data: parcsAll } = await supabase.from('divida_parcelas').select('id, lancamento_id').eq('divida_id', d.id)
+    const lancIdsDiretos = (parcsAll ?? []).map((p: any) => p.lancamento_id).filter(Boolean)
+    const parcIds = (parcsAll ?? []).map((p: any) => p.id).filter(Boolean)
+    // Via lancamento_id
+    if (lancIdsDiretos.length > 0) {
+      await supabase.from('financeiro_lancamentos').update({ deleted_at: agora }).in('id', lancIdsDiretos)
     }
-    toast.success(`Dívida "${d.descricao}" excluída.`)
+    // Via divida_parcela_id (lançamentos gerados pelo materializar_lancamentos_divida)
+    if (parcIds.length > 0) {
+      await supabase.from('financeiro_lancamentos').update({ deleted_at: agora }).in('divida_parcela_id', parcIds)
+    }
+    // 4. Soft-delete na tabela dividas (espelho)
+    await supabase.from('dividas').update({ deleted_at: agora }).eq('passivo_id', d.id)
+    toast.success(`Dívida "${d.descricao}" e seus lançamentos excluídos.`)
     setConfirmandoExclusao(null); setSaving(false)
     window.location.reload()
   }
