@@ -244,6 +244,21 @@ export default async function DiretoriaPage() {
       {/* ══════ SEÇÃO 1: SAÚDE FINANCEIRA ══════ */}
       <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Saúde Financeira</p>
 
+      {/* Banner: sem dados reais */}
+      {!temDadosReais && (lancamentos ?? []).length === 0 && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5">
+          <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-amber-600 text-xs font-bold">!</span>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Sem dados financeiros reais</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Nenhum lançamento, folha fechada ou BM registrado. Os valores abaixo marcados como "Projeção" são estimativas baseadas nos funcionários alocados e contratos.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
         <Link href="/rh/rentabilidade" title="Ver análise de margem"
           className={`block rounded-2xl shadow-sm border p-5 transition-shadow hover:shadow-md ${bgCardMargem(totReceita > 0 ? margemPct : null)}`}>
@@ -264,7 +279,7 @@ export default async function DiretoriaPage() {
           </div>
           {/* 3 Margens pills */}
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {margemTeoricaDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${corPill(margemTeoricaDir)}`} title="Calculada sobre preço contratado por HH vs custo projetado. Potencial máximo.">Teórica {margemTeoricaDir.toFixed(1)}%</span>}
+            {margemTeoricaDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${totReceita > 0 ? corPill(margemTeoricaDir) : 'bg-amber-100 text-amber-700'}`} title="Calculada sobre preço contratado por HH vs custo projetado. Potencial máximo.">{totReceita > 0 ? '' : 'Estimada '}Teórica {margemTeoricaDir.toFixed(1)}%</span>}
             {margemRealDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${corPill(margemRealDir)}`} title="Receita dos BMs aprovados menos folha sem provisões (salário+encargos+benefícios).">Real {margemRealDir.toFixed(1)}%</span>}
             {margemRealProvDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${corPill(margemRealProvDir)}`} title="Inclui 13°, férias e FGTS provisionados. Margem mais conservadora.">C/Prov {margemRealProvDir.toFixed(1)}%</span>}
           </div>
@@ -275,7 +290,10 @@ export default async function DiretoriaPage() {
           className={`block rounded-2xl shadow-sm border p-5 transition-shadow hover:shadow-md ${saldo30Ok ? 'bg-gradient-to-br from-blue-50 to-white border-blue-200' : 'bg-gradient-to-br from-red-50 to-white border-red-200'}`}>
           <div className="flex items-start justify-between mb-3">
             <div>
-              <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Caixa Projetado (30 dias)</div>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Caixa Projetado (30 dias)</span>
+                {!temDadosReais && <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-bold">Projeção</span>}
+              </div>
               <div className={`text-4xl font-bold font-display mt-1 ${saldo30Ok ? 'text-blue-700' : 'text-red-700'}`}>{fmtK(saldo30)}</div>
               <div className="text-xs text-gray-500 mt-1">Saldo atual: {fmtK(saldoContas)}</div>
             </div>
@@ -295,21 +313,30 @@ export default async function DiretoriaPage() {
             </div>
           </div>
           {!temDadosReais && (cf30Projetados.length > 0) && (
-            <div className="text-[9px] text-amber-600 mt-2">Valores baseados em projeções (folha estimada). Dados reais aparecem com lançamentos.</div>
+            <div className="text-[10px] text-amber-700 bg-amber-50 rounded-lg px-2 py-1.5 mt-2 border border-amber-100">
+              Valores baseados em projeções (folha estimada). Dados reais aparecem quando houver lançamentos financeiros.
+            </div>
           )}
           <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand">Ver fluxo completo <ArrowRight className="w-3 h-3" /></span>
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
-        {kpiCards.map((k: any) => (
-          <Link key={k.label} href={k.href} className={`${k.bg} ${k.hover} rounded-xl p-3 transition-all hover:shadow-md`}>
-            <div className="text-xs text-gray-500 mb-1 leading-tight">{k.label}</div>
-            <div className={`text-base font-bold ${k.color}`}>{fmt(k.value)}</div>
-            {k.sub && <div className={`text-[10px] mt-0.5 ${k.subColor || 'text-gray-400'}`}>{k.sub}</div>}
-          </Link>
-        ))}
-      </div>
+      {kpiCards.every(k => k.value === 0) ? (
+        <div className="mb-5 p-4 bg-gray-50 border border-dashed border-gray-200 rounded-xl text-center">
+          <p className="text-sm text-gray-500">Nenhum lançamento financeiro registrado.</p>
+          <Link href="/financeiro" className="text-xs text-brand font-semibold hover:underline mt-1 inline-block">Ir para Financeiro →</Link>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-5">
+          {kpiCards.map((k: any) => (
+            <Link key={k.label} href={k.href} className={`${k.bg} ${k.hover} rounded-xl p-3 transition-all hover:shadow-md`}>
+              <div className="text-xs text-gray-500 mb-1 leading-tight">{k.label}</div>
+              <div className={`text-base font-bold ${k.color}`}>{fmt(k.value)}</div>
+              {k.sub && <div className={`text-[10px] mt-0.5 ${k.subColor || 'text-gray-400'}`}>{k.sub}</div>}
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-8">
         <Link href="/obras" className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md hover:border-brand/30 transition-all">

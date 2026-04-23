@@ -176,8 +176,25 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
     { key: 'acumulado', label: 'Acumulado' },
   ]
 
+  const nenhumDadoReal = dre.length === 0 || dre.every((o: any) => !o.tem_dados_reais)
+
   return (
     <>
+      {/* Banner global: sem dados reais */}
+      {nenhumDadoReal && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2.5">
+          <div className="w-5 h-5 rounded-full bg-amber-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+            <span className="text-amber-600 text-xs font-bold">!</span>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-amber-800">Sem folha fechada nem BM registrado</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Os valores exibidos são <strong>projeções</strong> baseadas nos salários dos funcionários alocados e composição contratual. Para dados reais, feche folhas e emita BMs.
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* ══ CONTROL BAR (for DRE Consolidado) ══ */}
       {tab === 'dre' && (
         <div className="flex items-center gap-3 mb-3 flex-wrap">
