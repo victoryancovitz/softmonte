@@ -89,7 +89,7 @@ function FinanceiroPage() {
 
   useEffect(() => {
     supabase.from('obras').select('id,nome,conta_recebimento_id,conta_pagamento_id').is('deleted_at', null).order('nome').then(({ data }) => setObras(data ?? []))
-    supabase.from('contas_correntes').select('id,nome,banco,is_padrao,proprietario,saldo_atual').eq('ativo', true).is('deleted_at', null).order('is_padrao', { ascending: false }).order('nome').then(({ data }) => setContas((data ?? []).filter((c: any) => c.proprietario !== 'socio')))
+    supabase.from('vw_contas_saldo').select('id,nome,banco,is_padrao,proprietario,saldo_atual').order('is_padrao', { ascending: false }).order('nome').then(({ data }) => setContas((data ?? []).filter((c: any) => c.proprietario !== 'socio')))
     supabase.from('fornecedores').select('id, nome').is('deleted_at', null).order('nome').then(({ data }) => setFornecedores(data ?? []))
     supabase.from('centros_custo').select('id, codigo, nome, tipo').is('deleted_at', null).eq('ativo', true).order('codigo').then(({ data }) => setCentrosCusto(data ?? []))
   }, [])
