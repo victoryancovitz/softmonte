@@ -9,6 +9,7 @@ import { Landmark, AlertTriangle } from 'lucide-react'
 import { fmt } from '@/lib/cores'
 import { PASSIVO_TIPO, DIVIDA_TIPO, CREDOR_TIPO, SISTEMA_AMORTIZACAO } from '@/lib/enums/financeiro'
 import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
+import SelectWithCustom from '@/components/ui/SelectWithCustom'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 const n = (v: any) => Number(v || 0)
 
@@ -74,6 +75,7 @@ export default function DividasClient({ dividas, indicadores, kpis, cronograma, 
     taxa_juros_am: '', sistema: 'price' as 'price' | 'sac' | 'bullet',
     conta_debito_id: '', conta_credito_id: '',
     centro_custo_id: '',
+    tipoCustom: '', tipoDividaCustom: '', sistemaCustom: '',
     finalidade: '', garantia: '', observacao: '',
     // Cartório
     cartorio_nome: '', numero_protesto: '', data_protesto: '', credor_original: '',
@@ -158,13 +160,18 @@ export default function DividasClient({ dividas, indicadores, kpis, cronograma, 
     // 1. INSERT master (trigger cria dívida-espelho automaticamente)
     const { data: passivo, error: err1 } = await supabase.from('passivos_nao_circulantes').insert({
       descricao: form.descricao.trim(),
-      tipo: form.tipo || 'financiamento',
-      tipo_divida: form.tipo_divida,
+      tipo: form.tipoCustom ? 'outros' : (form.tipo || 'financiamento'),
+      tipo_divida: form.tipoDividaCustom ? 'outros' : form.tipo_divida,
       credor_tipo: form.credor_tipo,
       fornecedor_id: form.fornecedor_id || null,
       banco_credor: fornNome,
       numero_contrato: contratoSanitizado || null,
-      sistema: form.sistema,
+      sistema: form.sistemaCustom ? null : form.sistema,
+      classificacao_custom: {
+        tipo: form.tipoCustom || null,
+        tipo_divida: form.tipoDividaCustom || null,
+        sistema: form.sistemaCustom || null,
+      },
       status: 'ativa',
       valor_principal: valorTotal,
       valor_total: valorTotal,
@@ -575,18 +582,15 @@ export default function DividasClient({ dividas, indicadores, kpis, cronograma, 
           {/* SEÇÃO 2: Classificação */}
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2">Classificação</p>
           <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 mb-5">
-            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Tipo *</label>
-              <select value={form.tipo} onChange={e => setForm(f => ({ ...f, tipo: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                {Object.entries(PASSIVO_TIPO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select></div>
-            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Subtipo / Natureza *</label>
-              <select value={form.tipo_divida} onChange={e => setForm(f => ({ ...f, tipo_divida: e.target.value }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                {Object.entries(DIVIDA_TIPO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select></div>
-            <div><label className="block text-xs font-semibold text-gray-500 mb-1">Sistema de amortização</label>
-              <select value={form.sistema} onChange={e => setForm(f => ({ ...f, sistema: e.target.value as any }))} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                {Object.entries(SISTEMA_AMORTIZACAO).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-              </select></div>
+            <SelectWithCustom label="Tipo" value={form.tipo} customValue={form.tipoCustom} required
+              options={Object.entries(PASSIVO_TIPO).map(([k, v]) => ({ value: k, label: v }))}
+              onChange={(v, custom) => setForm(f => ({ ...f, tipo: v, tipoCustom: custom || '' }))} />
+            <SelectWithCustom label="Subtipo / Natureza" value={form.tipo_divida} customValue={form.tipoDividaCustom} required
+              options={Object.entries(DIVIDA_TIPO).map(([k, v]) => ({ value: k, label: v }))}
+              onChange={(v, custom) => setForm(f => ({ ...f, tipo_divida: v, tipoDividaCustom: custom || '' }))} />
+            <SelectWithCustom label="Sistema de amortização" value={form.sistema} customValue={form.sistemaCustom}
+              options={Object.entries(SISTEMA_AMORTIZACAO).map(([k, v]) => ({ value: k, label: v }))}
+              onChange={(v, custom) => setForm(f => ({ ...f, sistema: v as any, sistemaCustom: custom || '' }))} />
           </div>
 
           {/* SEÇÃO 3: Valores e parcelamento */}
@@ -735,7 +739,7 @@ export default function DividasClient({ dividas, indicadores, kpis, cronograma, 
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-xs">{TIPO_LABEL[d.tipo_divida] || d.tipo_divida || '—'}</td>
+                  <td className="px-4 py-3 text-xs">{d.classificacao_custom?.tipo_divida || TIPO_LABEL[d.tipo_divida] || d.tipo_divida || '—'}</td>
                   <td className="px-4 py-3 text-xs uppercase">{d.sistema || '—'}</td>
                   <td className="px-4 py-3 font-semibold text-red-700">{fmt(d.saldo_devedor_atual)}</td>
                   <td className="px-4 py-3 text-xs">{d.taxa_juros_am ? `${(n(d.taxa_juros_am) * 100).toFixed(2)}% a.m.` : d.taxa_juros_aa ? `${(n(d.taxa_juros_aa) * 100).toFixed(2)}% a.a.` : <span className="text-amber-600">Sem taxa</span>}</td>
