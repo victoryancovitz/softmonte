@@ -491,7 +491,7 @@ export default function QuickCreateSelect({
 
   return (
     <>
-      <div className={`flex items-center gap-1 ${className}`}>
+      <div className={`flex items-center gap-1.5 ${className}`}>
         <select
           value={value}
           onChange={e => {
@@ -499,7 +499,7 @@ export default function QuickCreateSelect({
             onChange(e.target.value, opt?.label || '')
           }}
           disabled={disabled}
-          className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white"
+          className="flex-1 min-w-0 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand bg-white"
         >
           <option value="">{placeholder}</option>
           {grouped
