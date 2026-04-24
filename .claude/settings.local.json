@@ -255,7 +255,8 @@
       "Read(//private/tmp/claude-501/-Users-victoryancovitz-softmonte-git/ecd710c4-1038-4d94-add7-f41e865ef36a/tasks/**)",
       "Bash(python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(d.get\\(''''type'''',''''?''''\\), d[''''message''''].get\\(''''stop_reason'''',''''?''''\\) if ''''message'''' in d else ''''?''''\\)\")",
       "Bash(python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(d.get\\(''''type'''',''''?''''\\), d[''''message''''][''''content''''][0].get\\(''''text'''',''''''''\\)[:200] if d.get\\(''''type''''\\)==''''assistant'''' and ''''message'''' in d and d[''''message''''].get\\(''''content''''\\) else ''''?''''\\)\")",
-      "Bash(python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(d.get\\(''''type'''',''''?''''\\), d[''''message''''][''''content''''][0].get\\(''''text'''',''''''''\\)[:300] if d.get\\(''''type''''\\)==''''assistant'''' and ''''message'''' in d and d[''''message''''].get\\(''''content''''\\) else ''''?''''\\)\")"
+      "Bash(python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); print\\(d.get\\(''''type'''',''''?''''\\), d[''''message''''][''''content''''][0].get\\(''''text'''',''''''''\\)[:300] if d.get\\(''''type''''\\)==''''assistant'''' and ''''message'''' in d and d[''''message''''].get\\(''''content''''\\) else ''''?''''\\)\")",
+      "Bash(python3 -c \"import sys,json; d=json.loads\\(sys.stdin.read\\(\\)\\); t=d.get\\(''''type'''',''''?''''\\); print\\(t, ''''done'''' if t==''''assistant'''' and d.get\\(''''message'''',{}\\).get\\(''''stop_reason''''\\)==''''end_turn'''' else ''''working''''\\)\")"
     ]
   }
 }
