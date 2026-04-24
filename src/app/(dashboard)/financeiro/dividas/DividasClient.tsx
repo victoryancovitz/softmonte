@@ -15,27 +15,35 @@ const n = (v: any) => Number(v || 0)
 
 const TIPO_LABEL: Record<string, string> = { ...DIVIDA_TIPO }
 
-const MESES_CURTO = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+import { CHART_THEME, formatCurrencyK } from '@/lib/charts/theme'
+
+const MESES_CURTO_LOCAL = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
 function CronogramaChart({ data }: { data: any[] }) {
-  // Agrupar por mês (somando todos os credores)
-  const porMes: Record<string, number> = {}
-  data.forEach((d: any) => {
-    porMes[d.mes] = (porMes[d.mes] || 0) + Number(d.valor || 0)
-  })
-  const chartData = Object.entries(porMes).sort(([a], [b]) => a.localeCompare(b)).map(([mes, valor]) => {
+  // Pivotar: cada mês vira uma row com uma key por credor
+  const credores = Array.from(new Set(data.map(d => d.banco_credor))).sort()
+  const meses = Array.from(new Set(data.map(d => d.mes))).sort()
+
+  const chartData = meses.map(mes => {
     const [ano, m] = mes.split('-')
-    return { mes: `${MESES_CURTO[Number(m)]}/${ano.slice(2)}`, valor: Math.round(valor) }
+    const row: any = { mes: `${MESES_CURTO_LOCAL[Number(m)]}/${ano.slice(2)}` }
+    credores.forEach(c => { row[c] = 0 })
+    data.filter(d => d.mes === mes).forEach(d => { row[d.banco_credor] = Math.round(Number(d.valor || 0)) })
+    return row
   })
-  const fmtK = (v: number) => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)
+
   return (
     <ResponsiveContainer width="100%" height="100%">
       <BarChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-        <XAxis dataKey="mes" tick={{ fontSize: 10 }} />
-        <YAxis tickFormatter={fmtK} tick={{ fontSize: 10 }} width={45} />
-        <Tooltip formatter={(v: any) => `R$ ${Number(v).toLocaleString('pt-BR')}`} />
-        <Bar dataKey="valor" radius={[4, 4, 0, 0]}>
-          {chartData.map((_, i) => <Cell key={i} fill={i === 0 ? '#0F3757' : '#C9A269'} />)}
-        </Bar>
+        <XAxis dataKey="mes" tick={{ fontSize: 10, fill: CHART_THEME.axisColor }} />
+        <YAxis tickFormatter={formatCurrencyK} tick={{ fontSize: 10, fill: CHART_THEME.axisColor }} width={50} />
+        <Tooltip formatter={(v: any) => `R$ ${Number(v).toLocaleString('pt-BR')}`}
+          contentStyle={{ backgroundColor: CHART_THEME.tooltipBg, border: 'none', borderRadius: 8, color: '#fff', fontSize: 11 }}
+          itemStyle={{ color: '#fff' }} labelStyle={{ color: '#C4972A', fontWeight: 'bold' }} />
+        {credores.map((c, i) => (
+          <Bar key={c} dataKey={c} stackId="a" fill={CHART_THEME.categorical[i % 8]}
+            radius={i === credores.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]} />
+        ))}
       </BarChart>
     </ResponsiveContainer>
   )
@@ -518,14 +526,13 @@ export default function DividasClient({ dividas, indicadores, kpis, cronograma, 
                 {(composicao ?? []).map((c: any, i: number) => {
                   const total = (composicao ?? []).reduce((s: number, x: any) => s + n(x.saldo), 0)
                   const pct = total > 0 ? (n(c.saldo) / total * 100) : 0
-                  const cores = ['bg-blue-500', 'bg-amber-500', 'bg-green-500', 'bg-red-500', 'bg-purple-500', 'bg-indigo-500']
                   return (
                     <div key={c.banco_credor}>
                       <div className="flex justify-between text-xs mb-0.5">
                         <span className="text-gray-600 truncate">{c.banco_credor}</span>
                         <span className="text-gray-500 font-medium">{fmt(n(c.saldo))} ({pct.toFixed(1)}%)</span>
                       </div>
-                      <div className="w-full h-2 bg-gray-100 rounded-full"><div className={`h-full rounded-full ${cores[i % cores.length]}`} style={{ width: `${pct}%` }} /></div>
+                      <div className="w-full h-2 bg-gray-100 rounded-full"><div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: CHART_THEME.categorical[i % 8] }} /></div>
                     </div>
                   )
                 })}
