@@ -108,71 +108,25 @@ export default function DividaDetalheClient({ passivo, parcelas: initialParcelas
     if (!showPagar) return
     if (!pagForm.data_pagamento) { toast.error('Informe a data de pagamento.'); return }
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
     const p = showPagar
-    const jurosReal = pagForm.valor_juros_real !== '' ? Number(pagForm.valor_juros_real) : n(p.valor_juros)
-    const moraReal = pagForm.valor_mora_real !== '' ? Number(pagForm.valor_mora_real) : n(p.juros_mora)
-    const multaReal = pagForm.valor_multa_real !== '' ? Number(pagForm.valor_multa_real) : n(p.multa)
-    const totalPago = n(p.valor_amortizacao) + jurosReal + moraReal + multaReal
+    const jurosReal = pagForm.valor_juros_real !== '' ? Number(pagForm.valor_juros_real) : 0
+    const moraReal = pagForm.valor_mora_real !== '' ? Number(pagForm.valor_mora_real) : 0
 
-    // Create lancamento for amortizacao
-    let lancAmortId: string | null = null
-    if (n(p.valor_amortizacao) > 0) {
-      const { data: la } = await supabase.from('financeiro_lancamentos').insert({
-        tipo: 'despesa',
-        nome: `Amortizacao parcela ${p.numero} — ${passivo.descricao}`,
-        categoria: 'Amortizacao de Emprestimos',
-        valor: n(p.valor_amortizacao),
-        status: 'pago',
-        data_competencia: pagForm.data_pagamento,
-        data_pagamento: pagForm.data_pagamento,
-        conta_id: pagForm.conta_id || null,
-        origem: 'manual',
-        is_provisao: false,
-        natureza: 'financiamento',
-        created_by: user?.id,
-      }).select('id').single()
-      lancAmortId = la?.id ?? null
-    }
+    const { data, error } = await supabase.rpc('registrar_pagamento_parcela', {
+      p_parcela_id: p.id,
+      p_data_pagamento: pagForm.data_pagamento,
+      p_conta_debito_id: pagForm.conta_id || null,
+      p_forma_pagamento: 'boleto',
+      p_valor_pago: null, // usa valor da parcela
+      p_juros_mora: jurosReal + moraReal,
+      p_desconto: 0,
+      p_observacao: null,
+    })
 
-    // Create lancamento for juros if applicable
-    if (jurosReal + moraReal + multaReal > 0) {
-      await supabase.from('financeiro_lancamentos').insert({
-        tipo: 'despesa',
-        nome: `Juros parcela ${p.numero} — ${passivo.descricao}`,
-        categoria: 'Despesas Financeiras',
-        valor: jurosReal + moraReal + multaReal,
-        status: 'pago',
-        data_competencia: pagForm.data_pagamento,
-        data_pagamento: pagForm.data_pagamento,
-        conta_id: pagForm.conta_id || null,
-        origem: 'manual',
-        is_provisao: false,
-        natureza: 'financiamento',
-        created_by: user?.id,
-      })
-    }
-
-    // Update parcela
-    await supabase.from('divida_parcelas').update({
-      status: 'paga',
-      data_pagamento: pagForm.data_pagamento,
-      valor_pago: totalPago,
-      valor_juros: jurosReal,
-      juros_mora: moraReal,
-      multa: multaReal,
-      lancamento_id: lancAmortId,
-    }).eq('id', p.id)
-
-    // Update passivo saldo
-    await supabase.from('passivos_nao_circulantes').update({
-      saldo_devedor_atual: Math.max(0, saldoDevedor - n(p.valor_amortizacao)),
-      n_parcelas_pagas: parcelasPagas + 1,
-    }).eq('id', passivo.id)
-
-    toast.success(`Parcela ${p.numero} paga — ${fmt(totalPago)}`)
-    setShowPagar(null)
     setSaving(false)
+    if (error) { toast.error(`Erro: ${error.message}`); return }
+    toast.success(`Parcela ${p.numero} paga — ${fmt(n(data?.valor_pago))}`)
+    setShowPagar(null)
     await reloadParcelas()
   }
 

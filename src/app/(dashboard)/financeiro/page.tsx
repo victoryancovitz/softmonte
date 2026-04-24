@@ -66,7 +66,7 @@ function FinanceiroPage() {
   const [page, setPage] = useState(1)
   const [totalCount, setTotalCount] = useState(0)
   const PAGE_SIZE = 100
-  const [filtroAno, setFiltroAno] = useState(new Date().getFullYear().toString())
+  const [filtroAno, setFiltroAno] = useState('todos')
   const [filtroMes, setFiltroMes] = useState('todos')
 
   const toggleSelect = (id: string) => setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
@@ -132,7 +132,7 @@ function FinanceiroPage() {
 
   async function loadData() {
     setLoading(true)
-    let q = supabase.from('financeiro_lancamentos').select('*, obras(nome), centros_custo(codigo, nome, tipo)', { count: 'exact' }).is('deleted_at', null).order('data_competencia', { ascending: false })
+    let q = supabase.from('financeiro_lancamentos').select('*, obras(nome), centros_custo(codigo, nome, tipo)', { count: 'exact' }).is('deleted_at', null).order('data_vencimento', { ascending: true })
     if (obraId && obraId !== 'all') q = q.eq('obra_id', obraId)
     if (!showProvisões) q = q.eq('is_provisao', false)
     // Filtros de período
@@ -278,9 +278,9 @@ function FinanceiroPage() {
           <select value={filtroAno} onChange={e => { setFiltroAno(e.target.value); setPage(1) }}
             className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
             <option value="todos">Todos os anos</option>
-            <option value="2026">2026</option>
-            <option value="2025">2025</option>
-            <option value="2024">2024</option>
+            {Array.from({ length: 10 }, (_, i) => 2024 + i).map(y => (
+              <option key={y} value={String(y)}>{y}</option>
+            ))}
           </select>
           <select value={filtroMes} onChange={e => { setFiltroMes(e.target.value); setPage(1) }}
             className="px-3 py-1.5 border border-gray-200 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
@@ -590,9 +590,21 @@ function FinanceiroPage() {
                     {l.tipo === 'receita' ? '+' : '-'}{fmt(l.valor)}
                   </td>
                   <td className="px-4 py-2.5">
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${l.status === 'pago' ? 'bg-green-100 text-green-700' : l.status === 'cancelado' ? 'bg-gray-100 text-gray-500' : 'bg-yellow-100 text-yellow-700'}`}>
-                      {l.status === 'em_aberto' ? 'Em aberto' : l.status === 'pago' ? 'Pago' : l.status === 'cancelado' ? 'Cancelado' : l.status}
-                    </span>
+                    {(() => {
+                      const hoje = new Date().toISOString().slice(0, 10)
+                      const isVencida = l.status === 'em_aberto' && l.data_vencimento && l.data_vencimento < hoje
+                      const diasAtraso = isVencida ? Math.ceil((Date.now() - new Date(l.data_vencimento + 'T12:00').getTime()) / 86400000) : 0
+                      return (
+                        <span className={`text-xs px-2 py-0.5 rounded-full ${
+                          l.status === 'pago' ? 'bg-green-100 text-green-700' :
+                          l.status === 'cancelado' ? 'bg-gray-100 text-gray-500' :
+                          isVencida ? 'bg-red-100 text-red-700' :
+                          'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {l.status === 'pago' ? 'Pago' : l.status === 'cancelado' ? 'Cancelado' : isVencida ? `Vencida há ${diasAtraso}d` : 'Em aberto'}
+                        </span>
+                      )
+                    })()}
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <div className={`flex gap-2 justify-end items-center ${selected.size > 0 ? 'opacity-30 pointer-events-none' : ''}`}>
