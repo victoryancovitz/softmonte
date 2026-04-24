@@ -73,12 +73,13 @@ const NAV_GROUPS: NavGroupDef[] = [
   {
     label: 'Financeiro',
     links: [
-      { href: '/financeiro', label: 'Lançamentos', icon: ic.fin },
-      { href: '/financeiro/dre', label: 'DRE & Resultado', icon: ic.fin },
-      { href: '/forecast', label: 'Forecast', icon: ic.report },
-      { href: '/financeiro/dividas', label: 'Dívidas', icon: ic.fin },
+      { href: '/financeiro', label: 'Lançamentos Financeiros', icon: ic.fin },
+      { href: '/financeiro/dre', label: 'Demonstrações Contábeis', icon: ic.fin },
+      { href: '/financeiro/cashflow', label: 'Previsões de Fluxo de Caixa', icon: ic.report },
+      { href: '/financeiro/contas', label: 'Contas Correntes', icon: ic.fin },
+      { href: '/financeiro/dividas', label: 'Dívidas e Empréstimos', icon: ic.fin },
       { href: '/financeiro/pendencias', label: 'Pendências', icon: ic.fin },
-      { href: '/financeiro/conciliacao', label: 'Conciliação', icon: ic.fin },
+      { href: '/financeiro/conciliacao', label: 'Conciliação OFX', icon: ic.fin },
     ],
   },
   {
@@ -148,15 +149,16 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
     ],
   },
   {
-    // Módulo Financeiro — 3 abas (Sumário movido para /diretoria)
+    // Módulo Financeiro
     groupPaths: ['/financeiro', '/relatorios/margem', '/relatorios/bm-comparativo', '/forecast'],
     tabs: [
-      { href: '/financeiro', label: 'Lançamentos', match: ['/financeiro', '/financeiro/novo', '/financeiro/contas', '/financeiro/cashflow', '/financeiro/ofx'] },
-      { href: '/financeiro/dre', label: 'DRE & Resultado', match: ['/financeiro/dre', '/relatorios/margem', '/relatorios/bm-comparativo'] },
-      { href: '/forecast', label: 'Forecast' },
-      { href: '/financeiro/dividas', label: 'Dívidas', match: ['/financeiro/dividas'] },
-      { href: '/financeiro/pendencias', label: 'Pendências', match: ['/financeiro/pendencias'] },
-      { href: '/financeiro/conciliacao', label: 'Conciliação', match: ['/financeiro/conciliacao'] },
+      { href: '/financeiro', label: 'Lançamentos Financeiros', match: ['/financeiro', '/financeiro/novo', '/financeiro/ofx'] },
+      { href: '/financeiro/dre', label: 'Demonstrações Contábeis', match: ['/financeiro/dre', '/relatorios/margem', '/relatorios/bm-comparativo'] },
+      { href: '/financeiro/cashflow', label: 'Previsões de Fluxo de Caixa', match: ['/financeiro/cashflow', '/forecast'] },
+      { href: '/financeiro/contas', label: 'Contas Correntes', match: ['/financeiro/contas'] },
+      { href: '/financeiro/dividas', label: 'Dívidas e Empréstimos', match: ['/financeiro/dividas'] },
+      { href: '/financeiro/pendencias', label: 'Pendências', match: ['/financeiro/pendencias'], secondary: true },
+      { href: '/financeiro/conciliacao', label: 'Conciliação OFX', match: ['/financeiro/conciliacao'], secondary: true },
     ],
   },
   {
