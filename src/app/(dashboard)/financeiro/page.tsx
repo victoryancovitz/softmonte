@@ -681,23 +681,19 @@ function FinanceiroPage() {
                         </button>
                       )}
                       <ConfirmButton label="Excluir" onConfirm={async () => {
-                        const { data: { user } } = await supabase.auth.getUser()
-                        const { error } = await supabase.from('financeiro_lancamentos').update({
-                          deleted_at: new Date().toISOString(),
-                          deleted_by: user?.id ?? null,
-                        }).eq('id', l.id)
+                        const { error } = await supabase.rpc('excluir_lancamento', { p_lancamento_id: l.id, p_motivo: null })
                         if (error) { toast.error('Erro ao excluir: ' + error.message); return }
                         setLancamentos(prev => prev.filter(x => x.id !== l.id))
                         toast.success('Lançamento excluído')
                       }} />
                       {l.parcela_grupo_id && (
                         <ConfirmButton label="Excluir série" onConfirm={async () => {
-                          const { data: { user } } = await supabase.auth.getUser()
-                          const { error } = await supabase.from('financeiro_lancamentos').update({
-                            deleted_at: new Date().toISOString(),
-                            deleted_by: user?.id ?? null,
-                          }).eq('parcela_grupo_id', l.parcela_grupo_id).eq('status', 'em_aberto')
-                          if (error) { toast.error('Erro: ' + error.message); return }
+                          // Excluir cada parcela em aberto da série via RPC
+                          const parcelas = lancamentos.filter(x => x.parcela_grupo_id === l.parcela_grupo_id && x.status === 'em_aberto')
+                          for (const p of parcelas) {
+                            const { error } = await supabase.rpc('excluir_lancamento', { p_lancamento_id: p.id, p_motivo: 'Exclusão de série' })
+                            if (error) { toast.error('Erro: ' + error.message); return }
+                          }
                           setLancamentos(prev => prev.filter(x => !(x.parcela_grupo_id === l.parcela_grupo_id && x.status === 'em_aberto')))
                           toast.success('Parcelas em aberto da série excluídas')
                         }} />

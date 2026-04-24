@@ -124,7 +124,7 @@ export default function PagamentosExtrasPage() {
     const pag = pagamentos.find(p => p.id === id)
     const { data: { user } } = await supabase.auth.getUser()
     if (pag?.financeiro_lancamento_id) {
-      await supabase.from('financeiro_lancamentos').update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null }).eq('id', pag.financeiro_lancamento_id)
+      await supabase.rpc('excluir_lancamento', { p_lancamento_id: pag.financeiro_lancamento_id, p_motivo: 'Cancelamento de pagamento extra' })
     }
     await supabase.from('pagamentos_extras').update({ deleted_at: new Date().toISOString(), deleted_by: user?.id ?? null }).eq('id', id)
     toast.success('Pagamento cancelado')

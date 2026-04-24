@@ -48,8 +48,11 @@ export default function LoteBar({ selected, lancamentos, contas, onClear, onPaid
     if (selected.size === 0) return
     setExcluindoLote(true)
     try {
-      const { error } = await supabase.from('financeiro_lancamentos').update({ deleted_at: new Date().toISOString() }).in('id', Array.from(selected))
-      if (error) throw error
+      const ids = Array.from(selected)
+      for (const id of ids) {
+        const { error } = await supabase.rpc('excluir_lancamento', { p_lancamento_id: id, p_motivo: null })
+        if (error) throw error
+      }
       const n = selected.size
       toast.success(`${n} lancamento${n > 1 ? 's' : ''} excluido${n > 1 ? 's' : ''}`)
       setConfirmandoExclusao(false)

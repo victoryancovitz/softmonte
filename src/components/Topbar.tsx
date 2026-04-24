@@ -80,6 +80,7 @@ const NAV_GROUPS: NavGroupDef[] = [
       { href: '/financeiro/contas', label: 'Contas Correntes', icon: ic.fin },
       { href: '/financeiro/dre', label: 'Demonstrações Contábeis', icon: ic.fin },
       { href: '/financeiro/conciliacao', label: 'Conciliação OFX', icon: ic.fin },
+      { href: '/financeiro/lixeira', label: 'Lixeira', icon: ic.fin },
     ],
   },
   {
@@ -159,6 +160,7 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/financeiro/contas', label: 'Contas', match: ['/financeiro/contas'] },
       { href: '/financeiro/dre', label: 'Demonstrações', match: ['/financeiro/dre', '/relatorios/margem', '/relatorios/bm-comparativo'] },
       { href: '/financeiro/conciliacao', label: 'Conciliação', match: ['/financeiro/conciliacao'], secondary: true },
+      { href: '/financeiro/lixeira', label: 'Lixeira', match: ['/financeiro/lixeira'], secondary: true },
     ],
   },
   {

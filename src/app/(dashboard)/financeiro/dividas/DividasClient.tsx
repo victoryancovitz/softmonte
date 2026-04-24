@@ -301,11 +301,16 @@ export default function DividasClient({ dividas, indicadores, kpis, cronograma, 
       data_pagamento: null, valor_pago: null,
     }).eq('id', p.id)
     if (p.lancamento_id) {
-      await supabase.from('financeiro_lancamentos').update({ deleted_at: new Date().toISOString() }).eq('id', p.lancamento_id)
+      await supabase.rpc('excluir_lancamento', { p_lancamento_id: p.lancamento_id, p_motivo: 'Estorno de parcela' })
     }
-    // Soft-delete lançamentos de juros da mesma parcela
-    await supabase.from('financeiro_lancamentos').update({ deleted_at: new Date().toISOString() })
+    // Soft-delete lançamentos de juros da mesma parcela via query + RPC
+    const { data: jurosLancs } = await supabase.from('financeiro_lancamentos')
+      .select('id')
       .eq('natureza', 'financiamento').eq('data_pagamento', p.data_pagamento).ilike('nome', `%parcela ${p.numero}%`)
+      .is('deleted_at', null)
+    for (const jl of (jurosLancs ?? [])) {
+      await supabase.rpc('excluir_lancamento', { p_lancamento_id: jl.id, p_motivo: 'Estorno de parcela - juros' })
+    }
     // Recalcular saldo
     const divida = dividas.find(d => d.id === p.divida_id)
     if (divida) {
@@ -321,26 +326,8 @@ export default function DividasClient({ dividas, indicadores, kpis, cronograma, 
 
   async function excluirDivida(d: any) {
     setSaving(true)
-    const agora = new Date().toISOString()
-    // 1. Soft-delete da dívida (sem deleted_by — campo não existe)
-    const { error: e1 } = await supabase.from('passivos_nao_circulantes').update({ deleted_at: agora, status: 'cancelada' }).eq('id', d.id)
-    if (e1) { toast.error('Erro ao excluir: ' + e1.message); setSaving(false); return }
-    // 2. Cancelar parcelas em aberto/atrasadas
-    await supabase.from('divida_parcelas').update({ status: 'cancelada' }).eq('divida_id', d.id).in('status', ['aberta', 'atrasada', 'pendente'])
-    // 3. Soft-delete TODOS os lançamentos vinculados (via lancamento_id OU divida_parcela_id)
-    const { data: parcsAll } = await supabase.from('divida_parcelas').select('id, lancamento_id').eq('divida_id', d.id)
-    const lancIdsDiretos = (parcsAll ?? []).map((p: any) => p.lancamento_id).filter(Boolean)
-    const parcIds = (parcsAll ?? []).map((p: any) => p.id).filter(Boolean)
-    // Via lancamento_id
-    if (lancIdsDiretos.length > 0) {
-      await supabase.from('financeiro_lancamentos').update({ deleted_at: agora }).in('id', lancIdsDiretos)
-    }
-    // Via divida_parcela_id (lançamentos gerados pelo materializar_lancamentos_divida)
-    if (parcIds.length > 0) {
-      await supabase.from('financeiro_lancamentos').update({ deleted_at: agora }).in('divida_parcela_id', parcIds)
-    }
-    // 4. Soft-delete na tabela dividas (espelho)
-    await supabase.from('dividas').update({ deleted_at: agora }).eq('passivo_id', d.id)
+    const { error } = await supabase.rpc('excluir_divida', { p_passivo_id: d.id, p_motivo: `Exclusão manual: ${d.descricao}` })
+    if (error) { toast.error('Erro ao excluir: ' + error.message); setSaving(false); return }
     toast.success(`Dívida "${d.descricao}" e seus lançamentos excluídos.`)
     setConfirmandoExclusao(null); setSaving(false)
     window.location.reload()
