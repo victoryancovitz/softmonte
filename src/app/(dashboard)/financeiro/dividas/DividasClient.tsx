@@ -10,7 +10,7 @@ import { fmt } from '@/lib/cores'
 import { PASSIVO_TIPO, DIVIDA_TIPO, CREDOR_TIPO, SISTEMA_AMORTIZACAO } from '@/lib/enums/financeiro'
 import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 import SelectWithCustom from '@/components/ui/SelectWithCustom'
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area } from 'recharts'
 const n = (v: any) => Number(v || 0)
 
 const TIPO_LABEL: Record<string, string> = { ...DIVIDA_TIPO }
@@ -58,7 +58,7 @@ const CREDOR_BADGE: Record<string, { icon: string; cls: string }> = {
   outro: { icon: '📋', cls: 'bg-gray-100 text-gray-600' },
 }
 
-export default function DividasClient({ dividas, indicadores, kpis, cronograma, composicao, contas, fornecedores, centros, credorTipos }: { dividas: any[]; indicadores: any; kpis?: any; cronograma?: any[]; composicao?: any[]; contas: any[]; fornecedores?: any[]; centros?: any[]; credorTipos?: any[] }) {
+export default function DividasClient({ dividas, indicadores, kpis, cronograma, composicao, evolucao, contas, fornecedores, centros, credorTipos }: { dividas: any[]; indicadores: any; kpis?: any; cronograma?: any[]; composicao?: any[]; evolucao?: any[]; contas: any[]; fornecedores?: any[]; centros?: any[]; credorTipos?: any[] }) {
   const supabase = createClient()
   const toast = useToast()
   const [showNova, setShowNova] = useState(false)
@@ -539,6 +539,34 @@ export default function DividasClient({ dividas, indicadores, kpis, cronograma, 
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* Evolução do saldo devedor */}
+      {(evolucao ?? []).length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
+          <h3 className="text-sm font-bold text-gray-800 mb-1">Evolução do Saldo Devedor</h3>
+          <p className="text-[11px] text-gray-400 mb-4">Projeção dos próximos 36 meses assumindo pagamento regular</p>
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={(evolucao ?? []).map((e: any) => {
+                const [ano, m] = (e.mes_ref || '').split('-')
+                return { mes: `${MESES_CURTO_LOCAL[Number(m)] || m}/${(ano || '').slice(2)}`, saldo: Math.round(Number(e.saldo_projetado || 0)) }
+              })} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                <defs>
+                  <linearGradient id="saldoGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor={CHART_THEME.primary} stopOpacity={0.3} />
+                    <stop offset="95%" stopColor={CHART_THEME.primary} stopOpacity={0.02} />
+                  </linearGradient>
+                </defs>
+                <XAxis dataKey="mes" tick={{ fontSize: 9, fill: CHART_THEME.axisColor }} interval={2} />
+                <YAxis tickFormatter={formatCurrencyK} tick={{ fontSize: 10, fill: CHART_THEME.axisColor }} width={55} />
+                <Tooltip formatter={(v: any) => `R$ ${Number(v).toLocaleString('pt-BR')}`}
+                  contentStyle={{ backgroundColor: CHART_THEME.tooltipBg, border: 'none', borderRadius: 8, color: '#fff', fontSize: 11 }} />
+                <Area type="monotone" dataKey="saldo" stroke={CHART_THEME.primary} strokeWidth={2} fill="url(#saldoGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       )}
 

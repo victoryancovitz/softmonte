@@ -8,6 +8,7 @@ import { getEfetivoDashboard } from '@/lib/efetivo/get-efetivo-dashboard'
 import EfetivoDashboard from '@/components/EfetivoDashboard'
 
 import { fmt, fmtK } from '@/lib/cores'
+import { FluxoMensalChart, CashflowMensalChart } from './DiretoriaCharts'
 
 function corMargem(pct: number | null): string {
   if (pct === null) return 'text-gray-400'
@@ -219,6 +220,40 @@ export default async function DiretoriaPage() {
     return 'bg-red-500'
   }
 
+  // === CHART DATA: Fluxo Mensal (últimos 6 meses from DRE) ===
+  const fluxoMensalMap: Record<string, { receita: number; despesa: number }> = {}
+  ;(dreMes ?? []).forEach((m: any) => {
+    const key = `${m.ano}-${String(m.mes).padStart(2, '0')}`
+    if (!fluxoMensalMap[key]) fluxoMensalMap[key] = { receita: 0, despesa: 0 }
+    fluxoMensalMap[key].receita += Number(m.receita_realizada || 0)
+    fluxoMensalMap[key].despesa += Number(m.custo_mo_real || 0)
+  })
+  const fluxoMensalData = Object.entries(fluxoMensalMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-6)
+    .map(([key, v]) => {
+      const [ano, mes] = key.split('-')
+      return { mes: `${MESES[Number(mes)]}/${ano.slice(2)}`, receita: v.receita, despesa: v.despesa, resultado: v.receita - v.despesa }
+    })
+
+  // === CHART DATA: Cashflow Mensal (from vw_cashflow_projetado) ===
+  const cashflowMensalMap: Record<string, { entradas: number; saidas: number }> = {}
+  ;(cashflow ?? []).forEach((e: any) => {
+    if (!e.data) return
+    const key = e.data.slice(0, 7) // YYYY-MM
+    if (!cashflowMensalMap[key]) cashflowMensalMap[key] = { entradas: 0, saidas: 0 }
+    const val = Number(e.valor || 0)
+    if (val > 0) cashflowMensalMap[key].entradas += val
+    else cashflowMensalMap[key].saidas += Math.abs(val)
+  })
+  const cashflowMensalData = Object.entries(cashflowMensalMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(-6)
+    .map(([key, v]) => {
+      const [ano, mes] = key.split('-')
+      return { mes: `${MESES[Number(mes)]}/${ano.slice(2)}`, entradas: v.entradas, saidas: v.saidas, saldo: v.entradas - v.saidas }
+    })
+
   const kpiCards = [
     { label: 'Receita recebida', value: receitaPaga, color: 'text-green-600', bg: 'bg-green-50', hover: 'hover:bg-green-100', href: '/financeiro?tab=lancamentos&tipo=receita&status=pago' },
     { label: 'Receita em aberto', value: receitaAberto, color: 'text-emerald-600', bg: 'bg-emerald-50', hover: 'hover:bg-emerald-100', href: '/financeiro?tab=lancamentos&tipo=receita&status=em_aberto',
@@ -335,6 +370,14 @@ export default async function DiretoriaPage() {
               {k.sub && <div className={`text-[10px] mt-0.5 ${k.subColor || 'text-gray-400'}`}>{k.sub}</div>}
             </Link>
           ))}
+        </div>
+      )}
+
+      {/* ══════ CHARTS: Fluxo Mensal ══════ */}
+      {(fluxoMensalData.length > 0 || cashflowMensalData.length > 0) && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+          {fluxoMensalData.length > 0 && <FluxoMensalChart data={fluxoMensalData} />}
+          {cashflowMensalData.length > 0 && <CashflowMensalChart data={cashflowMensalData} />}
         </div>
       )}
 

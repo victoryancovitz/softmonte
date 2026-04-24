@@ -5,12 +5,13 @@ import DividasClient from './DividasClient'
 
 export default async function DividasPage() {
   const supabase = createClient()
-  const [{ data: dividas }, { data: indicadores }, { data: kpis }, { data: cronograma }, { data: composicao }, { data: contas }, { data: fornecedores }, { data: centros }, { data: credorTipos }] = await Promise.all([
+  const [{ data: dividas }, { data: indicadores }, { data: kpis }, { data: cronograma }, { data: composicao }, { data: evolucao }, { data: contas }, { data: fornecedores }, { data: centros }, { data: credorTipos }] = await Promise.all([
     supabase.from('vw_dividas_listagem').select('*'),
     supabase.from('vw_indicadores_divida').select('*').maybeSingle(),
     supabase.from('vw_dividas_kpis').select('*').maybeSingle(),
     supabase.from('vw_dividas_cronograma_mensal').select('*'),
     supabase.from('vw_dividas_composicao').select('*'),
+    supabase.from('vw_dividas_evolucao_saldo').select('*'),
     supabase.from('contas_correntes').select('id, nome, banco').eq('ativo', true).is('deleted_at', null).order('nome'),
     supabase.from('fornecedores').select('id, nome').eq('ativo', true).is('deleted_at', null).order('nome'),
     supabase.from('centros_custo').select('id, codigo, nome').eq('ativo', true).is('deleted_at', null).order('codigo'),
@@ -27,7 +28,7 @@ export default async function DividasPage() {
       </div>
       <h1 className="text-xl font-bold font-display text-brand mb-1">Gestão de Dívidas</h1>
       <p className="text-sm text-gray-500 mb-6">Empréstimos, financiamentos, cronograma de parcelas e indicadores de endividamento.</p>
-      <DividasClient dividas={dividas ?? []} indicadores={indicadores} kpis={kpis} cronograma={cronograma ?? []} composicao={composicao ?? []} contas={contas ?? []} fornecedores={fornecedores ?? []} centros={centros ?? []} credorTipos={credorTipos ?? []} />
+      <DividasClient dividas={dividas ?? []} indicadores={indicadores} kpis={kpis} cronograma={cronograma ?? []} composicao={composicao ?? []} evolucao={evolucao ?? []} contas={contas ?? []} fornecedores={fornecedores ?? []} centros={centros ?? []} credorTipos={credorTipos ?? []} />
     </div>
   )
 }

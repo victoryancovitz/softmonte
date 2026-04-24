@@ -2,6 +2,9 @@
 import { useState, useMemo } from 'react'
 import { TrendingUp, Users, ChevronDown, ChevronUp, Settings } from 'lucide-react'
 import Link from 'next/link'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Cell, ResponsiveContainer, LineChart, Line, CartesianGrid, Legend } from 'recharts'
+import { CHART_THEME, formatCurrencyK, MESES_CURTO } from '@/lib/charts/theme'
+import ChartCard from '@/components/charts/ChartCard'
 
 const MESES = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 const fmt = (v: number | null) => v != null ? Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '—'
@@ -249,6 +252,96 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
       {tab === 'margem' && (
         dre.length > 0 ? (
           <div className="space-y-4">
+            {/* ── Waterfall: Resultado do Período ── */}
+            {(() => {
+              const totalReceita = dre.reduce((s: number, o: any) => {
+                const v = o.tem_dados_reais ? Number(o.receita_realizada || 0) : Number(o.receita_mensal_estimada || 0)
+                return s + v
+              }, 0)
+              const totalCustoMO = dre.reduce((s: number, o: any) => {
+                const v = o.tem_dados_reais ? Number(o.custo_realizado || 0) : Number(o.custo_mo_estimado || 0)
+                return s + v
+              }, 0)
+              const totalProvisoes = lancamentos.filter((l: any) => l.is_provisao).reduce((s: number, l: any) => s + Number(l.valor || 0), 0)
+              const resultado = totalReceita - totalCustoMO - totalProvisoes
+
+              const waterfallData = [
+                { name: 'Receita Bruta', value: totalReceita, bottom: 0, top: totalReceita, fill: CHART_THEME.primary },
+                { name: 'Custos MO', value: -totalCustoMO, bottom: totalReceita - totalCustoMO, top: totalReceita, fill: CHART_THEME.danger },
+                { name: 'Provisões', value: -totalProvisoes, bottom: resultado, top: totalReceita - totalCustoMO, fill: CHART_THEME.warning },
+                { name: 'Resultado', value: resultado, bottom: 0, top: resultado, fill: resultado >= 0 ? CHART_THEME.success : CHART_THEME.danger },
+              ]
+
+              // Monthly margin % data from dreMes (aggregated across all obras)
+              const monthlyMap = new Map<string, { receita: number; custo: number }>()
+              dreMes.forEach((m: any) => {
+                const key = m.mes ?? m.competencia ?? ''
+                if (!key) return
+                const existing = monthlyMap.get(key) || { receita: 0, custo: 0 }
+                existing.receita += Number(m.receita_realizada || 0)
+                existing.custo += Number(m.custo_mo_real || 0)
+                monthlyMap.set(key, existing)
+              })
+              const marginMonthly = Array.from(monthlyMap.entries())
+                .sort(([a], [b]) => a.localeCompare(b))
+                .slice(-12)
+                .map(([key, v]) => {
+                  const parts = key.split('-')
+                  const mesIdx = Number(parts[1] || 0)
+                  const label = mesIdx > 0 && mesIdx <= 12 ? `${MESES_CURTO[mesIdx]}/${(parts[0] || '').slice(2)}` : key
+                  const margem = v.receita > 0 ? ((v.receita - v.custo) / v.receita) * 100 : 0
+                  return { name: label, margem: Number(margem.toFixed(1)), receita: v.receita, custo: v.custo }
+                })
+
+              return (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  <ChartCard title="Resultado do Período" description="Receita, custos e resultado consolidado">
+                    <ResponsiveContainer width="100%" height={260}>
+                      <BarChart data={waterfallData} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
+                        <XAxis dataKey="name" tick={{ fontSize: 11, fill: CHART_THEME.axisColor }} axisLine={false} tickLine={false} />
+                        <YAxis tickFormatter={(v: number) => formatCurrencyK(Math.abs(v))} tick={{ fontSize: 10, fill: CHART_THEME.axisColor }} axisLine={false} tickLine={false} />
+                        <Tooltip
+                          formatter={(value: any) => [fmt(Math.abs(Number(value))), 'Valor']}
+                          contentStyle={{ background: CHART_THEME.tooltipBg, border: 'none', borderRadius: 8, color: '#fff', fontSize: 12 }}
+                        />
+                        {/* Invisible bottom bar to create floating effect */}
+                        <Bar dataKey="bottom" stackId="waterfall" fill="transparent" isAnimationActive={false} />
+                        {/* Visible bar segment */}
+                        <Bar dataKey={(d: any) => d.top - d.bottom} stackId="waterfall" radius={[4, 4, 0, 0]} animationDuration={CHART_THEME.animationDuration}>
+                          {waterfallData.map((entry, index) => (
+                            <Cell key={index} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                    <div className="flex items-center justify-center gap-4 mt-2 text-[10px] text-gray-500">
+                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: CHART_THEME.primary }} /> Receita</span>
+                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: CHART_THEME.danger }} /> Custos MO</span>
+                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: CHART_THEME.warning }} /> Provisões</span>
+                      <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded-sm" style={{ background: CHART_THEME.success }} /> Resultado</span>
+                    </div>
+                  </ChartCard>
+
+                  {marginMonthly.length > 1 && (
+                    <ChartCard title="Margem Operacional (%)" description="Evolução mensal dos últimos 12 meses">
+                      <ResponsiveContainer width="100%" height={260}>
+                        <LineChart data={marginMonthly} margin={{ top: 10, right: 10, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={CHART_THEME.gridColor} />
+                          <XAxis dataKey="name" tick={{ fontSize: 11, fill: CHART_THEME.axisColor }} axisLine={false} tickLine={false} />
+                          <YAxis tickFormatter={(v: number) => `${v}%`} tick={{ fontSize: 10, fill: CHART_THEME.axisColor }} axisLine={false} tickLine={false} />
+                          <Tooltip
+                            formatter={(value: any, name: any) => [`${Number(value).toFixed(1)}%`, name === 'margem' ? 'Margem' : name]}
+                            contentStyle={{ background: CHART_THEME.tooltipBg, border: 'none', borderRadius: 8, color: '#fff', fontSize: 12 }}
+                          />
+                          <Line type="monotone" dataKey="margem" stroke={CHART_THEME.primary} strokeWidth={2.5} dot={{ r: 3, fill: CHART_THEME.primary }} activeDot={{ r: 5 }} animationDuration={CHART_THEME.animationDuration} name="Margem %" />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </ChartCard>
+                  )}
+                </div>
+              )
+            })()}
+
             {dre.map((obra: any) => {
               const isOpen = expandido === obra.obra_id
               const funcsObra = custos.filter((c: any) => c.obra === obra.obra)
