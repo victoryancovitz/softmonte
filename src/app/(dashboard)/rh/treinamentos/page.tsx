@@ -411,6 +411,35 @@ export default function TreinamentosPage() {
         ))}
       </div>
 
+      {/* Gráfico status por NR */}
+      {Object.keys(byNR).length > 0 && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mb-6">
+          <h3 className="text-sm font-bold text-gray-800 mb-3">Status por Treinamento</h3>
+          <div className="space-y-2">
+            {Object.values(byNR).sort((a: any, b: any) => b.vencido - a.vencido || b.vencendo - a.vencendo).slice(0, 10).map((nr: any) => (
+              <div key={nr.codigo}>
+                <div className="flex justify-between text-xs mb-0.5">
+                  <span className="text-gray-600 truncate">{nr.codigo} — {nr.treinamento}</span>
+                  <span className="text-gray-400">{nr.total}</span>
+                </div>
+                <div className="flex h-3 rounded-full overflow-hidden bg-gray-100">
+                  {nr.ok > 0 && <div className="bg-green-500" style={{ width: `${nr.ok/nr.total*100}%` }} title={`${nr.ok} em dia`} />}
+                  {nr.vencendo > 0 && <div className="bg-amber-400" style={{ width: `${nr.vencendo/nr.total*100}%` }} title={`${nr.vencendo} vencendo`} />}
+                  {nr.vencido > 0 && <div className="bg-red-500" style={{ width: `${nr.vencido/nr.total*100}%` }} title={`${nr.vencido} vencidos`} />}
+                  {nr.pendente > 0 && <div className="bg-gray-300" style={{ width: `${nr.pendente/nr.total*100}%` }} title={`${nr.pendente} pendentes`} />}
+                </div>
+              </div>
+            ))}
+            <div className="flex gap-3 mt-2 text-[10px] text-gray-400">
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-green-500" /> Em dia</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> Vencendo</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500" /> Vencido</span>
+              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-gray-300" /> Pendente</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Form section */}
       {showForm && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 mb-6">

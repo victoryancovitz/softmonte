@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { useToast } from '@/components/Toast'
+import JuridicoCharts from './JuridicoCharts'
 
 export default function JuridicoDashboardPage() {
   const supabase = createClient()
@@ -14,6 +15,7 @@ export default function JuridicoDashboardPage() {
   const [acordosAbertos, setAcordosAbertos] = useState<number>(0)
   const [audiencias7d, setAudiencias7d] = useState<any[]>([])
   const [alertas, setAlertas] = useState<any[]>([])
+  const [processos, setProcessos] = useState<any[]>([])
 
   useEffect(() => { load() }, [])
 
@@ -34,13 +36,14 @@ export default function JuridicoDashboardPage() {
         supabase.from('processo_audiencias').select('*, processos_juridicos(numero_cnj, parte_contraria)').eq('status', 'agendada').order('data_audiencia').limit(1),
         supabase.from('financeiro_lancamentos').select('valor').eq('origem', 'juridico_acordo').eq('status', 'em_aberto').is('deleted_at', null),
         supabase.from('processo_audiencias').select('*, processos_juridicos(numero_cnj, parte_contraria)').eq('status', 'agendada').gte('data_audiencia', hoje).lte('data_audiencia', em7d).order('data_audiencia'),
-        supabase.from('processos_juridicos').select('id, numero_cnj, prognostico, updated_at').is('deleted_at', null),
+        supabase.from('processos_juridicos').select('id, numero_cnj, prognostico, tipo, valor_causa, valor_provisao, updated_at').is('deleted_at', null),
       ])
 
       setKpis(dashboard)
       setProximaAudiencia(proxAud?.[0] || null)
       setAcordosAbertos(acordos?.reduce((sum: number, l: any) => sum + (l.valor || 0), 0) || 0)
       setAudiencias7d(auds7d || [])
+      setProcessos(procs || [])
 
       // Compute alertas
       const alertasList: any[] = []
@@ -99,6 +102,9 @@ export default function JuridicoDashboardPage() {
           <p className="text-2xl font-bold font-display text-gray-900">{fmtCurrency(acordosAbertos)}</p>
         </div>
       </div>
+
+      {/* Charts */}
+      <JuridicoCharts processos={processos} />
 
       {/* Próximas Audiências */}
       <section className="bg-white border border-gray-200 rounded-xl p-5">

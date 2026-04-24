@@ -14,6 +14,7 @@ import { formatStatus } from '@/lib/formatters'
 import ContasBancariasObra from './ContasBancariasObra'
 import CriarCCButton from './CriarCCButton'
 import { fmt } from '@/lib/cores'
+import ObraCharts from './ObraCharts'
 
 const TIPOS_DOC_OBRA = [
   { value: 'contrato', label: 'Contrato' },
@@ -87,6 +88,7 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
   // ── Tab-specific queries (lazy-loaded) ──
 
   // geral tab: composicao, contasCorrentes, aditivosData, boletins, ccObra
+  let hhConsumido = 0
   let boletins: any[] | null = null
   let composicao: any[] | null = null
   let aditivosData: any[] | null = null
@@ -102,18 +104,23 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
       { data: _aditivosData },
       { data: _contasCorrentes },
       { data: _ccObra },
+      { data: _efetivoHH },
     ] = await Promise.all([
       supabase.from('boletins_medicao').select('*').eq('obra_id', params.id).is('deleted_at', null).order('numero'),
       supabase.from('contrato_composicao').select('*').eq('obra_id', params.id).order('funcao_nome'),
       supabase.from('aditivos').select('*').eq('obra_id', params.id).order('numero'),
       supabase.from('contas_correntes').select('id, nome, banco').eq('ativo', true).is('deleted_at', null).order('is_padrao', { ascending: false }).order('nome'),
       supabase.from('centros_custo').select('id, codigo, nome, tipo').eq('obra_id', params.id).eq('tipo', 'obra').is('deleted_at', null).maybeSingle(),
+      supabase.from('efetivo_diario').select('horas_trabalhadas').eq('obra_id', params.id),
     ])
     boletins = _boletins
     composicao = _composicao
     aditivosData = _aditivosData
     contasCorrentes = _contasCorrentes
     ccObra = _ccObra
+
+    // Charts: HH consumed
+    hhConsumido = (_efetivoHH ?? []).reduce((s: number, e: any) => s + Number(e.horas_trabalhadas || 0), 0)
 
     if (ccObra) {
       const [{ data: _subCCs }, { data: _custosFixosCC }] = await Promise.all([
@@ -314,6 +321,21 @@ export default async function ObraDetailPage({ params, searchParams }: { params:
               <div className="text-xs text-gray-400">até {obra.data_prev_fim ? new Date(obra.data_prev_fim + 'T12:00').toLocaleDateString('pt-BR') : '—'}</div>
             </div>
           </div>
+
+          <ObraCharts
+            dataInicio={obra.data_inicio}
+            dataPrevFim={obra.data_prev_fim}
+            hhContratado={(() => {
+              const mesesContrato = obra.data_inicio && obra.data_prev_fim
+                ? Math.max(1, Math.ceil((new Date(obra.data_prev_fim + 'T12:00').getTime() - new Date(obra.data_inicio + 'T12:00').getTime()) / (30.44 * 86400000)))
+                : 0
+              const hhMensal = (composicao ?? []).reduce((s: number, c: any) => s + Number(c.horas_mes || 0) * Number(c.quantidade_contratada || 0), 0)
+              return hhMensal * mesesContrato
+            })()}
+            hhConsumido={hhConsumido}
+            valorContrato={Number(obra.valor_contrato || 0)}
+            receitaRecebida={(boletins ?? []).filter((b: any) => b.status === 'aprovado').reduce((s: number, b: any) => s + Number(b.valor_aprovado || 0), 0)}
+          />
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <h2 className="text-sm font-semibold mb-4">Informações da Obra</h2>
