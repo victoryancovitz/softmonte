@@ -8,15 +8,19 @@ import SearchInput from '@/components/SearchInput'
 import { useToast } from '@/components/Toast'
 import { confirmDialog } from '@/components/ui/ConfirmDialog'
 
-const ROLE_CONFIG: Record<string, { label: string; color: string }> = {
-  admin: { label: 'Administrador', color: 'bg-red-100 text-red-700' },
-  encarregado: { label: 'Encarregado', color: 'bg-blue-100 text-blue-700' },
-  rh: { label: 'RH', color: 'bg-pink-100 text-pink-700' },
-  financeiro: { label: 'Financeiro', color: 'bg-emerald-100 text-emerald-700' },
-  almoxarife: { label: 'Almoxarife', color: 'bg-amber-100 text-amber-700' },
-  funcionario: { label: 'Funcionário', color: 'bg-gray-100 text-gray-600' },
-  visualizador: { label: 'Visualizador', color: 'bg-purple-100 text-purple-700' },
-}
+const ROLES = [
+  { value: 'admin', label: 'Diretoria', desc: 'Acesso total', color: 'bg-red-100 text-red-700' },
+  { value: 'rh', label: 'RH/Administrativo', desc: 'Funcionários, folha, ponto', color: 'bg-pink-100 text-pink-700' },
+  { value: 'financeiro', label: 'Financeiro', desc: 'Lançamentos, dívidas, DRE', color: 'bg-emerald-100 text-emerald-700' },
+  { value: 'juridico', label: 'Jurídico', desc: 'Processos e acordos', color: 'bg-indigo-100 text-indigo-700' },
+  { value: 'engenharia', label: 'Engenharia', desc: 'Obras, BMs, alocações', color: 'bg-cyan-100 text-cyan-700' },
+  { value: 'compras', label: 'Compras', desc: 'Fornecedores e estoque', color: 'bg-amber-100 text-amber-700' },
+  { value: 'visualizador', label: 'Visualizador', desc: 'Somente leitura', color: 'bg-purple-100 text-purple-700' },
+]
+
+const ROLE_CONFIG: Record<string, { label: string; color: string; desc: string }> = Object.fromEntries(
+  ROLES.map(r => [r.value, { label: r.label, color: r.color, desc: r.desc }])
+)
 
 function formatRelativeTime(dateStr: string | null): string {
   if (!dateStr) return '--'
@@ -43,6 +47,8 @@ export default function AdminUsuariosPage() {
   const [editandoValidade, setEditandoValidade] = useState<string | null>(null)
   const [novaValidade, setNovaValidade] = useState('')
   const [salvandoConvite, setSalvandoConvite] = useState<string | null>(null)
+  const [editandoRole, setEditandoRole] = useState<string | null>(null)
+  const [salvandoRole, setSalvandoRole] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
   const toast = useToast()
@@ -87,6 +93,24 @@ export default function AdminUsuariosPage() {
     setEditandoValidade(null)
     setNovaValidade('')
     setSalvandoConvite(null)
+  }
+
+  async function salvarRole(userId: string, newRole: string) {
+    setSalvandoRole(userId)
+    const { error } = await supabase.from('user_roles').update({ role: newRole }).eq('user_id', userId)
+    if (error) {
+      // Fallback: update profiles table if user_roles doesn't exist
+      const { error: profErr } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId)
+      if (profErr) {
+        toast.show('Erro ao salvar role: ' + profErr.message, 'error')
+        setSalvandoRole(null)
+        return
+      }
+    }
+    toast.show('Role atualizado com sucesso!')
+    setEditandoRole(null)
+    setSalvandoRole(null)
+    await loadData()
   }
 
   function copyLink(token: string, id: string) {
@@ -214,10 +238,41 @@ export default function AdminUsuariosPage() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${roleConf.color}`}>
-                        {roleConf.label}
-                      </span>
+                    <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                      {editandoRole === p.id ? (
+                        <div className="flex items-center gap-2">
+                          <select
+                            defaultValue={p.role || 'visualizador'}
+                            onChange={e => salvarRole(p.id, e.target.value)}
+                            disabled={salvandoRole === p.id}
+                            className="text-xs px-2 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand disabled:opacity-40"
+                            autoFocus
+                          >
+                            {ROLES.map(r => (
+                              <option key={r.value} value={r.value}>{r.label} — {r.desc}</option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => setEditandoRole(null)}
+                            className="text-xs text-gray-400 hover:text-gray-600"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setEditandoRole(p.id)}
+                          className="group/role flex items-center gap-1.5"
+                          title="Clique para editar role"
+                        >
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-semibold ${roleConf.color}`}>
+                            {roleConf.label}
+                          </span>
+                          <span className="text-xs text-gray-300 group-hover/role:text-brand transition-colors">
+                            Editar
+                          </span>
+                        </button>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       {p.ativo === false ? (
