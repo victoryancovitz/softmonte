@@ -33,9 +33,8 @@ const RBAC_CASES: RbacCase[] = [
       '/rh/desligamentos',
       '/rh/treinamentos',
       '/diretoria',
-      '/juridico',
     ],
-    description: 'Financeiro nao acessa RH, diretoria ou juridico',
+    description: 'Financeiro nao acessa RH ou diretoria (acessa juridico para leitura)',
   },
   {
     role: 'engenheiro',
