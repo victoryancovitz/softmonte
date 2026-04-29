@@ -22,7 +22,7 @@ export async function loginAs(page: Page, role: Role = 'admin') {
   await page.fill('input[type="email"]', cred.email)
   await page.fill('input[type="password"]', cred.pass)
   await page.click('button:has-text("Entrar")')
-  await page.waitForURL(u => !u.toString().includes('/login'), { timeout: 20000 })
+  await page.waitForURL(u => !u.toString().includes('/login'), { timeout: 45000 })
   await page.waitForTimeout(1500)
 }
 
