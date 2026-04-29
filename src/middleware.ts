@@ -80,18 +80,28 @@ export async function middleware(request: NextRequest) {
 
     // Matriz de rotas protegidas: rota → roles permitidos (admin sempre pode)
     const ROTAS_RBAC: Record<string, string[]> = {
+      // Financeiro: só financeiro edita
       '/financeiro/dividas': ['financeiro'],
       '/financeiro/contas': ['financeiro'],
       '/financeiro/lixeira': ['financeiro'],
+      '/financeiro/fluxo-caixa': ['financeiro'],
+      '/financeiro/categorias': ['financeiro'],
+      '/financeiro/dre': ['financeiro'],
+      '/financeiro/conciliacao': ['financeiro'],
+      // RH: só rh edita
       '/rh/folha': ['rh'],
       '/rh/admissoes': ['rh'],
       '/rh/desligamentos': ['rh'],
+      '/rh/treinamentos': ['rh'],
       '/rh/pagamentos-extras': ['rh'],
       '/rh/correcoes': ['rh'],
       '/rh/banco-horas': ['rh'],
       '/rh/ferias': ['rh'],
-      '/juridico/processos/novo': ['juridico'],
-      '/diretoria/societario': ['admin'],
+      // Jurídico
+      '/juridico': ['juridico', 'financeiro'],
+      // Diretoria
+      '/diretoria': ['admin'],
+      // Admin
       '/admin': ['admin'],
     }
 
