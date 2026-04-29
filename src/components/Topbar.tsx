@@ -234,6 +234,7 @@ PATH_MAP['/executivo'] = { group: '', label: 'Painel Executivo' }
 PATH_MAP['/portal'] = { group: '', label: 'Portal do Funcionário' }
 PATH_MAP['/configuracoes'] = { group: '', label: 'Configurações' }
 PATH_MAP['/admin/usuarios'] = { group: '', label: 'Gerenciar Usuários' }
+PATH_MAP['/admin/integridade'] = { group: '', label: 'Integridade da Plataforma' }
 PATH_MAP['/admin/usuarios/auditoria'] = { group: '', label: 'Auditoria' }
 PATH_MAP['/auditoria'] = { group: '', label: 'Auditoria do Sistema' }
 PATH_MAP['/admin/usuarios/convidar'] = { group: '', label: 'Convidar Usuário' }
