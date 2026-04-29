@@ -13,14 +13,26 @@ interface FluxoMensalItem {
 }
 
 export function FluxoMensalChart({ data }: { data: FluxoMensalItem[] }) {
-  if (data.length === 0) return null
+  if (data.length === 0) return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">Fluxo Mensal — Receita vs Custo MO (6 meses)</div>
+      <p className="text-sm text-gray-400 text-center py-10">Sem dados para exibir.</p>
+    </div>
+  )
+
+  const safeData = data.map(d => ({
+    ...d,
+    receita: isNaN(d.receita) ? 0 : d.receita,
+    despesa: isNaN(d.despesa) ? 0 : d.despesa,
+    resultado: isNaN(d.resultado) ? 0 : d.resultado,
+  }))
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">Fluxo Mensal — Receita vs Custo MO (6 meses)</div>
       <div className="h-[220px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: 5 }}>
+          <BarChart data={safeData} margin={{ top: 5, right: 10, bottom: 5, left: 5 }}>
             <XAxis
               dataKey="mes"
               tick={{ fontSize: 10, fill: CHART_THEME.axisColor }}
@@ -35,7 +47,7 @@ export function FluxoMensalChart({ data }: { data: FluxoMensalItem[] }) {
               width={55}
             />
             <Tooltip
-              formatter={(v: any) => `R$ ${Number(v).toLocaleString('pt-BR')}`}
+              formatter={(v: any) => `R$ ${Number(v || 0).toLocaleString('pt-BR')}`}
               contentStyle={{
                 backgroundColor: CHART_THEME.tooltipBg,
                 border: 'none',
@@ -80,14 +92,26 @@ interface CashflowMensalItem {
 }
 
 export function CashflowMensalChart({ data }: { data: CashflowMensalItem[] }) {
-  if (data.length === 0) return null
+  if (data.length === 0) return (
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">Fluxo de Caixa Mensal — Entradas vs Saídas</div>
+      <p className="text-sm text-gray-400 text-center py-10">Sem dados para exibir.</p>
+    </div>
+  )
+
+  const safeData = data.map(d => ({
+    ...d,
+    entradas: isNaN(d.entradas) ? 0 : d.entradas,
+    saidas: isNaN(d.saidas) ? 0 : d.saidas,
+    saldo: isNaN(d.saldo) ? 0 : d.saldo,
+  }))
 
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-4">Fluxo de Caixa Mensal — Entradas vs Saídas</div>
       <div className="h-[220px]">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} margin={{ top: 5, right: 10, bottom: 5, left: 5 }}>
+          <BarChart data={safeData} margin={{ top: 5, right: 10, bottom: 5, left: 5 }}>
             <XAxis
               dataKey="mes"
               tick={{ fontSize: 10, fill: CHART_THEME.axisColor }}
@@ -102,7 +126,7 @@ export function CashflowMensalChart({ data }: { data: CashflowMensalItem[] }) {
               width={55}
             />
             <Tooltip
-              formatter={(v: any) => `R$ ${Math.abs(Number(v)).toLocaleString('pt-BR')}`}
+              formatter={(v: any) => `R$ ${Math.abs(Number(v || 0)).toLocaleString('pt-BR')}`}
               contentStyle={{
                 backgroundColor: CHART_THEME.tooltipBg,
                 border: 'none',

@@ -1,14 +1,16 @@
 'use client'
 
 function getColor(value: number) {
+  if (isNaN(value)) return '#22C55E'
   if (value > 95) return '#EF4444'
   if (value >= 80) return '#F59E0B'
   return '#22C55E'
 }
 
 function ProgressCircle({ value, label, color }: { value: number; label: string; color: string }) {
+  const safeValue = isNaN(value) ? 0 : value
   const radius = 40, circumference = 2 * Math.PI * radius
-  const offset = circumference - (Math.min(value, 100) / 100) * circumference
+  const offset = circumference - (Math.min(safeValue, 100) / 100) * circumference
   return (
     <div className="flex flex-col items-center">
       <svg width="100" height="100" className="-rotate-90">
@@ -17,7 +19,7 @@ function ProgressCircle({ value, label, color }: { value: number; label: string;
           strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-all duration-700" />
       </svg>
       <div className="text-center -mt-16 mb-6">
-        <div className="text-xl font-bold">{value.toFixed(0)}%</div>
+        <div className="text-xl font-bold">{safeValue.toFixed(0)}%</div>
       </div>
       <div className="text-xs text-gray-500 font-medium">{label}</div>
     </div>

@@ -302,7 +302,7 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
                         <XAxis dataKey="name" tick={{ fontSize: 11, fill: CHART_THEME.axisColor }} axisLine={false} tickLine={false} />
                         <YAxis tickFormatter={(v: number) => formatCurrencyK(Math.abs(v))} tick={{ fontSize: 10, fill: CHART_THEME.axisColor }} axisLine={false} tickLine={false} />
                         <Tooltip
-                          formatter={(value: any) => [fmt(Math.abs(Number(value))), 'Valor']}
+                          formatter={(value: any) => [fmt(Math.abs(Number(value || 0))), 'Valor']}
                           contentStyle={{ background: CHART_THEME.tooltipBg, border: 'none', borderRadius: 8, color: '#fff', fontSize: 12 }}
                         />
                         {/* Invisible bottom bar to create floating effect */}

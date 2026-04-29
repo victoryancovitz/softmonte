@@ -20,15 +20,17 @@ import { CHART_THEME, formatCurrencyK } from '@/lib/charts/theme'
 const MESES_CURTO_LOCAL = ['', 'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
 
 function CronogramaChart({ data }: { data: any[] }) {
+  if (data.length === 0) return <p className="text-sm text-gray-400 text-center py-10">Sem dados para exibir.</p>
+
   // Pivotar: cada mês vira uma row com uma key por credor
   const credores = Array.from(new Set(data.map(d => d.banco_credor))).sort()
   const meses = Array.from(new Set(data.map(d => d.mes))).sort()
 
   const chartData = meses.map(mes => {
-    const [ano, m] = mes.split('-')
-    const row: any = { mes: `${MESES_CURTO_LOCAL[Number(m)]}/${ano.slice(2)}` }
+    const [ano, m] = (mes || '').split('-')
+    const row: any = { mes: `${MESES_CURTO_LOCAL[Number(m)] || m}/${(ano || '').slice(2)}` }
     credores.forEach(c => { row[c] = 0 })
-    data.filter(d => d.mes === mes).forEach(d => { row[d.banco_credor] = Math.round(Number(d.valor || 0)) })
+    data.filter(d => d.mes === mes).forEach(d => { row[d.banco_credor] = Math.round(Number(d.valor || 0)) || 0 })
     return row
   })
 
@@ -37,7 +39,7 @@ function CronogramaChart({ data }: { data: any[] }) {
       <BarChart data={chartData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
         <XAxis dataKey="mes" tick={{ fontSize: 10, fill: CHART_THEME.axisColor }} />
         <YAxis tickFormatter={formatCurrencyK} tick={{ fontSize: 10, fill: CHART_THEME.axisColor }} width={50} />
-        <Tooltip formatter={(v: any) => `R$ ${Number(v).toLocaleString('pt-BR')}`}
+        <Tooltip formatter={(v: any) => `R$ ${Number(v || 0).toLocaleString('pt-BR')}`}
           contentStyle={{ backgroundColor: CHART_THEME.tooltipBg, border: 'none', borderRadius: 8, color: '#fff', fontSize: 11 }}
           itemStyle={{ color: '#fff' }} labelStyle={{ color: '#C4972A', fontWeight: 'bold' }} />
         {credores.map((c, i) => (
@@ -548,7 +550,7 @@ export default function DividasClient({ dividas, indicadores, kpis, cronograma, 
                 </defs>
                 <XAxis dataKey="mes" tick={{ fontSize: 9, fill: CHART_THEME.axisColor }} interval={2} />
                 <YAxis tickFormatter={formatCurrencyK} tick={{ fontSize: 10, fill: CHART_THEME.axisColor }} width={55} />
-                <Tooltip formatter={(v: any) => `R$ ${Number(v).toLocaleString('pt-BR')}`}
+                <Tooltip formatter={(v: any) => `R$ ${Number(v || 0).toLocaleString('pt-BR')}`}
                   contentStyle={{ backgroundColor: CHART_THEME.tooltipBg, border: 'none', borderRadius: 8, color: '#fff', fontSize: 11 }} />
                 <Area type="monotone" dataKey="saldo" stroke={CHART_THEME.primary} strokeWidth={2} fill="url(#saldoGrad)" />
               </AreaChart>

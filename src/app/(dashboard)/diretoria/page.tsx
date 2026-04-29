@@ -103,7 +103,7 @@ export default async function DiretoriaPage() {
   const margemRealDir = totReceita > 0 ? ((totReceita - custoFolhaSemProv) / totReceita * 100) : null
   const margemRealProvDir = totReceita > 0 ? ((totReceita - custoFolhaComProv) / totReceita * 100) : null
   // Margem teórica: AVG de vw_custo_funcionario (mesma fonte da Rentabilidade)
-  const cfValid = (custoFunc ?? []).filter((f: any) => f.margem_pct != null)
+  const cfValid = (custoFunc ?? []).filter((f: any) => f.margem_pct != null && !isNaN(Number(f.margem_pct)))
   const margemTeoricaDir = cfValid.length > 0 ? cfValid.reduce((s: number, f: any) => s + Number(f.margem_pct), 0) / cfValid.length : null
 
   const cf30 = (cashflow ?? []).filter((e: any) => e.data >= hojeStr && e.data <= em30)
@@ -314,9 +314,9 @@ export default async function DiretoriaPage() {
           </div>
           {/* 3 Margens pills */}
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {margemTeoricaDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${totReceita > 0 ? corPill(margemTeoricaDir) : 'bg-amber-100 text-amber-700'}`} title="Calculada sobre preço contratado por HH vs custo projetado. Potencial máximo.">{totReceita > 0 ? '' : 'Estimada '}Teórica {margemTeoricaDir.toFixed(1)}%</span>}
-            {margemRealDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${corPill(margemRealDir)}`} title="Receita dos BMs aprovados menos folha sem provisões (salário+encargos+benefícios).">Real {margemRealDir.toFixed(1)}%</span>}
-            {margemRealProvDir != null && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${corPill(margemRealProvDir)}`} title="Inclui 13°, férias e FGTS provisionados. Margem mais conservadora.">C/Prov {margemRealProvDir.toFixed(1)}%</span>}
+            {margemTeoricaDir != null && !isNaN(margemTeoricaDir) && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${totReceita > 0 ? corPill(margemTeoricaDir) : 'bg-amber-100 text-amber-700'}`} title="Calculada sobre preço contratado por HH vs custo projetado. Potencial máximo.">{totReceita > 0 ? '' : 'Estimada '}Teórica {margemTeoricaDir.toFixed(1)}%</span>}
+            {margemRealDir != null && !isNaN(margemRealDir) && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${corPill(margemRealDir)}`} title="Receita dos BMs aprovados menos folha sem provisões (salário+encargos+benefícios).">Real {margemRealDir.toFixed(1)}%</span>}
+            {margemRealProvDir != null && !isNaN(margemRealProvDir) && <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${corPill(margemRealProvDir)}`} title="Inclui 13°, férias e FGTS provisionados. Margem mais conservadora.">C/Prov {margemRealProvDir.toFixed(1)}%</span>}
           </div>
           <span className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-brand">Ver análise de margem <ArrowRight className="w-3 h-3" /></span>
         </Link>
