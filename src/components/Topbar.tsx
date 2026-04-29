@@ -108,6 +108,8 @@ const NAV_GROUPS: NavGroupDef[] = [
       { href: '/cadastros', label: 'Visão Geral', icon: ic.cad },
       { href: '/cadastros/funcoes', label: 'Funções', icon: ic.cad },
       { href: '/clientes', label: 'Clientes', icon: ic.client },
+      { href: '/cadastros/socios', label: 'Sócios', icon: ic.cad },
+      { href: '/cadastros/credor-tipos', label: 'Tipos de Credor', icon: ic.cad },
       { href: '/tipos-contrato', label: 'Tipos de Contrato', icon: ic.docs },
     ],
   },
