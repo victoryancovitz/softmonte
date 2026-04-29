@@ -9,7 +9,6 @@ import SearchInput from '@/components/SearchInput'
 import { useToast } from '@/components/Toast'
 import { exportarExcel, exportarPDF } from '@/lib/exportLancamentos'
 
-const FluxoCaixaChart = dynamic(() => import('./components/FluxoCaixaChart'), { ssr: false, loading: () => <div className="h-40 animate-pulse bg-gray-100 rounded-xl" /> })
 const LancamentoModal = dynamic(() => import('./components/LancamentoModal'), { ssr: false, loading: () => null })
 const LoteBar = dynamic(() => import('./components/LoteBar'), { ssr: false, loading: () => null })
 import FiltrosAvancados, { type FilterState, FILTER_INITIAL } from './components/FiltrosAvancados'
@@ -17,15 +16,6 @@ import { useKeyboardShortcut } from '@/hooks/useKeyboardShortcut'
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-const CAT_COLORS: Record<string, string> = {
-  'Salário Base': '#6366f1',
-  'FGTS': '#8b5cf6',
-  'Vale-Transporte': '#0ea5e9',
-  'Treinamentos Obrigatórios': '#f59e0b',
-  'Acordos Trabalhistas': '#ef4444',
-  'Rescisões Extraordinárias': '#f97316',
-  'Receita HH Homem-Hora': '#10b981',
-}
 
 export default function FinanceiroPageWrapper() {
   return (
@@ -40,10 +30,8 @@ function FinanceiroPage() {
   const [obras, setObras] = useState<any[]>([])
   const [obraId, setObraId] = useState<string>('all')
   const [lancamentos, setLancamentos] = useState<any[]>([])
-  const [fluxo, setFluxo] = useState<any[]>([])
   const [showProvisões, setShowProvisões] = useState(true)
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'fluxo' | 'lancamentos'>('fluxo')
   const [busca, setBusca] = useState('')
   // Filtros vindos da URL (clicados do Sumário Executivo)
   const [filtroTipo, setFiltroTipo] = useState('')
@@ -60,7 +48,6 @@ function FinanceiroPage() {
   const [fornecedores, setFornecedores] = useState<any[]>([])
   const [showFiltros, setShowFiltros] = useState(false)
   const [advFilters, setAdvFilters] = useState<FilterState>({ ...FILTER_INITIAL })
-  const [alertasCoerencia, setAlertasCoerencia] = useState<string[]>([])
   const [filtroCCId, setFiltroCCId] = useState('')
   const [centrosCusto, setCentrosCusto] = useState<any[]>([])
   const [page, setPage] = useState(1)
@@ -77,11 +64,9 @@ function FinanceiroPage() {
 
   // Aplica filtros da URL ao montar
   useEffect(() => {
-    const urlTab = searchParams.get('tab')
     const urlTipo = searchParams.get('tipo')
     const urlStatus = searchParams.get('status')
     const urlProv = searchParams.get('is_provisao')
-    if (urlTab === 'lancamentos') setTab('lancamentos')
     if (urlTipo) setFiltroTipo(urlTipo)
     if (urlStatus) setFiltroStatus(urlStatus)
     if (urlProv === 'true') setFiltroProvisao(true)
@@ -97,38 +82,6 @@ function FinanceiroPage() {
   useEffect(() => {
     loadData()
   }, [obraId, showProvisões, page, filtroAno, filtroMes])
-
-  function verificarCoerencia(dados: any[]): string[] {
-    const alertas: string[] = []
-    const hoje = new Date().toISOString().slice(0, 10)
-    const trintaDiasAtras = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10)
-
-    const vencidosAntigos = dados.filter(l => l.status === 'em_aberto' && l.data_vencimento && l.data_vencimento < trintaDiasAtras && !l.is_provisao)
-    if (vencidosAntigos.length > 0) {
-      alertas.push(`${vencidosAntigos.length} lançamento(s) vencido(s) há mais de 30 dias — total ${fmt(vencidosAntigos.reduce((s: number, l: any) => s + Number(l.valor), 0))}`)
-    }
-
-    const semCategoria = dados.filter(l => !l.categoria && l.status !== 'cancelado')
-    if (semCategoria.length > 0) {
-      alertas.push(`${semCategoria.length} lançamento(s) sem categoria definida`)
-    }
-
-    const grupos = new Map<string, any[]>()
-    dados.filter(l => l.parcela_grupo_id).forEach(l => {
-      if (!grupos.has(l.parcela_grupo_id)) grupos.set(l.parcela_grupo_id, [])
-      grupos.get(l.parcela_grupo_id)!.push(l)
-    })
-    let parcelasIncompletas = 0
-    grupos.forEach((parcelas, _grupoId) => {
-      const esperado = parcelas[0]?.parcela_total
-      if (esperado && parcelas.length < esperado) parcelasIncompletas++
-    })
-    if (parcelasIncompletas > 0) {
-      alertas.push(`${parcelasIncompletas} grupo(s) de parcelamento com parcelas faltando`)
-    }
-
-    return alertas
-  }
 
   async function loadData() {
     setLoading(true)
@@ -152,35 +105,6 @@ function FinanceiroPage() {
     const { data, count } = await q
     setLancamentos(data ?? [])
     setTotalCount(count ?? 0)
-
-    setAlertasCoerencia(verificarCoerencia(data ?? []))
-
-    const hojeLocal = new Date().toISOString().slice(0, 10)
-    const byMes: Record<string, { mes: string; receita_pago: number; receita_aberto: number; despesa_pago: number; despesa_aberto: number; despesa_vencido: number; provisao: number }> = {}
-    ;(data ?? []).forEach((l: any) => {
-      const mes = l.data_competencia?.slice(0, 7) ?? 'sem-data'
-      if (!byMes[mes]) byMes[mes] = { mes, receita_pago: 0, receita_aberto: 0, despesa_pago: 0, despesa_aberto: 0, despesa_vencido: 0, provisao: 0 }
-      const v = Number(l.valor)
-      if (l.tipo === 'receita' && l.natureza !== 'financiamento') {
-        if (l.status === 'pago') byMes[mes].receita_pago += v
-        else byMes[mes].receita_aberto += v
-      } else if (l.tipo === 'despesa') {
-        if (l.is_provisao) byMes[mes].provisao += v
-        else if (l.status === 'pago') byMes[mes].despesa_pago += v
-        else if (l.data_vencimento && l.data_vencimento < hojeLocal) byMes[mes].despesa_vencido += v
-        else byMes[mes].despesa_aberto += v
-      }
-    })
-
-    let acum = 0
-    const fluxoMes = Object.values(byMes).sort((a, b) => a.mes.localeCompare(b.mes)).map(m => {
-      const totalRec = m.receita_pago + m.receita_aberto
-      const totalDesp = m.despesa_pago + m.despesa_aberto + m.provisao
-      const resultado = totalRec - totalDesp
-      acum += resultado
-      return { ...m, totalRec, totalDesp, resultado, acum }
-    })
-    setFluxo(fluxoMes)
     setLoading(false)
   }
 
@@ -213,20 +137,6 @@ function FinanceiroPage() {
   const provisoes = lancamentos.filter(l => l.tipo === 'despesa' && l.is_provisao).reduce((s, l) => s + Number(l.valor), 0)
   const resultadoRealizado = receitaPaga - despesaPaga
   const resultadoTotal = (receitaPaga + receitaAberto) - (despesaPaga + despesaAberto + provisoes)
-
-  // Chart dimensions
-  const chartH = 180
-  const maxVal = Math.max(...fluxo.map(m => Math.max(m.totalRec, m.totalDesp)), 1)
-  const barW = fluxo.length > 0 ? Math.min(30, Math.floor(560 / fluxo.length / 2 - 4)) : 20
-
-  // Categories breakdown
-  const cats: Record<string, number> = {}
-  lancamentos.filter(l => l.tipo === 'despesa').forEach(l => {
-    const cat = l.categoria || 'Outros'
-    cats[cat] = (cats[cat] || 0) + Number(l.valor)
-  })
-  const catsSorted = Object.entries(cats).sort((a, b) => b[1] - a[1])
-  const totalDesp = Object.values(cats).reduce((s, v) => s + v, 0)
 
   // Filtered lancamentos for the table
   const lancamentosFiltrados = lancamentos.filter(l => {
@@ -314,43 +224,6 @@ function FinanceiroPage() {
         </Link>
       </div>
 
-      {/* Coherence alerts */}
-      {alertasCoerencia.length > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
-          <div className="flex items-start gap-3">
-            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0 mt-0.5 text-amber-500">
-              <path d="M10 2l8 14H2L10 2z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinejoin="round"/>
-              <path d="M10 8v4M10 14.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            <div className="flex-1">
-              <div className="text-sm font-semibold text-amber-800 mb-1">Alertas de coerência</div>
-              <ul className="space-y-0.5">
-                {alertasCoerencia.map((a, i) => (
-                  <li key={i} className="text-xs text-amber-700">{a}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Cards por conta bancária */}
-      {contas.length > 0 && (
-        <div className="flex gap-3 mb-4 overflow-x-auto pb-1">
-          {contas.map(c => {
-            const saldo = Number(c.saldo_atual || 0)
-            const bancoColor: Record<string, string> = { 'BTG': 'border-blue-400 bg-blue-50', 'Santander': 'border-red-400 bg-red-50', 'Itaú': 'border-orange-400 bg-orange-50', 'Bradesco': 'border-pink-400 bg-pink-50', 'Banco do Brasil': 'border-yellow-400 bg-yellow-50', 'Caixa': 'border-cyan-400 bg-cyan-50', 'Sicoob': 'border-green-400 bg-green-50' }
-            const bc = Object.entries(bancoColor).find(([k]) => (c.banco || '').toLowerCase().includes(k.toLowerCase()))?.[1] || 'border-gray-200 bg-gray-50'
-            return (
-              <Link key={c.id} href="/financeiro/contas" className={`flex-shrink-0 rounded-xl border-l-4 p-3 min-w-[160px] hover:shadow-md transition-all ${bc}`}>
-                <div className="text-[10px] font-bold text-gray-500 uppercase truncate">{c.banco ? `${c.banco} — ` : ''}{c.nome}{c.is_padrao ? ' ★' : ''}</div>
-                <div className={`text-lg font-bold mt-0.5 ${saldo >= 0 ? 'text-gray-900' : 'text-red-700'}`}>{fmt(saldo)}</div>
-              </Link>
-            )
-          })}
-        </div>
-      )}
-
       {/* Status tabs */}
       {(() => {
         const hoje = new Date().toISOString().slice(0, 10)
@@ -396,57 +269,23 @@ function FinanceiroPage() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5 mb-5">
-        {/* Fluxo de caixa chart */}
-        <FluxoCaixaChart fluxo={fluxo} chartH={chartH} maxVal={maxVal} barW={barW} />
-
-        {/* Despesas por categoria */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h2 className="text-sm font-semibold mb-4">Despesas por Categoria</h2>
-          <div className="space-y-2.5">
-            {catsSorted.map(([cat, val]) => (
-              <div key={cat}>
-                <div className="flex justify-between text-xs mb-0.5">
-                  <span className="text-gray-600 truncate">{cat}</span>
-                  <span className="font-medium text-gray-900 ml-2 flex-shrink-0">{(val / 1000).toFixed(0)}k</span>
-                </div>
-                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-all"
-                    style={{ width: `${(val / totalDesp) * 100}%`, backgroundColor: CAT_COLORS[cat] ?? '#6b7280' }}/>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Tabela de fluxo mensal */}
+      {/* Lançamentos */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto mb-5">
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-          <div className="flex gap-3">
-            {(['fluxo', 'lancamentos'] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)}
-                className={`text-sm font-medium px-3 py-1 rounded-lg transition-colors ${tab === t ? 'bg-gray-100 text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}>
-                {t === 'fluxo' ? 'Fluxo mensal' : 'Lançamentos'}
-              </button>
-            ))}
+          <h2 className="text-sm font-semibold text-gray-900">Lançamentos</h2>
+          <div className="flex items-center gap-2">
+            <button onClick={() => exportarExcel(lancamentosFiltrados, `lancamentos-${new Date().toISOString().slice(0, 10)}`)}
+              className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 flex items-center gap-1">
+              <span>📊</span> Excel
+            </button>
+            <button onClick={() => exportarPDF(lancamentosFiltrados)}
+              className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 flex items-center gap-1">
+              <span>🖨️</span> PDF
+            </button>
           </div>
-          {tab === 'lancamentos' && (
-            <div className="flex items-center gap-2">
-              <button onClick={() => exportarExcel(lancamentosFiltrados, `lancamentos-${new Date().toISOString().slice(0, 10)}`)}
-                className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 flex items-center gap-1">
-                <span>📊</span> Excel
-              </button>
-              <button onClick={() => exportarPDF(lancamentosFiltrados)}
-                className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 flex items-center gap-1">
-                <span>🖨️</span> PDF
-              </button>
-            </div>
-          )}
         </div>
 
-        {tab === 'lancamentos' && (
-          <div className="px-5 pt-3 space-y-2">
+        <div className="px-5 pt-3 space-y-2">
             <div className="flex items-center gap-2 flex-wrap">
               <div className="flex-1 min-w-[200px]"><SearchInput value={busca} onChange={setBusca} placeholder="Buscar lançamento..." /></div>
               {/* Seleção rápida por folha */}
@@ -492,39 +331,7 @@ function FinanceiroPage() {
               </div>
             )}
           </div>
-        )}
 
-        {tab === 'fluxo' ? (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-100">
-                {['Mês','Receita','Despesa Paga','Em aberto','Provisão','Resultado Mês','Acumulado'].map(h => (
-                  <th key={h} className="text-right first:text-left px-4 py-2.5 text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {fluxo.map(m => (
-                <tr key={m.mes} className="border-b border-gray-50 hover:bg-gray-50/80">
-                  <td className="px-4 py-2.5 font-medium text-sm">
-                    {new Date(m.mes + '-01').toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('.', '').replace(' ', "'")}
-                  </td>
-                  <td className="px-4 py-2.5 text-right text-green-600">{m.totalRec > 0 ? fmt(m.totalRec) : '—'}</td>
-                  <td className="px-4 py-2.5 text-right text-red-600">{m.despesa_pago > 0 ? fmt(m.despesa_pago) : '—'}</td>
-                  <td className="px-4 py-2.5 text-right text-orange-500">{m.despesa_aberto > 0 ? fmt(m.despesa_aberto) : '—'}</td>
-                  <td className="px-4 py-2.5 text-right text-purple-600">{m.provisao > 0 ? fmt(m.provisao) : '—'}</td>
-                  <td className={`px-4 py-2.5 text-right font-semibold ${m.resultado >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                    {fmt(m.resultado)}
-                  </td>
-                  <td className={`px-4 py-2.5 text-right font-bold ${m.acum >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                    {fmt(m.acum)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <>
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-100">
@@ -735,57 +542,7 @@ function FinanceiroPage() {
               </button>
             </div>
           )}
-          </>
-        )}
       </div>
-
-      {/* Alerta de provisões */}
-      {showProvisões && provisoes > 0 && (
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className="flex-shrink-0 mt-0.5 text-amber-500">
-            <path d="M10 2l8 14H2L10 2z" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinejoin="round"/>
-            <path d="M10 8v4M10 14.5v.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          <div>
-            <div className="text-sm font-semibold text-amber-800">Atenção: Provisões futuras de {fmt(provisoes)}</div>
-            <div className="text-xs text-amber-700 mt-0.5">
-              Inclui salários, FGTS e demais encargos provisionados para os próximos meses.
-              Para equilibrar o resultado, é necessário provisionar as <strong>receitas futuras</strong> correspondentes (próximos BMs).
-              <Link href="/financeiro/novo" className="ml-1 underline font-medium">Adicionar receita projetada →</Link>
-            </div>
-          </div>
-        </div>
-      )}
-      {/* Próximos 30 dias */}
-      {(() => {
-        const hoje = new Date().toISOString().slice(0, 10)
-        const em30 = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
-        const proxReceitas = lancamentos.filter(l => l.tipo === 'receita' && l.status !== 'pago' && l.data_vencimento && l.data_vencimento >= hoje && l.data_vencimento <= em30).sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)).slice(0, 5)
-        const proxDespesas = lancamentos.filter(l => l.tipo === 'despesa' && l.status !== 'pago' && !l.is_provisao && l.data_vencimento && l.data_vencimento >= hoje && l.data_vencimento <= em30).sort((a, b) => a.data_vencimento.localeCompare(b.data_vencimento)).slice(0, 5)
-        if (proxReceitas.length === 0 && proxDespesas.length === 0) return null
-        return (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Próximas Receitas (30d)</h3>
-              {proxReceitas.length > 0 ? proxReceitas.map(l => (
-                <div key={l.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <div><div className="text-sm font-medium text-gray-900">{l.nome}</div><div className="text-[10px] text-gray-400">{l.obras?.nome || '—'}</div></div>
-                  <div className="text-right"><div className="text-sm font-bold text-green-700">{fmt(l.valor)}</div><div className="text-[10px] text-gray-400">{new Date(l.data_vencimento + 'T12:00').toLocaleDateString('pt-BR')}</div></div>
-                </div>
-              )) : <p className="text-xs text-gray-400">Nenhuma receita nos próximos 30 dias</p>}
-            </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
-              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Próximas Despesas (30d)</h3>
-              {proxDespesas.length > 0 ? proxDespesas.map(l => (
-                <div key={l.id} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                  <div><div className="text-sm font-medium text-gray-900">{l.nome}</div><div className="text-[10px] text-gray-400">{l.obras?.nome || '—'}</div></div>
-                  <div className="text-right"><div className="text-sm font-bold text-red-700">{fmt(l.valor)}</div><div className="text-[10px] text-gray-400">{new Date(l.data_vencimento + 'T12:00').toLocaleDateString('pt-BR')}</div></div>
-                </div>
-              )) : <p className="text-xs text-gray-400">Nenhuma despesa nos próximos 30 dias</p>}
-            </div>
-          </div>
-        )
-      })()}
 
       {/* Batch selection bar + modals */}
       <LoteBar
