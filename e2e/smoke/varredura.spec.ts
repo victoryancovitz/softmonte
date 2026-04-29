@@ -81,14 +81,23 @@ async function assertNoError(page: import('@playwright/test').Page, path: string
 
 for (const [role, pages] of Object.entries(PAGES_BY_ROLE)) {
   test.describe(`Varredura — ${role}`, () => {
-    for (const path of pages) {
-      test(`${role}: ${path} carrega sem erro`, async ({ page }) => {
-        test.setTimeout(60000)
-        await loginAs(page, role as Role)
-        await page.goto(BASE + path)
-        await page.waitForTimeout(3000)
-        await assertNoError(page, path)
-      })
-    }
+    test(`${role}: todas as ${pages.length} rotas carregam sem erro`, async ({ page }) => {
+      test.setTimeout(180000) // 3 min para todas as rotas do perfil
+      await loginAs(page, role as Role)
+      const erros: string[] = []
+      for (const path of pages) {
+        try {
+          await page.goto(BASE + path, { timeout: 45000 })
+          await page.waitForTimeout(2000)
+          const body = await page.locator('body').textContent() ?? ''
+          if (body.includes('Application error') || body.includes('500 Internal Server Error')) {
+            erros.push(`${path}: erro na página`)
+          }
+        } catch (e) {
+          erros.push(`${path}: ${(e as Error).message.slice(0, 80)}`)
+        }
+      }
+      expect(erros, `Rotas com erro para ${role}:\n${erros.join('\n')}`).toEqual([])
+    })
   })
 }
