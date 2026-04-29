@@ -6,7 +6,7 @@ import DreClient from './DreClient'
 export default async function DrePage() {
   const supabase = createClient()
 
-  const [{ data: dre }, { data: dreMes }, { data: custos }, { data: lancamentos }, { data: empresaArr }, { data: contasSaldo }, { data: ccsAdm }, { data: obrasAtivas }, { data: rateioConfigArr }, { data: distribuicoes }] = await Promise.all([
+  const [{ data: dre }, { data: dreMes }, { data: custos }, { data: lancamentos }, { data: empresaArr }, { data: contasSaldo }, { data: ccsAdm }, { data: obrasAtivas }, { data: rateioConfigArr }, { data: distribuicoes }, { data: contingenciasArr }] = await Promise.all([
     supabase.from('vw_dre_obra').select('*').limit(500),
     supabase.from('vw_dre_obra_mes').select('*').limit(500),
     supabase.from('vw_custo_funcionario').select('*'),
@@ -17,8 +17,10 @@ export default async function DrePage() {
     supabase.from('obras').select('id, nome, data_inicio, data_fim, status').in('status', ['em_andamento', 'planejamento']),
     supabase.from('cc_rateio_config').select('*').order('created_at', { ascending: false }).limit(1),
     supabase.from('movimentacoes_societarias').select('*').eq('tipo', 'distribuicao_lucro'),
+    supabase.from('processos_juridicos').select('valor_provisionado').is('deleted_at', null).eq('prognostico', 'provavel'),
   ])
   const empresa = (empresaArr ?? [])[0] ?? { regime_tributario: 'lucro_presumido', capital_social: 100000, aliquota_iss: 0.02, aliquota_pis: 0.0065, aliquota_cofins: 0.03, aliquota_ir: 0.048, aliquota_csll: 0.0288 }
+  const contingenciasJuridicas = (contingenciasArr ?? []).reduce((s: number, p: any) => s + Number(p.valor_provisionado || 0), 0)
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
@@ -51,6 +53,7 @@ export default async function DrePage() {
         obrasAtivas={obrasAtivas ?? []}
         rateioConfig={(rateioConfigArr ?? [])[0] ?? null}
         distribuicoes={distribuicoes ?? []}
+        contingenciasJuridicas={contingenciasJuridicas}
       />
     </div>
   )

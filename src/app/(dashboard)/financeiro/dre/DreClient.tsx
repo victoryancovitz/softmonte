@@ -19,9 +19,9 @@ const statusColor: Record<string, string> = {
 type Tab = 'margem' | 'dre' | 'por_obra' | 'obra_rateio' | 'sga' | 'consolidada' | 'oficial' | 'bp' | 'dfc' | 'por_cc'
 type Granularidade = 'mensal' | 'trimestral' | 'semestral' | 'anual' | 'acumulado'
 
-export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, contasSaldo, ccsAdm, obrasAtivas, rateioConfig, distribuicoes }: {
+export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, contasSaldo, ccsAdm, obrasAtivas, rateioConfig, distribuicoes, contingenciasJuridicas = 0 }: {
   dre: any[]; dreMes: any[]; custos: any[]; lancamentos: any[]; empresa: any; contasSaldo: any[]
-  ccsAdm?: any[]; obrasAtivas?: any[]; rateioConfig?: any; distribuicoes?: any[]
+  ccsAdm?: any[]; obrasAtivas?: any[]; rateioConfig?: any; distribuicoes?: any[]; contingenciasJuridicas?: number
 }) {
   const [expandido, setExpandido] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('margem')
@@ -145,12 +145,13 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
   const totalPassivoPL = totalPassivoCirc + totalPL
 
   // DRE line helper
-  function DreLine({ label, valor, base, bold, indent, negative }: { label: string; valor: number; base: number; bold?: boolean; indent?: boolean; negative?: boolean }) {
+  function DreLine({ label, valor, base, bold, indent, negative, colorClass }: { label: string; valor: number; base: number; bold?: boolean; indent?: boolean; negative?: boolean; colorClass?: string }) {
     const display = negative && valor > 0 ? -valor : valor
+    const valColor = colorClass ? colorClass : display < 0 ? 'text-red-600' : display > 0 ? 'text-green-700' : 'text-gray-400'
     return (
       <tr className={bold ? 'bg-gray-50 font-bold' : ''}>
-        <td className={`px-4 py-2 text-sm ${indent ? 'pl-8' : ''} ${bold ? 'text-gray-900' : 'text-gray-600'}`}>{label}</td>
-        <td className={`px-4 py-2 text-sm text-right ${display < 0 ? 'text-red-600' : display > 0 ? 'text-green-700' : 'text-gray-400'}`}>
+        <td className={`px-4 py-2 text-sm ${indent ? 'pl-8' : ''} ${bold ? 'text-gray-900' : colorClass ? colorClass : 'text-gray-600'}`}>{label}</td>
+        <td className={`px-4 py-2 text-sm text-right ${valColor}`}>
           {valor === 0 ? '—' : negative ? `(${fmt(Math.abs(valor))})` : fmt(valor)}
         </td>
         <td className="px-4 py-2 text-sm text-right text-gray-400">{valor === 0 ? '—' : pct(Math.abs(valor), base)}</td>
@@ -839,6 +840,11 @@ export default function DreClient({ dre, dreMes, custos, lancamentos, empresa, c
                   <DreLine label="CSLL" valor={csllVal} base={recBruta} indent negative />
                 </>)}
                 <DreLine label="(=) LUCRO LÍQUIDO" valor={lucroLiquidoC} base={recBruta} bold />
+
+                {contingenciasJuridicas > 0 && (<>
+                  <tr><td colSpan={3} className="px-4 pt-3 pb-1 text-[10px] font-bold text-amber-500 uppercase tracking-wider">Contingências</td></tr>
+                  <DreLine label="(-) Contingências Jurídicas" valor={contingenciasJuridicas} base={recBruta} indent negative colorClass="text-amber-600" />
+                </>)}
 
                 <tr><td colSpan={3} className="px-4 pt-4 pb-1 text-[10px] font-bold text-brand/70 uppercase tracking-wider border-t-2 border-brand/10">Destinação do Resultado</td></tr>
                 <DreLine label="(-) Distribuição de Lucros" valor={totalDistribuicoes} base={recBruta} indent negative />

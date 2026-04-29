@@ -201,7 +201,7 @@ export const MODULE_TABS: { groupPaths: string[]; tabs: ModuleTab[] }[] = [
       { href: '/juridico', label: 'Dashboard', match: ['/juridico'] },
       { href: '/juridico/processos', label: 'Processos', match: ['/juridico/processos'] },
       { href: '/juridico/audiencias', label: 'Audiências', match: ['/juridico/audiencias'] },
-      { href: '/juridico/processos?status=acordo', label: 'Acordos' },
+      { href: '/juridico/acordos', label: 'Acordos', match: ['/juridico/acordos'] },
       { href: '/juridico/advogados', label: 'Advogados', match: ['/juridico/advogados'] },
       { href: '/juridico/provisoes', label: 'Provisões', match: ['/juridico/provisoes'] },
       { href: '/juridico/importar-historico', label: 'Importar', match: ['/juridico/importar-historico'] },
