@@ -10,3 +10,4 @@ out/
 auditoria_strings.json
 scripts/seed*.ts
 test-results/
+e2e/screenshots/

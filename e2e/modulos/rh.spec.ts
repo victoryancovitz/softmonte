@@ -12,10 +12,10 @@ test.describe('Modulo RH', () => {
     await page.goto(BASE + '/funcionarios')
     await page.waitForTimeout(4000)
 
-    // Tabela de funcionarios deve ter pelo menos 1 linha
-    const rows = page.locator('tbody tr')
-    await expect(rows.first()).toBeVisible({ timeout: 10000 })
-    const count = await rows.count()
+    // Cards ou linhas de funcionarios (default view = cards com links)
+    const items = page.locator('a[href*="/funcionarios/"]').filter({ hasNotText: /Novo|Financeiro|novo/ })
+    await expect(items.first()).toBeVisible({ timeout: 10000 })
+    const count = await items.count()
     expect(count).toBeGreaterThan(0)
   })
 
@@ -26,10 +26,11 @@ test.describe('Modulo RH', () => {
     const searchInput = page.locator('input[placeholder*="Buscar" i], input[placeholder*="Pesquisar" i], input[type="search"]')
     const hasSearch = await searchInput.count()
     if (hasSearch > 0) {
-      const rowsBefore = await page.locator('tbody tr').count()
+      const itemSelector = 'a[href*="/funcionarios/"]'
+      const rowsBefore = await page.locator(itemSelector).filter({ hasNotText: /Novo|novo/ }).count()
       await searchInput.first().fill('ZZZZZZZ_INEXISTENTE')
       await page.waitForTimeout(1500)
-      const rowsAfter = await page.locator('tbody tr').count()
+      const rowsAfter = await page.locator(itemSelector).filter({ hasNotText: /Novo|novo/ }).count()
       // Deve ter filtrado (menos resultados ou mensagem de vazio)
       expect(rowsAfter).toBeLessThanOrEqual(rowsBefore)
     }
@@ -39,9 +40,9 @@ test.describe('Modulo RH', () => {
     await page.goto(BASE + '/funcionarios')
     await page.waitForTimeout(4000)
 
-    // Clicar no primeiro funcionario
-    const firstRow = page.locator('tbody tr').first()
-    await firstRow.click()
+    // Clicar no primeiro card/link de funcionario
+    const firstLink = page.locator('a[href*="/funcionarios/"]').filter({ hasNotText: /Novo|novo|editar/ }).first()
+    await firstLink.click()
     await page.waitForTimeout(3000)
 
     // Deve mostrar dados do funcionario (nome, CPF, ou informacoes)

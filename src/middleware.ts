@@ -51,7 +51,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // Verificar perfil pra: (a) bloquear usuários inativos/deletados, (b) redirect funcionário
+  // Verificar perfil pra: (a) bloquear inativos, (b) redirect funcionário, (c) RBAC por rota
   if (user && !isAuthPage && !isApiRoute) {
     const { data: profile } = await supabase
       .from('profiles')
@@ -59,15 +59,48 @@ export async function middleware(request: NextRequest) {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    // Usuário bloqueado (ativo=false) ou deletado → força logout
     if (profile && (profile.ativo === false || profile.deleted_at)) {
       await supabase.auth.signOut()
       return NextResponse.redirect(new URL('/login', request.url))
     }
 
-    // Funcionário logado é isolado ao /portal — bloqueia TODAS as rotas admin
     if (profile?.role === 'funcionario' && !isPortalRoute && !pathname.startsWith('/api/')) {
       return NextResponse.redirect(new URL('/portal', request.url))
+    }
+
+    // RBAC: verificar role via user_roles e bloquear rotas não autorizadas
+    const { data: userRole } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('ativo', true)
+      .maybeSingle()
+
+    const role = userRole?.role ?? 'visualizador'
+
+    // Matriz de rotas protegidas: rota → roles permitidos (admin sempre pode)
+    const ROTAS_RBAC: Record<string, string[]> = {
+      '/financeiro/dividas': ['financeiro'],
+      '/financeiro/contas': ['financeiro'],
+      '/financeiro/lixeira': ['financeiro'],
+      '/rh/folha': ['rh'],
+      '/rh/admissoes': ['rh'],
+      '/rh/desligamentos': ['rh'],
+      '/rh/pagamentos-extras': ['rh'],
+      '/rh/correcoes': ['rh'],
+      '/rh/banco-horas': ['rh'],
+      '/rh/ferias': ['rh'],
+      '/juridico/processos/novo': ['juridico'],
+      '/diretoria/societario': ['admin'],
+      '/admin': ['admin'],
+    }
+
+    if (role !== 'admin') {
+      for (const [rota, rolesPermitidos] of Object.entries(ROTAS_RBAC)) {
+        if (pathname.startsWith(rota) && !rolesPermitidos.includes(role)) {
+          return NextResponse.redirect(new URL('/sem-acesso', request.url))
+        }
+      }
     }
   }
 

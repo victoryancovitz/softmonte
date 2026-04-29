@@ -59,7 +59,7 @@ test.describe('Modulo Financeiro', () => {
   })
 
   test('Lancamentos — filtros funcionam', async ({ page }) => {
-    await page.goto(BASE + '/financeiro/lancamentos')
+    await page.goto(BASE + '/financeiro')
     await page.waitForTimeout(4000)
 
     // Deve ter algum controle de filtro (select, input, button)
