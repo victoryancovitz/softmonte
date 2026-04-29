@@ -262,7 +262,7 @@ export default function FolhaPage() {
           if (tot_prov > 0) {
             lancamentosParaInserir.push({
               obra_id: form.obra_id, tipo: 'despesa',
-              nome: `Provisao 13/Ferias/FGTS — ${String(form.mes).padStart(2,'0')}/${form.ano} — ${obraNome}`,
+              nome: `Provisão 13/Férias/FGTS — ${String(form.mes).padStart(2,'0')}/${form.ano} — ${obraNome}`,
               categoria: 'Folha de Pagamento', valor: tot_prov,
               status: 'em_aberto', data_competencia: compBase,
               origem: 'folha_fechamento', is_provisao: true,
@@ -270,7 +270,7 @@ export default function FolhaPage() {
             })
           }
           const { error: lancErr } = await supabase.from('financeiro_lancamentos').insert(lancamentosParaInserir)
-          if (lancErr) throw new Error('Falha ao gerar lancamentos da folha: ' + lancErr.message)
+          if (lancErr) throw new Error('Falha ao gerar lançamentos da folha: ' + lancErr.message)
 
           // 8) Provisoes por funcionario
           const provisoesRows = custosValidos.map((c: any) => ({
@@ -475,7 +475,7 @@ export default function FolhaPage() {
                   <AlertTriangle className="w-5 h-5 text-red-600" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-red-900 text-base">Divergencia na Composicao</h3>
+                  <h3 className="font-bold text-red-900 text-base">Divergência na Composição</h3>
                   <p className="text-xs text-red-600">Revise antes de fechar a folha</p>
                 </div>
               </div>

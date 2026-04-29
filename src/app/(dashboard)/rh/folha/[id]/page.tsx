@@ -333,7 +333,7 @@ function HoleriteCard({ item, folha, empresa, fmt, num, fmtDate }: {
             <table className="w-full text-[11px]">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left py-1 font-semibold text-gray-500">Descricao</th>
+                  <th className="text-left py-1 font-semibold text-gray-500">Descrição</th>
                   <th className="text-right py-1 font-semibold text-gray-500 w-16">Ref.</th>
                   <th className="text-right py-1 font-semibold text-gray-500 w-24">Valor</th>
                 </tr>
@@ -362,7 +362,7 @@ function HoleriteCard({ item, folha, empresa, fmt, num, fmtDate }: {
             <table className="w-full text-[11px]">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="text-left py-1 font-semibold text-gray-500">Descricao</th>
+                  <th className="text-left py-1 font-semibold text-gray-500">Descrição</th>
                   <th className="text-right py-1 font-semibold text-gray-500 w-16">Ref.</th>
                   <th className="text-right py-1 font-semibold text-gray-500 w-24">Valor</th>
                 </tr>

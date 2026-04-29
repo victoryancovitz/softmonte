@@ -43,11 +43,11 @@ export default function LixeiraClient({ lancamentos: initial }: LixeiraClientPro
     return (
       <>
         <h1 className="text-xl font-bold font-display text-brand mb-1">Lixeira</h1>
-        <p className="text-sm text-gray-500 mb-6">Itens excluidos nos ultimos 30 dias</p>
+        <p className="text-sm text-gray-500 mb-6">Itens excluídos nos últimos 30 dias</p>
         <EmptyState
           icone={<Trash2 size={48} />}
           titulo="Lixeira vazia"
-          descricao="Nenhum lancamento excluido nos ultimos 30 dias."
+          descricao="Nenhum lançamento excluído nos últimos 30 dias."
         />
       </>
     )
@@ -56,7 +56,7 @@ export default function LixeiraClient({ lancamentos: initial }: LixeiraClientPro
   return (
     <>
       <h1 className="text-xl font-bold font-display text-brand mb-1">Lixeira</h1>
-      <p className="text-sm text-gray-500 mb-6">Itens excluidos nos ultimos 30 dias</p>
+      <p className="text-sm text-gray-500 mb-6">Itens excluídos nos últimos 30 dias</p>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">

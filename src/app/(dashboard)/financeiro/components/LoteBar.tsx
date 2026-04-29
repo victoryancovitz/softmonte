@@ -34,7 +34,7 @@ export default function LoteBar({ selected, lancamentos, contas, onClear, onPaid
       const { error } = await supabase.from('financeiro_lancamentos').update(upd).in('id', Array.from(selected)).eq('status', 'em_aberto')
       if (error) throw error
       const n = selected.size
-      toast.success(`${n} lancamento${n > 1 ? 's' : ''} confirmado${n > 1 ? 's' : ''}`)
+      toast.success(`${n} lançamento${n > 1 ? 's' : ''} confirmado${n > 1 ? 's' : ''}`)
       setModalLote(false)
       onPaid()
     } catch (err: any) {
@@ -54,7 +54,7 @@ export default function LoteBar({ selected, lancamentos, contas, onClear, onPaid
         if (error) throw error
       }
       const n = selected.size
-      toast.success(`${n} lancamento${n > 1 ? 's' : ''} excluido${n > 1 ? 's' : ''}`)
+      toast.success(`${n} lançamento${n > 1 ? 's' : ''} excluído${n > 1 ? 's' : ''}`)
       setConfirmandoExclusao(false)
       onDeleted()
     } catch (err: any) {

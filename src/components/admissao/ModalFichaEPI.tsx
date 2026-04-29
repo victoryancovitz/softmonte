@@ -241,11 +241,11 @@ export default function ModalFichaEPI({ funcionario, workflowId, onClose, onSucc
       <div class="info-row">
         <span>NOME: <strong>${funcionario.nome || '-'}</strong></span>
         <span>CPF: <strong>${funcionario.cpf || '-'}</strong></span>
-        <span>FUNCAO: <strong>${funcionario.funcao_nome || funcionario.funcao || '-'}</strong></span>
-        <span>MATRICULA: <strong>${funcionario.matricula || '-'}</strong></span>
+        <span>FUNÇÃO: <strong>${funcionario.funcao_nome || funcionario.funcao || '-'}</strong></span>
+        <span>MATRÍCULA: <strong>${funcionario.matricula || '-'}</strong></span>
       </div>
       <div class="info-row">
-        <span>DATA ADMISSAO: <strong>${admissao}</strong></span>
+        <span>DATA ADMISSÃO: <strong>${admissao}</strong></span>
         <span>DATA ENTREGA: <strong>${entregaFmt}</strong></span>
       </div>
 

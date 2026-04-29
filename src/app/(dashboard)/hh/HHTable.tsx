@@ -44,7 +44,7 @@ export default function HHTable({ lancamentos, role }: { lancamentos: any[]; rol
   return (
     <>
       <div className="mb-4">
-        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar lancamento HH..." />
+        <SearchInput value={busca} onChange={setBusca} placeholder="Buscar lançamento HH..." />
       </div>
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
         <table className="w-full text-sm">
@@ -83,7 +83,7 @@ export default function HHTable({ lancamentos, role }: { lancamentos: any[]; rol
                 </td>
               </tr>
             )) : (
-              <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">Nenhum lancamento encontrado.</td></tr>
+              <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-400">Nenhum lançamento encontrado.</td></tr>
             )}
           </tbody>
         </table>

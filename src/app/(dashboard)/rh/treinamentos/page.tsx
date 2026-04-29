@@ -571,7 +571,7 @@ export default function TreinamentosPage() {
         </div>
 
         <div className="flex-1 max-w-sm">
-          <SearchInput value={search} onChange={setSearch} placeholder="Buscar nome, funcao ou obra..." />
+          <SearchInput value={search} onChange={setSearch} placeholder="Buscar nome, função ou obra..." />
         </div>
 
         <select
@@ -579,7 +579,7 @@ export default function TreinamentosPage() {
           onChange={e => setFiltroSituacao(e.target.value as SituacaoFilter)}
           className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand/30 bg-white"
         >
-          <option value="todos">Todas situacoes</option>
+          <option value="todos">Todas situações</option>
           <option value="ok">Em dia</option>
           <option value="vencendo">Vencendo</option>
           <option value="vencido">Vencido</option>

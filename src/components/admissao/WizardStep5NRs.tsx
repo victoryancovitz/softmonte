@@ -212,7 +212,7 @@ export default function WizardStep5NRs({ funcionario, workflowId, onComplete }: 
       <div className="space-y-4">
         <div className="p-6 rounded-xl bg-gray-50 border border-gray-200 text-center">
           <Shield className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-          <p className="text-sm text-gray-500">Nenhuma NR obrigatoria encontrada para esta funcao.</p>
+          <p className="text-sm text-gray-500">Nenhuma NR obrigatória encontrada para esta função.</p>
         </div>
         <button
           onClick={async () => {

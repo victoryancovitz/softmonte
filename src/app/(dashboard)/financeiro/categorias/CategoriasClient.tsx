@@ -175,7 +175,7 @@ export default function CategoriasClient({ lancamentos }: { lancamentos: Lancame
               <thead>
                 <tr className="text-left text-gray-400 text-xs border-b">
                   <th className="pb-2">Data</th>
-                  <th className="pb-2">Descricao</th>
+                  <th className="pb-2">Descrição</th>
                   <th className="pb-2">Fornecedor</th>
                   <th className="pb-2">Tipo</th>
                   <th className="pb-2 text-right">Valor</th>

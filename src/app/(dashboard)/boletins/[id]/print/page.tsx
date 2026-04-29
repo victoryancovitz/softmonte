@@ -296,7 +296,7 @@ export default async function BMPrintPage({ params }: { params: { id: string } }
         </div>
       </div>
 
-      {/* === PAGE 2: LANCAMENTOS POR FUNCAO === */}
+      {/* === PAGE 2: LANÇAMENTOS POR FUNÇÃO === */}
       <style>{`
         @media print {
           .bm-sheet-landscape { page-break-before: always; }
@@ -320,11 +320,11 @@ export default async function BMPrintPage({ params }: { params: { id: string } }
       <div className="bm-sheet-landscape">
         <div style={{ background: '#0F3757', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '3px solid #C9A269' }}>
           <div style={{ color: 'white' }}>
-            <div style={{ fontSize: 14, fontWeight: 900 }}>LANCAMENTOS POR FUNCAO</div>
+            <div style={{ fontSize: 14, fontWeight: 900 }}>LANÇAMENTOS POR FUNÇÃO</div>
             <div style={{ fontSize: 10, opacity: 0.8 }}>BM Nº {numero} — {bm.obras?.nome} — {periodo}</div>
           </div>
           <div style={{ fontSize: 9, color: '#C9A269', fontStyle: 'italic' }}>
-            Quantidade de pessoas por funcao em cada dia do periodo
+            Quantidade de pessoas por função em cada dia do período
           </div>
         </div>
 
@@ -333,7 +333,7 @@ export default async function BMPrintPage({ params }: { params: { id: string } }
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 9 }}>
               <thead>
                 <tr>
-                  <th style={{ textAlign: 'left', background: '#0F3757', color: 'white', padding: '5px 8px', minWidth: 110, fontSize: 9, fontWeight: 700 }}>FUNCAO</th>
+                  <th style={{ textAlign: 'left', background: '#0F3757', color: 'white', padding: '5px 8px', minWidth: 110, fontSize: 9, fontWeight: 700 }}>FUNÇÃO</th>
                   {datasArr.map(d => {
                     const dt = new Date(d + 'T12:00')
                     const dow = dt.getDay()
@@ -410,7 +410,7 @@ export default async function BMPrintPage({ params }: { params: { id: string } }
               <thead>
                 <tr>
                   <th style={{ textAlign: 'left', background: '#0F3757', color: 'white', padding: '5px 8px', minWidth: 120, fontSize: 9, fontWeight: 700 }}>FUNCIONARIO</th>
-                  <th style={{ textAlign: 'left', background: '#0F3757', color: 'white', padding: '5px 6px', minWidth: 80, fontSize: 9, fontWeight: 700 }}>FUNCAO</th>
+                  <th style={{ textAlign: 'left', background: '#0F3757', color: 'white', padding: '5px 6px', minWidth: 80, fontSize: 9, fontWeight: 700 }}>FUNÇÃO</th>
                   {datasArr.map(d => {
                     const dt = new Date(d + 'T12:00')
                     const dow = dt.getDay()

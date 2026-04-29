@@ -434,16 +434,16 @@ export default function CustosFixosPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm">
             <div className="flex items-center justify-between p-5 border-b border-gray-100">
-              <h2 className="text-base font-bold text-gray-800">Gerar Lancamentos</h2>
+              <h2 className="text-base font-bold text-gray-800">Gerar Lançamentos</h2>
               <button onClick={() => setGerarModal(false)} className="p-1 rounded-lg hover:bg-gray-100">
                 <X className="w-5 h-5 text-gray-400" />
               </button>
             </div>
             <div className="p-5 space-y-4">
-              <p className="text-sm text-gray-600">Gerar lancamentos financeiros a partir dos custos fixos com &quot;gerar lancamento automatico&quot; ativado.</p>
+              <p className="text-sm text-gray-600">Gerar lançamentos financeiros a partir dos custos fixos com &quot;gerar lançamento automático&quot; ativado.</p>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">Mes</label>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">Mês</label>
                   <select value={gerarMes} onChange={e => setGerarMes(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-xl text-sm">
                     {Array.from({ length: 12 }, (_, i) => <option key={i + 1} value={i + 1}>{String(i + 1).padStart(2, '0')}</option>)}
                   </select>

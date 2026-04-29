@@ -136,7 +136,7 @@ export default function FluxoCaixaClient({ rows }: { rows: FluxoRow[] }) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
-              {['Mes', 'Receita Paga', 'Despesa Paga', 'Em Aberto', 'Provisao', 'Resultado Caixa', 'Resultado Previsto', 'Acumulado'].map(h => (
+              {['Mês', 'Receita Paga', 'Despesa Paga', 'Em Aberto', 'Provisão', 'Resultado Caixa', 'Resultado Previsto', 'Acumulado'].map(h => (
                 <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase whitespace-nowrap">{h}</th>
               ))}
             </tr>

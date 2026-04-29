@@ -95,9 +95,9 @@ export default function DividaDetalheClient({ passivo, parcelas: initialParcelas
     }
 
     if (criados > 0) {
-      toast.success(`${criados} lancamento(s) gerado(s) com sucesso.`)
+      toast.success(`${criados} lançamento(s) gerado(s) com sucesso.`)
     } else {
-      toast.warning('Nenhum lancamento foi gerado.')
+      toast.warning('Nenhum lançamento foi gerado.')
     }
     setShowMaterializar(false)
     setSaving(false)
@@ -209,9 +209,9 @@ export default function DividaDetalheClient({ passivo, parcelas: initialParcelas
       {showMaterializar && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md">
-            <h3 className="text-sm font-bold text-brand mb-4">Gerar Lancamentos Financeiros</h3>
+            <h3 className="text-sm font-bold text-brand mb-4">Gerar Lançamentos Financeiros</h3>
             <p className="text-xs text-gray-500 mb-4">
-              Serao criados lancamentos em_aberto para {parcelasAbertas.filter(p => !p.hasLancamento).length} parcela(s) sem lancamento.
+              Serão criados lançamentos em_aberto para {parcelasAbertas.filter(p => !p.hasLancamento).length} parcela(s) sem lançamento.
             </p>
             <div className="space-y-3 mb-5">
               <div>

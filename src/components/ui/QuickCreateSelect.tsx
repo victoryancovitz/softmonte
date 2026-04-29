@@ -109,7 +109,7 @@ function QuickCreateModal({
 
       switch (type) {
         case 'centro_custo': {
-          if (!ccNome.trim()) { toast.warning('Nome obrigatorio'); setSaving(false); return }
+          if (!ccNome.trim()) { toast.warning('Nome obrigatório'); setSaving(false); return }
           // Tentar gerar codigo via RPC
           let codigo = ''
           try {
@@ -123,13 +123,13 @@ function QuickCreateModal({
           break
         }
         case 'categoria_financeira': {
-          if (!catNome.trim()) { toast.warning('Nome obrigatorio'); setSaving(false); return }
+          if (!catNome.trim()) { toast.warning('Nome obrigatório'); setSaving(false); return }
           insertData = { nome: catNome.trim(), tipo: catTipo }
           label = catNome.trim()
           break
         }
         case 'funcao': {
-          if (!funcNome.trim()) { toast.warning('Nome obrigatorio'); setSaving(false); return }
+          if (!funcNome.trim()) { toast.warning('Nome obrigatório'); setSaving(false); return }
           insertData = {
             nome: funcNome.trim(),
             ativo: true,
@@ -140,7 +140,7 @@ function QuickCreateModal({
           break
         }
         case 'cliente': {
-          if (!cliNome.trim()) { toast.warning('Nome obrigatorio'); setSaving(false); return }
+          if (!cliNome.trim()) { toast.warning('Nome obrigatório'); setSaving(false); return }
           insertData = { nome: cliNome.trim(), ...(cliCnpj ? { cnpj: cliCnpj } : {}) }
           label = cliNome.trim()
           break
@@ -271,12 +271,12 @@ function QuickCreateModal({
                   value={funcNome}
                   onChange={e => setFuncNome(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
-                  placeholder="Nome da funcao"
+                  placeholder="Nome da função"
                   autoFocus
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Salario (R$)</label>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Salário (R$)</label>
                 <input
                   type="number"
                   step="0.01"

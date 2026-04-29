@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
-import QuickCreateSelect from '@/components/QuickCreateSelect'
+import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 import { Check, ChevronRight, ChevronLeft, Plus, Loader2, Trash2 } from 'lucide-react'
 
 /**
@@ -288,25 +288,14 @@ export default function NovaObraWizardPage() {
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Cliente *</label>
               <QuickCreateSelect
-                table="clientes"
+                type="cliente"
                 value={form.cliente_id}
-                onChange={(id, rec) => {
+                onChange={(id, label) => {
                   set('cliente_id', id)
-                  set('cliente_nome', rec?.nome || '')
+                  set('cliente_nome', label)
                 }}
-                filter={{ deleted_at: null } as any}
+                options={clientes.map(c => ({ id: c.id, label: c.nome }))}
                 placeholder="Selecione o cliente..."
-                buttonLabel="Novo cliente"
-                createTitle="Criar novo cliente"
-                createFields={[
-                  { name: 'nome', label: 'Nome', required: true, placeholder: 'Ex: Cesari Engenharia' },
-                  { name: 'razao_social', label: 'Razão social' },
-                  { name: 'cnpj', label: 'CNPJ', placeholder: '00.000.000/0000-00' },
-                  { name: 'email_principal', label: 'E-mail principal' },
-                  { name: 'telefone', label: 'Telefone' },
-                  { name: 'cidade', label: 'Cidade' },
-                  { name: 'estado', label: 'UF', placeholder: 'SP' },
-                ]}
               />
             </div>
             {form.cliente_id && (
