@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { safeRedirect } from '@/lib/auth-helpers'
 
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request: { headers: request.headers } })
@@ -39,8 +40,6 @@ export async function middleware(request: NextRequest) {
   const isPortalRoute = pathname.startsWith('/portal')
 
   if (!user && !isAuthPage && !isPublicApi) {
-    // Rotas /api/* retornam 401 JSON em vez de redirect HTML pra /login,
-    // pra clientes fetch receberem erro tratável.
     if (isApiRoute) {
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
@@ -51,36 +50,27 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
-  // Verificar perfil pra: (a) bloquear inativos, (b) redirect funcionário, (c) RBAC por rota
+  // user_roles é a única source-of-truth para bloqueio e RBAC.
+  // profiles guarda metadado (nome, foto) mas NÃO controla acesso — soft-delete em profiles
+  // não derruba mais o usuário (era a causa do loop login→logout de 11/05).
   if (user && !isAuthPage && !isApiRoute) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, ativo, deleted_at')
-      .eq('user_id', user.id)
-      .maybeSingle()
-
-    if (profile && (profile.ativo === false || profile.deleted_at)) {
-      await supabase.auth.signOut()
-      return NextResponse.redirect(new URL('/login', request.url))
-    }
-
-    if (profile?.role === 'funcionario' && !isPortalRoute && !pathname.startsWith('/api/')) {
-      return NextResponse.redirect(new URL('/portal', request.url))
-    }
-
-    // RBAC: verificar role via user_roles e bloquear rotas não autorizadas
     const { data: userRole } = await supabase
       .from('user_roles')
-      .select('role')
+      .select('role, ativo')
       .eq('user_id', user.id)
-      .eq('ativo', true)
       .maybeSingle()
+
+    if (userRole && userRole.ativo === false) {
+      return safeRedirect(request, 'user-role-inactive', supabase)
+    }
 
     const role = userRole?.role ?? 'visualizador'
 
-    // Matriz de rotas protegidas: rota → roles permitidos (admin sempre pode)
+    if (role === 'funcionario' && !isPortalRoute) {
+      return NextResponse.redirect(new URL('/portal', request.url))
+    }
+
     const ROTAS_RBAC: Record<string, string[]> = {
-      // Financeiro: só financeiro edita
       '/financeiro/dividas': ['financeiro'],
       '/financeiro/contas': ['financeiro'],
       '/financeiro/lixeira': ['financeiro'],
@@ -88,7 +78,6 @@ export async function middleware(request: NextRequest) {
       '/financeiro/categorias': ['financeiro'],
       '/financeiro/dre': ['financeiro'],
       '/financeiro/conciliacao': ['financeiro'],
-      // RH: só rh edita
       '/rh/folha': ['rh'],
       '/rh/admissoes': ['rh'],
       '/rh/desligamentos': ['rh'],
@@ -97,11 +86,8 @@ export async function middleware(request: NextRequest) {
       '/rh/correcoes': ['rh'],
       '/rh/banco-horas': ['rh'],
       '/rh/ferias': ['rh'],
-      // Jurídico
       '/juridico': ['juridico', 'financeiro'],
-      // Diretoria
       '/diretoria': ['admin'],
-      // Admin
       '/admin': ['admin'],
     }
 

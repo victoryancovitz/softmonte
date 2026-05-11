@@ -1,15 +1,28 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+
+const MENSAGENS_MOTIVO: Record<string, string> = {
+  'user-role-inactive': 'Sua conta está desativada. Fale com a diretoria.',
+  'user-banned': 'Conta bloqueada. Fale com a diretoria.',
+  'admin-explicit-revoke': 'Seu acesso foi revogado. Fale com a diretoria.',
+  'session-expired': 'Sua sessão expirou. Faça login novamente.',
+}
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [aviso, setAviso] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+
+  useEffect(() => {
+    const motivo = new URLSearchParams(window.location.search).get('motivo')
+    if (motivo && MENSAGENS_MOTIVO[motivo]) setAviso(MENSAGENS_MOTIVO[motivo])
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -97,6 +110,12 @@ export default function LoginPage() {
               <h1 className="font-display font-bold text-2xl text-brand" style={{fontFamily:'Kanit,sans-serif'}}>Entrar na plataforma</h1>
               <p className="text-gray-500 text-sm mt-1">Acesse com seu e-mail e senha corporativa</p>
             </div>
+
+            {aviso && !error && (
+              <div className="mb-5 p-3.5 bg-amber-50 border border-amber-200 text-amber-800 text-sm rounded-xl">
+                {aviso}
+              </div>
+            )}
 
             {error && (
               <div className="mb-5 p-3.5 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl flex items-center gap-2">
