@@ -15,7 +15,6 @@ interface Cliente {
   endereco: string | null
   telefone: string | null
   email_principal: string | null
-  contato: string | null
   cidade: string | null
   ativo: boolean
   contatos: any[] | null
@@ -39,6 +38,7 @@ export default function ClientesPage() {
   const [showForm, setShowForm] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm)
+  const [originalContatos, setOriginalContatos] = useState<any[]>([])
   const [saving, setSaving] = useState(false)
 
   async function loadClientes() {
@@ -56,12 +56,15 @@ export default function ClientesPage() {
 
   function openCreate() {
     setEditingId(null)
+    setOriginalContatos([])
     setForm(emptyForm)
     setShowForm(true)
   }
 
   function openEdit(c: Cliente) {
     setEditingId(c.id)
+    const cts = Array.isArray(c.contatos) ? c.contatos : []
+    setOriginalContatos(cts)
     setForm({
       nome: c.nome ?? '',
       razao_social: c.razao_social ?? '',
@@ -69,7 +72,7 @@ export default function ClientesPage() {
       endereco: c.endereco ?? '',
       telefone: c.telefone ?? '',
       email: c.email_principal ?? '',
-      contato: c.contato ?? '',
+      contato: cts[0]?.nome ?? '',
     })
     setShowForm(true)
   }
@@ -77,12 +80,26 @@ export default function ClientesPage() {
   function closeForm() {
     setShowForm(false)
     setEditingId(null)
+    setOriginalContatos([])
     setForm(emptyForm)
   }
 
   async function handleSave() {
     if (!form.nome.trim()) return
     setSaving(true)
+
+    const contatoNome = form.contato.trim()
+    let novosContatos: any[]
+    if (originalContatos.length > 0) {
+      novosContatos = contatoNome
+        ? [{ ...originalContatos[0], nome: contatoNome }, ...originalContatos.slice(1)]
+        : originalContatos.slice(1)
+    } else if (contatoNome) {
+      novosContatos = [{ nome: contatoNome, email: null, funcao: null, whatsapp: null }]
+    } else {
+      novosContatos = []
+    }
+
     const payload = {
       nome: form.nome.trim(),
       razao_social: form.razao_social.trim() || null,
@@ -90,7 +107,7 @@ export default function ClientesPage() {
       endereco: form.endereco.trim() || null,
       telefone: form.telefone.trim() || null,
       email_principal: form.email.trim() || null,
-      contato: form.contato.trim() || null,
+      contatos: novosContatos,
     }
 
     if (editingId) {
@@ -242,7 +259,7 @@ export default function ClientesPage() {
                   <td className="px-4 py-3 text-gray-600 text-xs">{c.cnpj ?? '--'}</td>
                   <td className="px-4 py-3 text-gray-600 text-xs">{c.email_principal ?? '--'}</td>
                   <td className="px-4 py-3 text-gray-600 text-xs">{c.telefone ?? '--'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{c.contato ?? '--'}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs">{c.contatos?.[0]?.nome ?? '--'}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center gap-3 justify-end opacity-0 group-hover:opacity-100 sm:opacity-100 transition-opacity">
                       <button onClick={() => openEdit(c)} className="text-xs text-brand hover:underline inline-flex items-center gap-1">
