@@ -19,7 +19,7 @@ import { X, ChevronLeft, ChevronRight, Save } from 'lucide-react'
 
 const STEP_LABELS = ['', 'Pessoal', 'Contrato', 'CTPS/Banco', 'ASO', 'NRs', 'EPI', 'Uniforme', 'Integração']
 
-// Campos MÍNIMOS para avançar (P2)
+// Hard-required: sem isso o sistema/banco quebra ou nao identifica o funcionario.
 const REQUIRED_FIELDS: Record<number, string[]> = {
   1: ['nome', 'cpf', 'data_nascimento'],
   2: ['funcao_id', 'admissao'],
@@ -27,12 +27,13 @@ const REQUIRED_FIELDS: Record<number, string[]> = {
   4: [],
 }
 
-// Campos RECOMENDADOS (alerta amarelo, não bloqueia)
-const RECOMMENDED_FIELDS: Record<number, string[]> = {
+// Soft-required: ideal pra admissao completa, mas pode ser pulado com confirmacao.
+// Registrados em workflow.etapa_X.faltando pra bloquear alocacao depois.
+const SOFT_REQUIRED_FIELDS: Record<number, string[]> = {
   1: ['endereco', 'cep', 'cidade_endereco', 'nome_mae', 'pis', 're'],
   2: ['cargo', 'matricula', 'id_ponto', 'salario_base', 'tipo_vinculo', 'tamanho_uniforme', 'tamanho_bota'],
-  3: ['ctps_numero', 'banco'],
-  4: ['aso_data_exame'],
+  3: ['ctps_numero', 'ctps_serie', 'ctps_uf', 'banco'],
+  4: ['aso_data_exame', 'aso_data_vencimento'],
 }
 
 const FIELD_LABELS: Record<string, string> = {
@@ -136,7 +137,6 @@ export default function WizardAdmissaoPage() {
 
   function validate(stepNum: number): boolean {
     const required = REQUIRED_FIELDS[stepNum] ?? []
-    const recommended = RECOMMENDED_FIELDS[stepNum] ?? []
     const errs: Record<string, string> = {}
     for (const field of required) {
       const val = formData[field]
@@ -149,19 +149,17 @@ export default function WizardAdmissaoPage() {
       errs.obra_id = 'Selecione uma obra ou centro de custo administrativo'
     }
     setErrors(errs)
-    if (Object.keys(errs).length > 0) return false
+    return Object.keys(errs).length === 0
+  }
 
-    // Avisa sobre recomendados mas permite avançar
+  function getPendencias(stepNum: number): string[] {
+    const soft = SOFT_REQUIRED_FIELDS[stepNum] ?? []
     const skipCtps = stepNum === 3 && formData.tem_carteira_digital === true
-    const faltando = recommended.filter(f => {
-      if (skipCtps && (f === 'ctps_numero' || f === 'ctps_serie' || f === 'ctps_uf')) return false
-      return !formData[f]
+    return soft.filter(field => {
+      if (skipCtps && (field === 'ctps_numero' || field === 'ctps_serie' || field === 'ctps_uf')) return false
+      const val = formData[field]
+      return val === undefined || val === null || val === ''
     })
-    if (faltando.length > 0) {
-      const labels = faltando.map(f => FIELD_LABELS[f] || f).join(', ')
-      toast.warning('Dados incompletos', `Complete depois no perfil: ${labels}`)
-    }
-    return true
   }
 
   async function handleFileUpload(file: File): Promise<string | null> {
@@ -176,7 +174,7 @@ export default function WizardAdmissaoPage() {
     return data.publicUrl
   }
 
-  async function saveStep1() {
+  async function saveStep1(pendencias: string[] = []) {
     if (!validate(1)) return false
 
     setSaving(true)
@@ -233,6 +231,15 @@ export default function WizardAdmissaoPage() {
         const { data: wf, error: wfErr } = await supabase.from('admissoes_workflow').insert(wfData).select('id').single()
         if (wfErr) { toast.error('Erro ao criar workflow', formatSupabaseError(wfErr)); return false }
         setWorkflowId(wf.id)
+
+        // Marca etapa_docs_pessoais com pendencias do step 1
+        const now = new Date().toISOString()
+        const { data: authData } = await supabase.auth.getUser()
+        const userId = authData?.user?.id ?? null
+        const docsEtapa = pendencias.length === 0
+          ? { ok: true }
+          : { ok: false, faltando: pendencias, pulado_em: now, pulado_por: userId }
+        await supabase.from('admissoes_workflow').update({ etapa_docs_pessoais: docsEtapa }).eq('id', wf.id)
       }
       return true
     } catch (err: any) {
@@ -243,7 +250,7 @@ export default function WizardAdmissaoPage() {
     }
   }
 
-  async function saveStep2to4() {
+  async function saveStep2to4(pendencias: string[] = []) {
     if (!validate(step)) return false
     if (!funcionarioId) { toast.error('Funcionario nao encontrado'); return false }
 
@@ -298,25 +305,34 @@ export default function WizardAdmissaoPage() {
 
       // Update workflow etapa + passo
       if (workflowId) {
-        const wfUpdate: Record<string, any> = {
-          wizard_passo_atual: step,
+        const now = new Date().toISOString()
+        const { data: authData } = await supabase.auth.getUser()
+        const userId = authData?.user?.id ?? null
+
+        const buildEtapa = (extra: Record<string, any>, faltando: string[]): Record<string, any> => {
+          if (faltando.length === 0) return { ok: true, ...extra }
+          return { ok: false, faltando, pulado_em: now, pulado_por: userId, ...extra }
         }
+
+        const wfUpdate: Record<string, any> = { wizard_passo_atual: step }
         if (step === 2) {
-          wfUpdate.etapa_docs_pessoais = { ok: true }
-          wfUpdate.etapa_contrato_assinado = formData.contrato_arquivo ? { ok: true } : { ok: false }
+          const faltando = [...pendencias]
+          if (!formData.contrato_arquivo) faltando.push('contrato_arquivo')
+          wfUpdate.etapa_contrato_assinado = buildEtapa({}, faltando)
         } else if (step === 3) {
-          wfUpdate.etapa_ctps = { ok: true }
-          wfUpdate.etapa_dados_bancarios = { ok: true }
+          const ctpsFalt = pendencias.filter(f => f.startsWith('ctps_'))
+          const bancoFalt = pendencias.filter(f => f === 'banco')
+          wfUpdate.etapa_ctps = buildEtapa({}, ctpsFalt)
+          wfUpdate.etapa_dados_bancarios = buildEtapa({}, bancoFalt)
         } else if (step === 4) {
-          wfUpdate.etapa_exame_admissional = {
-            ok: true,
-            data_exame: formData.aso_data_exame,
-            data_vencimento: formData.aso_data_vencimento,
+          wfUpdate.etapa_exame_admissional = buildEtapa({
+            data_exame: formData.aso_data_exame || null,
+            data_vencimento: formData.aso_data_vencimento || null,
             medico: formData.aso_medico || null,
             cid: formData.aso_cid || null,
             custo: parseFloat(formData.aso_custo) || null,
             arquivo: formData.aso_arquivo || null,
-          }
+          }, pendencias)
         }
         await supabase.from('admissoes_workflow').update(wfUpdate).eq('id', workflowId)
       }
@@ -332,10 +348,25 @@ export default function WizardAdmissaoPage() {
 
   async function handleNext() {
     let success = false
-    if (step === 1) {
-      success = await saveStep1()
-    } else if (step >= 2 && step <= 4) {
-      success = await saveStep2to4()
+    if (step >= 1 && step <= 4) {
+      if (!validate(step)) return
+      const pendencias = getPendencias(step)
+      if (pendencias.length > 0) {
+        const labels = pendencias.map(f => FIELD_LABELS[f] || f).join(', ')
+        const confirmed = await confirmDialog({
+          title: 'Avancar com pendencias?',
+          message: `Os seguintes itens ficarao pendentes: ${labels}. Voce podera completar depois retomando a admissao. O funcionario nao podera ser alocado em obra ate completar.`,
+          variant: 'warning',
+          confirmLabel: 'Avancar com pendencias',
+          cancelLabel: 'Voltar e preencher',
+        })
+        if (!confirmed) return
+      }
+      if (step === 1) {
+        success = await saveStep1(pendencias)
+      } else {
+        success = await saveStep2to4(pendencias)
+      }
     } else {
       // Steps 5-8: placeholder — just advance
       success = true

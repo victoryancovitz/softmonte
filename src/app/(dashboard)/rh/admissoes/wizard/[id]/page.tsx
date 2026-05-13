@@ -21,9 +21,18 @@ import { etapaOk } from '@/lib/admissao-utils'
 
 const STEP_LABELS = ['', 'Pessoal', 'Contrato', 'CTPS/Banco', 'ASO', 'NRs', 'EPI', 'Uniforme', 'Integracao']
 
+// Hard-required: sem isso o sistema/banco quebra ou nao identifica o funcionario.
 const REQUIRED_FIELDS: Record<number, string[]> = {
-  1: ['nome', 'data_nascimento', 'cpf', 'nome_mae', 'telefone', 'endereco', 'cidade_endereco', 'cep'],
-  2: ['funcao_id', 'cargo', 'matricula', 'id_ponto', 'salario_base', 'tipo_vinculo', 'admissao', 'tamanho_uniforme', 'tamanho_bota'],
+  1: ['nome', 'data_nascimento', 'cpf'],
+  2: ['funcao_id', 'admissao'],
+  3: [],
+  4: [],
+}
+
+// Soft-required: ideal pra admissao completa, mas pode ser pulado e completado depois.
+const SOFT_REQUIRED_FIELDS: Record<number, string[]> = {
+  1: ['nome_mae', 'telefone', 'endereco', 'cidade_endereco', 'cep'],
+  2: ['cargo', 'matricula', 'id_ponto', 'salario_base', 'tipo_vinculo', 'tamanho_uniforme', 'tamanho_bota'],
   3: ['ctps_numero', 'ctps_serie', 'ctps_uf', 'banco'],
   4: ['aso_data_exame', 'aso_data_vencimento'],
 }
@@ -185,10 +194,8 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
 
   function validate(stepNum: number): boolean {
     const required = REQUIRED_FIELDS[stepNum] ?? []
-    const skipCtps = stepNum === 3 && formData.tem_carteira_digital === true
     const errs: Record<string, string> = {}
     for (const field of required) {
-      if (skipCtps && (field === 'ctps_numero' || field === 'ctps_serie' || field === 'ctps_uf')) continue
       const val = formData[field]
       if (val === undefined || val === null || val === '') {
         errs[field] = `${FIELD_LABELS[field] || field} e obrigatorio`
@@ -204,6 +211,16 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
     return Object.keys(errs).length === 0
   }
 
+  function getPendencias(stepNum: number): string[] {
+    const soft = SOFT_REQUIRED_FIELDS[stepNum] ?? []
+    const skipCtps = stepNum === 3 && formData.tem_carteira_digital === true
+    return soft.filter(field => {
+      if (skipCtps && (field === 'ctps_numero' || field === 'ctps_serie' || field === 'ctps_uf')) return false
+      const val = formData[field]
+      return val === undefined || val === null || val === ''
+    })
+  }
+
   async function handleFileUpload(file: File): Promise<string | null> {
     const ext = file.name.split('.').pop()
     const path = `aso/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
@@ -216,7 +233,7 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
     return data.publicUrl
   }
 
-  async function saveCurrentStep(): Promise<boolean> {
+  async function saveCurrentStep(pendencias: string[] = []): Promise<boolean> {
     if (!validate(step)) return false
     if (!funcionarioId) { toast.error('Funcionario nao encontrado'); return false }
 
@@ -282,27 +299,37 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
         if (error) { toast.error('Erro ao salvar', formatSupabaseError(error)); return false }
       }
 
-      // Update workflow
-      const wfUpdate: Record<string, any> = {
-        wizard_passo_atual: step,
+      // Update workflow — etapas registram pendencias silenciosamente
+      const now = new Date().toISOString()
+      const { data: authData } = await supabase.auth.getUser()
+      const userId = authData?.user?.id ?? null
+
+      const buildEtapa = (extra: Record<string, any>, faltando: string[]): Record<string, any> => {
+        if (faltando.length === 0) return { ok: true, ...extra }
+        return { ok: false, faltando, pulado_em: now, pulado_por: userId, ...extra }
       }
+
+      const wfUpdate: Record<string, any> = { wizard_passo_atual: step }
       if (step === 1) {
-        wfUpdate.etapa_docs_pessoais = { ok: true }
+        wfUpdate.etapa_docs_pessoais = buildEtapa({}, pendencias)
       } else if (step === 2) {
-        wfUpdate.etapa_contrato_assinado = formData.contrato_arquivo ? { ok: true } : { ok: false }
+        const faltando = [...pendencias]
+        if (!formData.contrato_arquivo) faltando.push('contrato_arquivo')
+        wfUpdate.etapa_contrato_assinado = buildEtapa({}, faltando)
       } else if (step === 3) {
-        wfUpdate.etapa_ctps = { ok: true }
-        wfUpdate.etapa_dados_bancarios = { ok: true }
+        const ctpsFalt = pendencias.filter(f => f.startsWith('ctps_'))
+        const bancoFalt = pendencias.filter(f => f === 'banco')
+        wfUpdate.etapa_ctps = buildEtapa({}, ctpsFalt)
+        wfUpdate.etapa_dados_bancarios = buildEtapa({}, bancoFalt)
       } else if (step === 4) {
-        wfUpdate.etapa_exame_admissional = {
-          ok: true,
-          data_exame: formData.aso_data_exame,
-          data_vencimento: formData.aso_data_vencimento,
+        wfUpdate.etapa_exame_admissional = buildEtapa({
+          data_exame: formData.aso_data_exame || null,
+          data_vencimento: formData.aso_data_vencimento || null,
           medico: formData.aso_medico || null,
           cid: formData.aso_cid || null,
           custo: parseFloat(formData.aso_custo) || null,
           arquivo: formData.aso_arquivo || null,
-        }
+        }, pendencias)
       }
       await supabase.from('admissoes_workflow').update(wfUpdate).eq('id', workflowId)
 
@@ -318,7 +345,20 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
   async function handleNext() {
     let success = false
     if (step >= 1 && step <= 4) {
-      success = await saveCurrentStep()
+      if (!validate(step)) return
+      const pendencias = getPendencias(step)
+      if (pendencias.length > 0) {
+        const labels = pendencias.map(f => FIELD_LABELS[f] || f).join(', ')
+        const confirmed = await confirmDialog({
+          title: 'Avancar com pendencias?',
+          message: `Os seguintes itens ficarao pendentes: ${labels}. Voce podera completar depois retomando a admissao. O funcionario nao podera ser alocado em obra ate completar.`,
+          variant: 'warning',
+          confirmLabel: 'Avancar com pendencias',
+          cancelLabel: 'Voltar e preencher',
+        })
+        if (!confirmed) return
+      }
+      success = await saveCurrentStep(pendencias)
     } else {
       success = true
     }
