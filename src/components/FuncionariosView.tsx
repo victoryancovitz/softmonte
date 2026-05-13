@@ -7,6 +7,7 @@ import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import { TIPO_VINCULO } from '@/lib/formatters'
+import { labelCampoAdmissao } from '@/lib/admissao-utils'
 
 const CC_BADGE_COLOR: Record<string, string> = {
   obra: 'bg-blue-100 text-blue-700',
@@ -47,6 +48,7 @@ export default function FuncionariosView({
   cargosUnicos = [],
   obraAtualMap = {},
   obrasUnicas = [],
+  admissaoIncompletaMap = {},
 }: {
   funcs: any[]
   hoje: string
@@ -54,6 +56,7 @@ export default function FuncionariosView({
   cargosUnicos?: string[]
   obraAtualMap?: Record<string, { id: string; nome: string }>
   obrasUnicas?: [string, string][]
+  admissaoIncompletaMap?: Record<string, { workflow_id: string; faltando: string[] }>
 }) {
   const router = useRouter()
   const sp = useSearchParams()
@@ -433,6 +436,18 @@ export default function FuncionariosView({
                       </span>
                     </div>
                   )}
+                  {admissaoIncompletaMap[f.id] && (
+                    <div className="mt-2 pt-2 border-t border-gray-100">
+                      <Link
+                        href={`/rh/admissoes/wizard/${admissaoIncompletaMap[f.id].workflow_id}`}
+                        onClick={e => e.stopPropagation()}
+                        title={`Faltando: ${admissaoIncompletaMap[f.id].faltando.map(labelCampoAdmissao).join(', ')}`}
+                        className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700 hover:bg-amber-200"
+                      >
+                        Adm. incompleta ({admissaoIncompletaMap[f.id].faltando.length}) — retomar
+                      </Link>
+                    </div>
+                  )}
                   </Link>
                 </div>
               )
@@ -518,6 +533,15 @@ export default function FuncionariosView({
                         {!desligado && f.cadastro_completo === false && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-medium bg-amber-50 text-amber-600" title="Faltam dados obrigatórios">⚠ Cadastro</span>}
                         {!desligado && !Number(f.salario_base) && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem salário</span>}
                         {!desligado && !f.funcao_id && <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700">Sem função</span>}
+                        {!desligado && admissaoIncompletaMap[f.id] && (
+                          <Link
+                            href={`/rh/admissoes/wizard/${admissaoIncompletaMap[f.id].workflow_id}`}
+                            title={`Faltando: ${admissaoIncompletaMap[f.id].faltando.map(labelCampoAdmissao).join(', ')}`}
+                            className="text-[10px] px-1.5 py-0.5 rounded-full font-bold bg-amber-100 text-amber-700 hover:bg-amber-200"
+                          >
+                            Adm. incompleta ({admissaoIncompletaMap[f.id].faltando.length})
+                          </Link>
+                        )}
                         </div>
                       </td>
                       <td className="px-4 py-3">

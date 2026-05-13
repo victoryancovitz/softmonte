@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import FuncionariosView from '@/components/FuncionariosView'
+import { getPendenciasAdmissao } from '@/lib/admissao-utils'
 
 export default async function FuncionariosPage() {
   const supabase = createClient()
@@ -34,6 +35,18 @@ export default async function FuncionariosPage() {
     }
   })
   const obrasUnicas = Array.from(obrasSet.entries()).sort((a, b) => a[1].localeCompare(b[1]))
+
+  // Workflows de admissão — pra marcar funcionários com pendências
+  const { data: workflows } = await supabase
+    .from('admissoes_workflow')
+    .select('id, funcionario_id, etapa_docs_pessoais, etapa_exame_admissional, etapa_ctps, etapa_contrato_assinado, etapa_dados_bancarios, etapa_epi_entregue, etapa_nr_obrigatorias, etapa_integracao, etapa_uniforme, etapa_esocial')
+
+  const admissaoIncompletaMap: Record<string, { workflow_id: string; faltando: string[] }> = {}
+  ;(workflows ?? []).forEach((w: any) => {
+    if (!w.funcionario_id) return
+    const faltando = getPendenciasAdmissao(w)
+    if (faltando.length > 0) admissaoIncompletaMap[w.funcionario_id] = { workflow_id: w.id, faltando }
+  })
 
   const { data: prazosLegais } = await supabase.from('vw_prazos_legais').select('funcionario_id,alerta_tipo,dias_restantes').limit(1000)
   const alertaMap: Record<string, string> = {}
@@ -99,7 +112,7 @@ export default async function FuncionariosPage() {
         </div>
       )}
 
-      <FuncionariosView funcs={funcs} hoje={hojeStr} alertas={alertaMap} cargosUnicos={cargosUnicos} obraAtualMap={obraAtualMap} obrasUnicas={obrasUnicas} />
+      <FuncionariosView funcs={funcs} hoje={hojeStr} alertas={alertaMap} cargosUnicos={cargosUnicos} obraAtualMap={obraAtualMap} obrasUnicas={obrasUnicas} admissaoIncompletaMap={admissaoIncompletaMap} />
     </div>
   )
 }
