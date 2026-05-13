@@ -7,6 +7,7 @@ import BackButton from '@/components/BackButton'
 import { Search, Check, Users } from 'lucide-react'
 import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 import { confirmDialog } from '@/components/ui/ConfirmDialog'
+import { getPendenciasAdmissao, labelCampoAdmissao } from '@/lib/admissao-utils'
 
 type Func = { id: string; nome: string; cargo: string | null; status: string | null; deleted_at: string | null }
 type AtivaMap = Record<string, { id: string; obra_nome: string; cargo_na_obra: string | null; data_inicio: string | null }[]>
@@ -16,6 +17,7 @@ export default function NovaAlocacaoPage() {
   const [funcionarios, setFuncionarios] = useState<Func[]>([])
   const [obras, setObras] = useState<any[]>([])
   const [ativasMap, setAtivasMap] = useState<AtivaMap>({})
+  const [admIncompletaMap, setAdmIncompletaMap] = useState<Record<string, { workflow_id: string; faltando: string[] }>>({})
   const [incluirArquivados, setIncluirArquivados] = useState(false)
   const [busca, setBusca] = useState('')
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set())
@@ -69,6 +71,28 @@ export default function NovaAlocacaoPage() {
       } catch (e: any) {
         console.error('[alocacao/nova] erro carregando ativasMap:', e)
       }
+    })()
+  }, [funcionarios]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Carrega mapa de admissões incompletas (etapas com faltando registrado)
+  useEffect(() => {
+    if (funcionarios.length === 0) return
+    const ids = funcionarios.map(f => f.id)
+    ;(async () => {
+      const { data, error } = await supabase.from('admissoes_workflow')
+        .select('id, funcionario_id, etapa_docs_pessoais, etapa_exame_admissional, etapa_ctps, etapa_contrato_assinado, etapa_dados_bancarios, etapa_epi_entregue, etapa_nr_obrigatorias, etapa_integracao, etapa_uniforme, etapa_esocial')
+        .in('funcionario_id', ids)
+      if (error) {
+        console.error('[alocacao/nova] erro carregando admIncompletaMap:', error)
+        return
+      }
+      const map: Record<string, { workflow_id: string; faltando: string[] }> = {}
+      ;(data ?? []).forEach((w: any) => {
+        if (!w.funcionario_id) return
+        const faltando = getPendenciasAdmissao(w)
+        if (faltando.length > 0) map[w.funcionario_id] = { workflow_id: w.id, faltando }
+      })
+      setAdmIncompletaMap(map)
     })()
   }, [funcionarios]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -161,6 +185,14 @@ export default function NovaAlocacaoPage() {
     }
 
     const selList = funcionarios.filter(f => selecionados.has(f.id))
+
+    // Bloqueio: admissão incompleta
+    const comPendencia = selList.filter(f => admIncompletaMap[f.id])
+    if (comPendencia.length > 0) {
+      const nomes = comPendencia.map(f => f.nome.split(' ')[0]).join(', ')
+      setError(`${comPendencia.length} funcionario(s) com admissao incompleta nao podem ser alocados: ${nomes}. Conclua a admissao no card amarelo de cada um antes de alocar.`)
+      return
+    }
 
     // Conflitos: arquivados
     const arquivados = selList.filter(f => f.deleted_at)
@@ -353,6 +385,16 @@ export default function NovaAlocacaoPage() {
                         <span className="text-xs text-gray-500">{f.cargo || 's/ cargo'}</span>
                         {f.deleted_at && (
                           <span className="text-[10px] px-1.5 py-0.5 bg-red-100 text-red-700 rounded font-semibold">ARQUIVADO</span>
+                        )}
+                        {admIncompletaMap[f.id] && (
+                          <Link
+                            href={`/rh/admissoes/wizard/${admIncompletaMap[f.id].workflow_id}`}
+                            onClick={e => e.stopPropagation()}
+                            title={`Faltando: ${admIncompletaMap[f.id].faltando.map(labelCampoAdmissao).join(', ')}`}
+                            className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded font-semibold hover:bg-amber-200"
+                          >
+                            ADMISSÃO INCOMPLETA — RETOMAR
+                          </Link>
                         )}
                         {ativas.length > 0 && (
                           <span className="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-semibold">

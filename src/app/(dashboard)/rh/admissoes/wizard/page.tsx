@@ -391,6 +391,28 @@ export default function WizardAdmissaoPage() {
       const ccId = formData.centro_custo_id || null
       const dataInicio = formData.data_inicio_obra || formData.admissao || new Date().toISOString().slice(0, 10)
 
+      // Detecta pendencias do workflow — se houver, nao aloca nem marca como disponivel
+      let temPendencias = false
+      if (workflowId) {
+        const { data: wf } = await supabase.from('admissoes_workflow')
+          .select('etapa_docs_pessoais, etapa_exame_admissional, etapa_ctps, etapa_contrato_assinado, etapa_dados_bancarios, etapa_epi_entregue, etapa_nr_obrigatorias, etapa_integracao, etapa_uniforme, etapa_esocial')
+          .eq('id', workflowId).maybeSingle()
+        const { getPendenciasAdmissao } = await import('@/lib/admissao-utils')
+        temPendencias = wf ? getPendenciasAdmissao(wf).length > 0 : false
+      }
+
+      if (temPendencias) {
+        // Mantem status=em_admissao, nao cria alocacao. Workflow permanece em_andamento.
+        await supabase.from('admissoes_workflow').update({ wizard_passo_atual: 8 }).eq('id', workflowId)
+        toast.warning(
+          'Admissão tem pendências',
+          'Funcionário não foi alocado em obra. Resolva as pendências antes de alocar.',
+        )
+        setSaving(false)
+        router.push(`/funcionarios/${funcionarioId}`)
+        return
+      }
+
       // 1. Status: alocado se tem obra, disponivel se adm/sem obra
       const novoStatus = obraId ? 'alocado' : 'disponivel'
       const funcUpdate: Record<string, any> = { status: novoStatus }
