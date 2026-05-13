@@ -71,6 +71,7 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes: f
     nome: '', salario_base: '', insalubridade: '0', periculosidade: '0',
     jornada_horas_mes: '220',
   })
+  const [salarioHint, setSalarioHint] = useState<string>('')
 
   // Sincronizar lista de funções quando prop mudar
   useEffect(() => { setFuncoesLocal(funcoesProp || []) }, [funcoesProp])
@@ -106,17 +107,24 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes: f
   function handleFuncaoChange(funcaoId: string) {
     onChange('funcao_id', funcaoId)
     const funcao = funcoes.find((f: any) => f.id === funcaoId)
-    if (funcao) {
-      // Pré-preenche cargo com o nome da função
-      if (funcao.nome && !data.cargo) onChange('cargo', funcao.nome)
-      if (funcao.salario_base != null) onChange('salario_base', funcao.salario_base)
-      if (funcao.insalubridade_pct_padrao != null) onChange('insalubridade_pct', funcao.insalubridade_pct_padrao)
-      if (funcao.periculosidade_pct_padrao != null) onChange('periculosidade_pct', funcao.periculosidade_pct_padrao)
-      if (funcao.jornada_horas_mes != null) onChange('horas_mes', funcao.jornada_horas_mes)
-      if (funcao.vt_mensal_padrao != null) onChange('vt_mensal', funcao.vt_mensal_padrao)
-      if (funcao.vr_diario_padrao != null) onChange('vr_diario', funcao.vr_diario_padrao)
-      if (funcao.va_mensal_padrao != null) onChange('va_mensal', funcao.va_mensal_padrao)
+    if (!funcao) {
+      setSalarioHint('')
+      return
     }
+    if (funcao.nome && !data.cargo) onChange('cargo', funcao.nome)
+    if (funcao.salario_base != null) {
+      onChange('salario_base', funcao.salario_base)
+      setSalarioHint(`Sugerido: ${fmtR(Number(funcao.salario_base))} (padrão da função). Pode editar.`)
+    } else {
+      onChange('salario_base', '')
+      setSalarioHint(`A função "${funcao.nome}" não tem salário padrão cadastrado. Digite o valor.`)
+    }
+    if (funcao.insalubridade_pct_padrao != null) onChange('insalubridade_pct', funcao.insalubridade_pct_padrao)
+    if (funcao.periculosidade_pct_padrao != null) onChange('periculosidade_pct', funcao.periculosidade_pct_padrao)
+    if (funcao.jornada_horas_mes != null) onChange('horas_mes', funcao.jornada_horas_mes)
+    if (funcao.vt_mensal_padrao != null) onChange('vt_mensal', funcao.vt_mensal_padrao)
+    if (funcao.vr_diario_padrao != null) onChange('vr_diario', funcao.vr_diario_padrao)
+    if (funcao.va_mensal_padrao != null) onChange('va_mensal', funcao.va_mensal_padrao)
   }
 
   function handleTipoVinculoChange(tipo: string) {
@@ -308,6 +316,9 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes: f
               className={inp}
               placeholder="0,00"
             />
+            {salarioHint && (
+              <p className="text-xs text-gray-500 mt-1">{salarioHint}</p>
+            )}
           </Field>
 
           <Field label="Insalubridade (%)" error={errors.insalubridade_pct}>
