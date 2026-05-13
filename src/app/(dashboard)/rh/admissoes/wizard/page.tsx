@@ -152,7 +152,11 @@ export default function WizardAdmissaoPage() {
     if (Object.keys(errs).length > 0) return false
 
     // Avisa sobre recomendados mas permite avançar
-    const faltando = recommended.filter(f => !formData[f])
+    const skipCtps = stepNum === 3 && formData.tem_carteira_digital === true
+    const faltando = recommended.filter(f => {
+      if (skipCtps && (f === 'ctps_numero' || f === 'ctps_serie' || f === 'ctps_uf')) return false
+      return !formData[f]
+    })
     if (faltando.length > 0) {
       const labels = faltando.map(f => FIELD_LABELS[f] || f).join(', ')
       toast.warning('Dados incompletos', `Complete depois no perfil: ${labels}`)
@@ -274,6 +278,7 @@ export default function WizardAdmissaoPage() {
         update.ctps_numero = formData.ctps_numero || null
         update.ctps_serie = formData.ctps_serie || null
         update.ctps_uf = formData.ctps_uf || null
+        update.tem_carteira_digital = formData.tem_carteira_digital === true
         update.banco = formData.banco || null
         update.agencia_conta = formData.agencia_conta || null
         update.pix = formData.pix || null

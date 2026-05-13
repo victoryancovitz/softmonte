@@ -122,6 +122,7 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
         ctps_numero: func.ctps_numero ?? '',
         ctps_serie: func.ctps_serie ?? '',
         ctps_uf: func.ctps_uf ?? '',
+        tem_carteira_digital: func.tem_carteira_digital ?? false,
         banco: func.banco ?? '',
         agencia_conta: func.agencia_conta ?? '',
         pix: func.pix ?? '',
@@ -184,8 +185,10 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
 
   function validate(stepNum: number): boolean {
     const required = REQUIRED_FIELDS[stepNum] ?? []
+    const skipCtps = stepNum === 3 && formData.tem_carteira_digital === true
     const errs: Record<string, string> = {}
     for (const field of required) {
+      if (skipCtps && (field === 'ctps_numero' || field === 'ctps_serie' || field === 'ctps_uf')) continue
       const val = formData[field]
       if (val === undefined || val === null || val === '') {
         errs[field] = `${FIELD_LABELS[field] || field} e obrigatorio`
@@ -263,6 +266,7 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
         update.ctps_numero = formData.ctps_numero || null
         update.ctps_serie = formData.ctps_serie || null
         update.ctps_uf = formData.ctps_uf || null
+        update.tem_carteira_digital = formData.tem_carteira_digital === true
         update.banco = formData.banco || null
         update.agencia_conta = formData.agencia_conta || null
         update.pix = formData.pix || null

@@ -82,6 +82,16 @@ function pixPlaceholder(tipo: string): string {
 
 export default function WizardStep3CtpsBanco({ data, onChange, errors }: Props) {
   const temVt = data.tem_vt !== false // default true quando undefined
+  const temCarteiraDigital = data.tem_carteira_digital === true
+
+  function toggleCarteiraDigital(novoValor: boolean) {
+    onChange('tem_carteira_digital', novoValor)
+    if (novoValor) {
+      onChange('ctps_numero', '')
+      onChange('ctps_serie', '')
+      onChange('ctps_uf', '')
+    }
+  }
 
   const totalBeneficios = useMemo(() => {
     const vt = temVt ? (parseFloat(data.vt_mensal) || 0) : 0
@@ -129,36 +139,56 @@ export default function WizardStep3CtpsBanco({ data, onChange, errors }: Props) 
             CTPS
           </h3>
 
-          <Field label="Número da CTPS" required error={errors.ctps_numero}>
+          <div className="flex items-start gap-3 p-3 bg-blue-50 border border-blue-200 rounded-xl">
             <input
-              type="text"
-              value={data.ctps_numero ?? ''}
-              onChange={e => onChange('ctps_numero', e.target.value)}
-              className={inp}
+              id="carteira-digital"
+              type="checkbox"
+              checked={temCarteiraDigital}
+              onChange={e => toggleCarteiraDigital(e.target.checked)}
+              className="mt-0.5"
             />
-          </Field>
+            <div>
+              <label htmlFor="carteira-digital" className="text-sm font-medium cursor-pointer">
+                Funcionário usa apenas Carteira de Trabalho Digital
+              </label>
+              <p className="text-xs text-blue-700 mt-0.5">
+                Marque se ele não tem CTPS física. Os campos abaixo ficam opcionais.
+              </p>
+            </div>
+          </div>
 
-          <Field label="Série" required error={errors.ctps_serie}>
-            <input
-              type="text"
-              value={data.ctps_serie ?? ''}
-              onChange={e => onChange('ctps_serie', e.target.value)}
-              className={inp}
-            />
-          </Field>
+          <fieldset disabled={temCarteiraDigital} className="space-y-4 disabled:opacity-60">
+            <Field label="Número da CTPS" error={errors.ctps_numero}>
+              <input
+                type="text"
+                value={data.ctps_numero ?? ''}
+                onChange={e => onChange('ctps_numero', e.target.value)}
+                className={inp + ' disabled:bg-gray-100 disabled:cursor-not-allowed'}
+              />
+            </Field>
 
-          <Field label="UF da CTPS" required error={errors.ctps_uf}>
-            <select
-              value={data.ctps_uf ?? ''}
-              onChange={e => onChange('ctps_uf', e.target.value)}
-              className={inp + ' bg-white'}
-            >
-              <option value="">Selecione...</option>
-              {UF_OPTIONS.map(uf => (
-                <option key={uf} value={uf}>{uf}</option>
-              ))}
-            </select>
-          </Field>
+            <Field label="Série" error={errors.ctps_serie}>
+              <input
+                type="text"
+                value={data.ctps_serie ?? ''}
+                onChange={e => onChange('ctps_serie', e.target.value)}
+                className={inp + ' disabled:bg-gray-100 disabled:cursor-not-allowed'}
+              />
+            </Field>
+
+            <Field label="UF da CTPS" error={errors.ctps_uf}>
+              <select
+                value={data.ctps_uf ?? ''}
+                onChange={e => onChange('ctps_uf', e.target.value)}
+                className={inp + ' bg-white disabled:bg-gray-100 disabled:cursor-not-allowed'}
+              >
+                <option value="">Selecione...</option>
+                {UF_OPTIONS.map(uf => (
+                  <option key={uf} value={uf}>{uf}</option>
+                ))}
+              </select>
+            </Field>
+          </fieldset>
         </section>
 
         {/* Banco */}
