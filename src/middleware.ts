@@ -89,6 +89,7 @@ export async function middleware(request: NextRequest) {
       '/juridico': ['juridico', 'financeiro', 'diretoria'],
       '/diretoria': ['admin', 'diretoria'],
       '/admin': ['admin'],
+      '/usuarios': ['admin'],
     }
 
     if (role !== 'admin') {

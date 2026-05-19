@@ -43,8 +43,19 @@ export default function UsuariosPage() {
 
   async function changeRole(userId: string, newRole: Role) {
     setSaving(userId)
-    await supabase.from('profiles').update({ role: newRole }).eq('user_id', userId)
-    setProfiles(prev => prev.map(p => p.user_id === userId ? { ...p, role: newRole } : p))
+    // user_roles é a fonte de verdade pra RBAC. profiles.role mantém-se em sync só pra UI.
+    // Mapear user_role (UI) -> app_role (RBAC). 'engenheiro'/'encarregado' -> 'engenharia', 'almoxarife' -> 'compras', 'funcionario' -> 'visualizador'.
+    const mapAppRole: Record<string, string> = {
+      admin: 'admin', rh: 'rh', financeiro: 'financeiro',
+      engenheiro: 'engenharia', encarregado: 'engenharia',
+      almoxarife: 'compras', funcionario: 'visualizador', visualizador: 'visualizador',
+    }
+    const appRole = mapAppRole[newRole] ?? 'visualizador'
+    const { error } = await supabase.from('user_roles').update({ role: appRole }).eq('user_id', userId)
+    if (!error) {
+      await supabase.from('profiles').update({ role: newRole }).eq('user_id', userId)
+      setProfiles(prev => prev.map(p => p.user_id === userId ? { ...p, role: newRole } : p))
+    }
     setSaving(null)
   }
 

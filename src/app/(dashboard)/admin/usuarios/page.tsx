@@ -99,13 +99,9 @@ export default function AdminUsuariosPage() {
     setSalvandoRole(userId)
     const { error } = await supabase.from('user_roles').update({ role: newRole }).eq('user_id', userId)
     if (error) {
-      // Fallback: update profiles table if user_roles doesn't exist
-      const { error: profErr } = await supabase.from('profiles').update({ role: newRole }).eq('id', userId)
-      if (profErr) {
-        toast.show('Erro ao salvar role: ' + profErr.message, 'error')
-        setSalvandoRole(null)
-        return
-      }
+      toast.show('Erro ao salvar role: ' + error.message, 'error')
+      setSalvandoRole(null)
+      return
     }
     toast.show('Role atualizado com sucesso!')
     setEditandoRole(null)
