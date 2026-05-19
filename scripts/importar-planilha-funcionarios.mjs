@@ -431,7 +431,7 @@ if (modo === 'sql') {
   for (const t of todos) {
     const funcaoNome = t.funcao_canonica || t.funcao_nova || null
     const cols = [
-      'nome', 'matricula', 'cpf', 'data_nascimento',
+      'nome', 'matricula', 'id_ponto', 'cpf', 'data_nascimento',
       'cargo', 'funcao_id',
       'admissao', 'prazo1', 'prazo2', 'tipo_vinculo', 'periodo_contrato',
       're', 'rg_data_expedicao', 'ctps_numero', 'ctps_serie', 'ctps_uf', 'tem_carteira_digital',
@@ -448,6 +448,7 @@ if (modo === 'sql') {
     const vals = [
       sqlString(t.nome),
       sqlString(t.matricula),
+      sqlString(t.matricula), // id_ponto = Dixi (mesmo valor da matricula nesta planilha)
       sqlString(t.cpf),
       sqlDate(t.data_nascimento),
       sqlString(t.cargo),
