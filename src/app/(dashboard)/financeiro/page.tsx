@@ -1,5 +1,6 @@
 'use client'
 import { Suspense, useState, useEffect, useCallback } from 'react'
+import { SkeletonPage } from '@/components/ui/Skeleton'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase'
 import Link from 'next/link'
@@ -19,7 +20,7 @@ const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', curren
 
 export default function FinanceiroPageWrapper() {
   return (
-    <Suspense fallback={<div className="p-6 text-gray-400 text-sm">Carregando...</div>}>
+    <Suspense fallback={<SkeletonPage />}>
       <FinanceiroPage />
     </Suspense>
   )
@@ -270,9 +271,14 @@ function FinanceiroPage() {
       </div>
 
       {/* Lançamentos */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto mb-5">
+      <div className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto mb-5 transition-opacity ${loading && lancamentos.length > 0 ? 'opacity-50' : ''}`}>
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">Lançamentos</h2>
+          <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+            Lançamentos
+            {loading && lancamentos.length > 0 && (
+              <span className="inline-block w-3 h-3 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" aria-label="Recarregando"></span>
+            )}
+          </h2>
           <div className="flex items-center gap-2">
             <button onClick={() => exportarExcel(lancamentosFiltrados, `lancamentos-${new Date().toISOString().slice(0, 10)}`)}
               className="px-3 py-1.5 border border-gray-200 text-gray-600 rounded-lg text-xs font-medium hover:bg-gray-50 flex items-center gap-1">

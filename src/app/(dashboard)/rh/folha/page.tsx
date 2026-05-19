@@ -8,33 +8,71 @@ import ImpactConfirmDialog from '@/components/ImpactConfirmDialog'
 import { calcularDescontosCLT } from '@/lib/clt'
 import { FileText, Plus, ChevronRight, Calendar, Users, DollarSign, AlertTriangle, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { SkeletonPage } from '@/components/ui/Skeleton'
 
 const MESES = ['', 'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
 
+const PAGE_SIZE_FOLHA = 30
+
 export default function FolhaPage() {
   const [fechamentos, setFechamentos] = useState<any[]>([])
+  const [totalFechamentos, setTotalFechamentos] = useState(0)
+  const [page, setPage] = useState(1)
   const [obras, setObras] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [fechando, setFechando] = useState(false)
   const [reverterAlvo, setReverterAlvo] = useState<any>(null)
   const [form, setForm] = useState({ obra_id: '', ano: new Date().getFullYear(), mes: new Date().getMonth() + 1 })
   const [alertaComposicao, setAlertaComposicao] = useState<{ excedentes: string[], semContrato: string[], onContinue: () => void } | null>(null)
+  const [agregados, setAgregados] = useState<{ total: number; soma: number; media: number } | null>(null)
   const supabase = createClient()
   const toast = useToast()
   const router = useRouter()
 
+  async function loadFechamentos(targetPage = page) {
+    setLoading(true)
+    const from = (targetPage - 1) * PAGE_SIZE_FOLHA
+    const to = from + PAGE_SIZE_FOLHA - 1
+    const { data, count } = await supabase
+      .from('folha_fechamentos')
+      .select('*, obras(nome)', { count: 'exact' })
+      .is('deleted_at', null)
+      .order('ano', { ascending: false })
+      .order('mes', { ascending: false })
+      .range(from, to)
+    setFechamentos(data || [])
+    setTotalFechamentos(count ?? 0)
+    setLoading(false)
+  }
+
+  async function loadAgregados() {
+    const { data } = await supabase
+      .from('folha_fechamentos')
+      .select('valor_total, funcionarios_incluidos')
+      .is('deleted_at', null)
+    const rows = data || []
+    setAgregados({
+      total: rows.length,
+      soma: rows.reduce((s, r: any) => s + Number(r.valor_total || 0), 0),
+      media: rows.length > 0 ? rows.reduce((s, r: any) => s + (r.funcionarios_incluidos || 0), 0) / rows.length : 0,
+    })
+  }
+
   useEffect(() => {
     (async () => {
-      const [{ data: f }, { data: o }] = await Promise.all([
-        supabase.from('folha_fechamentos').select('*, obras(nome)').is('deleted_at', null).order('ano', { ascending: false }).order('mes', { ascending: false }),
-        supabase.from('obras').select('id, nome').eq('status', 'ativo').is('deleted_at', null).order('nome'),
-      ])
-      setFechamentos(f || [])
+      const { data: o } = await supabase
+        .from('obras').select('id, nome').eq('status', 'ativo').is('deleted_at', null).order('nome')
       setObras(o || [])
       if (o && o.length > 0) setForm(s => ({ ...s, obra_id: o[0].id }))
-      setLoading(false)
+      await Promise.all([loadFechamentos(1), loadAgregados()])
     })()
   }, [])
+
+  // Recarrega quando muda página
+  useEffect(() => {
+    if (totalFechamentos > 0 || page > 1) loadFechamentos(page)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page])
 
   async function fecharFolha() {
     if (!form.obra_id) { toast.error('Selecione a obra'); return }
@@ -349,7 +387,8 @@ export default function FolhaPage() {
 
   const fmt = (v: number) => Number(v).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
-  if (loading) return <div className="p-6 text-gray-400 text-sm">Carregando...</div>
+  // Skeleton só no carregamento inicial (quando não há dados ainda)
+  if (loading && fechamentos.length === 0 && !agregados) return <SkeletonPage />
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto">
@@ -400,7 +439,23 @@ export default function FolhaPage() {
       </div>
 
       {/* Listagem de fechamentos */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto">
+      <div className={`bg-white rounded-xl shadow-sm border border-gray-100 overflow-x-auto transition-opacity ${loading && fechamentos.length > 0 ? 'opacity-50' : ''}`}>
+        {totalFechamentos > 0 && (
+          <div className="px-4 py-2 border-b border-gray-100 flex items-center justify-between text-xs text-gray-500">
+            <span>
+              Mostrando {((page - 1) * PAGE_SIZE_FOLHA) + 1}–{Math.min(page * PAGE_SIZE_FOLHA, totalFechamentos)} de {totalFechamentos}
+            </span>
+            {totalFechamentos > PAGE_SIZE_FOLHA && (
+              <div className="flex items-center gap-2">
+                <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+                  className="px-2 py-1 border border-gray-200 rounded disabled:opacity-30 hover:bg-gray-50">‹ Anterior</button>
+                <span>Pág {page} de {Math.ceil(totalFechamentos / PAGE_SIZE_FOLHA)}</span>
+                <button onClick={() => setPage(p => p + 1)} disabled={page >= Math.ceil(totalFechamentos / PAGE_SIZE_FOLHA)}
+                  className="px-2 py-1 border border-gray-200 rounded disabled:opacity-30 hover:bg-gray-50">Próxima ›</button>
+              </div>
+            )}
+          </div>
+        )}
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-100 bg-gray-50">
@@ -447,19 +502,19 @@ export default function FolhaPage() {
         </table>
       </div>
 
-      {fechamentos.length > 0 && (
+      {agregados && agregados.total > 0 && (
         <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="bg-white rounded-xl border border-gray-100 p-4">
             <div className="flex items-center gap-2 mb-1"><Calendar className="w-4 h-4 text-violet-500" /><span className="text-[11px] font-semibold text-gray-400 uppercase">Fechamentos</span></div>
-            <div className="text-xl font-bold text-gray-900">{fechamentos.length}</div>
+            <div className="text-xl font-bold text-gray-900">{agregados.total}</div>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 p-4">
             <div className="flex items-center gap-2 mb-1"><DollarSign className="w-4 h-4 text-red-500" /><span className="text-[11px] font-semibold text-gray-400 uppercase">Total acumulado</span></div>
-            <div className="text-xl font-bold text-red-700">{fmt(fechamentos.reduce((s, f) => s + Number(f.valor_total || 0), 0))}</div>
+            <div className="text-xl font-bold text-red-700">{fmt(agregados.soma)}</div>
           </div>
           <div className="bg-white rounded-xl border border-gray-100 p-4">
             <div className="flex items-center gap-2 mb-1"><Users className="w-4 h-4 text-blue-500" /><span className="text-[11px] font-semibold text-gray-400 uppercase">Funcs/mês média</span></div>
-            <div className="text-xl font-bold text-gray-900">{Math.round(fechamentos.reduce((s, f) => s + (f.funcionarios_incluidos || 0), 0) / fechamentos.length)}</div>
+            <div className="text-xl font-bold text-gray-900">{Math.round(agregados.media)}</div>
           </div>
         </div>
       )}

@@ -29,6 +29,8 @@ export default function NovaAlocacaoPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [resultados, setResultados] = useState<{ nome: string; ok: boolean; msg?: string }[] | null>(null)
+  const PAGE_SIZE_FUNC = 50
+  const [pageLimit, setPageLimit] = useState(PAGE_SIZE_FUNC)
   const router = useRouter()
   const supabase = createClient()
 
@@ -144,6 +146,15 @@ export default function NovaAlocacaoPage() {
       f.nome.toLowerCase().includes(s) || (f.cargo || '').toLowerCase().includes(s)
     )
   }, [funcionarios, busca])
+
+  // Reset paginação quando muda busca (mostra primeiros N do novo filtro)
+  useEffect(() => { setPageLimit(PAGE_SIZE_FUNC) }, [busca])
+
+  const funcionariosVisiveis = useMemo(
+    () => funcionariosFiltrados.slice(0, pageLimit),
+    [funcionariosFiltrados, pageLimit]
+  )
+  const temMais = funcionariosFiltrados.length > pageLimit
 
   function toggle(id: string) {
     setSelecionados(prev => {
@@ -367,7 +378,7 @@ export default function NovaAlocacaoPage() {
               {funcionariosFiltrados.length === 0 && (
                 <div className="p-4 text-center text-sm text-gray-400">Nenhum funcionário encontrado</div>
               )}
-              {funcionariosFiltrados.map(f => {
+              {funcionariosVisiveis.map(f => {
                 const sel = selecionados.has(f.id)
                 const ativas = ativasMap[f.id] || []
                 return (
@@ -411,6 +422,15 @@ export default function NovaAlocacaoPage() {
                   </label>
                 )
               })}
+              {temMais && (
+                <button
+                  type="button"
+                  onClick={() => setPageLimit(p => p + PAGE_SIZE_FUNC)}
+                  className="w-full py-2.5 text-sm font-medium text-brand hover:bg-brand/5 transition-colors"
+                >
+                  Ver mais {Math.min(PAGE_SIZE_FUNC, funcionariosFiltrados.length - pageLimit)} (faltam {funcionariosFiltrados.length - pageLimit})
+                </button>
+              )}
             </div>
             {incluirArquivados && (
               <p className="text-[11px] text-amber-600 mt-1">⚠ Arquivados só para readmissão ou fechamento retroativo.</p>
