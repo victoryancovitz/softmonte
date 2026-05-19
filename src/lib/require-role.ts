@@ -24,8 +24,12 @@ export async function requireRoleApi(allowed: string[]): Promise<NextResponse | 
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
-  const { data: profile } = await supabase.from('profiles').select('role').eq('user_id', user.id).single()
-  const role = profile?.role ?? 'funcionario'
+  const { data: userRole } = await supabase
+    .from('user_roles')
+    .select('role, ativo')
+    .eq('user_id', user.id)
+    .maybeSingle()
+  const role = userRole && userRole.ativo !== false ? userRole.role : 'funcionario'
   if (!allowed.includes(role)) {
     return NextResponse.json({ error: 'Permissão negada' }, { status: 403 })
   }
