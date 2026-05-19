@@ -43,9 +43,14 @@ export default function ResetPage() {
     ;(async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
-      const { data } = await supabase.from('profiles').select('role, nome, email').eq('user_id', user.id).maybeSingle()
-      if (!data || !['admin', 'diretoria'].includes((data as any).role)) { router.push('/'); return }
-      setProfile(data)
+      const { data: userRole } = await supabase
+        .from('user_roles').select('role, ativo').eq('user_id', user.id).maybeSingle()
+      const role = userRole && (userRole as any).ativo !== false ? (userRole as any).role : null
+      if (!role || !['admin', 'diretoria'].includes(role)) { router.push('/'); return }
+      // Profile só pra exibir nome/email
+      const { data: profile } = await supabase
+        .from('profiles').select('nome, email').eq('user_id', user.id).maybeSingle()
+      setProfile({ ...(profile || {}), role } as any)
       setLoading(false)
     })()
   }, [])

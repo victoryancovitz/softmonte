@@ -73,11 +73,14 @@ export default function PontoPage() {
         // Auto-seleciona se houver apenas uma obra
         if (lista.length === 1 && !obraId) setObraId(lista[0].id)
       })
-    // Buscar role do usuário (profiles.user_id é a FK pra auth.users.id)
+    // Buscar role do usuário em user_roles (fonte de verdade de RBAC desde 11/05/2026)
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        supabase.from('profiles').select('role').eq('user_id', user.id).maybeSingle()
-          .then(({ data }) => setRole((data as any)?.role ?? ''))
+        supabase.from('user_roles').select('role, ativo').eq('user_id', user.id).maybeSingle()
+          .then(({ data }) => {
+            const role = data && (data as any).ativo !== false ? (data as any).role : ''
+            setRole(role)
+          })
       }
     })
   }, [])

@@ -150,8 +150,10 @@ export default function RdoForm({ obraId, rdoId, onClose }: Props) {
     const { data: { user } } = await supabase.auth.getUser()
     setUserId(user?.id ?? '')
     if (user?.id) {
-      const { data: prof } = await supabase.from('profiles').select('role').eq('user_id', user.id).maybeSingle()
-      setUserRole((prof as any)?.role ?? '')
+      const { data: ur } = await supabase
+        .from('user_roles').select('role, ativo').eq('user_id', user.id).maybeSingle()
+      const role = ur && (ur as any).ativo !== false ? (ur as any).role : ''
+      setUserRole(role)
     }
 
     if (!rdoId) {

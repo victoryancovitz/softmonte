@@ -49,9 +49,10 @@ export default function LimpezaPage() {
     (async () => {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/login'); return }
-      const { data: profile } = await supabase
-        .from('profiles').select('role').eq('user_id', user.id).maybeSingle()
-      if (!profile || !['admin', 'diretoria'].includes((profile as any).role)) {
+      const { data: userRole } = await supabase
+        .from('user_roles').select('role, ativo').eq('user_id', user.id).maybeSingle()
+      const role = userRole && (userRole as any).ativo !== false ? (userRole as any).role : null
+      if (!role || !['admin', 'diretoria'].includes(role)) {
         setAuthorized(false); return
       }
       setAuthorized(true)

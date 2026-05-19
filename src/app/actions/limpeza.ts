@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase-server'
+import { getRole } from '@/lib/get-role'
 import { revalidatePath } from 'next/cache'
 
 export type LimpezaResult = {
@@ -13,9 +14,8 @@ async function checkRole(): Promise<{ ok: boolean; error?: string }> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Não autenticado.' }
-  const { data: profile } = await supabase
-    .from('profiles').select('role').eq('user_id', user.id).maybeSingle()
-  if (!profile || !['admin', 'diretoria'].includes((profile as any).role)) {
+  const role = await getRole()
+  if (!['admin', 'diretoria'].includes(role)) {
     return { ok: false, error: 'Apenas admin ou diretoria podem limpar dados.' }
   }
   return { ok: true }
