@@ -2,12 +2,12 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 
-const ROLES = ['admin','engenheiro','encarregado','rh','financeiro','almoxarife','funcionario','visualizador'] as const
+const ROLES = ['admin','engenheiro','encarregado','rh','financeiro','almoxarife','funcionario','cliente'] as const
 type Role = typeof ROLES[number]
 const ROLE_LABEL: Record<Role, string> = {
   admin: 'Administrador', engenheiro: 'Engenheiro', encarregado: 'Encarregado',
   rh: 'RH', financeiro: 'Financeiro',
-  almoxarife: 'Almoxarife', funcionario: 'Funcionário', visualizador: 'Visualizador',
+  almoxarife: 'Almoxarife', funcionario: 'Funcionário', cliente: 'Cliente',
 }
 const ROLE_COLOR: Record<Role, string> = {
   admin: 'bg-purple-100 text-purple-700',
@@ -17,7 +17,7 @@ const ROLE_COLOR: Record<Role, string> = {
   financeiro: 'bg-emerald-100 text-emerald-700',
   almoxarife: 'bg-amber-100 text-amber-700',
   funcionario: 'bg-gray-100 text-gray-600',
-  visualizador: 'bg-purple-100 text-purple-700',
+  cliente: 'bg-purple-100 text-purple-700',
 }
 
 export default function UsuariosPage() {
@@ -44,13 +44,13 @@ export default function UsuariosPage() {
   async function changeRole(userId: string, newRole: Role) {
     setSaving(userId)
     // user_roles é a fonte de verdade pra RBAC. profiles.role mantém-se em sync só pra UI.
-    // Mapear user_role (UI) -> app_role (RBAC). 'engenheiro'/'encarregado' -> 'engenharia', 'almoxarife' -> 'compras', 'funcionario' -> 'visualizador'.
+    // Mapear user_role (UI) -> app_role (RBAC). 'engenheiro'/'encarregado' -> 'engenharia', 'almoxarife' -> 'compras', 'funcionario' -> 'cliente'.
     const mapAppRole: Record<string, string> = {
       admin: 'admin', rh: 'rh', financeiro: 'financeiro',
       engenheiro: 'engenharia', encarregado: 'engenharia',
-      almoxarife: 'compras', funcionario: 'visualizador', visualizador: 'visualizador',
+      almoxarife: 'compras', funcionario: 'cliente', cliente: 'cliente',
     }
-    const appRole = mapAppRole[newRole] ?? 'visualizador'
+    const appRole = mapAppRole[newRole] ?? 'cliente'
     const { error } = await supabase.from('user_roles').update({ role: appRole }).eq('user_id', userId)
     if (!error) {
       await supabase.from('profiles').update({ role: newRole }).eq('user_id', userId)

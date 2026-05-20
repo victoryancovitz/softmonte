@@ -11,7 +11,7 @@ const ROLE_CONFIG: Record<string,{label:string;color:string}> = {
   financeiro:{label:'Financeiro',color:'text-emerald-400'},
   almoxarife:{label:'Almoxarife',color:'text-amber-400'},
   funcionario:{label:'Funcionário',color:'text-gray-400'},
-  visualizador:{label:'Visualizador',color:'text-purple-400'},
+  cliente:{label:'Cliente',color:'text-purple-400'},
 }
 
 const MODULO_LABEL: Record<string,string> = {

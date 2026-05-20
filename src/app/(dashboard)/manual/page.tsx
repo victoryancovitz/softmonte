@@ -291,7 +291,7 @@ const MANUAL: Secao[] = [
   {
     id: 'usuarios', grupo: 'Sistema', icon: Users, titulo: 'Usuários & Convites', desc: 'Gestão de acesso ao sistema', link: '/admin/usuarios',
     conteudo: [
-      { subtitulo: 'Roles', texto: '8 perfis disponíveis: admin (acesso total), encarregado (operação), engenheiro (BMs + ponto), rh, financeiro, almoxarife, funcionário, visualizador (somente leitura).' },
+      { subtitulo: 'Roles', texto: '9 perfis: admin (acesso total), diretoria, rh, financeiro, juridico, engenharia (BMs + obras), compras, funcionário (portal próprio) e cliente (portal somente leitura da obra contratada).' },
       { subtitulo: 'RLS por role', texto: 'Todo acesso ao banco passa por Row-Level Security. Cada role tem policies específicas para SELECT/INSERT/UPDATE/DELETE em cada tabela.' },
       { subtitulo: 'Convites em lote', texto: 'Cole vários emails (vírgula ou um por linha), escolha o role e módulos, gere um link individual para cada. Na tela de sucesso, copie links individualmente ou todos de uma vez.' },
       { subtitulo: 'Validade do convite', texto: 'Indeterminado, dias fixos (1d-1ano), data específica, ou vinculado ao contrato do funcionário (calcula automaticamente admissão + período).' },

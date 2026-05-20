@@ -24,7 +24,7 @@ export default async function SemAcesso() {
       .eq('user_id', user.id)
       .eq('ativo', true)
       .maybeSingle()
-    const role = userRole?.role ?? 'visualizador'
+    const role = userRole?.role ?? 'cliente'
     home = HOME_POR_ROLE[role] ?? { href: '/obras', label: 'Ir para Obras' }
   }
 

@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase'
 
-export type Role = 'admin' | 'rh' | 'financeiro' | 'juridico' | 'engenharia' | 'compras' | 'visualizador'
+export type Role = 'admin' | 'rh' | 'financeiro' | 'juridico' | 'engenharia' | 'compras' | 'cliente'
 
 const PODE_EDITAR: Record<string, Role[]> = {
   rh: ['rh'], folha: ['rh'], ponto: ['rh'],
@@ -21,7 +21,7 @@ export function useUserRole() {
     const supabase = createClient()
     supabase.from('user_roles').select('role').eq('ativo', true).maybeSingle()
       .then(({ data }) => {
-        setRole((data?.role as Role) ?? 'visualizador')
+        setRole((data?.role as Role) ?? 'cliente')
         setLoading(false)
       })
   }, [])

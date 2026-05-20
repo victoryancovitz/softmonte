@@ -15,7 +15,7 @@ const ROLES = [
   { value: 'juridico', label: 'Jurídico', desc: 'Processos e acordos', color: 'bg-indigo-100 text-indigo-700' },
   { value: 'engenharia', label: 'Engenharia', desc: 'Obras, BMs, alocações', color: 'bg-cyan-100 text-cyan-700' },
   { value: 'compras', label: 'Compras', desc: 'Fornecedores e estoque', color: 'bg-amber-100 text-amber-700' },
-  { value: 'visualizador', label: 'Visualizador', desc: 'Somente leitura', color: 'bg-purple-100 text-purple-700' },
+  { value: 'cliente', label: 'Cliente', desc: 'Cliente da obra (somente leitura)', color: 'bg-purple-100 text-purple-700' },
 ]
 
 const ROLE_CONFIG: Record<string, { label: string; color: string; desc: string }> = Object.fromEntries(
@@ -238,7 +238,7 @@ export default function AdminUsuariosPage() {
                       {editandoRole === p.id ? (
                         <div className="flex items-center gap-2">
                           <select
-                            defaultValue={p.role || 'visualizador'}
+                            defaultValue={p.role || 'cliente'}
                             onChange={e => salvarRole(p.id, e.target.value)}
                             disabled={salvandoRole === p.id}
                             className="text-xs px-2 py-1.5 border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 focus:border-brand disabled:opacity-40"

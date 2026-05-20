@@ -64,10 +64,17 @@ export async function middleware(request: NextRequest) {
       return safeRedirect(request, 'user-role-inactive', supabase)
     }
 
-    const role = userRole?.role ?? 'visualizador'
+    const role = userRole?.role ?? 'cliente'
 
     if (role === 'funcionario' && !isPortalRoute) {
       return NextResponse.redirect(new URL('/portal', request.url))
+    }
+
+    // Cliente só acessa /cliente (portal somente leitura da obra contratada).
+    const isClienteRoute = pathname.startsWith('/cliente')
+    const isDashboardRedirect = pathname === '/dashboard' // dashboard página de redirect, permite passar
+    if (role === 'cliente' && !isClienteRoute && !isDashboardRedirect) {
+      return NextResponse.redirect(new URL('/cliente', request.url))
     }
 
     const ROTAS_RBAC: Record<string, string[]> = {

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase-server'
 
 const HOME_POR_ROLE: Record<string, string> = {
   admin: '/diretoria',
+  diretoria: '/diretoria',
   rh: '/rh/folha',
   financeiro: '/financeiro',
   juridico: '/juridico',
@@ -10,6 +11,7 @@ const HOME_POR_ROLE: Record<string, string> = {
   encarregado: '/obras',
   compras: '/compras/pedidos',
   funcionario: '/portal',
+  cliente: '/cliente',
 }
 
 export default async function DashboardPage() {
@@ -24,6 +26,6 @@ export default async function DashboardPage() {
     .eq('ativo', true)
     .maybeSingle()
 
-  const role = userRole?.role ?? 'visualizador'
+  const role = userRole?.role ?? 'cliente'
   redirect(HOME_POR_ROLE[role] ?? '/obras')
 }

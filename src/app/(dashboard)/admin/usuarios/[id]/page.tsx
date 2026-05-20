@@ -15,7 +15,7 @@ const ROLES = [
   { key: 'financeiro', label: 'Financeiro', desc: 'Lançamentos e relatórios financeiros', color: 'bg-emerald-50 border-emerald-200 text-emerald-700' },
   { key: 'almoxarife', label: 'Almoxarife', desc: 'Controle de estoque e EPIs', color: 'bg-amber-50 border-amber-200 text-amber-700' },
   { key: 'funcionario', label: 'Funcionário', desc: 'Visualiza próprios dados e HH', color: 'bg-gray-50 border-gray-200 text-gray-700' },
-  { key: 'visualizador', label: 'Visualizador', desc: 'Apenas visualização, sem edição', color: 'bg-purple-50 border-purple-200 text-purple-700' },
+  { key: 'cliente', label: 'Cliente', desc: 'Cliente da obra (somente leitura)', color: 'bg-purple-50 border-purple-200 text-purple-700' },
 ]
 
 const ROLE_CONFIG: Record<string, { label: string; color: string }> = {
@@ -26,7 +26,7 @@ const ROLE_CONFIG: Record<string, { label: string; color: string }> = {
   financeiro: { label: 'Financeiro', color: 'bg-emerald-100 text-emerald-700' },
   almoxarife: { label: 'Almoxarife', color: 'bg-amber-100 text-amber-700' },
   funcionario: { label: 'Funcionário', color: 'bg-gray-100 text-gray-600' },
-  visualizador: { label: 'Visualizador', color: 'bg-purple-100 text-purple-700' },
+  cliente: { label: 'Cliente', color: 'bg-purple-100 text-purple-700' },
 }
 
 const MODULOS = ['dashboard', 'obras', 'funcionarios', 'ponto', 'faltas', 'boletins', 'financeiro', 'documentos', 'cadastros', 'admin', 'usuarios']

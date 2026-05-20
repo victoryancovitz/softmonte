@@ -7,7 +7,7 @@
  * Fonte de verdade do role do usuário: tabela `user_roles` (ver project_softmonte memory).
  *
  * Roles disponíveis (app_role enum):
- *   admin, rh, financeiro, juridico, engenharia, compras, visualizador, diretoria
+ *   admin, rh, financeiro, juridico, engenharia, compras, cliente, diretoria
  */
 
 export const RBAC = {
@@ -29,7 +29,7 @@ export const RBAC = {
   // Quem pode VER boletins / relatórios cross-módulo
   RELATORIOS: ['admin', 'financeiro', 'encarregado', 'engenheiro', 'rh'] as const,
 
-  // Assistant/Chat — qualquer um que opera o sistema (exclui só visualizador/funcionario externo)
+  // Assistant/Chat — qualquer um que opera o sistema (exclui só cliente/funcionario externo)
   ASSISTANT: ['admin', 'financeiro', 'rh', 'encarregado', 'engenheiro'] as const,
 
   // Mensageria (WhatsApp, notificações)
