@@ -50,7 +50,8 @@ export async function POST() {
   }
 
   // Clean old backups (>30 days)
-  try { await supabase.rpc('fn_limpar_backups_antigos') } catch {}
+  try { await supabase.rpc('fn_limpar_backups_antigos') }
+  catch (e: any) { console.error('[backup-manual] cleanup falhou:', e?.code || e?.message) }
 
   return NextResponse.json({
     sucesso: erros.length === 0,

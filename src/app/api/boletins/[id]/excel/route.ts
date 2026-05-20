@@ -155,7 +155,9 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     const logoBuf = Buffer.from(TECNOMONTE_LOGO_DARK_B64, 'base64')
     const logoId = wb.addImage({ buffer: logoBuf as any, extension: 'png' })
     ws.addImage(logoId, { tl: { col: 1.2, row: 0.2 } as any, ext: { width: 200, height: 60 }, editAs: 'oneCell' })
-  } catch { /* fallback sem logo */ }
+  } catch (e: any) {
+    console.error('[boletins/excel] addImage falhou (fallback sem logo):', e?.message)
+  }
 
   // Título "RESUMO DE HORAS" + subtítulo
   ws.mergeCells('D1:F2')

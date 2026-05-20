@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
   }
 
   const marcacoes = allMarcacoes
-  console.log('[calcular-efetivo] marcacoes:', marcacoes.length, 'periodo:', dataInicio, dataFim)
+  // [calcular-efetivo] processando marcações no período
 
   if (marcacoes.length === 0) {
     return NextResponse.json({
@@ -203,7 +203,7 @@ export async function POST(req: NextRequest) {
       if (obraId) q = q.eq('obra_id', obraId)
       const { data: efPage, error: efErr } = await q
       if (efErr) {
-        console.warn('[calcular-efetivo] Erro lendo efetivo_diario existente:', efErr.message)
+        console.error('[calcular-efetivo] efetivo_diario read failed:', efErr.code)
         break
       }
       const rows = (efPage ?? []) as EfetivoDiarioExistente[]
@@ -244,7 +244,7 @@ export async function POST(req: NextRequest) {
       }
     }
   }
-  console.log('[calcular-efetivo] atribuicoes manuais:', existenteMap.size, 'herancas pre-periodo:', lastBeforeMap.size)
+  // [calcular-efetivo] atribuições manuais + heranças pré-período carregadas
 
   // 3. Lê alocações ativas que cobrem o período (fallback pra quem não tem atribuição manual)
   let allocsQ = supabase

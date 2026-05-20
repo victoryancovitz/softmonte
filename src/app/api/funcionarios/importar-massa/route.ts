@@ -69,11 +69,13 @@ export async function POST(req: NextRequest) {
       salario_base: f.salario_base ? Number(f.salario_base) : null,
     }
 
-    // Verifica se ja existe pelo CPF
+    // Verifica se ja existe pelo CPF (ignora soft-deletados — evita
+    // colisão de identidade com funcionário antigo desativado)
     const { data: existing } = await supabase
       .from('funcionarios')
       .select('id')
       .eq('cpf', cpfLimpo)
+      .is('deleted_at', null)
       .maybeSingle()
 
     if (existing) {
