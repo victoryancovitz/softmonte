@@ -199,7 +199,7 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes: f
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {tipoAlocacao === 'obra' ? (
             <>
-              <Field label="Obra" required error={errors.obra_id}>
+              <Field label="Obra (opcional)" error={errors.obra_id}>
                 <select
                   value={data.obra_id ?? ''}
                   onChange={e => onChange('obra_id', e.target.value)}
@@ -221,7 +221,7 @@ export default function WizardStep2Contrato({ data, onChange, errors, funcoes: f
               </Field>
             </>
           ) : (
-            <Field label="Centro de Custo Administrativo" required error={errors.centro_custo_id}>
+            <Field label="Centro de Custo Administrativo (opcional)" error={errors.centro_custo_id}>
               <select
                 value={data.centro_custo_id ?? ''}
                 onChange={e => onChange('centro_custo_id', e.target.value)}

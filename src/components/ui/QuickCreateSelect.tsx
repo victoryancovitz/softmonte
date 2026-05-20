@@ -113,7 +113,7 @@ function QuickCreateModal({
           // Tentar gerar codigo via RPC
           let codigo = ''
           try {
-            const { data: rpcData } = await supabase.rpc('cc_gerar_codigo', { tipo_param: ccTipo })
+            const { data: rpcData } = await supabase.rpc('cc_gerar_codigo', { p_tipo: ccTipo })
             if (rpcData) codigo = rpcData
           } catch {
             // RPC pode nao existir, segue sem codigo

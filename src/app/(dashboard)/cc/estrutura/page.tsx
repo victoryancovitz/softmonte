@@ -145,7 +145,7 @@ export default function EstruturaAdmPage() {
         toast.success('Centro de custo atualizado.')
       } else {
         // Gerar código
-        const { data: codData, error: codErr } = await supabase.rpc('cc_gerar_codigo', { tipo: 'administrativo' })
+        const { data: codData, error: codErr } = await supabase.rpc('cc_gerar_codigo', { p_tipo: 'administrativo' })
         if (codErr) throw codErr
         const codigo = codData as string
 

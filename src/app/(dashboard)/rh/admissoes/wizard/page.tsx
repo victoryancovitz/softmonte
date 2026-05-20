@@ -144,10 +144,9 @@ export default function WizardAdmissaoPage() {
         errs[field] = `${FIELD_LABELS[field] || field} é obrigatório`
       }
     }
-    // Step 2: precisa de obra_id OU centro_custo_id
-    if (stepNum === 2 && !formData.obra_id && !formData.centro_custo_id) {
-      errs.obra_id = 'Selecione uma obra ou centro de custo administrativo'
-    }
+    // Step 2: obra/CC é opcional na admissão.
+    // Funcionário admitido sem alocação fica como 'disponivel' e pode ser
+    // alocado depois em /alocacao/nova.
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
