@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter, useParams } from 'next/navigation'
 import Breadcrumb from '@/components/ui/Breadcrumb'
 import { useToast } from '@/components/Toast'
+import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 
 const UFS = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO']
 
@@ -269,10 +270,17 @@ export default function EditarProcessoPage() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Advogado</label>
-              <select value={form.advogado_id} onChange={e => set('advogado_id', e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm">
-                <option value="">Selecione...</option>
-                {advogados.map(a => <option key={a.id} value={a.id}>{a.nome}</option>)}
-              </select>
+              <QuickCreateSelect
+                type="advogado"
+                value={form.advogado_id}
+                onChange={(id) => set('advogado_id', id)}
+                options={advogados.map(a => ({ id: a.id, label: a.nome }))}
+                placeholder="Buscar advogado..."
+                onCreated={(id, label) => {
+                  setAdvogados(prev => [...prev, { id, nome: label }])
+                  set('advogado_id', id)
+                }}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Funcionário vinculado</label>
