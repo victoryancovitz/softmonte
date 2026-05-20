@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireRoleApi } from '@/lib/require-role'
+import { RBAC } from '@/lib/rbac-matrix'
 import { rateLimit } from '@/lib/rate-limit'
 import { createClient } from '@/lib/supabase-server'
 
 export async function POST(req: NextRequest) {
   // Bloqueia chamadas sem auth (abuso da cota Anthropic)
-  const authErr = await requireRoleApi(['admin', 'financeiro', 'rh', 'encarregado', 'engenheiro'])
+  const authErr = await requireRoleApi(RBAC.ASSISTANT)
   if (authErr) return authErr
 
   // Rate limit por usuário: 10 requisições por minuto

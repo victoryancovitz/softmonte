@@ -7,7 +7,7 @@ import { createClient } from './supabase-server'
  * Para usar em server components. Redireciona para /dashboard se o usuário
  * não tem nenhuma das roles permitidas.
  */
-export async function requireRole(allowed: string[]): Promise<string> {
+export async function requireRole(allowed: readonly string[]): Promise<string> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -20,7 +20,7 @@ export async function requireRole(allowed: string[]): Promise<string> {
  * Para usar em route handlers (API routes). Retorna Response de erro se bloqueado,
  * ou null se OK. Use: `const err = await requireRoleApi(['admin','rh']); if (err) return err`
  */
-export async function requireRoleApi(allowed: string[]): Promise<NextResponse | null> {
+export async function requireRoleApi(allowed: readonly string[]): Promise<NextResponse | null> {
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })

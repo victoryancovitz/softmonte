@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { requireRoleApi } from '@/lib/require-role'
+import { RBAC } from '@/lib/rbac-matrix'
 
 export async function POST(req: Request) {
-  const authErr = await requireRoleApi(['admin', 'diretoria', 'financeiro'])
+  const authErr = await requireRoleApi(RBAC.FINANCEIRO_AMPLO)
   if (authErr) return authErr
 
   const supabase = createClient()

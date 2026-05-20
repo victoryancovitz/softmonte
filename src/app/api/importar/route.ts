@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { requireRoleApi } from '@/lib/require-role'
+import { RBAC } from '@/lib/rbac-matrix'
 import { rateLimit } from '@/lib/rate-limit'
 
 export async function POST(req: NextRequest) {
   // Só admin e RH podem importar funcionários em massa
-  const authErr = await requireRoleApi(['admin', 'rh'])
+  const authErr = await requireRoleApi(RBAC.RH)
   if (authErr) return authErr
 
   const supabase = createClient()

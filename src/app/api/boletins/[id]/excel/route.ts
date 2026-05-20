@@ -3,9 +3,10 @@ import { createClient } from '@/lib/supabase-server'
 import ExcelJS from 'exceljs'
 import { TECNOMONTE_LOGO_DARK_B64 } from '@/lib/tecnomonte-logo'
 import { requireRoleApi } from '@/lib/require-role'
+import { RBAC } from '@/lib/rbac-matrix'
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
-  const authErr = await requireRoleApi(['admin', 'financeiro', 'encarregado', 'engenheiro', 'rh'])
+  const authErr = await requireRoleApi(RBAC.RELATORIOS)
   if (authErr) return authErr
 
   const supabase = createClient()

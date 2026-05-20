@@ -9,12 +9,13 @@
 import { NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase-server'
 import { requireRoleApi } from '@/lib/require-role'
+import { RBAC } from '@/lib/rbac-matrix'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  const roleErr = await requireRoleApi(['admin', 'rh'])
+  const roleErr = await requireRoleApi(RBAC.RH)
   if (roleErr) return roleErr
 
   const supabase = createServerClient()

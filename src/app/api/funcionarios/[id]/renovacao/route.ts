@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { requireRoleApi } from '@/lib/require-role'
+import { RBAC } from '@/lib/rbac-matrix'
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const roleErr = await requireRoleApi(['admin', 'diretoria', 'rh'])
+  const roleErr = await requireRoleApi(RBAC.RH_AMPLO)
   if (roleErr) return roleErr
 
   const { decisao, observacao } = await req.json()

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 import JSZip from 'jszip'
 import { requireRoleApi } from '@/lib/require-role'
+import { RBAC } from '@/lib/rbac-matrix'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic'
  * Não salva no banco — apenas retorna o preview.
  */
 export async function POST(req: NextRequest) {
-  const authErr = await requireRoleApi(['admin', 'diretoria', 'engenharia', 'encarregado'])
+  const authErr = await requireRoleApi(RBAC.OPERACIONAL)
   if (authErr) return authErr
   try {
     const form = await req.formData()

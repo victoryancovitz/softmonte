@@ -22,6 +22,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient as createServerClient } from '@/lib/supabase-server'
 import { requireRoleApi } from '@/lib/require-role'
+import { RBAC } from '@/lib/rbac-matrix'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -96,7 +97,7 @@ export async function POST(req: NextRequest) {
   const cronSecret = req.headers.get('x-cron-secret')
   const isCron = !!(process.env.CRON_SECRET && cronSecret === process.env.CRON_SECRET)
   if (!isCron) {
-    const roleErr = await requireRoleApi(['admin', 'rh'])
+    const roleErr = await requireRoleApi(RBAC.RH)
     if (roleErr) return roleErr
   }
 

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase-server'
 import { requireRoleApi } from '@/lib/require-role'
+import { RBAC } from '@/lib/rbac-matrix'
 
 export const dynamic = 'force-dynamic'
 
@@ -18,7 +19,7 @@ interface FuncionarioInput {
 
 export async function POST(req: NextRequest) {
   // Somente admin e rh podem importar em massa
-  const authErr = await requireRoleApi(['admin', 'rh'])
+  const authErr = await requireRoleApi(RBAC.RH)
   if (authErr) return authErr
 
   let body: { funcionarios?: FuncionarioInput[] }

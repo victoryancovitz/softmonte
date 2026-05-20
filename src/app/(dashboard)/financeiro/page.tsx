@@ -33,6 +33,7 @@ function FinanceiroPage() {
   const [lancamentos, setLancamentos] = useState<any[]>([])
   const [showProvisões, setShowProvisões] = useState(true)
   const [loading, setLoading] = useState(true)
+  const [buscaDebounced, setBuscaDebounced] = useState('')
   const [busca, setBusca] = useState('')
   // Filtros vindos da URL (clicados do Sumário Executivo)
   const [filtroTipo, setFiltroTipo] = useState('')
@@ -80,9 +81,18 @@ function FinanceiroPage() {
     supabase.from('centros_custo').select('id, codigo, nome, tipo').is('deleted_at', null).eq('ativo', true).order('codigo').then(({ data }) => setCentrosCusto(data ?? []))
   }, [])
 
+  // Debounce da busca (300ms): evita query a cada keystroke
+  useEffect(() => {
+    const t = setTimeout(() => setBuscaDebounced(busca), 300)
+    return () => clearTimeout(t)
+  }, [busca])
+
+  // Reset paginação quando muda termo de busca
+  useEffect(() => { setPage(1) }, [buscaDebounced])
+
   useEffect(() => {
     loadData()
-  }, [obraId, showProvisões, page, filtroAno, filtroMes])
+  }, [obraId, showProvisões, page, filtroAno, filtroMes, buscaDebounced])
 
   async function loadData() {
     setLoading(true)
@@ -101,6 +111,12 @@ function FinanceiroPage() {
       } else {
         q = q.gte('data_competencia', `${ano}-01-01`).lte('data_competencia', `${ano}-12-31`)
       }
+    }
+    // Busca server-side em colunas relevantes (substituiu filter client-side)
+    if (buscaDebounced.trim()) {
+      const t = buscaDebounced.trim().replace(/[%,]/g, '') // sanitiza wildcards e separador do .or()
+      const pat = `%${t}%`
+      q = q.or(`nome.ilike.${pat},categoria.ilike.${pat},tipo.ilike.${pat},fornecedor.ilike.${pat}`)
     }
     q = q.range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1)
     const { data, count } = await q
@@ -140,8 +156,8 @@ function FinanceiroPage() {
   const resultadoTotal = (receitaPaga + receitaAberto) - (despesaPaga + despesaAberto + provisoes)
 
   // Filtered lancamentos for the table
+  // Busca já é server-side (.or() em loadData). Aqui só filtros locais (tabs de status, tipo, etc).
   const lancamentosFiltrados = lancamentos.filter(l => {
-    if (busca && !l.nome?.toLowerCase().includes(busca.toLowerCase()) && !l.categoria?.toLowerCase().includes(busca.toLowerCase()) && !l.tipo?.toLowerCase().includes(busca.toLowerCase()) && !l.fornecedor?.toLowerCase().includes(busca.toLowerCase())) return false
     if (filtroTipo && l.tipo !== filtroTipo) return false
     if (filtroStatus && l.status !== filtroStatus) return false
     if (filtroProvisao && !l.is_provisao) return false
