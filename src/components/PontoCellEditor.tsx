@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { compressImage } from "@/lib/image-compress"
 
 interface StatusOption {
   value: string
@@ -205,7 +206,7 @@ export default function PontoCellEditor({
       let arquivo_nome: string | null = null
       if (file) {
         const filePath = `faltas/${funcionario.id}/${data}_${Date.now()}_${file.name}`
-        const { error: upErr } = await supabase.storage.from('documentos').upload(filePath, file, { upsert: true })
+        const { error: upErr } = await supabase.storage.from('documentos').upload(filePath, await compressImage(file), { upsert: true })
         if (upErr) {
           toast.error('Erro no upload: ' + upErr.message)
           setSaving(false)

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { etapaOk } from '@/lib/admissao-utils'
 import ModalFichaEPI from '@/components/admissao/ModalFichaEPI'
+import { compressImage } from "@/lib/image-compress"
 
 /* ─── Constants ─── */
 
@@ -132,7 +133,7 @@ export default function ChecklistAdmissao({
 
   async function uploadFile(file: File, path: string): Promise<string | null> {
     const filePath = `${funcionario.id}/${path}/${Date.now()}_${file.name}`
-    const { error } = await supabase.storage.from('documentos').upload(filePath, file, { upsert: true })
+    const { error } = await supabase.storage.from('documentos').upload(filePath, await compressImage(file), { upsert: true })
     if (error) { toast.error('Erro no upload: ' + error.message); return null }
     const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(filePath)
     return publicUrl

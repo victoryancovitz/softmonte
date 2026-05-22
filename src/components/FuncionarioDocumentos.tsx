@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/Toast'
 import DocumentViewer from '@/components/DocumentViewer'
+import { compressImage } from "@/lib/image-compress"
 
 const TIPOS = ['ASO','NR-01','NR-06','NR-10','NR-12','NR-18','NR-20','NR-33','NR-35','NR','CIPA','EPI','RG','CPF','PIS','CTPS','contrato','admissao','esocial','comprovante','atestado','holerite','ponto','declaracao','termo','outro'] as const
 
@@ -84,7 +85,7 @@ export default function FuncionarioDocumentos({
 
   async function uploadFile(f: File, tipo: string): Promise<{ url: string; name: string } | null> {
     const filePath = `${funcionarioId}/${tipo}/${Date.now()}_${f.name}`
-    const { error: upErr } = await supabase.storage.from('documentos').upload(filePath, f, { upsert: true })
+    const { error: upErr } = await supabase.storage.from('documentos').upload(filePath, await compressImage(f), { upsert: true })
     if (upErr) {
       toast.error('Erro no upload: ' + upErr.message)
       return null

@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
+import { compressImage } from "@/lib/image-compress"
 
 const TIPOS = ['ASO','NR-01','NR-06','NR-10','NR-12','NR-18','NR-20','NR-33','NR-35','NR','CIPA','EPI','RG','CPF','PIS','CTPS','contrato','admissao','esocial','comprovante','atestado','holerite','ponto','declaracao','termo','outro']
 
@@ -45,7 +46,7 @@ export default function NovoDocumentoPage() {
     if (file) {
       const ext = file.name.split('.').pop()
       const path = `documentos/${form.funcionario_id}/${form.tipo}_${Date.now()}.${ext}`
-      const { data: upload, error: uploadErr } = await supabase.storage.from('softmonte').upload(path, file)
+      const { data: upload, error: uploadErr } = await supabase.storage.from('softmonte').upload(path, await compressImage(file))
       if (uploadErr) { setError('Erro ao fazer upload: ' + uploadErr.message); setLoading(false); return }
       const { data: urlData } = supabase.storage.from('softmonte').getPublicUrl(path)
       arquivo_url = urlData.publicUrl

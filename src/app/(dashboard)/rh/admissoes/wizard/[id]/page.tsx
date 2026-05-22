@@ -18,6 +18,7 @@ import WizardStep7Uniforme from '@/components/admissao/WizardStep7Uniforme'
 import WizardStep8Integracao from '@/components/admissao/WizardStep8Integracao'
 import { X, ChevronLeft, ChevronRight, Save, Loader2 } from 'lucide-react'
 import { etapaOk } from '@/lib/admissao-utils'
+import { compressImage } from "@/lib/image-compress"
 
 const STEP_LABELS = ['', 'Pessoal', 'Contrato', 'CTPS/Banco', 'ASO', 'NRs', 'EPI', 'Uniforme', 'Integracao']
 
@@ -224,7 +225,7 @@ export default function ResumeWizardPage({ params }: { params: { id: string } })
   async function handleFileUpload(file: File): Promise<string | null> {
     const ext = file.name.split('.').pop()
     const path = `aso/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from('documentos').upload(path, file)
+    const { error } = await supabase.storage.from('documentos').upload(path, await compressImage(file))
     if (error) {
       toast.error('Erro ao enviar arquivo', error.message)
       return null

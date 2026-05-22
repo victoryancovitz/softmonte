@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
+import { compressImage } from "@/lib/image-compress"
 import {
   ChevronDown, ChevronRight, Check, Upload, Shield, AlertTriangle,
 } from 'lucide-react'
@@ -130,7 +131,7 @@ export default function WizardStep5NRs({ funcionario, workflowId, onComplete }: 
     try {
       const ext = file.name.split('.').pop() || 'pdf'
       const path = `${funcionario.id}/nrs/${nrId}_${field}_${Date.now()}.${ext}`
-      const { error } = await supabase.storage.from('documentos').upload(path, file, { upsert: true })
+      const { error } = await supabase.storage.from('documentos').upload(path, await compressImage(file), { upsert: true })
       if (error) throw error
       const { data: { publicUrl } } = supabase.storage.from('documentos').getPublicUrl(path)
       updateField(nrId, field, publicUrl)

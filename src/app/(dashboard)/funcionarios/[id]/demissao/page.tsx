@@ -6,6 +6,7 @@ import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
 import { formatSupabaseError } from '@/lib/errors'
+import { compressImage } from "@/lib/image-compress"
 
 const DEVOLUCAO_ITEMS = [
   { key: 'epi_devolvido', label: 'EPI devolvido' },
@@ -234,7 +235,7 @@ export default function DemissaoWizardPage() {
         if (laudoFile) {
           const ext = laudoFile.name.split('.').pop()
           const path = `documentos/${id}/DEMISSIONAL_${Date.now()}.${ext}`
-          const { error: upErr } = await supabase.storage.from('softmonte').upload(path, laudoFile)
+          const { error: upErr } = await supabase.storage.from('softmonte').upload(path, await compressImage(laudoFile))
           if (upErr) { setError('Erro no upload: ' + upErr.message); setSaving(false); return false }
           const { data: urlData } = supabase.storage.from('softmonte').getPublicUrl(path)
           laudo_url = urlData.publicUrl

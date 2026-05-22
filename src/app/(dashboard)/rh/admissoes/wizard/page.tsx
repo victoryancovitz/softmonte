@@ -15,6 +15,7 @@ import WizardStep5NRs from '@/components/admissao/WizardStep5NRs'
 import WizardStep6EPI from '@/components/admissao/WizardStep6EPI'
 import WizardStep7Uniforme from '@/components/admissao/WizardStep7Uniforme'
 import WizardStep8Integracao from '@/components/admissao/WizardStep8Integracao'
+import { compressImage } from "@/lib/image-compress"
 import { X, ChevronLeft, ChevronRight, Save } from 'lucide-react'
 
 const STEP_LABELS = ['', 'Pessoal', 'Contrato', 'CTPS/Banco', 'ASO', 'NRs', 'EPI', 'Uniforme', 'Integração']
@@ -164,7 +165,7 @@ export default function WizardAdmissaoPage() {
   async function handleFileUpload(file: File): Promise<string | null> {
     const ext = file.name.split('.').pop()
     const path = `aso/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from('documentos').upload(path, file)
+    const { error } = await supabase.storage.from('documentos').upload(path, await compressImage(file))
     if (error) {
       toast.error('Erro ao enviar arquivo', error.message)
       return null

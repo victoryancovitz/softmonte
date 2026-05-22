@@ -11,6 +11,7 @@ import {
   ChevronDown, ChevronRight, Plus, Users, ShieldAlert, FileWarning,
 } from 'lucide-react'
 import ConfirmButton from '@/components/ConfirmButton'
+import { compressImage } from "@/lib/image-compress"
 
 /* ═══ Types ═══ */
 
@@ -282,7 +283,7 @@ export default function TreinamentosPage() {
     if (renewFile) {
       const ext = renewFile.name.split('.').pop()
       const path = `treinamentos/${renewTarget.funcionario_id}/${renewTarget.codigo}_${Date.now()}.${ext}`
-      const { error: upErr } = await supabase.storage.from('softmonte').upload(path, renewFile)
+      const { error: upErr } = await supabase.storage.from('softmonte').upload(path, await compressImage(renewFile))
       if (!upErr) {
         const { data: urlData } = supabase.storage.from('softmonte').getPublicUrl(path)
         arquivo_url = urlData.publicUrl

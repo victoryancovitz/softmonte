@@ -6,6 +6,7 @@ import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
 import { formatSupabaseError } from '@/lib/errors'
+import { compressImage } from "@/lib/image-compress"
 
 const EPI_PADRAO = [
   'Capacete', 'Óculos de proteção', 'Protetor auricular', 'Luvas',
@@ -215,7 +216,7 @@ export default function AdmissaoWizardPage() {
         if (asoFile) {
           const ext = asoFile.name.split('.').pop()
           const path = `documentos/${id}/ASO_admissao_${Date.now()}.${ext}`
-          const { error: upErr } = await supabase.storage.from('softmonte').upload(path, asoFile)
+          const { error: upErr } = await supabase.storage.from('softmonte').upload(path, await compressImage(asoFile))
           if (upErr) { setError('Erro no upload: ' + upErr.message); setSaving(false); return }
           const { data: urlData } = supabase.storage.from('softmonte').getPublicUrl(path)
           aso_url = urlData.publicUrl
@@ -251,7 +252,7 @@ export default function AdmissaoWizardPage() {
           if (file) {
             const ext = file.name.split('.').pop()
             const path = `documentos/${id}/NR_${tipoId}_${Date.now()}.${ext}`
-            const { error: upErr } = await supabase.storage.from('softmonte').upload(path, file)
+            const { error: upErr } = await supabase.storage.from('softmonte').upload(path, await compressImage(file))
             if (!upErr) {
               const { data: urlData } = supabase.storage.from('softmonte').getPublicUrl(path)
               nrFinal[tipoId] = { ...nrFinal[tipoId], certificado_url: urlData.publicUrl, certificado_nome: file.name }

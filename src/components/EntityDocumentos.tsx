@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/Toast'
 import DocumentViewer from '@/components/DocumentViewer'
+import { compressImage } from "@/lib/image-compress"
 
 interface EntityDoc {
   id: string
@@ -88,7 +89,7 @@ export default function EntityDocumentos({
 
   async function uploadFile(f: File): Promise<{ url: string; name: string } | null> {
     const filePath = `${storagePath}/${fkValue}/${form.tipo}/${Date.now()}_${f.name}`
-    const { error: upErr } = await supabase.storage.from('documentos').upload(filePath, f, { upsert: true })
+    const { error: upErr } = await supabase.storage.from('documentos').upload(filePath, await compressImage(f), { upsert: true })
     if (upErr) {
       toast.error('Erro no upload: ' + upErr.message)
       return null

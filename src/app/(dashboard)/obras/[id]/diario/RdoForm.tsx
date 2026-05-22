@@ -5,6 +5,7 @@ import { useToast } from '@/components/Toast'
 import { ChevronLeft, FileDown, Save, Send, Trash2, Plus, X, AlertTriangle, CheckCircle2, Edit3, PenLine } from 'lucide-react'
 import { exportarRdoPDF } from './rdo-pdf'
 import SignatureModal from './SignatureModal'
+import { compressImage } from '@/lib/image-compress'
 
 const HORAS_TURNO = ['07-08', '08-09', '09-10', '10-11', '11-12', '12-13', '13-14', '14-15', '15-16', '16-17', '17-18']
 const CLIMA_OPTS = [
@@ -295,9 +296,10 @@ export default function RdoForm({ obraId, rdoId, onClose }: Props) {
       for (let i = 0; i < fotos.length; i++) {
         const f = fotos[i]
         if (f.file) {
-          const ext = f.file.name.split('.').pop() || 'jpg'
+          const compressed = await compressImage(f.file)
+          const ext = compressed.name.split('.').pop() || 'jpg'
           const path = `${obraId}/${data}/${f.numero}-${Date.now()}.${ext}`
-          const { error: upErr } = await supabase.storage.from('rdos').upload(path, f.file, { upsert: true })
+          const { error: upErr } = await supabase.storage.from('rdos').upload(path, compressed, { upsert: true })
           if (upErr) { toast.error('Erro upload foto ' + f.numero, upErr.message); continue }
           const { data: pub } = supabase.storage.from('rdos').getPublicUrl(path)
           fotos[i] = { ...f, file: undefined, url: pub.publicUrl }

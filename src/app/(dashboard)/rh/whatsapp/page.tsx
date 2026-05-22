@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import SearchInput from '@/components/SearchInput'
 import EmptyState from '@/components/ui/EmptyState'
+import { compressImage } from "@/lib/image-compress"
 import {
   MessageSquare, Send, CheckCircle2, Clock, Eye, AlertTriangle,
   Plus, X, Upload, Inbox, FileText,
@@ -108,7 +109,7 @@ export default function WhatsAppRHPage() {
       if (formEnvio.arquivo) {
         const ext = formEnvio.arquivo.name.split('.').pop()
         const path = `whatsapp/${formEnvio.funcionario_id}/${Date.now()}.${ext}`
-        const { error: upErr } = await supabase.storage.from('documentos').upload(path, formEnvio.arquivo)
+        const { error: upErr } = await supabase.storage.from('documentos').upload(path, await compressImage(formEnvio.arquivo))
         if (upErr) throw upErr
         const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(path)
         arquivo_url = urlData.publicUrl

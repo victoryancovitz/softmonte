@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { confirmDialog } from '@/components/ui/ConfirmDialog'
 import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
+import { compressImage } from "@/lib/image-compress"
 
 const fmt = (v: number) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 
@@ -207,7 +208,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
     setUploadingAnexo(true)
     try {
       const path = `comprovantes/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
-      const { error } = await supabase.storage.from('documentos').upload(path, file)
+      const { error } = await supabase.storage.from('documentos').upload(path, await compressImage(file))
       if (error) { toast.error('Erro no upload: ' + error.message); return }
       const { data: urlData } = supabase.storage.from('documentos').getPublicUrl(path)
       setModalForm(f => ({ ...f, anexo_url: urlData.publicUrl }))

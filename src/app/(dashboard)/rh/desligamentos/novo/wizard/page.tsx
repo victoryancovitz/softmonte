@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { formatSupabaseError } from '@/lib/errors'
 import WizardStepperDesligamento from '@/components/desligamento/WizardStepperDesligamento'
+import { compressImage } from "@/lib/image-compress"
 import {
   X, ChevronLeft, ChevronRight, Save, Loader2, Upload, FileText,
   Calculator, Plus, Trash2, Calendar, CheckCircle2,
@@ -399,7 +400,7 @@ export default function WizardDesligamentoPage() {
   async function uploadFile(file: File, prefix: string): Promise<string | null> {
     const ext = file.name.split('.').pop()
     const path = `desligamento/${prefix}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from('documentos').upload(path, file)
+    const { error } = await supabase.storage.from('documentos').upload(path, await compressImage(file))
     if (error) {
       toast.error('Erro ao enviar arquivo', error.message)
       return null
