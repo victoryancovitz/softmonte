@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
+import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 
 const MESES = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro']
 
@@ -74,19 +75,31 @@ export default function NovoHHPage() {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Funcionário *</label>
-            <select required value={form.funcionario_id} onChange={e => set('funcionario_id', e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
-              <option value="">Selecione...</option>
-              {funcionarios.map(f => <option key={f.id} value={f.id}>{f.nome} — {f.cargo}</option>)}
-            </select>
+            <QuickCreateSelect
+              type="funcionario"
+              value={form.funcionario_id}
+              onChange={(id) => set('funcionario_id', id)}
+              options={funcionarios.map(f => ({ id: f.id, label: `${f.nome} — ${f.cargo}` }))}
+              placeholder="Buscar funcionário..."
+              onCreated={(id, label) => {
+                setFuncionarios(prev => [...prev, { id, nome: label, cargo: '', custo_hora: null }])
+                set('funcionario_id', id)
+              }}
+            />
           </div>
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1.5">Obra *</label>
-            <select required value={form.obra_id} onChange={e => set('obra_id', e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
-              <option value="">Selecione...</option>
-              {obras.map(o => <option key={o.id} value={o.id}>{o.nome}</option>)}
-            </select>
+            <QuickCreateSelect
+              type="obra"
+              value={form.obra_id}
+              onChange={(id) => set('obra_id', id)}
+              options={obras.map(o => ({ id: o.id, label: o.nome }))}
+              placeholder="Buscar obra..."
+              onCreated={(id, label) => {
+                setObras(prev => [...prev, { id, nome: label }])
+                set('obra_id', id)
+              }}
+            />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>

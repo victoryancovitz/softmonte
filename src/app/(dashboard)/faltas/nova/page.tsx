@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
+import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 
 export default function NovaFaltaPage() {
   const [funcionarios, setFuncionarios] = useState<any[]>([])
@@ -108,23 +109,33 @@ export default function NovaFaltaPage() {
           {/* Funcionário */}
           <div>
             <label className={lbl}>Funcionário *</label>
-            <select name="funcionario_id" value={form.funcionario_id} onChange={e => set('funcionario_id', e.target.value)} className={inp}>
-              <option value="">Selecione...</option>
-              {funcionarios.map(f => (
-                <option key={f.id} value={f.id}>{f.nome} — {f.cargo}</option>
-              ))}
-            </select>
+            <QuickCreateSelect
+              type="funcionario"
+              value={form.funcionario_id}
+              onChange={(id) => set('funcionario_id', id)}
+              options={funcionarios.map(f => ({ id: f.id, label: `${f.nome} — ${f.cargo}` }))}
+              placeholder="Buscar funcionário..."
+              onCreated={(id, label) => {
+                setFuncionarios(prev => [...prev, { id, nome: label, cargo: '' }])
+                set('funcionario_id', id)
+              }}
+            />
           </div>
 
           {/* Obra */}
           <div>
             <label className={lbl}>Obra</label>
-            <select name="obra_id" value={form.obra_id} onChange={e => set('obra_id', e.target.value)} className={inp}>
-              <option value="">Nenhuma</option>
-              {obras.map(o => (
-                <option key={o.id} value={o.id}>{o.nome}</option>
-              ))}
-            </select>
+            <QuickCreateSelect
+              type="obra"
+              value={form.obra_id}
+              onChange={(id) => set('obra_id', id)}
+              options={obras.map(o => ({ id: o.id, label: o.nome }))}
+              placeholder="Buscar obra..."
+              onCreated={(id, label) => {
+                setObras(prev => [...prev, { id, nome: label }])
+                set('obra_id', id)
+              }}
+            />
           </div>
 
           {/* Data */}

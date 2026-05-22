@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import BackButton from '@/components/BackButton'
 import { useToast } from '@/components/Toast'
+import QuickCreateSelect from '@/components/ui/QuickCreateSelect'
 
 interface PreviewRow {
   funcao_nome: string
@@ -567,11 +568,17 @@ export default function NovoBMPage() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Obra *</label>
-            <select required value={form.obra_id} onChange={e => onObraChange(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand">
-              <option value="">Selecione a obra...</option>
-              {obras.map(o => <option key={o.id} value={o.id}>{o.nome} — {o.cliente}</option>)}
-            </select>
+            <QuickCreateSelect
+              type="obra"
+              value={form.obra_id}
+              onChange={(id) => onObraChange(id)}
+              options={obras.map(o => ({ id: o.id, label: `${o.nome}${o.cliente ? ` — ${o.cliente}` : ''}` }))}
+              placeholder="Buscar obra..."
+              onCreated={(id, label) => {
+                setObras(prev => [...prev, { id, nome: label, cliente: '' }])
+                onObraChange(id)
+              }}
+            />
           </div>
 
           {form.obra_id && (

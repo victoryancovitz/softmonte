@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase'
 import { useToast } from '@/components/Toast'
 import { Plus, X } from 'lucide-react'
 
-type QuickCreateType = 'centro_custo' | 'categoria_financeira' | 'funcao' | 'cliente' | 'obra' | 'conta_bancaria' | 'fornecedor' | 'advogado' | 'credor_tipo'
+type QuickCreateType = 'centro_custo' | 'categoria_financeira' | 'funcao' | 'cliente' | 'obra' | 'conta_bancaria' | 'fornecedor' | 'advogado' | 'credor_tipo' | 'funcionario'
 
 interface QuickCreateOption {
   id: string
@@ -35,6 +35,7 @@ const TYPE_CONFIG: Record<QuickCreateType, { titulo: string; tabela: string }> =
   fornecedor: { titulo: 'Novo Fornecedor', tabela: 'fornecedores' },
   advogado: { titulo: 'Novo Advogado', tabela: 'advogados' },
   credor_tipo: { titulo: 'Novo Tipo de Credor', tabela: 'credor_tipos' },
+  funcionario: { titulo: 'Novo Funcionário (rascunho)', tabela: 'funcionarios' },
 }
 
 const CC_TIPOS = [
@@ -98,6 +99,11 @@ function QuickCreateModal({
   const [advOab, setAdvOab] = useState('')
   const [advUf, setAdvUf] = useState('SP')
   const [advTipo, setAdvTipo] = useState('externo')
+
+  // funcionario (criação mínima — wizard completa o resto)
+  const [funcionarioNome, setFuncionarioNome] = useState('')
+  const [funcionarioCpf, setFuncionarioCpf] = useState('')
+  const [funcionarioCargo, setFuncionarioCargo] = useState('')
 
   const config = TYPE_CONFIG[type]
 
@@ -174,6 +180,23 @@ function QuickCreateModal({
           const valor = ctLabel.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
           insertData = { valor, label: ctLabel.trim(), ativo: true }
           label = ctLabel.trim()
+          break
+        }
+        case 'funcionario': {
+          if (!funcionarioNome.trim()) { toast.warning('Nome obrigatório'); setSaving(false); return }
+          if (!funcionarioCargo.trim()) { toast.warning('Cargo obrigatório'); setSaving(false); return }
+          const cpfDigits = funcionarioCpf.replace(/\D/g, '')
+          if (cpfDigits && cpfDigits.length !== 11) {
+            toast.warning('CPF deve ter 11 dígitos (ou deixe vazio pra completar depois)')
+            setSaving(false); return
+          }
+          insertData = {
+            nome: funcionarioNome.trim(),
+            cargo: funcionarioCargo.trim().toUpperCase(),
+            status: 'pendente',
+            ...(cpfDigits ? { cpf: cpfDigits } : {}),
+          }
+          label = funcionarioNome.trim()
           break
         }
       }
@@ -421,6 +444,31 @@ function QuickCreateModal({
                   <option value="externo">Externo</option>
                   <option value="escritorio">Escritório</option>
                 </select>
+              </div>
+            </>
+          )}
+          {type === 'funcionario' && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Nome completo *</label>
+                <input value={funcionarioNome} onChange={e => setFuncionarioNome(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                  placeholder="Ex: José da Silva" autoFocus />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Cargo *</label>
+                <input value={funcionarioCargo} onChange={e => setFuncionarioCargo(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand uppercase"
+                  placeholder="Ex: CALDEIREIRO, MONTADOR..." />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">CPF (opcional)</label>
+                <input value={funcionarioCpf} onChange={e => setFuncionarioCpf(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand"
+                  placeholder="Apenas dígitos" maxLength={11} />
+              </div>
+              <div className="text-[11px] text-amber-600 bg-amber-50 border border-amber-100 rounded-lg p-2">
+                ⚠ Cadastro mínimo — status &quot;pendente&quot;. Complete os dados pelo wizard de admissão depois.
               </div>
             </>
           )}
