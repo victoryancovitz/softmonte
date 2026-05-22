@@ -61,7 +61,7 @@ export default function WizardStep5NRs({ funcionario, workflowId, onComplete }: 
 
   async function loadNRs() {
     setLoading(true)
-    // Se não tem funcao_id ainda (etapa 2 não preenchida), busca só as obrigatórias para todos
+    // 1) Lista de NRs obrigatórias pra essa função (+ as 'obrigatoria_todas')
     const funcaoId = funcionario.funcao_id
     let query = supabase
       .from('nr_obrigatorias_funcao')
@@ -73,9 +73,9 @@ export default function WizardStep5NRs({ funcionario, workflowId, onComplete }: 
     } else {
       query = query.eq('obrigatoria_todas', true)
     }
-    const { data } = await query
+    const { data: nrsRaw } = await query
 
-    const list: NR[] = (data ?? []).map((r: any) => ({
+    const list: NR[] = (nrsRaw ?? []).map((r: any) => ({
       id: r.id,
       nr_codigo: r.nr_codigo || '',
       nr_nome: r.nr_nome || '',
@@ -84,9 +84,27 @@ export default function WizardStep5NRs({ funcionario, workflowId, onComplete }: 
     }))
     setNrs(list)
 
-    // Init form data for each NR
+    // 2) Treinamentos já salvos pra esse workflow — pra repopular o form quando RH volta na etapa
+    const { data: existentes } = await supabase
+      .from('treinamentos_funcionarios')
+      .select('nr_codigo, data_conclusao, data_vencimento, carga_horaria, entidade, certificado_url, anuencia_url')
+      .eq('workflow_id', workflowId)
+
+    const byCodigo = new Map<string, any>()
+    ;(existentes ?? []).forEach((t: any) => byCodigo.set(t.nr_codigo, t))
+
     const init: Record<string, NRFormData> = {}
-    list.forEach(nr => { init[nr.id] = emptyForm() })
+    list.forEach(nr => {
+      const ex = byCodigo.get(nr.nr_codigo)
+      init[nr.id] = ex ? {
+        data_conclusao: ex.data_conclusao ?? '',
+        data_vencimento: ex.data_vencimento ?? '',
+        carga_horaria: ex.carga_horaria != null ? String(ex.carga_horaria) : '',
+        entidade: ex.entidade ?? '',
+        certificado_url: ex.certificado_url ?? null,
+        anuencia_url: ex.anuencia_url ?? null,
+      } : emptyForm()
+    })
     setNrData(init)
     setLoading(false)
   }
@@ -141,6 +159,15 @@ export default function WizardStep5NRs({ funcionario, workflowId, onComplete }: 
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const email = user?.email ?? 'sistema'
+
+      // Apaga treinamentos antigos deste workflow pra evitar duplicação
+      // se RH voltar nessa etapa e re-confirmar (caso típico de edição).
+      await supabase.from('treinamentos_funcionarios').delete().eq('workflow_id', workflowId)
+      // Idem pros documentos relacionados — chave: funcionário + tipo nr_*
+      await supabase.from('documentos')
+        .delete()
+        .eq('funcionario_id', funcionario.id)
+        .in('tipo', ['certificado_nr', 'anuencia_nr'])
 
       for (const nr of nrs) {
         const d = nrData[nr.id]
