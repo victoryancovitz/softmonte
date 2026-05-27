@@ -21,7 +21,6 @@ interface NR {
 interface NRFormData {
   data_conclusao: string
   data_vencimento: string
-  carga_horaria: string
   entidade: string
   certificado_url: string | null
   anuencia_url: string | null
@@ -36,7 +35,7 @@ interface Props {
 const inputCls = 'w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-brand'
 
 function emptyForm(): NRFormData {
-  return { data_conclusao: '', data_vencimento: '', carga_horaria: '', entidade: '', certificado_url: null, anuencia_url: null }
+  return { data_conclusao: '', data_vencimento: '', entidade: '', certificado_url: null, anuencia_url: null }
 }
 
 function isFilled(d: NRFormData, requerAnuencia: boolean): boolean {
@@ -55,6 +54,8 @@ export default function WizardStep5NRs({ funcionario, workflowId, onComplete }: 
   const [expanded, setExpanded] = useState<string | null>(null)
   const [nrData, setNrData] = useState<Record<string, NRFormData>>({})
   const [uploading, setUploading] = useState<Record<string, boolean>>({})
+  // nr_codigo -> treinamentos_tipos.id (tipo_id é NOT NULL no insert)
+  const [tipoByCodigo, setTipoByCodigo] = useState<Record<string, string>>({})
 
   useEffect(() => {
     loadNRs()
@@ -85,24 +86,36 @@ export default function WizardStep5NRs({ funcionario, workflowId, onComplete }: 
     }))
     setNrs(list)
 
-    // 2) Treinamentos já salvos pra esse workflow — pra repopular o form quando RH volta na etapa
+    // 2) Mapa nr_codigo -> tipo_id (treinamentos_funcionarios.tipo_id é NOT NULL)
+    const codigos = list.map(nr => nr.nr_codigo).filter(Boolean)
+    const { data: tipos } = await supabase
+      .from('treinamentos_tipos')
+      .select('id, codigo')
+      .in('codigo', codigos.length ? codigos : ['__none__'])
+    const tipoMap: Record<string, string> = {}
+    ;(tipos ?? []).forEach((t: any) => { tipoMap[t.codigo] = t.id })
+    setTipoByCodigo(tipoMap)
+
+    // 3) Treinamentos já salvos pra esse funcionário — repopula o form quando RH volta na etapa
+    const tipoIds = Object.values(tipoMap)
     const { data: existentes } = await supabase
       .from('treinamentos_funcionarios')
-      .select('nr_codigo, data_conclusao, data_vencimento, carga_horaria, entidade, certificado_url, anuencia_url')
-      .eq('workflow_id', workflowId)
+      .select('tipo_id, data_realizacao, data_vencimento, instituicao, arquivo_url, anuencia_url')
+      .eq('funcionario_id', funcionario.id)
+      .is('deleted_at', null)
+      .in('tipo_id', tipoIds.length ? tipoIds : ['00000000-0000-0000-0000-000000000000'])
 
-    const byCodigo = new Map<string, any>()
-    ;(existentes ?? []).forEach((t: any) => byCodigo.set(t.nr_codigo, t))
+    const byTipoId = new Map<string, any>()
+    ;(existentes ?? []).forEach((t: any) => byTipoId.set(t.tipo_id, t))
 
     const init: Record<string, NRFormData> = {}
     list.forEach(nr => {
-      const ex = byCodigo.get(nr.nr_codigo)
+      const ex = byTipoId.get(tipoMap[nr.nr_codigo])
       init[nr.id] = ex ? {
-        data_conclusao: ex.data_conclusao ?? '',
+        data_conclusao: ex.data_realizacao ?? '',
         data_vencimento: ex.data_vencimento ?? '',
-        carga_horaria: ex.carga_horaria != null ? String(ex.carga_horaria) : '',
-        entidade: ex.entidade ?? '',
-        certificado_url: ex.certificado_url ?? null,
+        entidade: ex.instituicao ?? '',
+        certificado_url: ex.arquivo_url ?? null,
         anuencia_url: ex.anuencia_url ?? null,
       } : emptyForm()
     })
@@ -156,59 +169,80 @@ export default function WizardStep5NRs({ funcionario, workflowId, onComplete }: 
       toast.warning('Preencha todas as NRs obrigatorias antes de continuar.')
       return
     }
+    // Garante que toda NR tem tipo_id (NOT NULL no insert)
+    const semTipo = nrs.filter(nr => !tipoByCodigo[nr.nr_codigo])
+    if (semTipo.length) {
+      toast.error(`Tipo de treinamento nao cadastrado: ${semTipo.map(n => n.nr_codigo).join(', ')}`)
+      return
+    }
+
     setSaving(true)
     try {
       const { data: { user } } = await supabase.auth.getUser()
       const email = user?.email ?? 'sistema'
 
-      // Apaga treinamentos antigos deste workflow pra evitar duplicação
-      // se RH voltar nessa etapa e re-confirmar (caso típico de edição).
-      await supabase.from('treinamentos_funcionarios').delete().eq('workflow_id', workflowId)
-      // Idem pros documentos relacionados — chave: funcionário + tipo nr_*
-      await supabase.from('documentos')
+      const tipoIds = nrs.map(nr => tipoByCodigo[nr.nr_codigo])
+      const codigos = nrs.map(nr => nr.nr_codigo)
+
+      // Apaga treinamentos/documentos antigos destas NRs pra esse funcionário
+      // antes de reinserir (caso RH volte na etapa e re-confirme).
+      const { error: delTErr } = await supabase
+        .from('treinamentos_funcionarios')
         .delete()
         .eq('funcionario_id', funcionario.id)
-        .in('tipo', ['certificado_nr', 'anuencia_nr'])
+        .in('tipo_id', tipoIds)
+      if (delTErr) throw delTErr
 
-      for (const nr of nrs) {
+      const { error: delDErr } = await supabase
+        .from('documentos')
+        .delete()
+        .eq('funcionario_id', funcionario.id)
+        .in('tipo', codigos)
+      if (delDErr) throw delDErr
+
+      const treinoRows = nrs.map(nr => {
         const d = nrData[nr.id]
-        if (!d) continue
-
-        // Insert treinamento
-        await supabase.from('treinamentos_funcionarios').insert({
+        return {
           funcionario_id: funcionario.id,
-          nr_codigo: nr.nr_codigo,
-          nr_nome: nr.nr_nome,
-          data_conclusao: d.data_conclusao,
+          tipo_id: tipoByCodigo[nr.nr_codigo],
+          data_realizacao: d.data_conclusao,
           data_vencimento: d.data_vencimento,
-          carga_horaria: d.carga_horaria ? Number(d.carga_horaria) : null,
-          entidade: d.entidade || null,
-          certificado_url: d.certificado_url,
+          instituicao: d.entidade || null,
+          arquivo_url: d.certificado_url,
           anuencia_url: d.anuencia_url,
-          workflow_id: workflowId,
-          created_by: user?.id,
-        })
+          status: 'valido',
+          registrado_por: email,
+        }
+      })
+      const { error: insTErr } = await supabase.from('treinamentos_funcionarios').insert(treinoRows)
+      if (insTErr) throw insTErr
 
-        // Insert documento for certificado
+      const docRows = nrs.flatMap(nr => {
+        const d = nrData[nr.id]
+        const rows: any[] = []
         if (d.certificado_url) {
-          await supabase.from('documentos').insert({
+          rows.push({
             funcionario_id: funcionario.id,
-            tipo: 'certificado_nr',
-            descricao: `Certificado ${nr.nr_codigo} - ${nr.nr_nome}`,
-            url: d.certificado_url,
-            created_by: user?.id,
+            tipo: nr.nr_codigo,
+            arquivo_url: d.certificado_url,
+            emissao: d.data_conclusao,
+            vencimento: d.data_vencimento,
+            observacao: `Certificado ${nr.nr_codigo} - ${nr.nr_nome}`,
           })
         }
-        // Insert documento for anuencia
         if (d.anuencia_url) {
-          await supabase.from('documentos').insert({
+          rows.push({
             funcionario_id: funcionario.id,
-            tipo: 'anuencia_nr',
-            descricao: `Anuencia ${nr.nr_codigo} - ${nr.nr_nome}`,
-            url: d.anuencia_url,
-            created_by: user?.id,
+            tipo: nr.nr_codigo,
+            arquivo_url: d.anuencia_url,
+            observacao: `Carta de anuencia ${nr.nr_codigo} - ${nr.nr_nome}`,
           })
         }
+        return rows
+      })
+      if (docRows.length) {
+        const { error: insDErr } = await supabase.from('documentos').insert(docRows)
+        if (insDErr) throw insDErr
       }
 
       // Update workflow
@@ -331,17 +365,6 @@ export default function WizardStep5NRs({ funcionario, workflowId, onComplete }: 
                         value={d.data_vencimento}
                         onChange={e => updateField(nr.id, 'data_vencimento', e.target.value)}
                         className={inputCls}
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1">Carga horaria (horas)</label>
-                      <input
-                        type="number"
-                        min={0}
-                        value={d.carga_horaria}
-                        onChange={e => updateField(nr.id, 'carga_horaria', e.target.value)}
-                        className={inputCls}
-                        placeholder="Ex: 8"
                       />
                     </div>
                     <div>
