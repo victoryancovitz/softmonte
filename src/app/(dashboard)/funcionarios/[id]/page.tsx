@@ -93,7 +93,7 @@ export default async function FuncionarioPage({ params, searchParams }: { params
     { data: historicoSalarial },
     { data: historicoFuncional },
   ] = await Promise.all([
-    supabase.from('funcoes').select('id, nome, salario_base, horas_mes, insalubridade_pct').eq('ativo', true),
+    supabase.from('funcoes').select('id, nome, salario_base, insalubridade_pct:insalubridade_pct_padrao').eq('ativo', true),
     supabase.from('funcionario_historico_salarial').select('*').eq('funcionario_id', params.id).order('data_efetivo', { ascending: false }),
     supabase.from('historico_funcional').select('*').eq('funcionario_id', params.id).order('data_vigencia', { ascending: false }),
   ])
