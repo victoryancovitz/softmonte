@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase'
+import { processarSaidaFIFO } from '@/lib/estoque'
 import { useToast } from '@/components/Toast'
 import { Plus, Trash2, Shirt } from 'lucide-react'
 
@@ -122,35 +123,58 @@ export default function WizardStep7Uniforme({ funcionario, workflowId, onComplet
       const { data: { user } } = await supabase.auth.getUser()
       const email = user?.email ?? 'sistema'
 
-      // Insert requisicao (quando houver itens no estoque)
-      const itensJson = itens.map(i => ({
-        item_id: i.item_id,
-        nome: i.nome,
-        tamanho: i.tamanho,
-        qtd: i.qtd,
-      }))
-
-      if (itens.length > 0) {
-        await supabase.from('estoque_requisicoes').insert({
-          funcionario_id: funcionario.id,
-          tipo: 'uniforme',
-          data_entrega: dataEntrega,
-          responsavel,
-          itens: itensJson,
-          workflow_id: workflowId,
-          created_by: user?.id,
-        })
+      // Requisição de estoque + baixa FIFO (apenas itens vinculados ao estoque)
+      const itensEstoque = itens.filter(i => i.item_id && Number(i.qtd) > 0)
+      let custoTotal = 0
+      if (itensEstoque.length > 0) {
+        const resultados: Array<{ item_id: string; qtd: number; custo_unitario: number; custo_total: number }> = []
+        const semEstoque: string[] = []
+        for (const i of itensEstoque) {
+          const r = await processarSaidaFIFO(supabase, i.item_id as string, Number(i.qtd))
+          if (!r.sucesso) { semEstoque.push(i.nome || 'item'); continue }
+          custoTotal += r.custo_total
+          resultados.push({ item_id: i.item_id as string, qtd: Number(i.qtd), custo_unitario: r.custo_medio, custo_total: r.custo_total })
+        }
+        if (semEstoque.length > 0) {
+          toast.warning(`Sem estoque suficiente: ${semEstoque.join(', ')}. Uniforme registrado, mas sem baixa desses itens.`)
+        }
+        if (resultados.length > 0) {
+          const { count } = await supabase.from('estoque_requisicoes').select('*', { count: 'exact', head: true })
+          const numero = `REQ-${String((count || 0) + 1).padStart(5, '0')}`
+          const { data: req, error: reqErr } = await supabase.from('estoque_requisicoes').insert({
+            numero,
+            solicitante_id: funcionario.id,
+            finalidade: 'Uniforme (admissão)',
+            data_requisicao: new Date().toISOString().slice(0, 10),
+            data_entrega: dataEntrega,
+            status: 'entregue',
+            custo_total: Math.round(custoTotal * 100) / 100,
+            observacao: responsavel ? `Entregue por: ${responsavel}` : null,
+            created_by: user?.id,
+          }).select().single()
+          if (!reqErr && req) {
+            for (const r of resultados) {
+              await supabase.from('estoque_requisicao_itens').insert({
+                requisicao_id: req.id,
+                item_id: r.item_id,
+                quantidade_solicitada: r.qtd,
+                quantidade_entregue: r.qtd,
+                custo_unitario_fifo: r.custo_unitario,
+                custo_total: r.custo_total,
+                tipo_consumo: 'uniforme',
+                funcionario_id: funcionario.id,
+              })
+              const est = estoqueItens.find(e => e.id === r.item_id)
+              const novaQtd = Math.max(0, Number(est?.quantidade || 0) - r.qtd)
+              await supabase.from('estoque_itens').update({ quantidade: novaQtd }).eq('id', r.item_id)
+            }
+          }
+        }
       }
-
-      // Update custo_uniforme on funcionarios (sum of items * qty as placeholder)
-      const custoTotal = itens.reduce((sum, i) => {
-        const est = estoqueItens.find(e => e.id === i.item_id)
-        return sum + (est?.custo_medio_atual ? Number(est.custo_medio_atual) * i.qtd : 0)
-      }, 0)
 
       if (custoTotal > 0) {
         await supabase.from('funcionarios').update({
-          custo_uniforme: custoTotal,
+          custo_uniforme: Math.round(custoTotal * 100) / 100,
         }).eq('id', funcionario.id)
       }
 

@@ -75,9 +75,9 @@ export default function ConsumidosClient({ requisicoes, itens, obras, funcionari
       const numero = `REQ-${String((count || 0) + 1).padStart(5, '0')}`
 
       // Create requisição
-      const { data: req } = await supabase.from('estoque_requisicoes').insert({
+      const { data: req, error: reqErr } = await supabase.from('estoque_requisicoes').insert({
         obra_id: obraId,
-        funcionario_id: funcionarioId,
+        solicitante_id: funcionarioId,
         data_requisicao: new Date().toISOString().slice(0, 10),
         status: 'entregue',
         custo_total: Math.round(custoTotalGeral * 100) / 100,
@@ -85,6 +85,7 @@ export default function ConsumidosClient({ requisicoes, itens, obras, funcionari
         numero,
         created_by: user?.id,
       }).select().single()
+      if (reqErr) { toast.error('Erro ao registrar requisição: ' + reqErr.message); setSaving(false); return }
 
       // Create requisição items
       if (req) {
@@ -92,9 +93,12 @@ export default function ConsumidosClient({ requisicoes, itens, obras, funcionari
           await supabase.from('estoque_requisicao_itens').insert({
             requisicao_id: req.id,
             item_id: r.item_id,
-            quantidade: r.quantidade,
-            custo_unitario: r.custo_unitario,
+            quantidade_solicitada: r.quantidade,
+            quantidade_entregue: r.quantidade,
+            custo_unitario_fifo: r.custo_unitario,
             custo_total: r.custo_total,
+            funcionario_id: funcionarioId,
+            tipo_consumo: 'consumo',
           })
         }
       }

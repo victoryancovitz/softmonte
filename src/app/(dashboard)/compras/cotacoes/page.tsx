@@ -28,7 +28,8 @@ interface Cotacao {
   prazo_resposta: string | null
   fornecedores_convidados: any[] | null
   valor_aprovado: number | null
-  fornecedor_escolhido: string | null
+  fornecedor_escolhido_id: string | null
+  fornecedores?: { nome: string } | null
   motivo_escolha: string | null
   itens: CotacaoItem[] | null
   created_at: string
@@ -54,6 +55,7 @@ export default function CotacoesPage() {
   const toast = useToast()
   const [cotacoes, setCotacoes] = useState<Cotacao[]>([])
   const [obras, setObras] = useState<Obra[]>([])
+  const [fornecedores, setFornecedores] = useState<{ id: string; nome: string }[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -74,16 +76,18 @@ export default function CotacoesPage() {
 
   async function loadData() {
     setLoading(true)
-    const [cotRes, obrasRes] = await Promise.all([
+    const [cotRes, obrasRes, fornRes] = await Promise.all([
       supabase
         .from('cotacoes')
-        .select('*, obras(nome)')
+        .select('*, obras(nome), fornecedores(nome)')
         .is('deleted_at', null)
         .order('created_at', { ascending: false }),
       supabase.from('obras').select('id, nome').is('deleted_at', null).order('nome'),
+      supabase.from('fornecedores').select('id, nome').eq('ativo', true).is('deleted_at', null).order('nome'),
     ])
     setCotacoes(cotRes.data ?? [])
     setObras(obrasRes.data ?? [])
+    setFornecedores(fornRes.data ?? [])
     setLoading(false)
   }
 
@@ -138,7 +142,7 @@ export default function CotacoesPage() {
       .from('cotacoes')
       .update({
         status: 'aprovada',
-        fornecedor_escolhido: approveForm.fornecedor,
+        fornecedor_escolhido_id: approveForm.fornecedor || null,
         valor_aprovado: Number(approveForm.valor),
         motivo_escolha: approveForm.motivo || null,
       })
@@ -431,11 +435,11 @@ export default function CotacoesPage() {
                     )}
 
                     {/* Aprovação info */}
-                    {c.status === 'aprovada' && c.fornecedor_escolhido && (
+                    {c.status === 'aprovada' && c.fornecedores?.nome && (
                       <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-3 flex items-center justify-between">
                         <div>
                           <p className="text-xs text-green-700">
-                            <strong>Aprovada:</strong> {c.fornecedor_escolhido} - {c.valor_aprovado != null ? fmt(c.valor_aprovado) : ''}
+                            <strong>Aprovada:</strong> {c.fornecedores?.nome} - {c.valor_aprovado != null ? fmt(c.valor_aprovado) : ''}
                           </p>
                           {c.motivo_escolha && (
                             <p className="text-xs text-green-600 mt-1">Motivo: {c.motivo_escolha}</p>
@@ -461,27 +465,16 @@ export default function CotacoesPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">Fornecedor Escolhido *</label>
-                                {convidados.length > 0 ? (
-                                  <select
-                                    value={approveForm.fornecedor}
-                                    onChange={(e) => setApproveForm({ ...approveForm, fornecedor: e.target.value })}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
-                                  >
-                                    <option value="">Selecione...</option>
-                                    {convidados.map((fc: any, i: number) => (
-                                      <option key={i} value={fc.nome ?? fc.fornecedor_id ?? `Fornecedor ${i + 1}`}>
-                                        {fc.nome ?? fc.fornecedor_id ?? `Fornecedor ${i + 1}`}
-                                      </option>
-                                    ))}
-                                  </select>
-                                ) : (
-                                  <input
-                                    value={approveForm.fornecedor}
-                                    onChange={(e) => setApproveForm({ ...approveForm, fornecedor: e.target.value })}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm"
-                                    placeholder="Nome do fornecedor"
-                                  />
-                                )}
+                                <select
+                                  value={approveForm.fornecedor}
+                                  onChange={(e) => setApproveForm({ ...approveForm, fornecedor: e.target.value })}
+                                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white"
+                                >
+                                  <option value="">Selecione...</option>
+                                  {fornecedores.map((f) => (
+                                    <option key={f.id} value={f.id}>{f.nome}</option>
+                                  ))}
+                                </select>
                               </div>
                               <div>
                                 <label className="block text-xs font-medium text-gray-500 mb-1">Valor Aprovado *</label>
