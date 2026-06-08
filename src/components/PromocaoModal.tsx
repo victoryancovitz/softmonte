@@ -75,7 +75,7 @@ export default function PromocaoModal({ funcionario, funcoes, onClose }: Props) 
         cargo_novo: isReajuste ? (funcionario.cargo || null) : form.cargo_novo,
         horas_mes_anterior: funcionario.horas_mes || 220,
         horas_mes_novo: parseInt(form.horas_mes_novo) || 220,
-        insalubridade_pct_anterior: funcionario.insalubridade_pct || 0,
+        insalubridade_pct_ant: funcionario.insalubridade_pct || 0,
         insalubridade_pct_novo: parseInt(form.insalubridade_pct_novo) || 0,
         motivo: form.tipo_mudanca === 'promocao_cargo' ? 'promocao'
               : form.tipo_mudanca === 'mudanca_cargo' ? 'reenquadramento'

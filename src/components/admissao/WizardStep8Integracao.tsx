@@ -112,14 +112,18 @@ export default function WizardStep8Integracao({ funcionario, workflowId, obras, 
       }
 
       // 3. Insere alocação (com funcao_id para cruzamento de composição/EPI/NR)
-      await supabase.from('alocacoes').insert({
+      const { error: errAloc } = await supabase.from('alocacoes').insert({
         funcionario_id: funcionario.id,
         obra_id: obraId,
         data_inicio: dataInicioObra || dataIntegracao,
-        cargo: cargoNaObra || null,
+        cargo_na_obra: cargoNaObra || null,
         funcao_id: funcionario.funcao_id ?? null,
-        created_by: user?.id,
       })
+      if (errAloc) {
+        toast.error('Erro ao alocar funcionário: ' + errAloc.message)
+        setSaving(false)
+        return
+      }
 
       // 4. Atualiza workflow — marca como concluída
       const localLabel = localSST === 'obra'
