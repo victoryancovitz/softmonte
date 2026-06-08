@@ -71,14 +71,17 @@ export default function EditarUsuarioPage() {
 
   async function handleSave() {
     setSaving(true)
+    // RBAC source-of-truth: user_roles (desde 11/05/2026). profiles.role é só espelho de UI.
+    const { error: roleErr } = await supabase.from('user_roles')
+      .update({ role }).eq('user_id', profile.user_id)
     const { error } = await supabase.from('profiles').update({
       role,
       acessos: modulos,
       ativo,
     }).eq('id', params.id)
 
-    if (error) {
-      toast.show('Erro ao salvar: ' + error.message, 'error')
+    if (roleErr || error) {
+      toast.show('Erro ao salvar: ' + (roleErr || error)!.message, 'error')
     } else {
       toast.show('Alterações salvas com sucesso!')
     }

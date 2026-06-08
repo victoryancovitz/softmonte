@@ -36,7 +36,7 @@ export default function JuridicoDashboardPage() {
         supabase.from('processo_audiencias').select('*, processos_juridicos(numero_cnj, parte_contraria)').eq('status', 'agendada').order('data_audiencia').limit(1),
         supabase.from('financeiro_lancamentos').select('valor').eq('origem', 'juridico_acordo').eq('status', 'em_aberto').is('deleted_at', null),
         supabase.from('processo_audiencias').select('*, processos_juridicos(numero_cnj, parte_contraria)').eq('status', 'agendada').gte('data_audiencia', hoje).lte('data_audiencia', em7d).order('data_audiencia'),
-        supabase.from('processos_juridicos').select('id, numero_cnj, prognostico, tipo, valor_causa, valor_provisao, updated_at').is('deleted_at', null),
+        supabase.from('processos_juridicos').select('id, numero_cnj, prognostico, tipo, valor_causa, valor_provisao:valor_provisionado, updated_at').is('deleted_at', null),
       ])
 
       setKpis(dashboard)

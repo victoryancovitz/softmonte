@@ -139,7 +139,7 @@ export default function ImportarHistoricoPage() {
 
     const { data: lancamentos, error } = await supabase
       .from('financeiro_lancamentos')
-      .select('id, nome, valor, data_vencimento, data_pagamento, fornecedor_nome, categoria, parcela_grupo_id, centro_custo_id')
+      .select('id, nome, valor, data_vencimento, data_pagamento, fornecedor_nome:fornecedor, categoria, parcela_grupo_id, centro_custo_id')
       .is('processo_juridico_id', null)
       .is('deleted_at', null)
       .or(`${termsFilter},${categoriesFilter}`)

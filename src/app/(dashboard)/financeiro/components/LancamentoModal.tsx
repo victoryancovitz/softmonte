@@ -89,16 +89,16 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
     supabase.from('passivos_nao_circulantes').select('id, descricao, banco_credor, valor_total, status')
       .eq('status', 'ativa').is('deleted_at', null).order('descricao')
       .then(({ data }) => setDividas(data ?? []))
-    supabase.from('processos_juridicos').select('id, numero_processo, parte_adversa, tipo')
-      .is('deleted_at', null).order('numero_processo')
+    supabase.from('processos_juridicos').select('id, numero_cnj, parte_contraria, tipo')
+      .is('deleted_at', null).order('numero_cnj')
       .then(({ data }) => setProcessos(data ?? []))
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch parcelas when divida_id changes
   useEffect(() => {
     if (!selectedDividaId) { setParcelasAberta([]); setSelectedParcelaId(''); return }
-    supabase.from('divida_parcelas').select('id, numero_parcela, valor, data_vencimento, status')
-      .eq('divida_id', selectedDividaId).eq('status', 'aberta').order('numero_parcela')
+    supabase.from('divida_parcelas').select('id, numero, valor_amortizacao, valor_juros, valor_outros, data_vencimento, status')
+      .eq('divida_id', selectedDividaId).eq('status', 'aberta').order('numero')
       .then(({ data }) => { setParcelasAberta(data ?? []); setSelectedParcelaId('') })
   }, [selectedDividaId]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -159,7 +159,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
     if (parcela) {
       setModalForm(f => ({
         ...f,
-        valor: String(parcela.valor || f.valor),
+        valor: String((Number(parcela.valor_amortizacao || 0) + Number(parcela.valor_juros || 0) + Number(parcela.valor_outros || 0)) || f.valor),
         data_vencimento: parcela.data_vencimento || f.data_vencimento,
         fornecedor: divida?.banco_credor || f.fornecedor,
       }))
@@ -738,7 +738,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
                         <option value="">Selecionar parcela...</option>
                         {parcelasAberta.map(p => (
                           <option key={p.id} value={p.id}>
-                            Parcela {p.numero_parcela} — {fmt(p.valor)} — venc. {p.data_vencimento ? new Date(p.data_vencimento + 'T12:00').toLocaleDateString('pt-BR') : 'N/A'}
+                            Parcela {p.numero} — {fmt(Number(p.valor_amortizacao || 0) + Number(p.valor_juros || 0) + Number(p.valor_outros || 0))} — venc. {p.data_vencimento ? new Date(p.data_vencimento + 'T12:00').toLocaleDateString('pt-BR') : 'N/A'}
                           </option>
                         ))}
                       </select>
@@ -759,7 +759,7 @@ export default function LancamentoModal({ open, onClose, editingLanc, contas, fo
                       className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" disabled={!!selectedDividaId}>
                       <option value="">Nenhum processo</option>
                       {processos.map(p => (
-                        <option key={p.id} value={p.id}>{p.numero_processo} — {p.parte_adversa} ({p.tipo})</option>
+                        <option key={p.id} value={p.id}>{p.numero_cnj} — {p.parte_contraria} ({p.tipo})</option>
                       ))}
                     </select>
                     {selectedProcessoId && (

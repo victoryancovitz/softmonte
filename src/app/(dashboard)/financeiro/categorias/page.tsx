@@ -8,7 +8,7 @@ export default async function CategoriasPage() {
 
   const { data: lancamentos } = await supabase
     .from('financeiro_lancamentos')
-    .select('id, descricao, valor, tipo, categoria, data_competencia, fornecedor')
+    .select('id, descricao:nome, valor, tipo, categoria, data_competencia, fornecedor')
     .is('deleted_at', null)
     .not('categoria', 'is', null)
     .order('data_competencia', { ascending: false })

@@ -103,7 +103,7 @@ export async function GET(req: NextRequest) {
     .lte('data_vencimento', new Date(Date.now() + 7 * 86400000).toISOString().split('T')[0])
 
   const { data: destinatarios } = await supabase
-    .from('profiles')
+    .from('user_roles')
     .select('user_id')
     .in('role', ['financeiro', 'admin'])
     .eq('ativo', true)

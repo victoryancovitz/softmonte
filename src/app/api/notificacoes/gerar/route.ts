@@ -16,9 +16,10 @@ export async function POST() {
 
     // Get destinatarios: admins + encarregados
     const { data: destinatarios, error: destErr } = await supabase
-      .from('profiles')
-      .select('id, role')
+      .from('user_roles')
+      .select('user_id, role')
       .in('role', ['admin', 'encarregado'])
+      .eq('ativo', true)
     if (destErr) {
       console.error('[notificacoes/gerar] Erro ao buscar admins:', destErr.message)
       return NextResponse.json({ criadas: 0, aviso: 'Erro ao buscar destinatarios' })
@@ -49,7 +50,7 @@ export async function POST() {
       const funcNome = (doc as any).funcionarios?.nome ?? 'Funcionario'
       for (const dest of destinatarios) {
         await supabase.from('notificacoes').insert({
-          destinatario_id: dest.id,
+          destinatario_id: dest.user_id,
           tipo: 'documento_vencendo',
           titulo: dias < 0 ? `${doc.tipo} vencido — ${funcNome}` : `${doc.tipo} vence em ${dias}d — ${funcNome}`,
           mensagem: `Documento ${doc.tipo} de ${funcNome} requer atencao.`,
@@ -81,7 +82,7 @@ export async function POST() {
       const funcNome = (t as any).funcionarios?.nome ?? 'Funcionario'
       for (const dest of destinatarios) {
         await supabase.from('notificacoes').insert({
-          destinatario_id: dest.id,
+          destinatario_id: dest.user_id,
           tipo: 'treinamento_vencendo',
           titulo: dias < 0 ? `${codigo} vencido — ${funcNome}` : `${codigo} vence em ${dias}d — ${funcNome}`,
           mensagem: `Treinamento ${codigo} de ${funcNome} requer renovacao.`,

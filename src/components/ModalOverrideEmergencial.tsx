@@ -86,9 +86,10 @@ export default function ModalOverrideEmergencial({ funcionario, etapasPendentes,
       if (e2) throw e2
 
       // 3. Notify RH and admin users
-      const { data: targets } = await supabase.from('profiles')
+      const { data: targets } = await supabase.from('user_roles')
         .select('user_id')
         .in('role', ['rh', 'admin'])
+        .eq('ativo', true)
       if (targets && targets.length > 0) {
         const notificacoes = targets.map((t: any) => ({
           user_id: t.user_id,

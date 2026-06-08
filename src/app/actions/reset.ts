@@ -148,14 +148,20 @@ export async function resetTotal(confirmation: string): Promise<ResetResult> {
     return { success: false, error: 'Usuário não autenticado.' }
   }
 
-  // 2. Role check via user_id (padrão Softmonte)
+  // 2. Role check via user_roles (source-of-truth de RBAC desde 11/05/2026; profiles.role NÃO autoriza)
+  const { data: roleRow } = await supabase
+    .from('user_roles')
+    .select('role')
+    .eq('user_id', user.id)
+    .eq('ativo', true)
+    .maybeSingle()
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, nome')
+    .select('nome')
     .eq('user_id', user.id)
     .maybeSingle()
 
-  if (!profile || !['admin', 'diretoria'].includes((profile as any).role)) {
+  if (!roleRow || !['admin', 'diretoria'].includes((roleRow as any).role)) {
     return { success: false, error: 'Apenas admin ou diretoria podem executar o reset total.' }
   }
 

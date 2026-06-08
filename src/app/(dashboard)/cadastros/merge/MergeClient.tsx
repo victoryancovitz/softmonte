@@ -65,7 +65,9 @@ export default function MergeClient() {
 
     const table = TABELA_POR_TIPO[tipo]
     const load = async () => {
-      let query = supabase.from(table).select('id, nome, codigo').order('nome')
+      // funcoes não tem coluna 'codigo'; só os outros tipos (centros_custo etc.)
+      const cols: string = tipo === 'funcao' ? 'id, nome' : 'id, nome, codigo'
+      let query = supabase.from(table).select(cols).order('nome')
 
       if (tipo === 'funcao') {
         query = query.eq('ativo', true)
@@ -74,7 +76,7 @@ export default function MergeClient() {
       }
 
       const { data } = await query
-      setRegistros(data ?? [])
+      setRegistros((data as any[]) ?? [])
     }
     load()
   // eslint-disable-next-line react-hooks/exhaustive-deps

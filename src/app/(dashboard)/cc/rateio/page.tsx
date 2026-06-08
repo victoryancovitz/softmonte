@@ -33,7 +33,7 @@ export default function RateioPage() {
   useEffect(() => {
     async function load() {
       const [{ data: obrasData }, { data: configData }, { data: lancData }] = await Promise.all([
-        supabase.from('obras').select('id, nome, data_inicio, data_fim, status').in('status', ['em_andamento', 'planejamento']),
+        supabase.from('obras').select('id, nome, data_inicio, data_fim:data_prev_fim, status').in('status', ['ativo', 'em_andamento', 'planejamento']),
         supabase.from('cc_rateio_config').select('*').eq('mes', mesAtual).eq('ano', anoAtual).limit(1),
         supabase.from('financeiro_lancamentos').select('obra_id, tipo, valor, natureza, is_provisao, centros_custo(tipo)').is('deleted_at', null),
       ])

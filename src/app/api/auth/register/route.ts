@@ -104,6 +104,18 @@ export async function POST(req: NextRequest) {
     // Não falha — o user foi criado, profile pode ser ajustado depois
   }
 
+  // 3b. Cria role em user_roles (source-of-truth de RBAC desde 11/05/2026).
+  // Sem isto o usuário recém-registrado fica sem role efetivo e cai no fallback 'funcionario'.
+  const { error: roleError } = await supabaseAdmin.from('user_roles').upsert({
+    user_id: authData.user.id,
+    role: convite.role,
+    funcionario_id: convite.funcionario_id,
+    ativo: true,
+  }, { onConflict: 'user_id' })
+  if (roleError) {
+    console.error('[register] user_roles upsert error:', roleError)
+  }
+
   // 4. Marca convite como usado
   await supabaseAdmin.from('convites').update({
     usado_em: new Date().toISOString(),

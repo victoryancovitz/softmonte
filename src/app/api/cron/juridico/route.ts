@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
 
   // Get juridico destinatarios
   const { data: destinatarios } = await supabase
-    .from('profiles')
+    .from('user_roles')
     .select('user_id')
     .in('role', ['juridico', 'admin'])
     .eq('ativo', true)

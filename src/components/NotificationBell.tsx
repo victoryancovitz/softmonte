@@ -48,7 +48,7 @@ export default function NotificationBell() {
     // 1b. Buscar parcelas de dívidas próximas/atrasadas
     const { data: dividaData } = await supabase
       .from('divida_parcelas')
-      .select('id, numero, valor_amortizacao, valor_juros, valor_outros, data_vencimento, status, divida_id, passivos_nao_circulantes(descricao, credor)')
+      .select('id, numero, valor_amortizacao, valor_juros, valor_outros, data_vencimento, status, divida_id, dividas(descricao, credor)')
       .in('status', ['pendente', 'aberta', 'atrasada'])
       .lte('data_vencimento', new Date(Date.now() + 15 * 86400000).toISOString().slice(0, 10))
       .order('data_vencimento')
@@ -223,7 +223,7 @@ export default function NotificationBell() {
                   const hoje = new Date().toISOString().slice(0, 10)
                   const atrasada = p.data_vencimento < hoje
                   const diasDiff = Math.abs(Math.round((new Date(p.data_vencimento).getTime() - Date.now()) / 86400000))
-                  const divida = p.passivos_nao_circulantes as any
+                  const divida = p.dividas as any
                   const valorParcela = Number(p.valor_amortizacao || 0) + Number(p.valor_juros || 0) + Number(p.valor_outros || 0)
                   return (
                     <button key={`divida-${p.id}`} onClick={() => { router.push('/financeiro/dividas'); setOpen(false) }}

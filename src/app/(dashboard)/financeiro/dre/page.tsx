@@ -14,7 +14,7 @@ export default async function DrePage() {
     supabase.from('empresa_config').select('regime_tributario, aliquota_simples_efetiva, aliquota_iss, aliquota_pis, aliquota_cofins, aliquota_ir, aliquota_csll, capital_social').limit(1),
     supabase.from('vw_contas_saldo').select('*'),
     supabase.from('centros_custo').select('id, codigo, nome, tipo').eq('tipo', 'administrativo').eq('ativo', true),
-    supabase.from('obras').select('id, nome, data_inicio, data_fim, status').in('status', ['em_andamento', 'planejamento']),
+    supabase.from('obras').select('id, nome, data_inicio, data_fim:data_prev_fim, status').in('status', ['ativo', 'em_andamento', 'planejamento']),
     supabase.from('cc_rateio_config').select('*').order('created_at', { ascending: false }).limit(1),
     supabase.from('movimentacoes_societarias').select('*').eq('tipo', 'distribuicao_lucro'),
     supabase.from('processos_juridicos').select('valor_provisionado').is('deleted_at', null).eq('prognostico', 'provavel'),
