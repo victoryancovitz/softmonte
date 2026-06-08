@@ -109,10 +109,11 @@ export default function EntityDocumentos({
     const payload: any = {
       tipo: form.tipo,
       titulo: form.titulo.trim(),
-      descricao: form.descricao || null,
       data_documento: form.data_documento || null,
       numero: form.numero || null,
     }
+    // bm_documentos não tem coluna 'descricao'; só obra_documentos
+    if (table === 'obra_documentos') payload.descricao = form.descricao || null
     if (showValor) payload.valor = form.valor ? Number(form.valor) : null
 
     if (file) {

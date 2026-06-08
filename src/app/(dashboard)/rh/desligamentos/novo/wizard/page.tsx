@@ -278,7 +278,6 @@ export default function WizardDesligamentoPage() {
           .from('fichas_epi')
           .select('id, itens, data_entrega')
           .eq('funcionario_id', funcionarioId)
-          .is('deleted_at', null)
           .order('data_entrega', { ascending: false })
 
         // Flatten itens from all fichas (unique by nome+ca)

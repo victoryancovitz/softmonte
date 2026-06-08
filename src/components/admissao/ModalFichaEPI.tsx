@@ -184,9 +184,7 @@ export default function ModalFichaEPI({ funcionario, workflowId, onClose, onSucc
       // 1. Insert ficha_epi
       const { data: ficha } = await supabase.from('fichas_epi').insert({
         funcionario_id: funcionario.id,
-        workflow_id: workflowId,
         data_entrega: dataEntrega,
-        responsavel,
         itens: itensJson,
         assinatura_tipo: tipo,
         assinatura_svg: signatureData,

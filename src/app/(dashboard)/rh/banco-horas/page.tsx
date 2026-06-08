@@ -12,11 +12,11 @@ interface BancoHorasRow {
   obra_id: string
   mes: number
   ano: number
-  hh_contrato: number
-  hh_trabalhado: number
-  hh_extras: number
-  hh_faltas: number
-  hh_compensadas: number
+  horas_normais_contrato: number
+  horas_trabalhadas: number
+  horas_extras: number
+  horas_faltas: number
+  horas_compensadas: number
   saldo_mes: number
   saldo_acumulado_final: number
   fechado: boolean
@@ -170,7 +170,7 @@ export default function BancoHorasPage() {
     if (!row) return
 
     const updatedRow = { ...row, [field]: numValue }
-    const saldoMes = updatedRow.hh_trabalhado + updatedRow.hh_extras - updatedRow.hh_contrato - updatedRow.hh_faltas + updatedRow.hh_compensadas
+    const saldoMes = updatedRow.horas_trabalhadas + updatedRow.horas_extras - updatedRow.horas_normais_contrato - updatedRow.horas_faltas + updatedRow.horas_compensadas
 
     await supabase
       .from('banco_horas')
@@ -232,14 +232,14 @@ export default function BancoHorasPage() {
   }, [saldoRows, busca, saldoFilter])
 
   const totalFuncionarios = useFallback ? filteredSaldoRows.length : rows.length
-  const totalExtras = rows.reduce((s, r) => s + (r.hh_extras || 0), 0)
-  const totalFaltas = rows.reduce((s, r) => s + (r.hh_faltas || 0), 0)
+  const totalExtras = rows.reduce((s, r) => s + (r.horas_extras || 0), 0)
+  const totalFaltas = rows.reduce((s, r) => s + (r.horas_faltas || 0), 0)
   const saldoGeral = useFallback
     ? filteredSaldoRows.reduce((s, r) => s + (r.saldo_atual_horas || 0), 0)
     : rows.reduce((s, r) => s + (r.saldo_mes || 0), 0)
   const mesFechado = rows.length > 0 && rows.every(r => r.fechado)
 
-  const editableFields = ['hh_contrato', 'hh_trabalhado', 'hh_extras', 'hh_faltas', 'hh_compensadas']
+  const editableFields = ['horas_normais_contrato', 'horas_trabalhadas', 'horas_extras', 'horas_faltas', 'horas_compensadas']
 
   function renderCell(row: BancoHorasRow, field: string, value: number) {
     const isEditing = editingCell?.id === row.id && editingCell?.field === field
@@ -513,11 +513,11 @@ export default function BancoHorasPage() {
                   <tr key={row.id} className="border-b border-gray-50 hover:bg-gray-50/80">
                     <td className="px-4 py-3 font-semibold text-gray-900 whitespace-nowrap">{row.funcionarios?.nome ?? '—'}</td>
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{row.funcionarios?.cargo ?? '—'}</td>
-                    <td className="px-4 py-3">{renderCell(row, 'hh_contrato', row.hh_contrato)}</td>
-                    <td className="px-4 py-3">{renderCell(row, 'hh_trabalhado', row.hh_trabalhado)}</td>
-                    <td className="px-4 py-3">{renderCell(row, 'hh_extras', row.hh_extras)}</td>
-                    <td className="px-4 py-3">{renderCell(row, 'hh_faltas', row.hh_faltas)}</td>
-                    <td className="px-4 py-3">{renderCell(row, 'hh_compensadas', row.hh_compensadas)}</td>
+                    <td className="px-4 py-3">{renderCell(row, 'horas_normais_contrato', row.horas_normais_contrato)}</td>
+                    <td className="px-4 py-3">{renderCell(row, 'horas_trabalhadas', row.horas_trabalhadas)}</td>
+                    <td className="px-4 py-3">{renderCell(row, 'horas_extras', row.horas_extras)}</td>
+                    <td className="px-4 py-3">{renderCell(row, 'horas_faltas', row.horas_faltas)}</td>
+                    <td className="px-4 py-3">{renderCell(row, 'horas_compensadas', row.horas_compensadas)}</td>
                     <td className={`px-4 py-3 ${saldoColor(row.saldo_mes)}`}>
                       {(row.saldo_mes >= 0 ? '+' : '')}{(row.saldo_mes || 0).toFixed(1)}h
                     </td>

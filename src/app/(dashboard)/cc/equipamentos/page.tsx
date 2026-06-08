@@ -111,20 +111,20 @@ export default function EquipamentosPage() {
         // Fallback: ativos_fixos JOIN centros_custo
         const { data: af } = await supabase
           .from('ativos_fixos')
-          .select('id, patrimonio, nome, centro_custo_id, status, custo_dia, alocado_desde, centros_custo(codigo, nome)')
+          .select('id, numero_patrimonio, nome, centro_custo_id, status_ativo, centros_custo(codigo, nome)')
           .is('deleted_at', null)
           .order('nome')
 
         const mapped: Equipamento[] = (af ?? []).map((r: any) => ({
           id: r.id,
-          patrimonio: r.patrimonio,
+          patrimonio: r.numero_patrimonio,
           nome: r.nome,
           centro_custo_id: r.centro_custo_id,
           cc_nome: r.centros_custo?.nome ?? null,
           cc_codigo: r.centros_custo?.codigo ?? null,
-          alocado_desde: r.alocado_desde,
-          custo_dia: r.custo_dia,
-          status: r.status,
+          alocado_desde: null,
+          custo_dia: null,
+          status: r.status_ativo,
         }))
         setEquipamentos(mapped)
       }

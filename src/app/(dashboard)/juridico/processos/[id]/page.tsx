@@ -44,8 +44,8 @@ export default async function ProcessoPage({ params, searchParams }: { params: {
   if (!p) notFound()
 
   const [{ data: movimentacoes }, { data: anexos }, { data: lancamentos }] = await Promise.all([
-    supabase.from('processo_movimentacoes').select('*').eq('processo_juridico_id', params.id).order('data', { ascending: false }),
-    supabase.from('processo_anexos').select('*').eq('processo_juridico_id', params.id).is('deleted_at', null).order('created_at', { ascending: false }),
+    supabase.from('processo_movimentacoes').select('*').eq('processo_id', params.id).order('data_movimento', { ascending: false }),
+    supabase.from('processo_anexos').select('*').eq('processo_id', params.id).order('created_at', { ascending: false }),
     supabase.from('financeiro_lancamentos').select('*').eq('processo_juridico_id', params.id).is('deleted_at', null).order('data_vencimento', { ascending: false }),
   ])
 

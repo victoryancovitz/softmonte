@@ -239,7 +239,6 @@ export default function ModalEdicaoPonto({ funcionario, data, obraId, open, onCl
       sequencia: maxSeq + 1,
       origem: 'manual',
       motivo_edicao: newMotivo,
-      criado_por: user?.id,
     })
     setSaving(false)
     if (error) { toast.error('Erro ao adicionar batida: ' + error.message); return }

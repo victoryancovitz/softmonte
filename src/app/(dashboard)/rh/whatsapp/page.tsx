@@ -95,7 +95,7 @@ export default function WhatsAppRHPage() {
   }
 
   async function abrirModal() {
-    const { data } = await supabase.from('funcionarios').select('id, nome, cargo').eq('ativo', true).is('deleted_at', null).order('nome')
+    const { data } = await supabase.from('funcionarios').select('id, nome, cargo').eq('status', 'ativo').is('deleted_at', null).order('nome')
     setFuncionarios(data || [])
     setFormEnvio({ funcionario_id: data?.[0]?.id || '', tipo_documento: 'holerite', mensagem_texto: '', arquivo: null })
     setModalAberto(true)

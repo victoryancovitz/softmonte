@@ -224,9 +224,7 @@ ${signImg ? `<div class="sig"><img src="${signImg}" alt="Assinatura digital" /><
 
       const { data: ficha } = await supabase.from('fichas_epi').insert({
         funcionario_id: funcionario.id,
-        workflow_id: workflowId,
         data_entrega: dataEntrega,
-        responsavel,
         itens: itensJson,
         assinatura_tipo: tipo,
         assinatura_svg: signatureData,

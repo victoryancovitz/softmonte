@@ -43,7 +43,7 @@ export default function NovoAdvogadoPage() {
       email: form.email || null,
       telefone: form.telefone || null,
       honorarios_mensais: form.honorarios_mensais ? parseFloat(form.honorarios_mensais) : null,
-      honorario_exito: form.honorario_exito ? parseFloat(form.honorario_exito) : null,
+      honorario_exito_pct: form.honorario_exito ? parseFloat(form.honorario_exito) : null,
       observacoes: form.observacoes || null,
     }
 

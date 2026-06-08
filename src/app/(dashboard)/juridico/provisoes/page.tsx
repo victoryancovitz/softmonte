@@ -32,7 +32,7 @@ export default function ProvisoesPage() {
     try {
       const [{ data: procs }, { data: hist }] = await Promise.all([
         supabase.from('processos_juridicos')
-          .select('id, numero_cnj, parte_contraria, tipo, prognostico, valor_causa, valor_provisionado, centro_custo, advogado_id, advogados_juridicos(nome)')
+          .select('id, numero_cnj, parte_contraria, tipo, prognostico, valor_causa, valor_provisionado, centro_custo:centro_custo_id, advogado_id, advogados_juridicos:advogados(nome)')
           .is('deleted_at', null)
           .in('prognostico', ['provavel', 'possivel', 'remoto'])
           .order('prognostico')

@@ -409,7 +409,7 @@ export default function RdoForm({ obraId, rdoId, onClose }: Props) {
 
   if (loading) return <div className="text-sm text-gray-400 py-8 text-center">Carregando RDO...</div>
 
-  const canRevisar = status === 'rascunho' && currentRdoId && rdoMeta?.criado_por !== userId
+  const canRevisar = status === 'rascunho' && currentRdoId && rdoMeta?.created_by !== userId
   const canAprovar = status === 'revisado' && (userRole === 'admin' || userRole === 'diretoria' || userRole === 'gerente')
   const canAssinarResp = currentRdoId && ['aprovado', 'fechado'].includes(status) && !rdoMeta?.assinatura_responsavel_url
   const canAssinarFiscal = currentRdoId && status === 'aprovado' && rdoMeta?.assinatura_responsavel_url && !rdoMeta?.assinatura_fiscal_url

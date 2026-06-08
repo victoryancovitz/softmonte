@@ -145,7 +145,7 @@ export default function WizardStep7Uniforme({ funcionario, workflowId, onComplet
       // Update custo_uniforme on funcionarios (sum of items * qty as placeholder)
       const custoTotal = itens.reduce((sum, i) => {
         const est = estoqueItens.find(e => e.id === i.item_id)
-        return sum + (est?.custo_unitario ? Number(est.custo_unitario) * i.qtd : 0)
+        return sum + (est?.custo_medio_atual ? Number(est.custo_medio_atual) * i.qtd : 0)
       }, 0)
 
       if (custoTotal > 0) {

@@ -67,15 +67,13 @@ export default function PatrimonioClient({ ativos, obras, funcionarios, proximoP
       numero_patrimonio: form.numero_patrimonio || null,
       valor_aquisicao: Number(form.valor_aquisicao),
       data_aquisicao: form.data_aquisicao || null,
-      vida_util_meses: Number(form.vida_util_meses) || 60,
+      vida_util_anos: (Number(form.vida_util_meses) || 60) / 12,
       taxa_depreciacao_anual: Number(form.taxa_depreciacao_anual) || 20,
       obra_id: form.obra_id || null,
-      funcionario_id: form.funcionario_id || null,
+      funcionario_responsavel_id: form.funcionario_id || null,
       nota_fiscal: form.nota_fiscal || null,
-      observacao: form.observacao || null,
       status_ativo: 'ativo',
       depreciacao_acumulada: 0,
-      created_by: user?.id,
     })
     setSaving(false)
     if (error) { toast.error('Erro ao cadastrar: ' + error.message); return }

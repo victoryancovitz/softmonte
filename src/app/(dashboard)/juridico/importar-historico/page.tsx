@@ -270,11 +270,10 @@ export default function ImportarHistoricoPage() {
 
     const { error } = await supabase.from('juridico_import_log').insert({
       decisao: 'descartado',
-      lancamento_ids: candidate.lancamentos.map(l => l.id),
-      grupo_key: candidate.key,
+      lancamentos_vinculados: candidate.lancamentos.map(l => l.id),
       valor_total: candidate.valor_total,
-      parte_sugerida: candidate.parte_sugerida,
-      confidence: candidate.confidence,
+      parte_contraria: candidate.parte_sugerida,
+      confianca: candidate.confidence,
     })
 
     if (error) {
@@ -352,12 +351,11 @@ export default function ImportarHistoricoPage() {
     // 3. Log
     await supabase.from('juridico_import_log').insert({
       decisao: 'aprovado',
-      processo_juridico_id: processo.id,
-      lancamento_ids: ids,
-      grupo_key: modalCandidate.key,
+      processo_id: processo.id,
+      lancamentos_vinculados: ids,
       valor_total: modalCandidate.valor_total,
-      parte_sugerida: modalCandidate.parte_sugerida,
-      confidence: modalCandidate.confidence,
+      parte_contraria: modalCandidate.parte_sugerida,
+      confianca: modalCandidate.confidence,
     })
 
     setSaving(false)
